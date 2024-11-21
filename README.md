@@ -109,7 +109,7 @@ cd Sana
 ```bash
 # official online demo
 DEMO_PORT=15432 \
-pyhton app/sana_app.py \
+python app/sana_app.py \
       --config=configs/sana_config/1024ms/Sana_1600M_img1024.yaml \
       --model_path=hf://Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth
 ```

@@ -77,7 +77,8 @@ class SanaPipeline(nn.Module):
         config: Optional[str] = "configs/sana_config/1024ms/Sana_1600M_img1024.yaml",
     ):
         super().__init__()
-        config = pyrallis.parse(config_class=SanaInference, config_path=config)
+        with open(config) as cf:
+            config = pyrallis.load(SanaInference, f)
         self.args = self.config = config
 
         # set some hyper-parameters

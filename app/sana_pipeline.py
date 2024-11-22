@@ -121,7 +121,9 @@ class SanaPipeline(nn.Module):
             null_caption_token = self.tokenizer(
                 "", max_length=self.max_sequence_length, padding="max_length", truncation=True, return_tensors="pt"
             ).to(self.device)
-            self.null_caption_embs = self.text_encoder(null_caption_token.input_ids, null_caption_token.attention_mask)[0]
+            self.null_caption_embs = self.text_encoder(null_caption_token.input_ids, null_caption_token.attention_mask)[
+                0
+            ]
 
     def build_vae(self, config):
         vae = get_vae(config.vae_type, config.vae_pretrained, self.device).to(self.weight_dtype)
@@ -231,7 +233,9 @@ class SanaPipeline(nn.Module):
             )
             for _ in range(num_images_per_prompt):
                 with torch.no_grad():
-                    prompts.append(prepare_prompt_ar(prompt, self.base_ratios, device=self.device, show=False)[0].strip())
+                    prompts.append(
+                        prepare_prompt_ar(prompt, self.base_ratios, device=self.device, show=False)[0].strip()
+                    )
 
                     # prepare text feature
                     if not self.config.text_encoder.chi_prompt:
@@ -246,7 +250,11 @@ class SanaPipeline(nn.Module):
                         )  # magic number 2: [bos], [_]
 
                     caption_token = self.tokenizer(
-                        prompts_all, max_length=max_length_all, padding="max_length", truncation=True, return_tensors="pt"
+                        prompts_all,
+                        max_length=max_length_all,
+                        padding="max_length",
+                        truncation=True,
+                        return_tensors="pt",
                     ).to(device=self.device)
                     select_index = [0] + list(range(-self.config.text_encoder.model_max_length + 1, 0))
                     caption_embs = self.text_encoder(caption_token.input_ids, caption_token.attention_mask)[0][:, None][

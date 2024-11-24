@@ -21,11 +21,6 @@ from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
 from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, MBConvPreGLU, Mlp
-try:
-    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU
-except ImportError:
-    import warnings
-    warnings.warn("TritonLiteMLA and TritonMBConvPreGLU with `triton` is not available on your platform.")
 from diffusion.model.nets.sana import Sana, get_2d_sincos_pos_embed
 from diffusion.model.nets.sana_blocks import (
     Attention,
@@ -38,6 +33,12 @@ from diffusion.model.nets.sana_blocks import (
     t2i_modulate,
 )
 from diffusion.model.utils import auto_grad_checkpoint
+from diffusion.utils.import_utils import is_triton_module_available
+
+_triton_modules_available = False
+if is_triton_module_available():
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU    
+    _triton_modules_available = True
 
 
 class SanaMSBlock(nn.Module):
@@ -78,6 +79,8 @@ class SanaMSBlock(nn.Module):
             self_num_heads = hidden_size // linear_head_dim
             self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "triton_linear":
+            if not _triton_modules_available:
+                raise ValueError(f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
             # linear self attention with triton kernel fusion
             self_num_heads = hidden_size // linear_head_dim
             self.attn = TritonLiteMLA(hidden_size, num_heads=self_num_heads, eps=1e-8)
@@ -112,6 +115,8 @@ class SanaMSBlock(nn.Module):
                 dilation=2,
             )
         elif ffn_type == "triton_mbconvpreglu":
+            if not _triton_modules_available:
+                raise ValueError(f"{ffn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
             self.mlp = TritonMBConvPreGLU(
                 in_dim=hidden_size,
                 out_dim=hidden_size,

@@ -43,6 +43,12 @@ from diffusion.model.nets.sana_blocks import (
 from diffusion.model.norms import RMSNorm
 from diffusion.model.utils import auto_grad_checkpoint, to_2tuple
 from diffusion.utils.logger import get_root_logger
+from diffusion.utils.import_utils import is_triton_module_available
+
+_triton_modules_available = False
+if is_triton_module_available():
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU    
+    _triton_modules_available = True
 
 
 class SanaUBlock(nn.Module):
@@ -81,6 +87,8 @@ class SanaUBlock(nn.Module):
             self_num_heads = hidden_size // 32
             self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "triton_linear":
+            if not _triton_modules_available:
+                raise ValueError(f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
             # linear self attention with triton kernel fusion
             # TODO: Here the num_heads set to 36 for tmp used
             self_num_heads = hidden_size // 32

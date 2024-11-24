@@ -39,6 +39,12 @@ from diffusion.model.nets.sana_blocks import (
     modulate,
 )
 from diffusion.model.utils import auto_grad_checkpoint, to_2tuple
+from diffusion.utils.import_utils import is_triton_module_available
+
+_triton_modules_available = False
+if is_triton_module_available():
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU    
+    _triton_modules_available = True
 
 
 class SanaMSAdaLNBlock(nn.Module):
@@ -77,6 +83,8 @@ class SanaMSAdaLNBlock(nn.Module):
             self_num_heads = hidden_size // 32
             self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "triton_linear":
+            if not _triton_modules_available:
+                raise ValueError(f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
             # linear self attention with triton kernel fusion
             self_num_heads = hidden_size // 32
             self.attn = TritonLiteMLA(hidden_size, num_heads=self_num_heads, eps=1e-8)
@@ -375,12 +383,12 @@ def SanaMSAdaLN_600M_P4_D28(**kwargs):
 
 
 @MODELS.register_module()
-def SanaMSAdaLN_P1_D20(**kwargs):
+def SanaMSAdaLN_1600M_P1_D20(**kwargs):
     # 20 layers, 1648.48M
     return SanaMSAdaLN(depth=20, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
 
 
 @MODELS.register_module()
-def SanaMSAdaLN_P2_D20(**kwargs):
+def SanaMSAdaLN_1600M_P2_D20(**kwargs):
     # 28 layers, 1648.48M
     return SanaMSAdaLN(depth=20, hidden_size=2240, patch_size=2, num_heads=20, **kwargs)

@@ -48,7 +48,7 @@ class EncoderConfig:
     width_list: tuple[int, ...] = (128, 256, 512, 512, 1024, 1024)
     depth_list: tuple[int, ...] = (2, 2, 2, 2, 2, 2)
     block_type: Any = "ResBlock"
-    norm: str = "trms2d"
+    norm: str = "rms2d"
     act: str = "silu"
     downsample_block_type: str = "ConvPixelUnshuffle"
     downsample_match_channel: bool = True
@@ -67,12 +67,12 @@ class DecoderConfig:
     width_list: tuple[int, ...] = (128, 256, 512, 512, 1024, 1024)
     depth_list: tuple[int, ...] = (2, 2, 2, 2, 2, 2)
     block_type: Any = "ResBlock"
-    norm: Any = "trms2d"
+    norm: Any = "rms2d"
     act: Any = "silu"
     upsample_block_type: str = "ConvPixelShuffle"
     upsample_match_channel: bool = True
     upsample_shortcut: str = "duplicating"
-    out_norm: str = "trms2d"
+    out_norm: str = "rms2d"
     out_act: str = "relu"
 
 
@@ -470,7 +470,7 @@ def dc_ae_f32c32(name: str, pretrained_path: str) -> DCAEConfig:
             "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViTS5_GLU,EViTS5_GLU,EViTS5_GLU] "
             "decoder.width_list=[128,256,512,512,1024,1024] decoder.depth_list=[3,3,3,3,3,3] "
             "decoder.upsample_block_type=InterpolateConv "
-            "decoder.norm=trms2d decoder.act=silu "
+            "decoder.norm=rms2d decoder.act=silu "
             "scaling_factor=0.41407"
         )
     else:

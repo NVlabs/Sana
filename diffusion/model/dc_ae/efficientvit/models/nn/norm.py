@@ -40,12 +40,38 @@ class TritonRMSNorm2d(nn.LayerNorm):
         return TritonRMSNorm2dFunc.apply(x, self.weight, self.bias, self.eps)
 
 
+class RMSNorm2d(nn.Module):
+    def __init__(
+        self, num_features: int, eps: float = 1e-5, elementwise_affine: bool = True, bias: bool = True
+    ) -> None:
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.elementwise_affine = elementwise_affine
+        if self.elementwise_affine:
+            self.weight = torch.nn.parameter.Parameter(torch.empty(self.num_features))
+            if bias:
+                self.bias = torch.nn.parameter.Parameter(torch.empty(self.num_features))
+            else:
+                self.register_parameter("bias", None)
+        else:
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = (x / torch.sqrt(torch.square(x.float()).mean(dim=1, keepdim=True) + self.eps)).to(x.dtype)
+        if self.elementwise_affine:
+            x = x * self.weight.view(1, -1, 1, 1) + self.bias.view(1, -1, 1, 1)
+        return x
+
+
 # register normalization function here
 REGISTERED_NORM_DICT: dict[str, type] = {
     "bn2d": nn.BatchNorm2d,
     "ln": nn.LayerNorm,
     "ln2d": LayerNorm2d,
     "trms2d": TritonRMSNorm2d,
+    "rms2d": RMSNorm2d,
 }
 
 

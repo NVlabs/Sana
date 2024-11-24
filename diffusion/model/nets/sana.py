@@ -24,7 +24,11 @@ from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
 from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, MBConvPreGLU, Mlp
-from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU
+try:
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU
+except ImportError:
+    import warnings
+    warnings.warn("TritonLiteMLA and TritonMBConvPreGLU with `triton` is not available on your platform.")
 from diffusion.model.nets.sana_blocks import (
     Attention,
     CaptionEmbedder,

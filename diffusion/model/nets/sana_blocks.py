@@ -22,7 +22,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import xformers.ops
+from diffusion.utils.import_utils import is_xformers_available
 from einops import rearrange
 from timm.models.vision_transformer import Attention as Attention_
 from timm.models.vision_transformer import Mlp
@@ -30,6 +30,12 @@ from transformers import AutoModelForCausalLM
 
 from diffusion.model.norms import RMSNorm
 from diffusion.model.utils import get_same_padding, to_2tuple
+
+
+_xformers_available = False
+if is_xformers_available():
+    import xformers.ops
+    _xformers_available = True
 
 
 def modulate(x, shift, scale):
@@ -72,10 +78,19 @@ class MultiHeadCrossAttention(nn.Module):
         q = self.q_norm(q).view(1, -1, self.num_heads, self.head_dim)
         k = self.k_norm(k).view(1, -1, self.num_heads, self.head_dim)
         v = v.view(1, -1, self.num_heads, self.head_dim)
-        attn_bias = None
-        if mask is not None:
-            attn_bias = xformers.ops.fmha.BlockDiagonalMask.from_seqlens([N] * B, mask)
-        x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
+
+        if _xformers_available:
+            attn_bias = None
+            if mask is not None:
+                attn_bias = xformers.ops.fmha.BlockDiagonalMask.from_seqlens([N] * B, mask)
+            x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
+        else:
+            q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+            if mask is not None and mask.ndim == 2:
+                mask = (1 - mask.to(x.dtype)) * -10000.0
+                mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+            x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+            x = x.transpose(1, 2)
 
         x = x.view(B, -1, C)
         x = self.proj(x)
@@ -347,7 +362,15 @@ class FlashAttention(Attention_):
             attn_bias = torch.zeros([B * self.num_heads, q.shape[1], k.shape[1]], dtype=q.dtype, device=q.device)
             attn_bias.masked_fill_(mask.squeeze(1).repeat(self.num_heads, 1, 1) == 0, float("-inf"))
 
-        x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
+        if _xformers_available:
+            x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
+        else:
+            q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+            if mask is not None and mask.ndim == 2:
+                mask = (1 - mask.to(x.dtype)) * -10000.0
+                mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+            x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+            x = x.transpose(1, 2)
 
         x = x.view(B, N, C)
         x = self.proj(x)

@@ -20,7 +20,7 @@
 #     IDDPM: https://github.com/openai/improved-diffusion/blob/main/improved_diffusion/gaussian_diffusion.py
 from diffusion.model.respace import SpacedDiffusion, space_timesteps
 
-from .model import gaussian_diffusion as gd
+from .model.gaussian_diffusion import gaussian_diffusion as gd
 
 
 def Scheduler(

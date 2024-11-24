@@ -21,6 +21,11 @@ from timm.models.layers import DropPath
 
 from diffusion.model.nets.basic_modules import DWMlp, MBConvPreGLU, Mlp
 from diffusion.model.nets.fastlinear.modules import TritonLiteMLA
+try:
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA
+except ImportError:
+    import warnings
+    warnings.warn("TritonLiteMLA with `triton` is not available on your platform.")
 from diffusion.model.nets.sana_blocks import Attention, FlashAttention, MultiHeadCrossAttention, t2i_modulate
 
 

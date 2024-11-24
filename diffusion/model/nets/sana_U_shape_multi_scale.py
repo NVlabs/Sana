@@ -21,7 +21,11 @@ from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
 from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, MBConvPreGLU, Mlp
-from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonLiteMLAFwd
+try:
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA
+except ImportError:
+    import warnings
+    warnings.warn("TritonLiteMLA with `triton` is not available on your platform.")
 from diffusion.model.nets.sana import Sana, get_2d_sincos_pos_embed
 from diffusion.model.nets.sana_blocks import (
     Attention,
@@ -365,12 +369,12 @@ def SanaUMS_600M_P4_D28(**kwargs):
 
 
 @MODELS.register_module()
-def SanaUMS_P1_D20(**kwargs):
+def SanaUMS_1600M_P1_D20(**kwargs):
     # 20 layers, 1648.48M
     return SanaUMS(depth=20, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
 
 
 @MODELS.register_module()
-def SanaUMS_P2_D20(**kwargs):
+def SanaUMS_1600M_P2_D20(**kwargs):
     # 28 layers, 1648.48M
     return SanaUMS(depth=20, hidden_size=2240, patch_size=2, num_heads=20, **kwargs)

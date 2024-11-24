@@ -22,7 +22,6 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from diffusion.utils.import_utils import is_xformers_available
 from einops import rearrange
 from timm.models.vision_transformer import Attention as Attention_
 from timm.models.vision_transformer import Mlp
@@ -30,11 +29,12 @@ from transformers import AutoModelForCausalLM
 
 from diffusion.model.norms import RMSNorm
 from diffusion.model.utils import get_same_padding, to_2tuple
-
+from diffusion.utils.import_utils import is_xformers_available
 
 _xformers_available = False
 if is_xformers_available():
     import xformers.ops
+
     _xformers_available = True
 
 

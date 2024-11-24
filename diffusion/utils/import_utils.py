@@ -1,8 +1,9 @@
 import importlib.util
-import importlib_metadata
-from packaging import version
 import logging
 import warnings
+
+import importlib_metadata
+from packaging import version
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,10 @@ except ImportError:
     _triton_modules_available = False
     warnings.warn("TritonLiteMLA and TritonMBConvPreGLU with `triton` is not available on your platform.")
 
+
 def is_xformers_available():
     return _xformers_available
+
 
 def is_triton_module_available():
     return _triton_modules_available

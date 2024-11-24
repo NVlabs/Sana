@@ -43,7 +43,8 @@ from diffusion.utils.logger import get_root_logger
 
 _triton_modules_available = False
 if is_triton_module_available():
-    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU    
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU
+
     _triton_modules_available = True
 
 
@@ -84,7 +85,9 @@ class SanaBlock(nn.Module):
             self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "triton_linear":
             if not _triton_modules_available:
-                raise ValueError(f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
+                raise ValueError(
+                    f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}."
+                )
             # linear self attention with triton kernel fusion
             # TODO: Here the num_heads set to 36 for tmp used
             self_num_heads = hidden_size // linear_head_dim
@@ -131,7 +134,9 @@ class SanaBlock(nn.Module):
             )
         elif ffn_type == "triton_mbconvpreglu":
             if not _triton_modules_available:
-                raise ValueError(f"{ffn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
+                raise ValueError(
+                    f"{ffn_type} type is not available due to _triton_modules_available={_triton_modules_available}."
+                )
             self.mlp = TritonMBConvPreGLU(
                 in_dim=hidden_size,
                 out_dim=hidden_size,

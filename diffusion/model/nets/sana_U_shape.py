@@ -23,11 +23,6 @@ from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
 from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, MBConvPreGLU, Mlp
-try:
-    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA
-except ImportError:
-    import warnings
-    warnings.warn("TritonLiteMLA with `triton` is not available on your platform.")
 from diffusion.model.nets.sana import Sana, get_2d_sincos_pos_embed
 from diffusion.model.nets.sana_blocks import (
     Attention,
@@ -41,13 +36,14 @@ from diffusion.model.nets.sana_blocks import (
     t2i_modulate,
 )
 from diffusion.model.norms import RMSNorm
-from diffusion.model.utils import auto_grad_checkpoint, to_2tuple
-from diffusion.utils.logger import get_root_logger
+from diffusion.model.utils import auto_grad_checkpoint
 from diffusion.utils.import_utils import is_triton_module_available
+from diffusion.utils.logger import get_root_logger
 
 _triton_modules_available = False
 if is_triton_module_available():
-    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU    
+    from diffusion.model.nets.fastlinear.modules import TritonLiteMLA
+
     _triton_modules_available = True
 
 
@@ -88,7 +84,9 @@ class SanaUBlock(nn.Module):
             self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "triton_linear":
             if not _triton_modules_available:
-                raise ValueError(f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}.")
+                raise ValueError(
+                    f"{attn_type} type is not available due to _triton_modules_available={_triton_modules_available}."
+                )
             # linear self attention with triton kernel fusion
             # TODO: Here the num_heads set to 36 for tmp used
             self_num_heads = hidden_size // 32

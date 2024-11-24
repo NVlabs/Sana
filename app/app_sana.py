@@ -21,6 +21,7 @@ import os
 import random
 import time
 import uuid
+import socket
 from datetime import datetime
 
 import gradio as gr
@@ -308,7 +309,7 @@ DESCRIPTION = f"""
         <p><span style="font-size: 36px; font-weight: bold;">Sana-{model_size}B</span><span style="font-size: 20px; font-weight: bold;">{args.image_size}px</span></p>
         <p style="font-size: 16px; font-weight: bold;">Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer</p>
         <p><span style="font-size: 16px;"><a href="https://arxiv.org/abs/2410.10629">[Paper]</a></span> <span style="font-size: 16px;"><a href="https://github.com/NVlabs/Sana">[Github(coming soon)]</a></span> <span style="font-size: 16px;"><a href="https://nvlabs.github.io/Sana">[Project]</a></span</p>
-        <p style="font-size: 16px; font-weight: bold;">Powered by <a href="https://hanlab.mit.edu/projects/dc-ae">DC-AE</a> with 32x latent space</p>, running on A6000 node.
+        <p style="font-size: 16px; font-weight: bold;">Powered by <a href="https://hanlab.mit.edu/projects/dc-ae">DC-AE</a> with 32x latent space, </p>running on node {socket.gethostname()}.
         <p style="font-size: 16px; font-weight: bold;">Unsafe word will give you a 'Red Heart' in the image instead.</p>
         """
 if model_size == "0.6":
@@ -336,7 +337,7 @@ h1{text-align:center}
 """
 with gr.Blocks(css=css) as demo:
     gr.Markdown(title)
-    gr.Markdown(DESCRIPTION)
+    gr.HTML(DESCRIPTION)
     gr.DuplicateButton(
         value="Duplicate Space for private use",
         elem_id="duplicate-button",
@@ -485,4 +486,4 @@ with gr.Blocks(css=css) as demo:
     )
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=True, share=True)
+    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=False)

@@ -112,7 +112,6 @@ DEFAULT_STYLE_NAME = "(No style)"
 SCHEDULE_NAME = ["Flow_DPM_Solver"]
 DEFAULT_SCHEDULE_NAME = "Flow_DPM_Solver"
 NUM_IMAGES_PER_PROMPT = 1
-TEST_TIMES = 0
 INFER_SPEED = 0
 
 
@@ -139,10 +138,11 @@ def write_inference_count(count):
 
 def run_inference(num_imgs=1):
     write_inference_count(num_imgs)
+    count = read_inference_count()
 
     return (
         f"<span style='font-size: 16px; font-weight: bold;'>Total inference runs: </span><span style='font-size: "
-        f"16px; color:red; font-weight: bold;'>{TEST_TIMES}</span>"
+        f"16px; color:red; font-weight: bold;'>{count}</span>"
     )
 
 
@@ -242,13 +242,12 @@ def generate(
     flow_dpms_inference_steps: int = 20,
     randomize_seed: bool = False,
 ):
-    global TEST_TIMES
     global INFER_SPEED
     # seed = 823753551
     run_inference(num_imgs)
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator(device=device).manual_seed(seed)
-    print(f"PORT: {DEMO_PORT}, model_path: {model_path}, time_times: {TEST_TIMES}")
+    print(f"PORT: {DEMO_PORT}, model_path: {model_path}")
     if safety_check.is_dangerous(safety_checker_tokenizer, safety_checker_model, prompt, threshold=0.2):
         prompt = "A red heart."
 
@@ -302,7 +301,6 @@ def generate(
     )
 
 
-TEST_TIMES = read_inference_count()
 model_size = "1.6" if "1600M" in args.model_path else "0.6"
 title = f"""
     <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>

@@ -33,13 +33,17 @@ from diffusion.model.nets.sana_blocks import (
     t2i_modulate,
 )
 from diffusion.model.utils import auto_grad_checkpoint
-from diffusion.utils.import_utils import is_triton_module_available
+from diffusion.utils.import_utils import is_triton_module_available, is_xformers_available
 
 _triton_modules_available = False
 if is_triton_module_available():
     from diffusion.model.nets.fastlinear.modules import TritonLiteMLA, TritonMBConvPreGLU    
     _triton_modules_available = True
 
+_xformers_available = False
+if is_xformers_available():
+    import xformers.ops
+    _xformers_available = True
 
 class SanaMSBlock(nn.Module):
     """
@@ -301,14 +305,19 @@ class SanaMS(Sana):
             y = self.attention_y_norm(y)
 
         if mask is not None:
-            if mask.shape[0] != y.shape[0]:
-                mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
+            mask = mask.repeat(y.shape[0] // mask.shape[0], 1) if mask.shape[0] != y.shape[0] else mask
             mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
-            y_lens = mask.sum(dim=1).tolist()
-        else:
+            if _xformers_available:
+                y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+                y_lens = mask.sum(dim=1).tolist()
+            else:
+                y_lens = mask
+        elif _xformers_available:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
+        else:
+            raise ValueError(f"{attn_type} type is not available due to _xformers_available={_xformers_available}.")
+
         for block in self.blocks:
             x = auto_grad_checkpoint(
                 block, x, y, t0, y_lens, (self.h, self.w), **kwargs

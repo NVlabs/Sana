@@ -71,13 +71,14 @@ class MultiHeadCrossAttention(nn.Module):
     def forward(self, x, cond, mask=None):
         # query: img tokens; key/value: condition; mask: if padding tokens
         B, N, C = x.shape
+        first_dim = 1 if _xformers_available else B
 
         q = self.q_linear(x)
-        kv = self.kv_linear(cond).view(1, -1, 2, C)
+        kv = self.kv_linear(cond).view(first_dim, -1, 2, C)
         k, v = kv.unbind(2)
-        q = self.q_norm(q).view(1, -1, self.num_heads, self.head_dim)
-        k = self.k_norm(k).view(1, -1, self.num_heads, self.head_dim)
-        v = v.view(1, -1, self.num_heads, self.head_dim)
+        q = self.q_norm(q).view(first_dim, -1, self.num_heads, self.head_dim)
+        k = self.k_norm(k).view(first_dim, -1, self.num_heads, self.head_dim)
+        v = v.view(first_dim, -1, self.num_heads, self.head_dim)
 
         if _xformers_available:
             attn_bias = None

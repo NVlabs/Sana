@@ -19,9 +19,10 @@ from __future__ import annotations
 import argparse
 import os
 import random
+import socket
+import sqlite3
 import time
 import uuid
-import socket
 from datetime import datetime
 
 import gradio as gr
@@ -42,6 +43,7 @@ USE_TORCH_COMPILE = os.getenv("USE_TORCH_COMPILE", "0") == "1"
 ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "0") == "1"
 DEMO_PORT = int(os.getenv("DEMO_PORT", "15432"))
 os.environ["GRADIO_EXAMPLES_CACHE"] = "./.gradio/cache"
+COUNTER_DB = os.getenv('COUNTER_DB', '.count.db')
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -112,30 +114,30 @@ DEFAULT_SCHEDULE_NAME = "Flow_DPM_Solver"
 NUM_IMAGES_PER_PROMPT = 1
 TEST_TIMES = 0
 INFER_SPEED = 0
-FILENAME = f"output/port{DEMO_PORT}_inference_count.txt"
+
+def open_db():
+    db = sqlite3.connect(COUNTER_DB)
+    db.execute('CREATE TABLE IF NOT EXISTS counter(app CHARS PRIMARY KEY UNIQUE, value INTEGER)')
+    db.execute('INSERT OR IGNORE INTO counter(app, value) VALUES("Sana", 0)')
+    return db
 
 
 def read_inference_count():
-    global TEST_TIMES
-    try:
-        with open(FILENAME) as f:
-            count = int(f.read().strip())
-    except FileNotFoundError:
-        count = 0
-    TEST_TIMES = count
-
-    return count
+    with open_db() as db:
+        cur = db.execute('SELECT value FROM counter WHERE app="Sana"')
+        db.commit()
+    return cur.fetchone()[0]
 
 
 def write_inference_count(count):
-    with open(FILENAME, "w") as f:
-        f.write(str(count))
+    count = max(0, int(count))
+    with open_db() as db:
+        db.execute(f'UPDATE counter SET value=value+{count} WHERE app="Sana"')
+        db.commit()
 
 
 def run_inference(num_imgs=1):
-    TEST_TIMES = read_inference_count()
-    TEST_TIMES += int(num_imgs)
-    write_inference_count(TEST_TIMES)
+    write_inference_count(num_imgs)
 
     return (
         f"<span style='font-size: 16px; font-weight: bold;'>Total inference runs: </span><span style='font-size: "
@@ -242,6 +244,7 @@ def generate(
     global TEST_TIMES
     global INFER_SPEED
     # seed = 823753551
+    run_inference(num_imgs)
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator(device=device).manual_seed(seed)
     print(f"PORT: {DEMO_PORT}, model_path: {model_path}, time_times: {TEST_TIMES}")
@@ -299,7 +302,7 @@ def generate(
 
 
 TEST_TIMES = read_inference_count()
-model_size = "1.6" if "D20" in args.model_path else "0.6"
+model_size = "1.6" if "1600M" in args.model_path else "0.6"
 title = f"""
     <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>
         <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="50%" alt="logo"/>
@@ -335,7 +338,7 @@ css = """
 .gradio-container{max-width: 640px !important}
 h1{text-align:center}
 """
-with gr.Blocks(css=css) as demo:
+with gr.Blocks(css=css, title='Sana') as demo:
     gr.Markdown(title)
     gr.HTML(DESCRIPTION)
     gr.DuplicateButton(

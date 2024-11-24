@@ -43,7 +43,7 @@ USE_TORCH_COMPILE = os.getenv("USE_TORCH_COMPILE", "0") == "1"
 ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "0") == "1"
 DEMO_PORT = int(os.getenv("DEMO_PORT", "15432"))
 os.environ["GRADIO_EXAMPLES_CACHE"] = "./.gradio/cache"
-COUNTER_DB = os.getenv('COUNTER_DB', '.count.db')
+COUNTER_DB = os.getenv("COUNTER_DB", ".count.db")
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -115,9 +115,10 @@ NUM_IMAGES_PER_PROMPT = 1
 TEST_TIMES = 0
 INFER_SPEED = 0
 
+
 def open_db():
     db = sqlite3.connect(COUNTER_DB)
-    db.execute('CREATE TABLE IF NOT EXISTS counter(app CHARS PRIMARY KEY UNIQUE, value INTEGER)')
+    db.execute("CREATE TABLE IF NOT EXISTS counter(app CHARS PRIMARY KEY UNIQUE, value INTEGER)")
     db.execute('INSERT OR IGNORE INTO counter(app, value) VALUES("Sana", 0)')
     return db
 
@@ -338,7 +339,7 @@ css = """
 .gradio-container{max-width: 640px !important}
 h1{text-align:center}
 """
-with gr.Blocks(css=css, title='Sana') as demo:
+with gr.Blocks(css=css, title="Sana") as demo:
     gr.Markdown(title)
     gr.HTML(DESCRIPTION)
     gr.DuplicateButton(

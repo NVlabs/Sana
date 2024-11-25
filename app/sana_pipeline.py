@@ -233,9 +233,7 @@ class SanaPipeline(nn.Module):
             )
 
             for _ in range(num_images_per_prompt):
-                prompts.append(
-                    prepare_prompt_ar(prompt, self.base_ratios, device=self.device, show=False)[0].strip()
-                )
+                prompts.append(prepare_prompt_ar(prompt, self.base_ratios, device=self.device, show=False)[0].strip())
 
             with torch.no_grad():
                 # prepare text feature

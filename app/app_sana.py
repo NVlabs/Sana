@@ -244,7 +244,7 @@ def generate(
 ):
     global INFER_SPEED
     # seed = 823753551
-    run_inference(num_imgs)
+    box = run_inference(num_imgs)
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator(device=device).manual_seed(seed)
     print(f"PORT: {DEMO_PORT}, model_path: {model_path}")
@@ -298,6 +298,7 @@ def generate(
         img,
         seed,
         f"<span style='font-size: 16px; font-weight: bold;'>Inference Speed: {INFER_SPEED:.3f} s/Img</span>",
+        box,
     )
 
 
@@ -445,8 +446,6 @@ with gr.Blocks(css=css, title="Sana") as demo:
                     value=1,
                 )
 
-    run_button.click(fn=run_inference, inputs=num_imgs, outputs=info_box)
-
     gr.Examples(
         examples=examples,
         inputs=prompt,
@@ -483,7 +482,7 @@ with gr.Blocks(css=css, title="Sana") as demo:
             flow_dpms_inference_steps,
             randomize_seed,
         ],
-        outputs=[result, seed, speed_box],
+        outputs=[result, seed, speed_box, info_box],
         api_name="run",
     )
 

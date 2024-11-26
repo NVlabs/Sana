@@ -218,6 +218,25 @@ bash train_scripts/train.sh \
   --train.train_batch_size=8
 ```
 
+Local training with bucketing and VAE embedding caching:
+```bash
+# Prepare buckets and cache VAE embeds
+python train_scripts/make_buckets.py \
+    --config=configs/sana_config/1024ms/Sana_1600M_img1024.yaml \
+    --data.data_dir=[asset/example_data] \
+    --data.buckets_file=buckets.json
+
+# Start training with cached VAE embeddings and bucketing
+bash train_scripts/train_local.sh \
+    configs/sana_config/1024ms/Sana_1600M_img1024.yaml \
+    --data.buckets_file=buckets.json \
+    --train.train_batch_size=30
+```
+Using the AdamW optimizer, training with a batch size of 30 on 1024x1024 resolution consumes ~48GB VRAM on an NVIDIA A6000 GPU.
+Each training iteration takes ~7.5 seconds.
+
+
+
 # 💻 4. Metric toolkit
 
 Refer to [Toolkit Manual](asset/docs/metrics_toolkit.md).

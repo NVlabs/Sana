@@ -146,7 +146,6 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale, pag_scale
                 latent_size,
                 device=device,
                 generator=generator,
-                dtype=weight_dtype,
             )
             model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
 

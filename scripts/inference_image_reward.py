@@ -118,7 +118,14 @@ def visualize(items, bs, sample_steps, cfg_scale, pag_scale=1.0):
         # start sampling
         with torch.no_grad():
             n = len(prompts)
-            z = torch.randn(n, config.vae.vae_latent_dim, latent_size, latent_size, device=device, generator=generator)
+            z = torch.randn(
+                n,
+                config.vae.vae_latent_dim,
+                latent_size,
+                latent_size,
+                device=device,
+                generator=generator,
+            )
             model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
 
             if args.sampling_algo == "dpm-solver":
@@ -205,7 +212,6 @@ def get_args():
 class SanaInference(SanaConfig):
     config: str = ""
     model_path: Optional[str] = field(default=None, metadata={"help": "Path to the model file (optional)"})
-    version: str = "sigma"
     txt_file: str = "asset/samples.txt"
     json_file: Optional[str] = None
     sample_nums: int = 100_000
@@ -214,7 +220,7 @@ class SanaInference(SanaConfig):
     cfg_scale: float = 4.5
     pag_scale: float = 1.0
     sampling_algo: str = field(
-        default="dpm-solver", metadata={"choices": ["dpm-solver", "sa-solver", "flow_euler", "flow_dpm-solver"]}
+        default="flow_dpm-solver", metadata={"choices": ["dpm-solver", "sa-solver", "flow_euler", "flow_dpm-solver"]}
     )
     seed: int = 0
     dataset: str = "custom"
@@ -233,7 +239,6 @@ class SanaInference(SanaConfig):
         default=None, metadata={"help": "A list value, like [0, 1.] for ablation"}
     )
     ablation_key: Optional[str] = field(default=None, metadata={"choices": ["step", "cfg_scale", "pag_scale"]})
-    debug: bool = False
     if_save_dirname: bool = field(
         default=False,
         metadata={"help": "if save img save dir name at wor_dir/metrics/tmp_time.time().txt for metric testing"},
@@ -244,7 +249,6 @@ if __name__ == "__main__":
 
     args = get_args()
     config = args = pyrallis.parse(config_class=SanaInference, config_path=args.config)
-    # config = read_config(args.config)
 
     args.image_size = config.model.image_size
     if args.custom_image_size:
@@ -311,6 +315,7 @@ if __name__ == "__main__":
         "linear_head_dim": config.model.linear_head_dim,
         "pred_sigma": pred_sigma,
         "learn_sigma": learn_sigma,
+        "use_fp32_attention": getattr(config.model, "fp32_attention", False),
     }
     model = build_model(config.model.model, **model_kwargs).to(device)
     logger.info(
@@ -411,6 +416,7 @@ if __name__ == "__main__":
         save_root = create_save_root(args, dataset, epoch_name, step_name, sample_steps, guidance_type)
         os.makedirs(save_root, exist_ok=True)
         if args.if_save_dirname and args.gpu_id == 0:
+            os.makedirs(f"{work_dir}/metrics", exist_ok=True)
             # save at work_dir/metrics/tmp_xxx.txt for metrics testing
             with open(f"{work_dir}/metrics/tmp_{dataset}_{time.time()}.txt", "w") as f:
                 print(f"save tmp file at {work_dir}/metrics/tmp_{dataset}_{time.time()}.txt")

@@ -165,7 +165,7 @@ def generate_img(
 
     n = len(prompts)
     latent_size_h, latent_size_w = height // config.vae.vae_downsample_rate, width // config.vae.vae_downsample_rate
-    z = torch.randn(n, config.vae.vae_latent_dim, latent_size_h, latent_size_w, device=device, dtype=weight_dtype)
+    z = torch.randn(n, config.vae.vae_latent_dim, latent_size_h, latent_size_w, device=device)
     model_kwargs = dict(data_info={"img_hw": (latent_size_h, latent_size_w), "aspect_ratio": 1.0}, mask=emb_masks)
     print(f"Latent Size: {z.shape}")
     # Sample images:

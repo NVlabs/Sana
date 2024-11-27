@@ -35,6 +35,7 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2024/11\] Sana code-base license changed to Apache 2.0.
 - (🔥 New) \[2024/11\] 1.6B [Sana multi-linguistic models](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing) are released. Multi-language(Emoji & Chinese & English) are supported.
 - (🔥 New) \[2024/11\] 1.6B [Sana models](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released.
 - (🔥 New) \[2024/11\] Training & Inference & Metrics code are released.

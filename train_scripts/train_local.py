@@ -29,13 +29,19 @@ from pathlib import Path
 import numpy as np
 import pyrallis
 import torch
+import torch.utils
+import torch.utils.data
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
 from PIL import Image
 from termcolor import colored
-import torch.utils
-import torch.utils.data
+
 warnings.filterwarnings("ignore")  # ignore warning
+
+import gc
+import json
+import math
+import random
 
 from diffusion import DPMS, FlowEuler, Scheduler
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
@@ -47,10 +53,6 @@ from diffusion.utils.logger import LogBuffer, get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_random_seed
 from diffusion.utils.optimizer import build_optimizer
-import json
-import random
-import math
-import gc
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -61,10 +63,13 @@ def set_fsdp_env():
     os.environ["FSDP_BACKWARD_PREFETCH"] = "BACKWARD_PRE"
     os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaBlock"
 
+
 image_index = 0
+
+
 @torch.inference_mode()
 def log_validation(accelerator, config, model, logger, step, device, vae=None, init_noise=None):
-    
+
     torch.cuda.empty_cache()
     vis_sampler = config.scheduler.vis_sampler
     model = accelerator.unwrap_model(model).eval()
@@ -127,7 +132,7 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                     model_kwargs=model_kwargs,
                     schedule="FLOW",
                 )
-                
+
                 denoised = dpm_solver.sample(
                     z,
                     steps=24,
@@ -141,7 +146,7 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
 
             latents.append(denoised)
         torch.cuda.empty_cache()
-        
+
         del_vae = False
         if vae is None:
             vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(torch.float16)
@@ -236,12 +241,9 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
     return image_logs
 
 
-class RatioBucketsDataset():
-    def __init__(
-        self,
-        buckets_file
-    ):
-        with open(buckets_file, 'r') as file:
+class RatioBucketsDataset:
+    def __init__(self, buckets_file):
+        with open(buckets_file) as file:
             self.buckets = json.load(file)
 
     def __getitem__(self, idx):
@@ -249,29 +251,29 @@ class RatioBucketsDataset():
             loader = random.choice(self.loaders)
 
             try:
-                return next(loader)  
+                return next(loader)
             except StopIteration:
                 self.loaders.remove(loader)
                 print(f"bucket ended, {len(self.loaders)}")
 
     def __len__(self):
         return self.size
-    
+
     def make_loaders(self, batch_size):
         self.loaders = []
         self.size = 0
         for bucket in self.buckets.keys():
             dataset = ImageDataset(self.buckets[bucket])
-            
-            loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=False, drop_last=False)
+
+            loader = torch.utils.data.DataLoader(
+                dataset, batch_size=batch_size, shuffle=True, pin_memory=False, drop_last=False
+            )
             self.loaders.append(iter(loader))
             self.size += math.ceil(len(dataset) / batch_size)
 
+
 class ImageDataset(torch.utils.data.Dataset):
-    def __init__(
-        self,
-        images
-    ):
+    def __init__(self, images):
         self.images = images
 
     def getdata(self, idx):
@@ -279,16 +281,16 @@ class ImageDataset(torch.utils.data.Dataset):
         filename_wo_ext = os.path.splitext(os.path.basename(path))[0]
 
         text_file = os.path.join(os.path.dirname(path), f"{filename_wo_ext}.txt")
-        with open(text_file, 'r') as file:
+        with open(text_file) as file:
             prompt = file.read()
 
         cache_file = os.path.join(os.path.dirname(path), f"{filename_wo_ext}_img.npz")
         cached_data = torch.load(cache_file)
 
-        size = cached_data['prefsize']
-        ratio = cached_data['ratio']
-        vae_embed = cached_data['img']
-        
+        size = cached_data["prefsize"]
+        ratio = cached_data["ratio"]
+        vae_embed = cached_data["img"]
+
         data_info = {
             "img_hw": size,
             "aspect_ratio": torch.tensor(ratio.item()),
@@ -312,6 +314,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.images)
+
 
 def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, train_diffusion, logger):
     if getattr(config.train, "debug_nan", False):
@@ -358,19 +361,21 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
             shuffled_prompts = []
             for prompt in prompts:
                 tags = prompt.split(",")  # Split the string into a list of tags
-                random.shuffle(tags)      # Shuffle the tags
+                random.shuffle(tags)  # Shuffle the tags
                 shuffled_prompts.append(",".join(tags))  # Join them back into a string
 
             if "T5" in config.text_encoder.text_encoder_name:
                 with torch.no_grad():
                     txt_tokens = tokenizer(
-                        shuffled_prompts, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
+                        shuffled_prompts,
+                        max_length=max_length,
+                        padding="max_length",
+                        truncation=True,
+                        return_tensors="pt",
                     ).to(accelerator.device)
                     y = text_encoder(txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
                     y_mask = txt_tokens.attention_mask[:, None, None]
-            elif (
-                "gemma" in config.text_encoder.text_encoder_name or "Qwen" in config.text_encoder.text_encoder_name
-            ):
+            elif "gemma" in config.text_encoder.text_encoder_name or "Qwen" in config.text_encoder.text_encoder_name:
                 with torch.no_grad():
                     if not config.text_encoder.chi_prompt:
                         max_length_all = config.text_encoder.model_max_length
@@ -430,13 +435,13 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 # Check if the loss is NaN
                 if torch.isnan(loss):
                     loss_nan_timer += 1
-                    print(f'Skip nan: {loss_nan_timer}')
+                    print(f"Skip nan: {loss_nan_timer}")
                     continue  # Skip the rest of the loop iteration if loss is NaN
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.train.gradient_clip)
-                
+
                 optimizer.step()
                 lr_scheduler.step()
                 accelerator.wait_for_everyone()
@@ -462,9 +467,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 )
                 log_buffer.average()
 
-                current_step = (
-                    global_step - step // config.train.train_batch_size
-                ) % len(dataset)
+                current_step = (global_step - step // config.train.train_batch_size) % len(dataset)
                 current_step = len(dataset) if current_step == 0 else current_step
                 info = (
                     f"Epoch: {epoch} | Global Step: {global_step} | Local Step: {current_step} // {len(dataset)}, "
@@ -639,7 +642,7 @@ def main(cfg: SanaConfig) -> None:
         if getattr(config.train, "deterministic_validation", False)
         else None
     )
-    
+
     tokenizer = text_encoder = None
     if not config.data.load_text_feat:
         tokenizer, text_encoder = get_tokenizer_and_text_encoder(
@@ -732,7 +735,11 @@ def main(cfg: SanaConfig) -> None:
                 torch.save({"caption_embeds": caption_emb, "emb_mask": caption_emb_mask}, prompt_embed_path)
 
             null_tokens = tokenizer(
-                "bad artwork,ugly,sketch,poorly drawn,messy,noisy,score: 0/10,blurry,low quality,old", max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
+                "bad artwork,ugly,sketch,poorly drawn,messy,noisy,score: 0/10,blurry,low quality,old",
+                max_length=max_length,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
             ).to(accelerator.device)
             if "T5" in config.text_encoder.text_encoder_name:
                 null_token_emb = text_encoder(null_tokens.input_ids, attention_mask=null_tokens.attention_mask)[0]
@@ -849,7 +856,7 @@ def main(cfg: SanaConfig) -> None:
             config.train.lr_schedule_args["num_warmup_steps"] * num_replicas
         )
     lr_scheduler = build_lr_scheduler(config.train, optimizer, dataset, 1)
-    
+
     logger.warning(
         f"{colored(f'Basic Setting: ', 'green', attrs=['bold'])}"
         f"lr: {config.train.optimizer['lr']:.9f}, bs: {config.train.train_batch_size}, gc: {config.train.grad_checkpointing}, "

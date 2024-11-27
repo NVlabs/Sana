@@ -222,6 +222,7 @@ bash train_scripts/train.sh \
 ```
 
 Local training with bucketing and VAE embedding caching:
+
 ```bash
 # Prepare buckets and cache VAE embeds
 python train_scripts/make_buckets.py \
@@ -235,10 +236,9 @@ bash train_scripts/train_local.sh \
     --data.buckets_file=buckets.json \
     --train.train_batch_size=30
 ```
+
 Using the AdamW optimizer, training with a batch size of 30 on 1024x1024 resolution consumes ~48GB VRAM on an NVIDIA A6000 GPU.
 Each training iteration takes ~7.5 seconds.
-
-
 
 # 💻 4. Metric toolkit
 

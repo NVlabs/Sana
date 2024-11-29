@@ -504,10 +504,12 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                     checkpoints_dir = osp.join(config.work_dir, "checkpoints")
 
                     # Remove all old checkpoint files in the directory
-                    for filename in os.listdir(checkpoints_dir):
-                        file_path = osp.join(checkpoints_dir, filename)
-                        if os.path.isfile(file_path):
-                            os.remove(file_path)
+                    if(os.path.exists(checkpoints_dir)):
+                        for filename in os.listdir(checkpoints_dir):
+                            file_path = osp.join(checkpoints_dir, filename)
+                            if os.path.isfile(file_path):
+                                os.remove(file_path)
+
                     ckpt_saved_path = save_checkpoint(
                         checkpoints_dir,
                         epoch=epoch,

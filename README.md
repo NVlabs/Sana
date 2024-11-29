@@ -204,7 +204,7 @@ asset/example_data
 Then Sana's training can be launched via
 
 ```bash
-# Example of training Sana 0.6B with 512x512 resolution
+# Example of training Sana 0.6B with 512x512 resolution from scratch
 bash train_scripts/train.sh \
   configs/sana_config/512ms/Sana_600M_img512.yaml \
   --data.data_dir="[asset/example_data]" \
@@ -212,11 +212,12 @@ bash train_scripts/train.sh \
   --model.multi_scale=false \
   --train.train_batch_size=32
 
-# Example of training Sana 1.6B with 1024x1024 resolution
+# Example of fine-tuning Sana 1.6B with 1024x1024 resolution
 bash train_scripts/train.sh \
   configs/sana_config/1024ms/Sana_1600M_img1024.yaml \
   --data.data_dir="[asset/example_data]" \
   --data.type=SanaImgDataset \
+  --model.load_from=hf://Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth \
   --model.multi_scale=false \
   --train.train_batch_size=8
 ```

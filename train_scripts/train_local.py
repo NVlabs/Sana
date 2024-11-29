@@ -15,12 +15,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import datetime
-import getpass
 import hashlib
-import json
 import os
 import os.path as osp
-import random
 import time
 import types
 import warnings
@@ -31,9 +28,9 @@ import pyrallis
 import torch
 import torch.utils
 import torch.utils.data
+from PIL import Image
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
-from PIL import Image
 from termcolor import colored
 
 warnings.filterwarnings("ignore")  # ignore warning
@@ -44,7 +41,7 @@ import math
 import random
 
 from diffusion import DPMS, FlowEuler, Scheduler
-from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
+from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode
 from diffusion.model.respace import compute_density_for_timestep_sampling
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
 from diffusion.utils.config import SanaConfig
@@ -68,8 +65,7 @@ image_index = 0
 
 
 @torch.inference_mode()
-def log_validation(accelerator, config, model, logger, step, device, vae=None, init_noise=None):
-
+def idation(accelerator, config, model, step, device, vae=None, init_noise=None):
     torch.cuda.empty_cache()
     vis_sampler = config.scheduler.vis_sampler
     model = accelerator.unwrap_model(model).eval()
@@ -82,7 +78,12 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
     logger.info("Running validation... ")
     image_logs = []
 
-    def run_sampling(init_z=None, label_suffix="", vae=None, sampler="dpm-solver"):
+    del_vae = False
+    if vae is None:
+        vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(torch.float16)
+        del_vae = True
+
+    def run_sampling(init_z=None, label_suffix="", sampler="dpm-solver"):
         latents = []
         current_image_logs = []
 
@@ -147,10 +148,6 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
             latents.append(denoised)
         torch.cuda.empty_cache()
 
-        del_vae = False
-        if vae is None:
-            vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(torch.float16)
-            del_vae = True
         for prompt, latent in zip(validation_prompts, latents):
             latent = latent.to(torch.float16)
             samples = vae_decode(config.vae.vae_type, vae, latent)
@@ -160,19 +157,20 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
             image = Image.fromarray(samples)
             current_image_logs.append({"validation_prompt": prompt + label_suffix, "images": [image]})
 
-        if del_vae:
-            vae = None
-            gc.collect()
-            torch.cuda.empty_cache()
         return current_image_logs
 
     # First run with original noise
-    image_logs += run_sampling(init_z=None, label_suffix="", vae=vae, sampler=vis_sampler)
+    image_logs += run_sampling(init_z=None, label_suffix="", sampler=vis_sampler)
 
     # Second run with init_noise if provided
     if init_noise is not None:
         init_noise = torch.clone(init_noise).to(device)
-        image_logs += run_sampling(init_z=init_noise, label_suffix=" w/ init noise", vae=vae, sampler=vis_sampler)
+        image_logs += run_sampling(init_z=init_noise, label_suffix=" w/ init noise", sampler=vis_sampler)
+
+    if del_vae:
+        vae = None
+        gc.collect()
+        torch.cuda.empty_cache()
 
     formatted_images = []
     for log in image_logs:
@@ -204,13 +202,13 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
 
         widths, heights = zip(*(img.size for img in images))
         max_width = max(widths)
-        total_height = sum(heights[i : i + images_per_row][0] for i in range(0, len(images), images_per_row))
+        total_height = sum(heights[i: i + images_per_row][0] for i in range(0, len(images), images_per_row))
 
         new_im = Image.new("RGB", (max_width * images_per_row, total_height))
 
         y_offset = 0
         for i in range(0, len(images), images_per_row):
-            row_images = images[i : i + images_per_row]
+            row_images = images[i: i + images_per_row]
             x_offset = 0
             for img in row_images:
                 new_im.paste(img, (x_offset, y_offset))
@@ -254,7 +252,7 @@ class RatioBucketsDataset:
                 return next(loader)
             except StopIteration:
                 self.loaders.remove(loader)
-                print(f"bucket ended, {len(self.loaders)}")
+                logger.info(f"bucket ended, {len(self.loaders)}")
 
     def __len__(self):
         return self.size
@@ -308,7 +306,7 @@ class ImageDataset(torch.utils.data.Dataset):
                 data = self.getdata(idx)
                 return data
             except Exception as e:
-                print(f"Error details: {str(e)}")
+                logger.error(f"Error details: {str(e)}")
                 idx = idx + 1
         raise RuntimeError("Too many bad data.")
 
@@ -316,7 +314,7 @@ class ImageDataset(torch.utils.data.Dataset):
         return len(self.images)
 
 
-def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, train_diffusion, logger):
+def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, train_diffusion):
     if getattr(config.train, "debug_nan", False):
         DebugUnderflowOverflow(model)
         logger.info("NaN debugger registered. Start to detect overflow during training.")
@@ -325,9 +323,39 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
     def check_nan_inf(model):
         for name, param in model.named_parameters():
             if torch.isnan(param).any() or torch.isinf(param).any():
-                print(f"NaN/Inf detected in {name}")
+                logger.error(f"NaN/Inf detected in {name}")
 
     check_nan_inf(model)
+
+    def save_model(save_metric=True):
+        accelerator.wait_for_everyone()
+        if accelerator.is_main_process:
+            os.umask(0o000)
+            checkpoints_dir = osp.join(config.work_dir, "checkpoints")
+
+            # Remove all old checkpoint files in the directory
+            if os.path.exists(checkpoints_dir):
+                for filename in os.listdir(checkpoints_dir):
+                    file_path = osp.join(checkpoints_dir, filename)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+
+            ckpt_saved_path = save_checkpoint(
+                checkpoints_dir,
+                epoch=epoch,
+                step=global_step,
+                model=accelerator.unwrap_model(model),
+                optimizer=optimizer,
+                lr_scheduler=lr_scheduler,
+                generator=generator,
+                add_symlink=True,
+            )
+            if save_metric:
+                online_metric_monitor_dir = osp.join(config.work_dir, config.train.online_metric_dir)
+                os.makedirs(online_metric_monitor_dir, exist_ok=True)
+                with open(f"{online_metric_monitor_dir}/{ckpt_saved_path.split('/')[-1]}.txt", "w") as f:
+                    f.write(osp.join(config.work_dir, "config.py") + "\n")
+                    f.write(ckpt_saved_path)
 
     global_step = start_step + 1
     skip_step = max(config.train.skip_step, global_step) % len(dataset)
@@ -344,6 +372,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
         data_time_all = 0
         lm_time_all = 0
         model_time_all = 0
+        optimizer_time_all = 0
         dataset.make_loaders(config.train.train_batch_size)
         for step, batch in enumerate(dataset):
             # image, json_info, key = batch
@@ -385,7 +414,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                         prompt = [chi_prompt + i for i in shuffled_prompts]
                         num_chi_prompt_tokens = len(tokenizer.encode(chi_prompt))
                         max_length_all = (
-                            num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
+                                num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
                         )  # magic number 2: [bos], [_]
                     txt_tokens = tokenizer(
                         prompt,
@@ -399,10 +428,10 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                     )  # first bos and end N-1
                     y = text_encoder(txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None][
                         :, :, select_index
-                    ]
+                        ]
                     y_mask = txt_tokens.attention_mask[:, None, None][:, :, :, select_index]
             else:
-                print("error")
+                logger.error("error")
                 exit()
 
             # Sample a random timestep for each image
@@ -435,17 +464,19 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 # Check if the loss is NaN
                 if torch.isnan(loss):
                     loss_nan_timer += 1
-                    print(f"Skip nan: {loss_nan_timer}")
+                    logger.warning(f"Skip nan: {loss_nan_timer}")
                     continue  # Skip the rest of the loop iteration if loss is NaN
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.train.gradient_clip)
 
+                model_time_all += time.time() - model_time_start
+                optimizer_time_start = time.time()
                 optimizer.step()
+                optimizer_time_all += time.time() - optimizer_time_start
                 lr_scheduler.step()
                 accelerator.wait_for_everyone()
-                model_time_all += time.time() - model_time_start
 
             lr = lr_scheduler.get_last_lr()[0]
             logs = {args.loss_report_name: accelerator.gather(loss).mean().item()}
@@ -457,6 +488,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 t = (time.time() - last_tic) / config.train.log_interval
                 t_d = data_time_all / config.train.log_interval
                 t_m = model_time_all / config.train.log_interval
+                t_opt = optimizer_time_all / config.train.log_interval
                 t_lm = lm_time_all / config.train.log_interval
                 avg_time = (time.time() - time_start) / (step + 1)
                 eta = str(datetime.timedelta(seconds=int(avg_time * (total_steps - global_step - 1))))
@@ -471,7 +503,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 current_step = len(dataset) if current_step == 0 else current_step
                 info = (
                     f"Epoch: {epoch} | Global Step: {global_step} | Local Step: {current_step} // {len(dataset)}, "
-                    f"total_eta: {eta}, epoch_eta:{eta_epoch}, time: all:{t:.3f}, model:{t_m:.3f}, data:{t_d:.3f}, "
+                    f"total_eta: {eta}, epoch_eta:{eta_epoch}, time: all:{t:.3f}, model:{t_m:.3f}, optimizer:{t_opt:.3f}, data:{t_d:.3f}, "
                     f"lm:{t_lm:.3f}, lr:{lr:.3e}, "
                 )
                 info += (
@@ -485,6 +517,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 log_buffer.clear()
                 data_time_all = 0
                 model_time_all = 0
+                optimizer_time_all = 0
                 lm_time_all = 0
                 if accelerator.is_main_process:
                     logger.info(info)
@@ -498,34 +531,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
             if loss_nan_timer > 20:
                 raise ValueError("Loss is NaN too much times. Break here.")
             if global_step % config.train.save_model_steps == 0:
-                accelerator.wait_for_everyone()
-                if accelerator.is_main_process:
-                    os.umask(0o000)
-                    checkpoints_dir = osp.join(config.work_dir, "checkpoints")
-
-                    # Remove all old checkpoint files in the directory
-                    if(os.path.exists(checkpoints_dir)):
-                        for filename in os.listdir(checkpoints_dir):
-                            file_path = osp.join(checkpoints_dir, filename)
-                            if os.path.isfile(file_path):
-                                os.remove(file_path)
-
-                    ckpt_saved_path = save_checkpoint(
-                        checkpoints_dir,
-                        epoch=epoch,
-                        step=global_step,
-                        model=accelerator.unwrap_model(model),
-                        optimizer=optimizer,
-                        lr_scheduler=lr_scheduler,
-                        generator=generator,
-                        add_symlink=True,
-                    )
-                    if config.train.online_metric and global_step % config.train.eval_metric_step == 0 and step > 1:
-                        online_metric_monitor_dir = osp.join(config.work_dir, config.train.online_metric_dir)
-                        os.makedirs(online_metric_monitor_dir, exist_ok=True)
-                        with open(f"{online_metric_monitor_dir}/{ckpt_saved_path.split('/')[-1]}.txt", "w") as f:
-                            f.write(osp.join(config.work_dir, "config.py") + "\n")
-                            f.write(ckpt_saved_path)
+                save_model(config.train.online_metric and global_step % config.train.eval_metric_step == 0 and step > 1)
 
                 # if (time.time() - training_start_time) / 3600 > 3.8:
                 #     logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to time limit.")
@@ -534,22 +540,20 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     if validation_noise is not None:
-                        log_validation(
+                        idation(
                             accelerator=accelerator,
                             config=config,
                             model=model,
-                            logger=logger,
                             step=global_step,
                             device=accelerator.device,
                             vae=vae,
                             init_noise=validation_noise,
                         )
                     else:
-                        log_validation(
+                        idation(
                             accelerator=accelerator,
                             config=config,
                             model=model,
-                            logger=logger,
                             step=global_step,
                             device=accelerator.device,
                             vae=vae,
@@ -557,15 +561,18 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, dataset, tr
 
             data_time_start = time.time()
 
+        if epoch % config.train.save_model_epochs == 0 or epoch == config.train.num_epochs and not config.debug:
+            save_model()
         accelerator.wait_for_everyone()
+    save_model()
 
 
 @pyrallis.wrap()
 def main(cfg: SanaConfig) -> None:
     global start_epoch, start_step, vae, generator, num_replicas, rank, training_start_time
-    global load_vae_feat, load_text_feat, validation_noise, text_encoder, tokenizer
+    global load_vae_feat, load_text_feat, validation_noise, text_encoder, tokenizer, logger
     global max_length, validation_prompts, latent_size, valid_prompt_embed_suffix, null_embed_path
-    global image_size, cache_file, total_steps
+    global image_size, total_steps
 
     config = cfg
     args = cfg
@@ -707,7 +714,7 @@ def main(cfg: SanaConfig) -> None:
                     caption_emb = text_encoder(txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0]
                     caption_emb_mask = txt_tokens.attention_mask
                 elif (
-                    "gemma" in config.text_encoder.text_encoder_name or "Qwen" in config.text_encoder.text_encoder_name
+                        "gemma" in config.text_encoder.text_encoder_name or "Qwen" in config.text_encoder.text_encoder_name
                 ):
                     if not config.text_encoder.chi_prompt:
                         max_length_all = config.text_encoder.model_max_length
@@ -716,7 +723,7 @@ def main(cfg: SanaConfig) -> None:
                         prompt = chi_prompt + prompt
                         num_chi_prompt_tokens = len(tokenizer.encode(chi_prompt))
                         max_length_all = (
-                            num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
+                                num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
                         )  # magic number 2: [bos], [_]
 
                     txt_tokens = tokenizer(
@@ -728,8 +735,8 @@ def main(cfg: SanaConfig) -> None:
                     ).to(accelerator.device)
                     select_index = [0] + list(range(-config.text_encoder.model_max_length + 1, 0))
                     caption_emb = text_encoder(txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][
-                        :, select_index
-                    ]
+                                  :, select_index
+                                  ]
                     caption_emb_mask = txt_tokens.attention_mask[:, select_index]
                 else:
                     raise ValueError(f"{config.text_encoder.text_encoder_name} is not supported!!")
@@ -821,15 +828,17 @@ def main(cfg: SanaConfig) -> None:
     # 2-1. load model
     if args.load_from is not None:
         config.model.load_from = args.load_from
-    # if config.model.load_from is not None and load_from:
-    #     _, missing, unexpected, _ = load_checkpoint(
-    #         config.model.load_from,
-    #         model,
-    #         load_ema=config.model.resume_from.get("load_ema", False),
-    #         null_embed_path=null_embed_path,
-    #     )
-    #     logger.warning(f"Missing keys: {missing}")
-    #     logger.warning(f"Unexpected keys: {unexpected}")
+    if config.model.load_from is not None and load_from:
+        _, missing, unexpected, _ = load_checkpoint(
+            config.model.load_from,
+            model,
+            load_ema=config.model.resume_from.get("load_ema", False),
+            null_embed_path=null_embed_path,
+        )
+        if missing:
+            logger.warning(f"Missing keys: {missing}")
+        if unexpected:
+            logger.warning(f"Unexpected keys: {unexpected}")
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
@@ -855,7 +864,7 @@ def main(cfg: SanaConfig) -> None:
 
     if config.train.lr_schedule_args and config.train.lr_schedule_args.get("num_warmup_steps", None):
         config.train.lr_schedule_args["num_warmup_steps"] = (
-            config.train.lr_schedule_args["num_warmup_steps"] * num_replicas
+                config.train.lr_schedule_args["num_warmup_steps"] * num_replicas
         )
     lr_scheduler = build_lr_scheduler(config.train, optimizer, dataset, 1)
 
@@ -906,8 +915,10 @@ def main(cfg: SanaConfig) -> None:
                 null_embed_path=null_embed_path,
             )
 
-            logger.warning(f"Missing keys: {missing}")
-            logger.warning(f"Unexpected keys: {unexpected}")
+            if missing:
+                logger.warning(f"Missing keys: {missing}")
+            if unexpected:
+                logger.warning(f"Unexpected keys: {unexpected}")
 
             path = osp.basename(config.model.resume_from["checkpoint"])
         try:
@@ -939,8 +950,7 @@ def main(cfg: SanaConfig) -> None:
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         dataset=dataset,
-        train_diffusion=train_diffusion,
-        logger=logger,
+        train_diffusion=train_diffusion
     )
 
 

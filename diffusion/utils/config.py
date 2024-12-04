@@ -141,6 +141,7 @@ class TrainingConfig(BaseConfig):
     load_mask_index: bool = False
     snr_loss: bool = False
     real_prompt_ratio: float = 1.0
+    training_hours: float = 10000.0
     save_image_epochs: int = 1
     save_model_epochs: int = 1
     save_model_steps: int = 1000000

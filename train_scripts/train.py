@@ -448,7 +448,10 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
 
             if loss_nan_timer > 20:
                 raise ValueError("Loss is NaN too much times. Break here.")
-            if global_step % config.train.save_model_steps == 0 or (time.time() - training_start_time) / 3600 > 3.8:
+            if (
+                global_step % config.train.save_model_steps == 0
+                or (time.time() - training_start_time) / 3600 > config.train.training_hours
+            ):
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     os.umask(0o000)
@@ -469,7 +472,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                             f.write(osp.join(config.work_dir, "config.py") + "\n")
                             f.write(ckpt_saved_path)
 
-                if (time.time() - training_start_time) / 3600 > 3.8:
+                if (time.time() - training_start_time) / 3600 > config.train.training_hours:
                     logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to time limit.")
                     return
             if config.train.visualize and (global_step % config.train.eval_sampling_steps == 0 or (step + 1) == 1):

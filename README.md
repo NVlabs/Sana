@@ -243,10 +243,10 @@ We will try our best to release
 
 # 🤗Acknowledgements
 
-- Thanks to [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma), 
-[Efficient-ViT](https://github.com/mit-han-lab/efficientvit) and
-[ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels)
-for their wonderful work and codebase!
+- Thanks to [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma),
+  [Efficient-ViT](https://github.com/mit-han-lab/efficientvit) and
+  [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels)
+  for their wonderful work and codebase!
 
 # 📖BibTeX
 

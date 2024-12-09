@@ -3,14 +3,16 @@
 [Original Repo](https://github.com/city96/ComfyUI_ExtraModels)
 
 ### Model info / implementation
+
 - Uses Gemma2 2B as the text encoder
 - Multiple resolutions and models available
 - Compressed latent space (32 channels, /32 compression) - needs custom VAE
 
 ### Usage
+
 1. All the checkpoints will be downloaded automatically.
-2. KSampler(Flow Euler) is available for now; Flow DPM-Solver will be available soon.
-3. For more information, check the [original city96/ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels).
+1. KSampler(Flow Euler) is available for now; Flow DPM-Solver will be available soon.
+1. For more information, check the [original city96/ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels).
 
 ```bash
 git clone https://github.com/comfyanonymous/ComfyUI.git

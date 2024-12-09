@@ -36,9 +36,10 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.
 
 ## 🔥🔥 News
 
-- (🔥 New) \[2024/11/30\] All multi-linguistic (Emoji & Chinese & English) SFT models are released: [1.6B-512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing), [1.6B-1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing), [600M-512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px), [600M-1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px). The metric performance is shown [here](#performance)
-- (🔥 New) \[2024/11/27\] Sana Replicate API is launching at [Sana-API](https://replicate.com/chenxwh/sana).
-- (🔥 New) \[2024/11/27\] Sana code-base license changed to Apache 2.0.
+- (🔥 New) \[2024/12/9\] We release the [ComfyUI node](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels) for Sana. [\[Guidance\]](asset/docs/ComfyUI/comfyui.md)
+- (🔥 New) \[2024/11\] All multi-linguistic (Emoji & Chinese & English) SFT models are released: [1.6B-512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing), [1.6B-1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing), [600M-512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px), [600M-1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px). The metric performance is shown [here](#performance)
+- (🔥 New) \[2024/11\] Sana Replicate API is launching at [Sana-API](https://replicate.com/chenxwh/sana).
+- (🔥 New) \[2024/11\] Sana code-base license changed to Apache 2.0.
 - (🔥 New) \[2024/11\] 1.6B [Sana models](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released.
 - (🔥 New) \[2024/11\] Training & Inference & Metrics code are released.
 - (🔥 New) \[2024/11\] Working on [`diffusers`](https://github.com/huggingface/diffusers/pull/9982).
@@ -235,13 +236,17 @@ We will try our best to release
 - \[x\] Training code
 - \[x\] Inference code
 - \[+\] Model zoo
-- \[ \] working on Diffusers(https://github.com/huggingface/diffusers/pull/9982)
-- \[ \] ComfyUI
+- \[x\] ComfyUI
+- \[x\] DC-AE Diffusers
+- \[ \] Sana working on Diffusers(https://github.com/huggingface/diffusers/pull/9982)
 - \[ \] Laptop development
 
 # 🤗Acknowledgements
 
-- Thanks to [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma) and [Efficient-ViT](https://github.com/mit-han-lab/efficientvit) for their wonderful work and codebase!
+- Thanks to [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma), 
+[Efficient-ViT](https://github.com/mit-han-lab/efficientvit) and
+[ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels)
+for their wonderful work and codebase!
 
 # 📖BibTeX
 

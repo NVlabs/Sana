@@ -32,9 +32,4 @@ python main.py
 
 [Sana + CogVideoX workflow](Sana_CogVideoX.json)
 
-![Sample T2I + I2V workflow](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/sana-cogvideox.jpg)
-
-<video width="800" controls>
-  <source src="https://nvlabs.github.io/Sana/asset/content/comfyui/Sana_CogVideoX_Fun.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+[![Sample T2I + I2V](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/sana-cogvideox.jpg)](https://nvlabs.github.io/Sana/asset/content/comfyui/Sana_CogVideoX_Fun.mp4)

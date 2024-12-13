@@ -12,7 +12,6 @@
 
 1. All the checkpoints will be downloaded automatically.
 1. KSampler(Flow Euler) is available for now; Flow DPM-Solver will be available soon.
-1. For more information, check the [original city96/ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels).
 
 ```bash
 git clone https://github.com/comfyanonymous/ComfyUI.git

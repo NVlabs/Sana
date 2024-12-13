@@ -36,6 +36,7 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2024/12/13\] `diffusers` has Sana! [All Sana models in diffusers safetensors](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released and diffusers pipeline `SanaPipeline`, `SanaPAGPipeline`, `DPMSolverMultistepScheduler(with FlowMatching)` are all supported now.
 - (🔥 New) \[2024/12/10\] 1.6B BF16 [Sana model](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16) is released for stable fine-tuning.
 - (🔥 New) \[2024/12/9\] We release the [ComfyUI node](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels) for Sana. [\[Guidance\]](asset/docs/ComfyUI/comfyui.md)
 - (🔥 New) \[2024/11\] All multi-linguistic (Emoji & Chinese & English) SFT models are released: [1.6B-512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing), [1.6B-1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing), [600M-512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px), [600M-1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px). The metric performance is shown [here](#performance)
@@ -123,6 +124,69 @@ python app/app_sana.py \
     --model_path=hf://Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth
 ```
 
+### 1. How to use `SanaPipeline` with `🧨diffusers`
+
+run `pip install -U diffusers` before use Sana in diffusers
+
+```python
+import torch
+from diffusers import SanaPipeline
+
+pipe = SanaPipeline.from_pretrained(
+    "Efficient-Large-Model/Sana_1600M_1024px_diffusers",
+    variant="fp16",
+    torch_dtype=torch.float16,
+)
+pipe.to("cuda")
+
+pipe.vae.to(torch.bfloat16)
+pipe.text_encoder.to(torch.bfloat16)
+
+prompt = 'a cyberpunk cat with a neon sign that says "Sana"'
+image = pipe(
+    prompt=prompt,
+    height=1024,
+    width=1024,
+    guidance_scale=5.0,
+    num_inference_steps=20,
+    generator=torch.Generator(device="cuda").manual_seed(42),
+)[0]
+
+image[0].save("sana.png")
+```
+
+### 2. How to use `SanaPAGPipeline` with `🧨diffusers`
+
+```python
+# run `pip install -U diffusers` before use Sana in diffusers
+import torch
+from diffusers import SanaPAGPipeline
+
+pipe = SanaPAGPipeline.from_pretrained(
+  "Efficient-Large-Model/Sana_1600M_1024px_diffusers",
+  variant="fp16",
+  torch_dtype=torch.float16,
+  pag_applied_layers="transformer_blocks.8"
+)
+pipe.to("cuda")
+
+pipe.text_encoder.to(torch.bfloat16)
+pipe.vae.to(torch.bfloat16)
+
+prompt = 'a cyberpunk cat with a neon sign that says "Sana"'
+image = pipe(
+    prompt=prompt,
+    guidance_scale=5.0,
+    pag_scale=2.0,
+    num_inference_steps=20,
+    generator=torch.Generator(device="cuda").manual_seed(42),
+)[0]
+image[0].save('sana.png')
+```
+
+<details>
+<summary><h3>3. How to use Sana in this repo</h3></summary>
+
 ```python
 import torch
 from app.sana_pipeline import SanaPipeline
@@ -147,8 +211,10 @@ image = sana(
 save_image(image, 'output/sana.png', nrow=1, normalize=True, value_range=(-1, 1))
 ```
 
+</details>
+
 <details>
-<summary><h2>Run Sana (Inference) with Docker</h2></summary>
+<summary><h3>4. Run Sana (Inference) with Docker</h3></summary>
 
 ```
 # Pull related models

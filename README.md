@@ -116,7 +116,6 @@ cd Sana
 
 ## 🔛 Choose your model: [Model card](asset/docs/model_zoo.md)
 
-
 ## 🔛 Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
 ```bash
@@ -171,7 +170,7 @@ pipe = SanaPAGPipeline.from_pretrained(
   "Efficient-Large-Model/Sana_1600M_1024px_diffusers",
   variant="fp16",
   torch_dtype=torch.float16,
-  pag_applied_layers="transformer_blocks.8"
+  pag_applied_layers="transformer_blocks.8",
 )
 pipe.to("cuda")
 

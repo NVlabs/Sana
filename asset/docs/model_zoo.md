@@ -56,7 +56,7 @@ pipe = SanaPAGPipeline.from_pretrained(
   "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers",
   variant="bf16",
   torch_dtype=torch.bfloat16,
-  pag_applied_layers="transformer_blocks.8"
+  pag_applied_layers="transformer_blocks.8",
 )
 pipe.to("cuda")
 

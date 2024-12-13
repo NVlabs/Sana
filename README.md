@@ -114,6 +114,9 @@ cd Sana
 - 9GB VRAM is required for 0.6B model and 12GB VRAM for 1.6B model. Our later quantization version will require less than 8GB for inference.
 - All the tests are done on A100 GPUs. Different GPU version may be different.
 
+## 🔛 Choose your model: [Model card](asset/docs/model_zoo.md)
+
+
 ## 🔛 Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
 ```bash

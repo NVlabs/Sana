@@ -88,6 +88,7 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.
 
 - [Env](#-1-dependencies-and-installation)
 - [Demo](#-3-how-to-inference)
+- [Model Zoo](asset/docs/model_zoo.md)
 - [Training](#-2-how-to-train)
 - [Testing](#-4-how-to-inference--test-metrics-fid-clip-score-geneval-dpg-bench-etc)
 - [TODO](#to-do-list)
@@ -126,7 +127,8 @@ python app/app_sana.py \
 
 ### 1. How to use `SanaPipeline` with `🧨diffusers`
 
-run `pip install -U diffusers` before use Sana in diffusers
+1. Run `pip install -U diffusers` before use Sana in diffusers
+1. Make sure to use variant(bf16, fp16, fp32) and torch_dtype(torch.float16, torch.bfloat16, torch.float32) to specify the precision you want.
 
 ```python
 import torch
@@ -311,8 +313,9 @@ We will try our best to release
 # 🤗Acknowledgements
 
 - Thanks to [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma),
-  [Efficient-ViT](https://github.com/mit-han-lab/efficientvit) and
-  [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels)
+  [Efficient-ViT](https://github.com/mit-han-lab/efficientvit),
+  [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) and
+  [diffusers](https://github.com/huggingface/diffusers)
   for their wonderful work and codebase!
 
 # 📖BibTeX

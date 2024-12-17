@@ -92,8 +92,12 @@ class SanaImgDataset(torch.utils.data.Dataset):
 
     def getdata(self, idx):
         data = self.dataset[idx]
+        img_extensions = [".jpg", ".png", ".jpeg", ".webp"]
+        filename, ext = os.path.splitext(data)
+        if ext in img_extensions:
+            data = filename
+            self.img_extension = ext
         self.key = data.split("/")[-1]
-        # info = json.load(open(f"{data}.json"))[self.key]
         info = {}
         with open(f"{data}.txt") as f:
             info[self.default_prompt] = f.readlines()[0].strip()

@@ -126,3 +126,19 @@ We provide several options for optimizing memory optimization:
 - `--use_8bit_adam`: When enabled, we will use the 8bit version of AdamW provided by the `bitsandbytes` library.
 
 Refer to the [official documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/sana) of the `SanaPipeline` to know more about the models available under the SANA family and their preferred dtypes during inference.
+
+## Samples
+
+We show some samples during Sana-LoRA fine-tuning process below.
+
+<p align="center" border-raduis="10px">
+  <img src="https://nvlabs.github.io/Sana/asset/content/dreambooth/step0.jpg" width="90%" alt="sana-lora-step0"/>
+  <br>
+  <em> training samples at step=0 </em>
+</p>
+
+<p align="center" border-raduis="10px">
+  <img src="https://nvlabs.github.io/Sana/asset/content/dreambooth/step500.jpg" width="90%" alt="sana-lora-step500"/>
+  <br>
+  <em> training samples at step=500 </em>
+</p>

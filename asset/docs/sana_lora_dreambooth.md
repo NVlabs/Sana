@@ -22,12 +22,6 @@ cd diffusers
 pip install -e .
 ```
 
-Then cd in the `examples/dreambooth` folder and run
-
-```bash
-pip install -r requirements_sana.txt
-```
-
 And initialize an [🤗Accelerate](https://github.com/huggingface/accelerate/) environment with:
 
 ```bash
@@ -71,19 +65,29 @@ This will also allow us to push the trained LoRA parameters to the Hugging Face 
 
 [Here is the Model Card](model_zoo.md) for you to choose the desired pre-trained models and set it to `MODEL_NAME`.
 
-Now, we can launch training using:
+Now, we can launch training using [file here](../../train_scripts/train_lora.sh):
 
 ```bash
+bash train_scripts/train_lora.sh
+```
+
+or you can run it locally:
+
+```bash
+huggingface-cli download diffusers/dog-example --local-dir data/dreambooth/dog --repo-type dataset
+
 export MODEL_NAME="Efficient-Large-Model/Sana_1600M_1024px_diffusers"
-export INSTANCE_DIR="dog"
+export INSTANCE_DIR="data/dreambooth/dog"
 export OUTPUT_DIR="trained-sana-lora"
 
-accelerate launch train_dreambooth_lora_sana.py \
+accelerate launch --num_processes 8 --main_process_port 29500 --gpu_ids 0,1,2,3 \
+  train_scripts/train_dreambooth_lora_sana.py \
   --pretrained_model_name_or_path=$MODEL_NAME  \
   --instance_data_dir=$INSTANCE_DIR \
   --output_dir=$OUTPUT_DIR \
   --mixed_precision="bf16" \
   --instance_prompt="a photo of sks dog" \
+  --mixed_precision="fp16" \
   --resolution=1024 \
   --train_batch_size=1 \
   --gradient_accumulation_steps=4 \

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +23,7 @@ import shutil
 import warnings
 from pathlib import Path
 
+import diffusers
 import numpy as np
 import torch
 import torch.utils.checkpoint
@@ -31,6 +31,17 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import DistributedDataParallelKwargs, ProjectConfiguration, set_seed
+from diffusers import AutoencoderDC, FlowMatchEulerDiscreteScheduler, SanaPipeline, SanaTransformer2DModel
+from diffusers.optimization import get_scheduler
+from diffusers.training_utils import (
+    cast_training_params,
+    compute_density_for_timestep_sampling,
+    compute_loss_weighting_for_sd3,
+    free_memory,
+)
+from diffusers.utils import check_min_version, convert_unet_state_dict_to_peft, is_wandb_available
+from diffusers.utils.hub_utils import load_or_create_model_card, populate_model_card
+from diffusers.utils.torch_utils import is_compiled_module
 from huggingface_hub import create_repo, upload_folder
 from huggingface_hub.utils import insecure_hashlib
 from peft import LoraConfig, set_peft_model_state_dict
@@ -42,29 +53,6 @@ from torchvision import transforms
 from torchvision.transforms.functional import crop
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, Gemma2Model
-
-import diffusers
-from diffusers import (
-    AutoencoderDC,
-    FlowMatchEulerDiscreteScheduler,
-    SanaPipeline,
-    SanaTransformer2DModel,
-)
-from diffusers.optimization import get_scheduler
-from diffusers.training_utils import (
-    cast_training_params,
-    compute_density_for_timestep_sampling,
-    compute_loss_weighting_for_sd3,
-    free_memory,
-)
-from diffusers.utils import (
-    check_min_version,
-    convert_unet_state_dict_to_peft,
-    is_wandb_available,
-)
-from diffusers.utils.hub_utils import load_or_create_model_card, populate_model_card
-from diffusers.utils.torch_utils import is_compiled_module
-
 
 if is_wandb_available():
     import wandb
@@ -365,9 +353,7 @@ def parse_args(input_args=None):
     parser.add_argument(
         "--train_batch_size", type=int, default=4, help="Batch size (per device) for the training dataloader."
     )
-    parser.add_argument(
-        "--sample_batch_size", type=int, default=4, help="Batch size (per device) for sampling images."
-    )
+    parser.add_argument("--sample_batch_size", type=int, default=4, help="Batch size (per device) for sampling images.")
     parser.add_argument("--num_train_epochs", type=int, default=1)
     parser.add_argument(
         "--max_train_steps",
@@ -932,6 +918,7 @@ def main(args):
             repo_id = create_repo(
                 repo_id=args.hub_model_id or Path(args.output_dir).name,
                 exist_ok=True,
+                private=True,
             ).repo_id
 
     # Load the tokenizer
@@ -1219,9 +1206,7 @@ def main(args):
         vae = vae.to("cuda")
         for batch in tqdm(train_dataloader, desc="Caching latents"):
             with torch.no_grad():
-                batch["pixel_values"] = batch["pixel_values"].to(
-                    accelerator.device, non_blocking=True, dtype=vae.dtype
-                )
+                batch["pixel_values"] = batch["pixel_values"].to(accelerator.device, non_blocking=True, dtype=vae.dtype)
                 latents_cache.append(vae.encode(batch["pixel_values"]).latent)
 
         if args.validation_prompt is None:

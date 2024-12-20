@@ -5,7 +5,7 @@ output_dir=output
 # ============ 0. start of custom code block ============
 #### Infer Hyper
 default_step=20                             # inference step for diffusion model
-default_sample_nums=533                   # inference first $sample_nums sample in list(json.keys())
+default_sample_nums=553                   # inference first $sample_nums sample in list(json.keys())
 default_sampling_algo="flow_dpm-solver"
 default_add_label=''
 default_log_geneval=false

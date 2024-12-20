@@ -12,7 +12,7 @@ fi
 # ============ end of custom code block ===========
 
 default_step=20
-default_sample_nums=533
+default_sample_nums=553
 default_sampling_algo="flow_dpm-solver"
 default_add_label=''
 

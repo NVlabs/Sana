@@ -6,7 +6,7 @@ geneval=true
 
 np=8    # number of GPU to use
 py=tools/metrics/geneval/evaluation/evaluate_images.py
-default_sample_nums=533
+default_sample_nums=553
 report_to=wandb
 default_log_suffix_label=''
 

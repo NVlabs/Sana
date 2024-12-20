@@ -151,7 +151,7 @@ def parse_args():
         help="skip saving grid",
     )
 
-    parser.add_argument("--sample_nums", default=533, type=int)
+    parser.add_argument("--sample_nums", default=553, type=int)
     parser.add_argument("--add_label", default="", type=str)
     parser.add_argument("--exist_time_prefix", default="", type=str)
     parser.add_argument("--gpu_id", type=int, default=0)

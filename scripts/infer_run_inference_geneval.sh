@@ -7,7 +7,7 @@
 # ================= sampler & data =================
 np=8    # number of GPU to use
 default_step=20   # 14
-default_sample_nums=533
+default_sample_nums=553
 default_sampling_algo="flow_dpm-solver"
 default_add_label=''
 

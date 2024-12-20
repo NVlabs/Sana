@@ -346,7 +346,7 @@ class SanaInference(SanaConfig):
     batch_size: int = field(default=1, metadata={"help": "how many samples can be produced simultaneously"})
     skip_grid: bool = field(default=False, metadata={"help": "skip saving grid"})
     model_path: Optional[str] = field(default=None, metadata={"help": "Path to the model file (optional)"})
-    sample_nums: int = 533
+    sample_nums: int = 553
     cfg_scale: float = 4.5
     pag_scale: float = 1.0
     sampling_algo: str = field(

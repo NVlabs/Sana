@@ -79,6 +79,7 @@ class ModelConfig(BaseConfig):
 class AEConfig(BaseConfig):
     vae_type: str = "dc-ae"
     vae_pretrained: str = "mit-han-lab/dc-ae-f32c32-sana-1.0"
+    weight_dtype: str = "bfloat16"
     scale_factor: float = 0.41407
     vae_latent_dim: int = 32
     vae_downsample_rate: int = 32
@@ -191,3 +192,30 @@ class SanaConfig(BaseConfig):
     tracker_project_name: str = "t2i-evit-baseline"
     name: str = "baseline"
     loss_report_name: str = "loss"
+
+
+def model_init_config(config: SanaConfig, latent_size: int = 32):
+
+    pred_sigma = getattr(config.scheduler, "pred_sigma", True)
+    learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
+    return {
+        "input_size": latent_size,
+        "pe_interpolation": config.model.pe_interpolation,
+        "config": config,
+        "model_max_length": config.text_encoder.model_max_length,
+        "qk_norm": config.model.qk_norm,
+        "micro_condition": config.model.micro_condition,
+        "caption_channels": config.text_encoder.caption_channels,
+        "y_norm": config.text_encoder.y_norm,
+        "attn_type": config.model.attn_type,
+        "ffn_type": config.model.ffn_type,
+        "mlp_ratio": config.model.mlp_ratio,
+        "mlp_acts": list(config.model.mlp_acts),
+        "in_channels": config.vae.vae_latent_dim,
+        "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
+        "use_pe": config.model.use_pe,
+        "linear_head_dim": config.model.linear_head_dim,
+        "pred_sigma": pred_sigma,
+        "learn_sigma": learn_sigma,
+        "cross_norm": config.model.cross_norm,
+    }

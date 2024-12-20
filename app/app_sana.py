@@ -408,14 +408,14 @@ with gr.Blocks(css=css, title="Sana") as demo:
                     minimum=1,
                     maximum=10,
                     step=0.1,
-                    value=5.0,
+                    value=4.5,
                 )
                 flow_dpms_pag_guidance_scale = gr.Slider(
                     label="PAG Guidance scale",
                     minimum=1,
                     maximum=4,
                     step=0.5,
-                    value=2.0,
+                    value=1.0,
                 )
             with gr.Row():
                 use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=True)

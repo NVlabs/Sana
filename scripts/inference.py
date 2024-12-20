@@ -37,8 +37,8 @@ warnings.filterwarnings("ignore")  # ignore warning
 from diffusion import DPMS, FlowEuler, SASolverSampler
 from diffusion.data.datasets.utils import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST, ASPECT_RATIO_2048_TEST
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode
-from diffusion.model.utils import prepare_prompt_ar
-from diffusion.utils.config import SanaConfig
+from diffusion.model.utils import get_weight_dtype, prepare_prompt_ar
+from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.logger import get_root_logger
 from tools.download import find_model
 
@@ -209,7 +209,7 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale, pag_scale
             else:
                 raise ValueError(f"{args.sampling_algo} is not defined")
 
-        samples = samples.to(weight_dtype)
+        samples = samples.to(vae_dtype)
         samples = vae_decode(config.vae.vae_type, vae, samples)
         torch.cuda.empty_cache()
 
@@ -217,7 +217,6 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale, pag_scale
         for i, sample in enumerate(samples):
             save_file_name = f"{chunk[i]}.jpg" if dict_prompt else f"{prompts[i][:100]}.jpg"
             save_path = os.path.join(save_root, save_file_name)
-            # logger.info(f"Saving path: {save_path}")
             save_image(sample, save_path, nrow=1, normalize=True, value_range=(-1, 1))
 
 
@@ -287,17 +286,12 @@ if __name__ == "__main__":
     args.interval_guidance = [max(0, args.interval_guidance[0]), min(1, args.interval_guidance[1])]
     sample_steps_dict = {"dpm-solver": 20, "sa-solver": 25, "flow_dpm-solver": 20, "flow_euler": 28}
     sample_steps = args.step if args.step != -1 else sample_steps_dict[args.sampling_algo]
-    if config.model.mixed_precision == "fp16":
-        weight_dtype = torch.float16
-    elif config.model.mixed_precision == "bf16":
-        weight_dtype = torch.bfloat16
-    elif config.model.mixed_precision == "fp32":
-        weight_dtype = torch.float32
-    else:
-        raise ValueError(f"weigh precision {config.model.mixed_precision} is not defined")
+
+    weight_dtype = get_weight_dtype(config.model.mixed_precision)
     logger.info(f"Inference with {weight_dtype}, default guidance_type: {guidance_type}, flow_shift: {flow_shift}")
 
-    vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, device).to(weight_dtype)
+    vae_dtype = get_weight_dtype(config.vae.weight_dtype)
+    vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, device).to(vae_dtype)
     tokenizer, text_encoder = get_tokenizer_and_text_encoder(name=config.text_encoder.text_encoder_name, device=device)
 
     null_caption_token = tokenizer(
@@ -306,27 +300,7 @@ if __name__ == "__main__":
     null_caption_embs = text_encoder(null_caption_token.input_ids, null_caption_token.attention_mask)[0]
 
     # model setting
-    pred_sigma = getattr(config.scheduler, "pred_sigma", True)
-    learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
-    model_kwargs = {
-        "pe_interpolation": config.model.pe_interpolation,
-        "config": config,
-        "model_max_length": config.text_encoder.model_max_length,
-        "qk_norm": config.model.qk_norm,
-        "micro_condition": config.model.micro_condition,
-        "caption_channels": text_encoder.config.hidden_size,
-        "y_norm": config.text_encoder.y_norm,
-        "attn_type": config.model.attn_type,
-        "ffn_type": config.model.ffn_type,
-        "mlp_ratio": config.model.mlp_ratio,
-        "mlp_acts": list(config.model.mlp_acts),
-        "in_channels": config.vae.vae_latent_dim,
-        "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
-        "use_pe": config.model.use_pe,
-        "linear_head_dim": config.model.linear_head_dim,
-        "pred_sigma": pred_sigma,
-        "learn_sigma": learn_sigma,
-    }
+    model_kwargs = model_init_config(config, latent_size=latent_size)
     model = build_model(
         config.model.model, use_fp32_attention=config.model.get("fp32_attention", False), **model_kwargs
     ).to(device)
@@ -418,6 +392,7 @@ if __name__ == "__main__":
             save_root = create_save_root(args, dataset, epoch_name, step_name, sample_steps, guidance_type)
             os.makedirs(save_root, exist_ok=True)
             if args.if_save_dirname and args.gpu_id == 0:
+                os.makedirs(f"{work_dir}/metrics", exist_ok=True)
                 # save at work_dir/metrics/tmp_xxx.txt for metrics testing
                 with open(f"{work_dir}/metrics/tmp_{dataset}_{time.time()}.txt", "w") as f:
                     print(f"save tmp file at {work_dir}/metrics/tmp_{dataset}_{time.time()}.txt")
@@ -441,6 +416,7 @@ if __name__ == "__main__":
         save_root = create_save_root(args, dataset, epoch_name, step_name, sample_steps, guidance_type)
         os.makedirs(save_root, exist_ok=True)
         if args.if_save_dirname and args.gpu_id == 0:
+            os.makedirs(f"{work_dir}/metrics", exist_ok=True)
             # save at work_dir/metrics/tmp_xxx.txt for metrics testing
             with open(f"{work_dir}/metrics/tmp_{dataset}_{time.time()}.txt", "w") as f:
                 print(f"save tmp file at {work_dir}/metrics/tmp_{dataset}_{time.time()}.txt")

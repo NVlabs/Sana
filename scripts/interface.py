@@ -36,8 +36,8 @@ from asset.examples import examples
 from diffusion import DPMS, FlowEuler, SASolverSampler
 from diffusion.data.datasets.utils import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST, ASPECT_RATIO_2048_TEST
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode
-from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
-from diffusion.utils.config import SanaConfig
+from diffusion.model.utils import get_weight_dtype, prepare_prompt_ar, resize_and_crop_tensor
+from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.dist_utils import flush
 from tools.download import find_model
 
@@ -232,7 +232,7 @@ def generate_img(
     else:
         raise ValueError(f"{args.sampling_algo} is not defined")
 
-    samples = samples.to(weight_dtype)
+    samples = samples.to(vae_dtype)
     samples = vae_decode(config.vae.vae_type, vae, samples)
     samples = resize_and_crop_tensor(samples, orig_width, orig_height)
     display_model_info = (
@@ -267,42 +267,15 @@ if __name__ == "__main__":
     pag_applied_layers = config.model.pag_applied_layers
     flow_shift = config.scheduler.flow_shift
 
-    if config.model.mixed_precision == "fp16":
-        weight_dtype = torch.float16
-    elif config.model.mixed_precision == "bf16":
-        weight_dtype = torch.bfloat16
-    elif config.model.mixed_precision == "fp32":
-        weight_dtype = torch.float32
-    else:
-        raise ValueError(f"weigh precision {config.model.mixed_precision} is not defined")
+    weight_dtype = get_weight_dtype(config.model.mixed_precision)
     logger.info(f"Inference with {weight_dtype}")
 
-    vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, device).to(weight_dtype)
+    vae_dtype = get_weight_dtype(config.vae.weight_dtype)
+    vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, device).to(vae_dtype)
     tokenizer, text_encoder = get_tokenizer_and_text_encoder(name=config.text_encoder.text_encoder_name, device=device)
 
     # model setting
-    pred_sigma = getattr(config.scheduler, "pred_sigma", True)
-    learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
-    model_kwargs = {
-        "input_size": latent_size,
-        "pe_interpolation": config.model.pe_interpolation,
-        "config": config,
-        "model_max_length": config.text_encoder.model_max_length,
-        "qk_norm": config.model.qk_norm,
-        "micro_condition": config.model.micro_condition,
-        "caption_channels": text_encoder.config.hidden_size,
-        "y_norm": config.text_encoder.y_norm,
-        "attn_type": config.model.attn_type,
-        "ffn_type": config.model.ffn_type,
-        "mlp_ratio": config.model.mlp_ratio,
-        "mlp_acts": list(config.model.mlp_acts),
-        "in_channels": config.vae.vae_latent_dim,
-        "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
-        "use_pe": config.model.use_pe,
-        "linear_head_dim": config.model.linear_head_dim,
-        "pred_sigma": pred_sigma,
-        "learn_sigma": learn_sigma,
-    }
+    model_kwargs = model_init_config(config, latent_size=latent_size)
     model = build_model(
         config.model.model, use_fp32_attention=config.model.get("fp32_attention", False), **model_kwargs
     ).to(device)

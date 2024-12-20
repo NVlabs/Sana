@@ -589,3 +589,14 @@ def get_same_padding(kernel_size: int or tuple[int, ...]) -> int or tuple[int, .
     else:
         assert kernel_size % 2 > 0, f"kernel size {kernel_size} should be odd number"
         return kernel_size // 2
+
+
+def get_weight_dtype(mixed_precision):
+    if mixed_precision in ["fp16", "float16"]:
+        return torch.float16
+    elif mixed_precision in ["bf16", "bfloat16"]:
+        return torch.bfloat16
+    elif mixed_precision in ["fp32", "float32"]:
+        return torch.float32
+    else:
+        raise ValueError(f"weigh precision {mixed_precision} is not defined")

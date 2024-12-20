@@ -28,8 +28,8 @@ warnings.filterwarnings("ignore")  # ignore warning
 from diffusion import DPMS, FlowEuler
 from diffusion.data.datasets.utils import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST, ASPECT_RATIO_2048_TEST
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode
-from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
-from diffusion.utils.config import SanaConfig
+from diffusion.model.utils import get_weight_dtype, prepare_prompt_ar, resize_and_crop_tensor
+from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.logger import get_root_logger
 
 # from diffusion.utils.misc import read_config
@@ -40,6 +40,8 @@ def guidance_type_select(default_guidance_type, pag_scale, attn_type):
     guidance_type = default_guidance_type
     if not (pag_scale > 1.0 and attn_type == "linear"):
         guidance_type = "classifier-free"
+    elif pag_scale > 1.0 and attn_type == "linear":
+        guidance_type = "classifier-free_PAG"
     return guidance_type
 
 
@@ -93,15 +95,9 @@ class SanaPipeline(nn.Module):
         self.flow_shift = config.scheduler.flow_shift
         guidance_type = "classifier-free_PAG"
 
-        if config.model.mixed_precision == "fp16":
-            weight_dtype = torch.float16
-        elif config.model.mixed_precision == "bf16":
-            weight_dtype = torch.bfloat16
-        elif config.model.mixed_precision == "fp32":
-            weight_dtype = torch.float32
-        else:
-            raise ValueError(f"weigh precision {config.model.mixed_precision} is not defined")
+        weight_dtype = get_weight_dtype(config.model.mixed_precision)
         self.weight_dtype = weight_dtype
+        self.vae_dtype = get_weight_dtype(config.vae.weight_dtype)
 
         self.base_ratios = eval(f"ASPECT_RATIO_{self.image_size}_TEST")
         self.vis_sampler = self.config.scheduler.vis_sampler
@@ -126,7 +122,7 @@ class SanaPipeline(nn.Module):
             ]
 
     def build_vae(self, config):
-        vae = get_vae(config.vae_type, config.vae_pretrained, self.device).to(self.weight_dtype)
+        vae = get_vae(config.vae_type, config.vae_pretrained, self.device).to(self.vae_dtype)
         return vae
 
     def build_text_encoder(self, config):
@@ -135,31 +131,12 @@ class SanaPipeline(nn.Module):
 
     def build_sana_model(self, config):
         # model setting
-        pred_sigma = getattr(config.scheduler, "pred_sigma", True)
-        learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
-        model_kwargs = {
-            "input_size": self.latent_size,
-            "pe_interpolation": config.model.pe_interpolation,
-            "config": config,
-            "model_max_length": config.text_encoder.model_max_length,
-            "qk_norm": config.model.qk_norm,
-            "micro_condition": config.model.micro_condition,
-            "caption_channels": self.text_encoder.config.hidden_size,
-            "y_norm": config.text_encoder.y_norm,
-            "attn_type": config.model.attn_type,
-            "ffn_type": config.model.ffn_type,
-            "mlp_ratio": config.model.mlp_ratio,
-            "mlp_acts": list(config.model.mlp_acts),
-            "in_channels": config.vae.vae_latent_dim,
-            "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
-            "use_pe": config.model.use_pe,
-            "pred_sigma": pred_sigma,
-            "learn_sigma": learn_sigma,
-            "use_fp32_attention": config.model.get("fp32_attention", False) and config.model.mixed_precision != "bf16",
-        }
-        model = build_model(config.model.model, **model_kwargs)
-        model = model.to(self.weight_dtype)
-
+        model_kwargs = model_init_config(config, latent_size=self.latent_size)
+        model = build_model(
+            config.model.model,
+            use_fp32_attention=config.model.get("fp32_attention", False) and config.model.mixed_precision != "bf16",
+            **model_kwargs,
+        )
         self.logger.info(f"use_fp32_attention: {model.fp32_attention}")
         self.logger.info(
             f"{model.__class__.__name__}:{config.model.model},"
@@ -310,7 +287,7 @@ class SanaPipeline(nn.Module):
                         flow_shift=self.flow_shift,
                     )
 
-            sample = sample.to(self.weight_dtype)
+            sample = sample.to(self.vae_dtype)
             with torch.no_grad():
                 sample = vae_decode(self.config.vae.vae_type, self.vae, sample)
 

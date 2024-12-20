@@ -386,14 +386,14 @@ with gr.Blocks(css=css, title="Sana") as demo:
                     minimum=256,
                     maximum=MAX_IMAGE_SIZE,
                     step=32,
-                    value=1024,
+                    value=args.image_size,
                 )
                 width = gr.Slider(
                     label="Width",
                     minimum=256,
                     maximum=MAX_IMAGE_SIZE,
                     step=32,
-                    value=1024,
+                    value=args.image_size,
                 )
             with gr.Row():
                 flow_dpms_inference_steps = gr.Slider(
@@ -401,7 +401,7 @@ with gr.Blocks(css=css, title="Sana") as demo:
                     minimum=5,
                     maximum=40,
                     step=1,
-                    value=18,
+                    value=20,
                 )
                 flow_dpms_guidance_scale = gr.Slider(
                     label="CFG Guidance scale",

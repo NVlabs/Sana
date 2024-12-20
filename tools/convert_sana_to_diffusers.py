@@ -8,32 +8,60 @@ from contextlib import nullcontext
 import torch
 from accelerate import init_empty_weights
 from diffusers import (
-    DCAE,
-    DCAE_HF,
-    FlowDPMSolverMultistepScheduler,
+    AutoencoderDC,
+    DPMSolverMultistepScheduler,
     FlowMatchEulerDiscreteScheduler,
     SanaPipeline,
     SanaTransformer2DModel,
 )
 from diffusers.models.modeling_utils import load_model_dict_into_meta
 from diffusers.utils.import_utils import is_accelerate_available
+from huggingface_hub import hf_hub_download, snapshot_download
 from termcolor import colored
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 CTX = init_empty_weights if is_accelerate_available else nullcontext
 
-ckpt_id = "Sana"
+ckpt_ids = [
+    "Efficient-Large-Model/Sana_1600M_2Kpx_BF16/checkpoints/Sana_1600M_2Kpx_BF16.pth",
+    "Efficient-Large-Model/Sana_1600M_1024px_MultiLing/checkpoints/Sana_1600M_1024px_MultiLing.pth",
+    "Efficient-Large-Model/Sana_1600M_1024px_BF16/checkpoints/Sana_1600M_1024px_BF16.pth",
+    "Efficient-Large-Model/Sana_1600M_512px_MultiLing/checkpoints/Sana_1600M_512px_MultiLing.pth",
+    "Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth",
+    "Efficient-Large-Model/Sana_1600M_512px/checkpoints/Sana_1600M_512px.pth",
+    "Efficient-Large-Model/Sana_600M_1024px/checkpoints/Sana_600M_1024px_MultiLing.pth",
+    "Efficient-Large-Model/Sana_600M_512px/checkpoints/Sana_600M_512px_MultiLing.pth",
+]
 # https://github.com/NVlabs/Sana/blob/main/scripts/inference.py
 
 
 def main(args):
-    all_state_dict = torch.load(args.orig_ckpt_path, map_location=torch.device("cpu"))
+    cache_dir_path = os.path.expanduser("~/.cache/huggingface/hub")
+
+    if args.orig_ckpt_path is None or args.orig_ckpt_path in ckpt_ids:
+        ckpt_id = args.orig_ckpt_path or ckpt_ids[0]
+        snapshot_download(
+            repo_id=f"{'/'.join(ckpt_id.split('/')[:2])}",
+            cache_dir=cache_dir_path,
+            repo_type="model",
+        )
+        file_path = hf_hub_download(
+            repo_id=f"{'/'.join(ckpt_id.split('/')[:2])}",
+            filename=f"{'/'.join(ckpt_id.split('/')[2:])}",
+            cache_dir=cache_dir_path,
+            repo_type="model",
+        )
+    else:
+        file_path = args.orig_ckpt_path
+
+    print(colored(f"Loading checkpoint from {file_path}", "green", attrs=["bold"]))
+    all_state_dict = torch.load(file_path, weights_only=True)
     state_dict = all_state_dict.pop("state_dict")
     converted_state_dict = {}
 
     # Patch embeddings.
-    converted_state_dict["pos_embed.proj.weight"] = state_dict.pop("x_embedder.proj.weight")
-    converted_state_dict["pos_embed.proj.bias"] = state_dict.pop("x_embedder.proj.bias")
+    converted_state_dict["patch_embed.proj.weight"] = state_dict.pop("x_embedder.proj.weight")
+    converted_state_dict["patch_embed.proj.bias"] = state_dict.pop("x_embedder.proj.bias")
 
     # Caption projection.
     converted_state_dict["caption_projection.linear_1.weight"] = state_dict.pop("y_embedder.y_proj.fc1.weight")
@@ -42,28 +70,23 @@ def main(args):
     converted_state_dict["caption_projection.linear_2.bias"] = state_dict.pop("y_embedder.y_proj.fc2.bias")
 
     # AdaLN-single LN
-    converted_state_dict["adaln_single.emb.timestep_embedder.linear_1.weight"] = state_dict.pop(
-        "t_embedder.mlp.0.weight"
-    )
-    converted_state_dict["adaln_single.emb.timestep_embedder.linear_1.bias"] = state_dict.pop("t_embedder.mlp.0.bias")
-    converted_state_dict["adaln_single.emb.timestep_embedder.linear_2.weight"] = state_dict.pop(
-        "t_embedder.mlp.2.weight"
-    )
-    converted_state_dict["adaln_single.emb.timestep_embedder.linear_2.bias"] = state_dict.pop("t_embedder.mlp.2.bias")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop("t_embedder.mlp.0.weight")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.bias"] = state_dict.pop("t_embedder.mlp.0.bias")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop("t_embedder.mlp.2.weight")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.bias"] = state_dict.pop("t_embedder.mlp.2.bias")
 
     # Shared norm.
-    converted_state_dict["adaln_single.linear.weight"] = state_dict.pop("t_block.1.weight")
-    converted_state_dict["adaln_single.linear.bias"] = state_dict.pop("t_block.1.bias")
+    converted_state_dict["time_embed.linear.weight"] = state_dict.pop("t_block.1.weight")
+    converted_state_dict["time_embed.linear.bias"] = state_dict.pop("t_block.1.bias")
 
     # y norm
     converted_state_dict["caption_norm.weight"] = state_dict.pop("attention_y_norm.weight")
 
+    flow_shift = 3.0
     if args.model_type == "SanaMS_1600M_P1_D20":
         layer_num = 20
-        flow_shift = 3.0
     elif args.model_type == "SanaMS_600M_P1_D28":
         layer_num = 28
-        flow_shift = 4.0
     else:
         raise ValueError(f"{args.model_type} is not supported.")
 
@@ -72,8 +95,8 @@ def main(args):
         converted_state_dict[f"transformer_blocks.{depth}.scale_shift_table"] = state_dict.pop(
             f"blocks.{depth}.scale_shift_table"
         )
-        # Linear Attention is all you need 🤘
 
+        # Linear Attention is all you need 🤘
         # Self attention.
         q, k, v = torch.chunk(state_dict.pop(f"blocks.{depth}.attn.qkv.weight"), 3, dim=0)
         converted_state_dict[f"transformer_blocks.{depth}.attn1.to_q.weight"] = q
@@ -88,19 +111,19 @@ def main(args):
         )
 
         # Feed-forward.
-        converted_state_dict[f"transformer_blocks.{depth}.ff.inverted_conv.conv.weight"] = state_dict.pop(
+        converted_state_dict[f"transformer_blocks.{depth}.ff.conv_inverted.weight"] = state_dict.pop(
             f"blocks.{depth}.mlp.inverted_conv.conv.weight"
         )
-        converted_state_dict[f"transformer_blocks.{depth}.ff.inverted_conv.conv.bias"] = state_dict.pop(
+        converted_state_dict[f"transformer_blocks.{depth}.ff.conv_inverted.bias"] = state_dict.pop(
             f"blocks.{depth}.mlp.inverted_conv.conv.bias"
         )
-        converted_state_dict[f"transformer_blocks.{depth}.ff.depth_conv.conv.weight"] = state_dict.pop(
+        converted_state_dict[f"transformer_blocks.{depth}.ff.conv_depth.weight"] = state_dict.pop(
             f"blocks.{depth}.mlp.depth_conv.conv.weight"
         )
-        converted_state_dict[f"transformer_blocks.{depth}.ff.depth_conv.conv.bias"] = state_dict.pop(
+        converted_state_dict[f"transformer_blocks.{depth}.ff.conv_depth.bias"] = state_dict.pop(
             f"blocks.{depth}.mlp.depth_conv.conv.bias"
         )
-        converted_state_dict[f"transformer_blocks.{depth}.ff.point_conv.conv.weight"] = state_dict.pop(
+        converted_state_dict[f"transformer_blocks.{depth}.ff.conv_point.weight"] = state_dict.pop(
             f"blocks.{depth}.mlp.point_conv.conv.weight"
         )
 
@@ -132,46 +155,40 @@ def main(args):
     # Transformer
     with CTX():
         transformer = SanaTransformer2DModel(
-            num_attention_heads=model_kwargs[args.model_type]["num_attention_heads"],
-            attention_head_dim=model_kwargs[args.model_type]["attention_head_dim"],
-            num_cross_attention_heads=model_kwargs[args.model_type]["num_cross_attention_heads"],
-            cross_attention_head_dim=model_kwargs[args.model_type]["cross_attention_head_dim"],
             in_channels=32,
             out_channels=32,
+            num_attention_heads=model_kwargs[args.model_type]["num_attention_heads"],
+            attention_head_dim=model_kwargs[args.model_type]["attention_head_dim"],
             num_layers=model_kwargs[args.model_type]["num_layers"],
+            num_cross_attention_heads=model_kwargs[args.model_type]["num_cross_attention_heads"],
+            cross_attention_head_dim=model_kwargs[args.model_type]["cross_attention_head_dim"],
             cross_attention_dim=model_kwargs[args.model_type]["cross_attention_dim"],
+            caption_channels=2304,
+            mlp_ratio=2.5,
             attention_bias=False,
-            sample_size=32,
+            sample_size=args.image_size // 32,
             patch_size=1,
-            activation_fn=("silu", "silu", None),
-            upcast_attention=False,
-            norm_type="ada_norm_single",
             norm_elementwise_affine=False,
             norm_eps=1e-6,
-            use_additional_conditions=False,
-            caption_channels=2304,
-            use_caption_norm=True,
-            caption_norm_scale_factor=0.1,
-            attention_type="default",
-            use_pe=False,
-            expand_ratio=2.5,
-            ff_bias=(True, True, False),
-            ff_norm=(None, None, None),
         )
+
     if is_accelerate_available():
         load_model_dict_into_meta(transformer, converted_state_dict)
     else:
-        transformer.load_state_dict(converted_state_dict, strict=True)
+        transformer.load_state_dict(converted_state_dict, strict=True, assign=True)
 
     try:
         state_dict.pop("y_embedder.y_embedding")
         state_dict.pop("pos_embed")
-    except:
-        pass
+    except KeyError:
+        print("y_embedder.y_embedding or pos_embed not found in the state_dict")
+
     assert len(state_dict) == 0, f"State dict is not empty, {state_dict.keys()}"
 
     num_model_params = sum(p.numel() for p in transformer.parameters())
     print(f"Total number of transformer parameters: {num_model_params}")
+
+    transformer = transformer.to(weight_dtype)
 
     if not args.save_full_pipeline:
         print(
@@ -182,71 +199,55 @@ def main(args):
                 attrs=["bold"],
             )
         )
-        transformer.to(weight_dtype).save_pretrained(os.path.join(args.dump_path, "transformer"))
+        transformer.save_pretrained(
+            os.path.join(args.dump_path, "transformer"), safe_serialization=True, max_shard_size="5GB", variant=variant
+        )
     else:
         print(colored(f"Saving the whole SanaPipeline containing {args.model_type}", "green", attrs=["bold"]))
         # VAE
-        dc_ae = DCAE_HF.from_pretrained(f"mit-han-lab/dc-ae-f32c32-sana-1.0")
-        dc_ae_state_dict = dc_ae.state_dict()
-        dc_ae = DCAE(
-            in_channels=3,
-            latent_channels=32,
-            encoder_width_list=[128, 256, 512, 512, 1024, 1024],
-            encoder_depth_list=[2, 2, 2, 3, 3, 3],
-            encoder_block_type=["ResBlock", "ResBlock", "ResBlock", "EViTS5_GLU", "EViTS5_GLU", "EViTS5_GLU"],
-            encoder_norm="rms2d",
-            encoder_act="silu",
-            downsample_block_type="Conv",
-            decoder_width_list=[128, 256, 512, 512, 1024, 1024],
-            decoder_depth_list=[3, 3, 3, 3, 3, 3],
-            decoder_block_type=["ResBlock", "ResBlock", "ResBlock", "EViTS5_GLU", "EViTS5_GLU", "EViTS5_GLU"],
-            decoder_norm="rms2d",
-            decoder_act="silu",
-            upsample_block_type="InterpolateConv",
-            scaling_factor=0.41407,
-        )
-        dc_ae.load_state_dict(dc_ae_state_dict, strict=True)
-        dc_ae.to(torch.float32).to(device)
+        ae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-f32c32-sana-1.0-diffusers", torch_dtype=torch.float32)
 
         # Text Encoder
         text_encoder_model_path = "google/gemma-2-2b-it"
         tokenizer = AutoTokenizer.from_pretrained(text_encoder_model_path)
         tokenizer.padding_side = "right"
-        text_encoder = (
-            AutoModelForCausalLM.from_pretrained(text_encoder_model_path, torch_dtype=torch.bfloat16)
-            .get_decoder()
-            .to(device)
-        )
+        text_encoder = AutoModelForCausalLM.from_pretrained(
+            text_encoder_model_path, torch_dtype=torch.bfloat16
+        ).get_decoder()
 
         # Scheduler
         if args.scheduler_type == "flow-dpm_solver":
-            scheduler = FlowDPMSolverMultistepScheduler(flow_shift=flow_shift)
+            scheduler = DPMSolverMultistepScheduler(
+                flow_shift=flow_shift,
+                use_flow_sigmas=True,
+                prediction_type="flow_prediction",
+            )
         elif args.scheduler_type == "flow-euler":
             scheduler = FlowMatchEulerDiscreteScheduler(shift=flow_shift)
         else:
             raise ValueError(f"Scheduler type {args.scheduler_type} is not supported")
 
-        # transformer
-        transformer.to(device).to(weight_dtype)
-
         pipe = SanaPipeline(
             tokenizer=tokenizer,
             text_encoder=text_encoder,
             transformer=transformer,
-            vae=dc_ae,
+            vae=ae,
             scheduler=scheduler,
         )
+        pipe.save_pretrained(args.dump_path, safe_serialization=True, max_shard_size="5GB", variant=variant)
 
-        image = pipe(
-            "a dog",
-            height=1024,
-            width=1024,
-            guidance_scale=5.0,
-        )[0]
 
-        image[0].save("sana.png")
+DTYPE_MAPPING = {
+    "fp32": torch.float32,
+    "fp16": torch.float16,
+    "bf16": torch.bfloat16,
+}
 
-        pipe.save_pretrained(args.dump_path)
+VARIANT_MAPPING = {
+    "fp32": None,
+    "fp16": "fp16",
+    "bf16": "bf16",
+}
 
 
 if __name__ == "__main__":
@@ -259,9 +260,9 @@ if __name__ == "__main__":
         "--image_size",
         default=1024,
         type=int,
-        choices=[512, 1024],
+        choices=[512, 1024, 2048],
         required=False,
-        help="Image size of pretrained model, 512 or 1024.",
+        help="Image size of pretrained model, 512 or 1024 or 2048.",
     )
     parser.add_argument(
         "--model_type", default="SanaMS_1600M_P1_D20", type=str, choices=["SanaMS_1600M_P1_D20", "SanaMS_600M_P1_D28"]
@@ -271,6 +272,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--dump_path", default=None, type=str, required=True, help="Path to the output pipeline.")
     parser.add_argument("--save_full_pipeline", action="store_true", help="save all the pipelien elemets in one.")
+    parser.add_argument("--dtype", default="fp32", type=str, choices=["fp32", "fp16", "bf16"], help="Weight dtype.")
 
     args = parser.parse_args()
 
@@ -294,6 +296,7 @@ if __name__ == "__main__":
     }
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    weight_dtype = torch.float16
+    weight_dtype = DTYPE_MAPPING[args.dtype]
+    variant = VARIANT_MAPPING[args.dtype]
 
     main(args)

@@ -36,16 +36,17 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2024/12/20\] 1.6B 2K resolution [Sana models](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released: [\[BF16 pth\]](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16) or [\[BF16 diffusers\]](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers). 🚀 Get your 2K resolution images within 4 seconds! Find more samples in [Sana page](https://nvlabs.github.io/Sana/).
 - (🔥 New) \[2024/12/18\] `diffusers` supports Sana-LoRA fine-tuning! Sana-LoRA's training and convergence speed is supper fast. [\[Guidance\]](asset/docs/sana_lora_dreambooth.md) or  [\[diffusers docs\]](https://github.com/huggingface/diffusers/blob/main/examples/dreambooth/README_sana.md).
 - (🔥 New) \[2024/12/13\] `diffusers` has Sana! [All Sana models in diffusers safetensors](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released and diffusers pipeline `SanaPipeline`, `SanaPAGPipeline`, `DPMSolverMultistepScheduler(with FlowMatching)` are all supported now. We prepare a [Model Card](asset/docs/model_zoo.md) for you to choose.
 - (🔥 New) \[2024/12/10\] 1.6B BF16 [Sana model](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16) is released for stable fine-tuning.
 - (🔥 New) \[2024/12/9\] We release the [ComfyUI node](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels) for Sana. [\[Guidance\]](asset/docs/ComfyUI/comfyui.md)
-- (🔥 New) \[2024/11\] All multi-linguistic (Emoji & Chinese & English) SFT models are released: [1.6B-512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing), [1.6B-1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing), [600M-512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px), [600M-1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px). The metric performance is shown [here](#performance)
-- (🔥 New) \[2024/11\] Sana Replicate API is launching at [Sana-API](https://replicate.com/chenxwh/sana).
-- (🔥 New) \[2024/11\] Sana code-base license changed to Apache 2.0.
-- (🔥 New) \[2024/11\] 1.6B [Sana models](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released.
-- (🔥 New) \[2024/11\] Training & Inference & Metrics code are released.
-- (🔥 New) \[2024/11\] Working on [`diffusers`](https://github.com/huggingface/diffusers/pull/9982).
+- ✅ \[2024/11\] All multi-linguistic (Emoji & Chinese & English) SFT models are released: [1.6B-512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing), [1.6B-1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing), [600M-512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px), [600M-1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px). The metric performance is shown [here](#performance)
+- ✅ \[2024/11\] Sana Replicate API is launching at [Sana-API](https://replicate.com/chenxwh/sana).
+- ✅ \[2024/11\] Sana code-base license changed to Apache 2.0.
+- ✅ \[2024/11\] 1.6B [Sana models](https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e) are released.
+- ✅ \[2024/11\] Training & Inference & Metrics code are released.
+- ✅ \[2024/11\] Working on [`diffusers`](https://github.com/huggingface/diffusers/pull/9982).
 - \[2024/10\] [Demo](https://nv-sana.mit.edu/) is released.
 - \[2024/10\] [DC-AE Code](https://github.com/mit-han-lab/efficientvit/blob/master/applications/dc_ae/README.md) and [weights](https://huggingface.co/collections/mit-han-lab/dc-ae-670085b9400ad7197bb1009b) are released!
 - \[2024/10\] [Paper](https://arxiv.org/abs/2410.10629) is on Arxiv!
@@ -314,18 +315,19 @@ Refer to [Toolkit Manual](asset/docs/metrics_toolkit.md).
 
 We will try our best to release
 
-- \[x\] Training code
-- \[x\] Inference code
-- \[x\] Model zoo
-- \[x\] ComfyUI
-- \[x\] DC-AE Diffusers
-- \[x\] Sana merged in Diffusers(https://github.com/huggingface/diffusers/pull/9982)
-- \[x\] LoRA training by [@paul](https://github.com/sayakpaul)(`diffusers`: https://github.com/huggingface/diffusers/pull/10234)
-- \[ \] ControlNet (train & inference & models)
-- \[ \] 8bit / 4bit Laptop development
-- \[ \] Larger model size
-- \[ \] Better re-construction F32/F64 VAEs.
-- \[ \] **Sana1.5 (Focus on: Human body / Human face / Text rendering / Realism / Efficiency)**
+- \[✅\] Training code
+- \[✅\] Inference code
+- \[✅\] Model zoo
+- \[✅\] ComfyUI
+- \[✅\] DC-AE Diffusers
+- \[✅\] Sana merged in Diffusers(https://github.com/huggingface/diffusers/pull/9982)
+- \[✅\] LoRA training by [@paul](https://github.com/sayakpaul)(`diffusers`: https://github.com/huggingface/diffusers/pull/10234)
+- \[✅\] 2K resolution models
+- \[💻\] ControlNet (train & inference & models)
+- \[💻\] 8bit / 4bit Laptop development
+- \[💻\] Larger model size
+- \[💻\] Better re-construction F32/F64 VAEs.
+- \[💻\] **Sana1.5 (Focus on: Human body / Human face / Text rendering / Realism / Efficiency)**
 
 # 🤗Acknowledgements
 

@@ -323,7 +323,7 @@ We will try our best to release
 - \[✅\] DC-AE Diffusers
 - \[✅\] Sana merged in Diffusers(https://github.com/huggingface/diffusers/pull/9982)
 - \[✅\] LoRA training by [@paul](https://github.com/sayakpaul)(`diffusers`: https://github.com/huggingface/diffusers/pull/10234)
-- \[✅\] 2K resolution models
+- \[✅\] 2K resolution models.(Thanks [@SUPIR](https://github.com/Fanghua-Yu/SUPIR) to provide a 4K super-resolution model)
 - \[💻\] ControlNet (train & inference & models)
 - \[💻\] 8bit / 4bit Laptop development
 - \[💻\] Larger model size
@@ -334,7 +334,8 @@ We will try our best to release
 
 - Thanks to [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma),
   [Efficient-ViT](https://github.com/mit-han-lab/efficientvit),
-  [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) and
+  [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels),
+  [SUPIR](https://github.com/Fanghua-Yu/SUPIR) and
   [diffusers](https://github.com/huggingface/diffusers)
   for their wonderful work and codebase!
 

@@ -1,13 +1,13 @@
 {
-  "last_node_id": 10,
-  "last_link_id": 11,
+  "last_node_id": 38,
+  "last_link_id": 47,
   "nodes": [
     {
-      "id": 1,
+      "id": 4,
       "type": "VAEDecode",
       "pos": [
-        1116.951416015625,
-        273.2231140136719
+        776.332763671875,
+        105.08650970458984
       ],
       "size": [
         200,
@@ -20,12 +20,12 @@
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 1
+          "link": 3
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 2
+          "link": 24
         }
       ],
       "outputs": [
@@ -33,7 +33,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            9
+            11
           ],
           "slot_index": 0,
           "shape": 3
@@ -45,11 +45,11 @@
       "widgets_values": []
     },
     {
-      "id": 2,
+      "id": 9,
       "type": "GemmaLoader",
       "pos": [
-        -41.03317642211914,
-        680.6829223632812
+        -381.6518859863281,
+        512.5463256835938
       ],
       "size": [
         315,
@@ -64,8 +64,8 @@
           "name": "GEMMA",
           "type": "GEMMA",
           "links": [
-            10,
-            11
+            39,
+            41
           ],
           "slot_index": 0
         }
@@ -80,11 +80,11 @@
       ]
     },
     {
-      "id": 3,
+      "id": 29,
       "type": "ExtraVAELoader",
       "pos": [
-        801.2960205078125,
-        863.7061157226562
+        460.67730712890625,
+        695.5695190429688
       ],
       "size": [
         315,
@@ -99,7 +99,7 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            2
+            24
           ],
           "slot_index": 0
         }
@@ -114,11 +114,11 @@
       ]
     },
     {
-      "id": 4,
+      "id": 10,
       "type": "KSampler",
       "pos": [
-        770.397216796875,
-        267.5942077636719
+        429.7785339355469,
+        99.45759582519531
       ],
       "size": [
         300,
@@ -131,22 +131,22 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 3
+          "link": 33
         },
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 4
+          "link": 42
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 5
+          "link": 47
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 6
+          "link": 46
         }
       ],
       "outputs": [
@@ -154,7 +154,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            1
+            3
           ],
           "slot_index": 0,
           "shape": 3
@@ -174,11 +174,11 @@
       ]
     },
     {
-      "id": 5,
+      "id": 33,
       "type": "EmptySanaLatentImage",
       "pos": [
-        392.18475341796875,
-        367.0936279296875
+        51.56604766845703,
+        198.95700073242188
       ],
       "size": [
         315,
@@ -191,7 +191,7 @@
         {
           "name": "width",
           "type": "INT",
-          "link": 7,
+          "link": 28,
           "widget": {
             "name": "width"
           }
@@ -199,7 +199,7 @@
         {
           "name": "height",
           "type": "INT",
-          "link": 8,
+          "link": 29,
           "widget": {
             "name": "height"
           }
@@ -210,7 +210,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            6
+            46
           ],
           "slot_index": 0
         }
@@ -225,11 +225,11 @@
       ]
     },
     {
-      "id": 6,
+      "id": 13,
       "type": "PreviewImage",
       "pos": [
-        1143.318115234375,
-        385.34552001953125
+        802.6994018554688,
+        217.20889282226562
       ],
       "size": [
         605.93505859375,
@@ -242,7 +242,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 9
+          "link": 11
         }
       ],
       "outputs": [],
@@ -252,87 +252,11 @@
       "widgets_values": []
     },
     {
-      "id": 9,
-      "type": "GemmaTextEncode",
-      "pos": [
-        320.47918701171875,
-        884.2686767578125
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "GEMMA",
-          "type": "GEMMA",
-          "link": 10
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            5
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GemmaTextEncode"
-      },
-      "widgets_values": [
-        ""
-      ]
-    },
-    {
-      "id": 10,
-      "type": "SanaTextEncode",
-      "pos": [
-        323.21978759765625,
-        632.0758666992188
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "GEMMA",
-          "type": "GEMMA",
-          "link": 11
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            4
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "SanaTextEncode"
-      },
-      "widgets_values": [
-        "a dog and a cat"
-      ]
-    },
-    {
-      "id": 7,
+      "id": 25,
       "type": "SanaCheckpointLoader",
       "pos": [
-        -15.461307525634766,
-        297.74456787109375
+        -356.08001708984375,
+        129.6079559326172
       ],
       "size": [
         315,
@@ -347,7 +271,7 @@
           "name": "model",
           "type": "MODEL",
           "links": [
-            3
+            33
           ],
           "slot_index": 0
         }
@@ -356,17 +280,17 @@
         "Node name for S&R": "SanaCheckpointLoader"
       },
       "widgets_values": [
-        "Efficient-Large-Model/Sana_1600M_1024px_BF16",
-        "SanaMS_1600M_P1_D20",
+        "Efficient-Large-Model/Sana_1600M_2Kpx_BF16",
+        "SanaMS_1600M_P1_D20_2K",
         "BF16"
       ]
     },
     {
-      "id": 8,
+      "id": 6,
       "type": "SanaResolutionSelect",
       "pos": [
-        -24.12485122680664,
-        469.7320556640625
+        -364.7435607910156,
+        301.5954284667969
       ],
       "size": [
         315,
@@ -381,7 +305,7 @@
           "name": "width",
           "type": "INT",
           "links": [
-            7
+            28
           ],
           "slot_index": 0
         },
@@ -389,7 +313,7 @@
           "name": "height",
           "type": "INT",
           "links": [
-            8
+            29
           ],
           "slot_index": 1
         }
@@ -398,109 +322,185 @@
         "Node name for S&R": "SanaResolutionSelect"
       },
       "widgets_values": [
-        "1024px",
+        "2K",
         "1.00"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "SanaTextEncode",
+      "pos": [
+        -17.398910522460938,
+        463.93927001953125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "link": 39
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            42
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaTextEncode"
+      },
+      "widgets_values": [
+        "a dog and a cat"
+      ]
+    },
+    {
+      "id": 37,
+      "type": "GemmaTextEncode",
+      "pos": [
+        -20.1395263671875,
+        716.132080078125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "link": 41
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            47
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GemmaTextEncode"
+      },
+      "widgets_values": [
+        ""
       ]
     }
   ],
   "links": [
     [
-      1,
-      4,
-      0,
-      1,
-      0,
-      "LATENT"
-    ],
-    [
-      2,
       3,
-      0,
-      1,
-      1,
-      "VAE"
-    ],
-    [
-      3,
-      7,
-      0,
-      4,
-      0,
-      "MODEL"
-    ],
-    [
-      4,
       10,
       0,
       4,
-      1,
-      "CONDITIONING"
-    ],
-    [
-      5,
-      9,
       0,
-      4,
-      2,
-      "CONDITIONING"
-    ],
-    [
-      6,
-      5,
-      0,
-      4,
-      3,
       "LATENT"
     ],
     [
-      7,
-      8,
+      11,
+      4,
       0,
-      5,
-      0,
-      "INT"
-    ],
-    [
-      8,
-      8,
-      1,
-      5,
-      1,
-      "INT"
-    ],
-    [
-      9,
-      1,
-      0,
-      6,
+      13,
       0,
       "IMAGE"
     ],
     [
-      10,
-      2,
+      24,
+      29,
       0,
+      4,
+      1,
+      "VAE"
+    ],
+    [
+      28,
+      6,
+      0,
+      33,
+      0,
+      "INT"
+    ],
+    [
+      29,
+      6,
+      1,
+      33,
+      1,
+      "INT"
+    ],
+    [
+      33,
+      25,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      39,
       9,
+      0,
+      14,
       0,
       "GEMMA"
     ],
     [
-      11,
-      2,
+      41,
+      9,
       0,
-      10,
+      37,
       0,
       "GEMMA"
+    ],
+    [
+      42,
+      14,
+      0,
+      10,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      46,
+      33,
+      0,
+      10,
+      3,
+      "LATENT"
+    ],
+    [
+      47,
+      37,
+      0,
+      10,
+      2,
+      "CONDITIONING"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 1,
+      "scale": 0.9090909090909091,
       "offset": [
-        363.9719256481908,
-        -27.1040341608292
+        623.7012344346042,
+        257.61183690683845
       ]
     }
   },

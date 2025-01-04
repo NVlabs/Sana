@@ -15,6 +15,8 @@ from tqdm import tqdm
 from diffusion.model.builder import get_vae, vae_encode
 from diffusion.utils.config import SanaConfig
 
+from PIL import PngImagePlugin
+PngImagePlugin.MAX_TEXT_CHUNK = 100 * 1024 * 1024
 
 @pyrallis.wrap()
 def main(config: SanaConfig) -> None:

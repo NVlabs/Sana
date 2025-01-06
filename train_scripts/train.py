@@ -52,6 +52,10 @@ from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, read_config, set_random_seed
 from diffusion.utils.optimizer import auto_scale_lr, build_optimizer
 
+from diffusion.data.datasets import MorphicStreamingDataset
+
+import litdata as ld
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
@@ -59,7 +63,7 @@ def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = "true"
     os.environ["FSDP_AUTO_WRAP_POLICY"] = "TRANSFORMER_BASED_WRAP"
     os.environ["FSDP_BACKWARD_PREFETCH"] = "BACKWARD_PRE"
-    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaBlock"
+    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaMSBlock"
 
 
 @torch.inference_mode()
@@ -84,7 +88,7 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                 torch.randn(1, config.vae.vae_latent_dim, latent_size, latent_size, device=device)
                 if init_z is None
                 else init_z
-            )
+            ).to(torch.bfloat16)
             embed = torch.load(
                 osp.join(config.train.valid_prompt_embed_root, f"{prompt[:50]}_{valid_prompt_embed_suffix}"),
                 map_location="cpu",
@@ -273,13 +277,13 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
     # Now you train the model
     for epoch in range(start_epoch + 1, config.train.num_epochs + 1):
         time_start, last_tic = time.time(), time.time()
-        sampler = (
-            train_dataloader.batch_sampler.sampler
-            if (num_replicas > 1 or config.model.multi_scale)
-            else train_dataloader.sampler
-        )
-        sampler.set_epoch(epoch)
-        sampler.set_start(max((skip_step - 1) * config.train.train_batch_size, 0))
+        # sampler = (
+        #     train_dataloader.batch_sampler.sampler
+        #     if (num_replicas > 1 or config.model.multi_scale)
+        #     else train_dataloader.sampler
+        # )
+        # sampler.set_epoch(epoch)
+        # sampler.set_start(max((skip_step - 1) * config.train.train_batch_size, 0))
         if skip_step > 1 and accelerator.is_main_process:
             logger.info(f"Skipped Steps: {skip_step}")
         skip_step = 1
@@ -302,14 +306,14 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                         enabled=(config.model.mixed_precision == "fp16" or config.model.mixed_precision == "bf16"),
                     ):
                         z = vae_encode(
-                            config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device
+                            config.vae.vae_type, vae, batch['image'], config.vae.sample_posterior, accelerator.device
                         )
 
             accelerator.wait_for_everyone()
             vae_time_all += time.time() - vae_time_start
 
             clean_images = z
-            data_info = batch[3]
+            data_info = batch['text']
 
             lm_time_start = time.time()
             if load_text_feat:
@@ -319,7 +323,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                 if "T5" in config.text_encoder.text_encoder_name:
                     with torch.no_grad():
                         txt_tokens = tokenizer(
-                            batch[1], max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
+                            batch['text'], max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
                         ).to(accelerator.device)
                         y = text_encoder(txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
                         y_mask = txt_tokens.attention_mask[:, None, None]
@@ -409,20 +413,20 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                     datetime.timedelta(
                         seconds=int(
                             avg_time
-                            * (train_dataloader_len - sampler.step_start // config.train.train_batch_size - step - 1)
+                            * (train_dataloader_len // config.train.train_batch_size - step - 1)
                         )
                     )
                 )
                 log_buffer.average()
 
                 current_step = (
-                    global_step - sampler.step_start // config.train.train_batch_size
+                    global_step  // config.train.train_batch_size
                 ) % train_dataloader_len
                 current_step = train_dataloader_len if current_step == 0 else current_step
                 info = (
                     f"Epoch: {epoch} | Global Step: {global_step} | Local Step: {current_step} // {train_dataloader_len}, "
                     f"total_eta: {eta}, epoch_eta:{eta_epoch}, time: all:{t:.3f}, model:{t_m:.3f}, data:{t_d:.3f}, "
-                    f"lm:{t_lm:.3f}, vae:{t_vae:.3f}, lr:{lr:.3e}, Cap: {batch[5][0]}, "
+                    f"lm:{t_lm:.3f}, vae:{t_vae:.3f}, lr:{lr:.3e}"
                 )
                 info += (
                     f"s:({model.module.h}, {model.module.w}), "
@@ -504,7 +508,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
             # for internal, refactor dataloader logic to remove the ad-hoc implementation
             if (
                 config.model.multi_scale
-                and (train_dataloader_len - sampler.step_start // config.train.train_batch_size - step) < 30
+                and (train_dataloader_len  // config.train.train_batch_size - step) < 30
             ):
                 global_step = epoch * train_dataloader_len
                 logger.info("Early stop current iteration")
@@ -541,7 +545,7 @@ def main(cfg: SanaConfig) -> None:
     global load_vae_feat, load_text_feat, validation_noise, text_encoder, tokenizer
     global max_length, validation_prompts, latent_size, valid_prompt_embed_suffix, null_embed_path
     global image_size, cache_file, total_steps
-
+    import uuid
     config = cfg
     args = cfg
     # config = read_config(args.config)
@@ -576,6 +580,7 @@ def main(cfg: SanaConfig) -> None:
         set_fsdp_env()
         fsdp_plugin = FullyShardedDataParallelPlugin(
             state_dict_config=FullStateDictConfig(offload_to_cpu=False, rank0_only=False),
+
         )
     else:
         init_train = "DDP"
@@ -602,8 +607,8 @@ def main(cfg: SanaConfig) -> None:
         pyrallis.dump(config, open(osp.join(config.work_dir, "config.yaml"), "w"), sort_keys=False, indent=4)
         if args.report_to == "wandb":
             import wandb
-
-            wandb.init(project=args.tracker_project_name, name=args.name, resume="allow", id=args.name)
+            uniqueid = str(uuid.uuid4())[:4]
+            wandb.init(project=args.tracker_project_name , name=args.name + '_' + uniqueid , resume="allow", id=args.name + '_' +  uniqueid)
 
     logger.info(f"Config: \n{config}")
     logger.info(f"World_size: {get_world_size()}, seed: {config.train.seed}")
@@ -814,17 +819,18 @@ def main(cfg: SanaConfig) -> None:
     ]
     num_replicas = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["RANK"])
-    dataset = build_dataset(
-        asdict(config.data),
-        resolution=image_size,
-        aspect_ratio_type=config.model.aspect_ratio_type,
-        real_prompt_ratio=config.train.real_prompt_ratio,
-        max_length=max_length,
-        config=config,
-        caption_proportion=config.data.caption_proportion,
-        sort_dataset=config.data.sort_dataset,
-        vae_downsample_rate=config.vae.vae_downsample_rate,
-    )
+    # dataset = build_dataset(
+    #     asdict(config.data),
+    #     resolution=image_size,
+    #     aspect_ratio_type=config.model.aspect_ratio_type,
+    #     real_prompt_ratio=config.train.real_prompt_ratio,
+    #     max_length=max_length,
+    #     config=config,
+    #     caption_proportion=config.data.caption_proportion,
+    #     sort_dataset=config.data.sort_dataset,
+    #     vae_downsample_rate=config.vae.vae_downsample_rate,
+    # )
+    dataset = MorphicStreamingDataset('/data/mharikum/laion/filtered_laion_2B_256-data-litdata/')
     accelerator.wait_for_everyone()
     if config.model.multi_scale:
         drop_last = True
@@ -861,13 +867,14 @@ def main(cfg: SanaConfig) -> None:
         logger.info(f"rank-{rank} Cached file len: {len(train_dataloader.batch_sampler.cached_idx)}")
     else:
         sampler = DistributedRangedSampler(dataset, num_replicas=num_replicas, rank=rank)
-        train_dataloader = build_dataloader(
-            dataset,
-            num_workers=config.train.num_workers,
-            batch_size=config.train.train_batch_size,
-            shuffle=False,
-            sampler=sampler,
-        )
+        # train_dataloader = build_dataloader(
+        #     dataset,
+        #     num_workers=config.train.num_workers,
+        #     batch_size=config.train.train_batch_size,
+        #     shuffle=False,
+        #     sampler=sampler,
+        # )
+        train_dataloader = ld.StreamingDataLoader(dataset,num_workers=config.train.num_workers,drop_last=True,batch_size=config.train.train_batch_size,shuffle=False)
         train_dataloader_len = len(train_dataloader)
     load_vae_feat = getattr(train_dataloader.dataset, "load_vae_feat", False)
     load_text_feat = getattr(train_dataloader.dataset, "load_text_feat", False)
@@ -896,12 +903,12 @@ def main(cfg: SanaConfig) -> None:
 
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
 
-    if accelerator.is_main_process:
-        tracker_config = dict(vars(config))
-        try:
-            accelerator.init_trackers(args.tracker_project_name, tracker_config)
-        except:
-            accelerator.init_trackers(f"tb_{timestamp}")
+    # if accelerator.is_main_process:
+    #     tracker_config = dict(vars(config))
+    #     try:
+    #         accelerator.init_trackers(args.tracker_project_name, tracker_config)
+    #     except:
+    #         accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
     start_step = 0

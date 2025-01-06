@@ -275,6 +275,7 @@ where each line of [`asset/samples_mini.txt`](asset/samples_mini.txt) contains a
 - 32GB VRAM is required for both 0.6B and 1.6B model's training
 
 ### 1). Train with image-text pairs in directory
+
 We provide a training example here and you can also select your desired config file from [config files dir](configs/sana_config) based on your data structure.
 
 To launch Sana training, you will first need to prepare data in the following formats. [Here](asset/example_data) is an example for the data structure for reference.
@@ -312,6 +313,7 @@ bash train_scripts/train.sh \
 ```
 
 ### 2). Train with image-text pairs in directory
+
 We also provide conversion scripts to convert your data to the required format. You can refer to the [data conversion scripts](asset/data_conversion_scripts) for more details.
 
 ```bash
@@ -319,6 +321,7 @@ python tools/convert_ImgDataset_to_WebDatasetMS_format.py
 ```
 
 Then Sana's training can be launched via
+
 ```bash
 # Example of training Sana 0.6B with 512x512 resolution from scratch
 bash train_scripts/train.sh \

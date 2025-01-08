@@ -32,3 +32,9 @@ python main.py
 [Sana + CogVideoX workflow](Sana_CogVideoX.json)
 
 [![Sample T2I + I2V](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/sana-cogvideox.jpg)](https://nvlabs.github.io/Sana/asset/content/comfyui/Sana_CogVideoX_Fun.mp4)
+
+### A sample workflow for Sana 4096x4096 image
+
+[Sana workflow](Sana_FlowEuler_4K.json)
+
+![Sana](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/Sana_4K_workflow.jpg)

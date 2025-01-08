@@ -78,6 +78,7 @@ image[0].save('sana.png')
 ```
 
 #### 2). For 4K models
+
 4K models need [patch_conv](https://github.com/mit-han-lab/patch_conv) to avoid OOM issue.(80GB GPU is recommended)
 
 run `pip install patch_conv` first, then

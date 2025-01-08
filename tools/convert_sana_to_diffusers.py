@@ -82,13 +82,21 @@ def main(args):
     # y norm
     converted_state_dict["caption_norm.weight"] = state_dict.pop("attention_y_norm.weight")
 
-    flow_shift = 3.0
+    # scheduler
+    if args.image_size == 4096:
+        flow_shift = 6.0
+    else:
+        flow_shift = 3.0
+
+    # model config
     if args.model_type == "SanaMS_1600M_P1_D20":
         layer_num = 20
     elif args.model_type == "SanaMS_600M_P1_D28":
         layer_num = 28
     else:
         raise ValueError(f"{args.model_type} is not supported.")
+    # Positional embedding interpolation scale.
+    interpolation_scale = {512: None, 1024: None, 2048: 1.0, 4096: 2.0}
 
     for depth in range(layer_num):
         # Transformer blocks.
@@ -170,6 +178,7 @@ def main(args):
             patch_size=1,
             norm_elementwise_affine=False,
             norm_eps=1e-6,
+            interpolation_scale=interpolation_scale[args.image_size],
         )
 
     if is_accelerate_available():
@@ -260,9 +269,9 @@ if __name__ == "__main__":
         "--image_size",
         default=1024,
         type=int,
-        choices=[512, 1024, 2048],
+        choices=[512, 1024, 2048, 4096],
         required=False,
-        help="Image size of pretrained model, 512 or 1024 or 2048.",
+        help="Image size of pretrained model, 512, 1024, 2048 or 4096.",
     )
     parser.add_argument(
         "--model_type", default="SanaMS_1600M_P1_D20", type=str, choices=["SanaMS_1600M_P1_D20", "SanaMS_600M_P1_D28"]

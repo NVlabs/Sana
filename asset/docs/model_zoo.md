@@ -10,6 +10,7 @@
 | Sana-1.6B | 1024px | [Sana_1600M_1024px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing) | [Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers) | fp16/fp32     | Multi-Language |
 | Sana-1.6B | 1024px | [Sana_1600M_1024px_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16)           | [Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers)           | **bf16**/fp32 | Multi-Language |
 | Sana-1.6B | 2Kpx   | [Sana_1600M_2Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16)               | [Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
+| Sana-1.6B | 4Kpx   | [Sana_1600M_4Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16)               | [Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
 
 ## ❗ 2. Make sure to use correct precision(fp16/bf16/fp32) for training and inference.
 
@@ -20,6 +21,7 @@
 #### 1). For fp16 models
 
 ```python
+# run `pip install git+https://github.com/huggingface/diffusers` before use Sana in diffusers
 import torch
 from diffusers import SanaPipeline
 
@@ -49,7 +51,7 @@ image[0].save("sana.png")
 #### 2). For bf16 models
 
 ```python
-# run `pip install -U diffusers` before use Sana in diffusers
+# run `pip install git+https://github.com/huggingface/diffusers` before use Sana in diffusers
 import torch
 from diffusers import SanaPAGPipeline
 
@@ -73,4 +75,42 @@ image = pipe(
     generator=torch.Generator(device="cuda").manual_seed(42),
 )[0]
 image[0].save('sana.png')
+```
+
+#### 2). For 4K models
+4K models need [patch_conv](https://github.com/mit-han-lab/patch_conv) to avoid OOM issue.(80GB GPU is recommended)
+
+run `pip install patch_conv` first, then
+
+```python
+# run `pip install git+https://github.com/huggingface/diffusers` before use Sana in diffusers
+import torch
+from diffusers import SanaPipeline
+
+pipe = SanaPipeline.from_pretrained(
+    "Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers",
+    variant="bf16",
+    torch_dtype=torch.bfloat16,
+)
+pipe.to("cuda")
+
+pipe.vae.to(torch.bfloat16)
+pipe.text_encoder.to(torch.bfloat16)
+
+# for 4096x4096 image generation OOM issue
+if pipe.transformer.config.sample_size == 128:
+    from patch_conv import convert_model
+    pipe.vae = convert_model(pipe.vae, splits=32)
+
+prompt = 'a cyberpunk cat with a neon sign that says "Sana"'
+image = pipe(
+    prompt=prompt,
+    height=4096,
+    width=4096,
+    guidance_scale=5.0,
+    num_inference_steps=20,
+    generator=torch.Generator(device="cuda").manual_seed(42),
+)[0]
+
+image[0].save("sana_4K.png")
 ```

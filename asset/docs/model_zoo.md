@@ -77,11 +77,9 @@ image = pipe(
 image[0].save('sana.png')
 ```
 
-#### 2). For 4K models
+## ❗ 3. 4K models
 
-4K models need [patch_conv](https://github.com/mit-han-lab/patch_conv) to avoid OOM issue.(80GB GPU is recommended)
-
-run `pip install patch_conv` first, then
+4K models need VAE tiling to avoid OOM issue.(24 GPU is recommended)
 
 ```python
 # run `pip install git+https://github.com/huggingface/diffusers` before use Sana in diffusers
@@ -99,7 +97,8 @@ pipe.vae.to(torch.bfloat16)
 pipe.text_encoder.to(torch.bfloat16)
 
 # for 4096x4096 image generation OOM issue, feel free adjust the tile size
-pipe.vae.enable_tiling(tile_sample_min_height=1024, tile_sample_min_width=1024)
+if pipe.transformer.config.sample_size == 128:
+    pipe.vae.enable_tiling(tile_sample_min_height=1024, tile_sample_min_width=1024)
 
 prompt = 'a cyberpunk cat with a neon sign that says "Sana"'
 image = pipe(

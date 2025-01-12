@@ -135,6 +135,7 @@ def vae_decode(name, vae, latent):
         scaling_factor = ae.cfg.scaling_factor if ae.cfg.scaling_factor else 0.41407
         if latent.shape[-1] * vae_scale_factor > 4000 or latent.shape[-2] * vae_scale_factor > 4000:
             from patch_conv import convert_model
+
             ae = convert_model(ae, splits=4)
         samples = ae.decode(latent.detach() / scaling_factor)
     elif "AutoencoderDC" in name:

@@ -98,10 +98,8 @@ pipe.to("cuda")
 pipe.vae.to(torch.bfloat16)
 pipe.text_encoder.to(torch.bfloat16)
 
-# for 4096x4096 image generation OOM issue
-if pipe.transformer.config.sample_size == 128:
-    from patch_conv import convert_model
-    pipe.vae = convert_model(pipe.vae, splits=32)
+# for 4096x4096 image generation OOM issue, feel free adjust the tile size
+pipe.vae.enable_tiling(tile_sample_min_height=1024, tile_sample_min_width=1024)
 
 prompt = 'a cyberpunk cat with a neon sign that says "Sana"'
 image = pipe(

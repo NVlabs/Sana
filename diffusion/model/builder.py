@@ -15,6 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import torch
+from diffusers import AutoencoderDC
 from diffusers.models import AutoencoderKL
 from mmcv import Registry
 from termcolor import colored
@@ -87,6 +88,10 @@ def get_vae(name, model_path, device="cuda"):
         print(colored(f"[DC-AE] Loading model from {model_path}", attrs=["bold"]))
         dc_ae = DCAE_HF.from_pretrained(model_path).to(device).eval()
         return dc_ae
+    elif "AutoencoderDC" in name:
+        print(colored(f"[AutoencoderDC] Loading model from {model_path}", attrs=["bold"]))
+        dc_ae = AutoencoderDC.from_pretrained(model_path).to(device).eval()
+        return dc_ae
     else:
         print("error load vae")
         exit()
@@ -102,8 +107,14 @@ def vae_encode(name, vae, images, sample_posterior, device):
         z = (z - vae.config.shift_factor) * vae.config.scaling_factor
     elif "dc-ae" in name:
         ae = vae
+        scaling_factor = ae.cfg.scaling_factor if ae.cfg.scaling_factor else 0.41407
         z = ae.encode(images.to(device))
-        z = z * ae.cfg.scaling_factor
+        z = z * scaling_factor
+    elif "AutoencoderDC" in name:
+        ae = vae
+        scaling_factor = ae.config.scaling_factor if ae.config.scaling_factor else 0.41407
+        z = ae.encode(images.to(device))
+        z = z * scaling_factor
     else:
         print("error load vae")
         exit()
@@ -116,7 +127,25 @@ def vae_decode(name, vae, latent):
         samples = vae.decode(latent).sample
     elif "dc-ae" in name:
         ae = vae
-        samples = ae.decode(latent.detach() / ae.cfg.scaling_factor)
+        vae_scale_factor = (
+            2 ** (len(ae.config.encoder_block_out_channels) - 1)
+            if hasattr(ae, "config") and ae.config is not None
+            else 32
+        )
+        scaling_factor = ae.cfg.scaling_factor if ae.cfg.scaling_factor else 0.41407
+        if latent.shape[-1] * vae_scale_factor > 4000 or latent.shape[-2] * vae_scale_factor > 4000:
+            from patch_conv import convert_model
+            ae = convert_model(ae, splits=4)
+        samples = ae.decode(latent.detach() / scaling_factor)
+    elif "AutoencoderDC" in name:
+        ae = vae
+        scaling_factor = ae.config.scaling_factor if ae.config.scaling_factor else 0.41407
+        try:
+            samples = ae.decode(latent / scaling_factor, return_dict=False)[0]
+        except torch.cuda.OutOfMemoryError as e:
+            print("Warning: Ran out of memory when regular VAE decoding, retrying with tiled VAE decoding.")
+            ae.enable_tiling(tile_sample_min_height=512, tile_sample_min_width=512)
+            samples = ae.decode(latent / scaling_factor, return_dict=False)[0]
     else:
         print("error load vae")
         exit()

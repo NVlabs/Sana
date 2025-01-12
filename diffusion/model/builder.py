@@ -145,7 +145,7 @@ def vae_decode(name, vae, latent):
             samples = ae.decode(latent / scaling_factor, return_dict=False)[0]
         except torch.cuda.OutOfMemoryError as e:
             print("Warning: Ran out of memory when regular VAE decoding, retrying with tiled VAE decoding.")
-            ae.enable_tiling(tile_sample_min_height=512, tile_sample_min_width=512)
+            ae.enable_tiling(tile_sample_min_height=1024, tile_sample_min_width=1024)
             samples = ae.decode(latent / scaling_factor, return_dict=False)[0]
     else:
         print("error load vae")

@@ -35,7 +35,7 @@ import torch
 from diffusers import SanaPipeline
 from torchvision.utils import save_image
 
-from t2i.hf_utils import hf_download_or_fpath
+from sana.tools import hf_download_or_fpath
 
 MAX_SEED = np.iinfo(np.int32).max
 CACHE_EXAMPLES = torch.cuda.is_available() and os.getenv("CACHE_EXAMPLES", "1") == "1"

@@ -158,7 +158,9 @@ if torch.cuda.is_available():
         use_safetensors=True,
     ).to(device)
 
-    quant_model_path = hf_download_or_fpath(f"hf://{args.model_path}/transformer/diffusion_pytorch_model.int4.safetensors")
+    quant_model_path = hf_download_or_fpath(
+        f"hf://{args.model_path}/transformer/diffusion_pytorch_model.int4.safetensors"
+    )
 
     nunchaku.models.transformer_sana.inject_quantized_module(
         pipe.transformer,

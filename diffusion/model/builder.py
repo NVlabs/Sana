@@ -113,7 +113,7 @@ def vae_encode(name, vae, images, sample_posterior, device):
     elif "AutoencoderDC" in name:
         ae = vae
         scaling_factor = ae.config.scaling_factor if ae.config.scaling_factor else 0.41407
-        z = ae.encode(images.to(device))
+        z = ae.encode(images.to(device))[0]
         z = z * scaling_factor
     else:
         print("error load vae")

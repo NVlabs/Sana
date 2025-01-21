@@ -1,57 +1,59 @@
 [build-system]
-requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0"]
 
 [project]
-name = "sana"
-version = "0.0.1"
-description = "SANA"
-readme = "README.md"
-requires-python = ">=3.10"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-    "pre-commit",
-    "accelerate",
-    "beautifulsoup4",
-    "bs4",
-    "came-pytorch",
-    "einops",
-    "ftfy",
-    "diffusers@git+https://github.com/huggingface/diffusers",
-    "clip@git+https://github.com/openai/CLIP.git",
-    "gradio",
-    "image-reward",
-    "ipdb",
-    "mmcv==1.7.2",
-    "omegaconf",
-    "opencv-python",
-    "optimum",
-    "patch_conv",
-    "peft",
-    "protobuf",
-    "pytorch-fid",
-    "regex",
-    "sentencepiece",
-    "tensorboard",
-    "tensorboardX",
-    "timm",
-    "torchaudio==2.4.0",
-    "torchvision==0.19",
-    "transformers",
-    "triton==3.0.0",
-    "wandb",
-    "webdataset",
-    "xformers==0.0.27.post2",
-    "yapf",
-    "spaces",
-    "matplotlib",
-    "termcolor",
-    "pyrallis",
+  "accelerate>=1.3.0",
+  "beautifulsoup4>=4.12.3",
+  "bs4>=0.0.2",
+  "came-pytorch>=0.1.3",
+  "clip@git+https://github.com/openai/CLIP.git",
+  "diffusers@git+https://github.com/huggingface/diffusers",
+  "einops>=0.8.0",
+  "ftfy>=6.3.1",
+  "gradio>=5.12.0",
+  "image-reward>=1.5",
+  "ipdb>=0.13.13",
+  "matplotlib>=3.10.0",
+  "mmcv==1.7.2",
+  "numpy>=1.26.4",
+  "omegaconf>=2.3.0",
+  "opencv-python>=4.11.0.86",
+  "optimum>=1.23.3",
+  "pandas>=2.2.3",
+  "patch-conv>=0.0.1b0",
+  "peft>=0.14.0",
+  "pre-commit>=4.0.1",
+  "protobuf>=5.29.3",
+  "pyrallis>=0.3.1",
+  "pytorch-fid>=0.3.0",
+  "regex>=2024.11.6",
+  "ruff>=0.9.2",
+  "sentencepiece>=0.2.0",
+  "spaces>=0.32.0",
+  "tensorboard>=2.18.0",
+  "tensorboardx>=2.6.2.2",
+  "termcolor>=2.5.0",
+  "timm>=0.6.13",
+  "torchaudio==2.4.0",
+  "torchvision==0.19",
+  "transformers>=4.48.0",
+  "triton==3.0.0",
+  "wandb>=0.19.4",
+  "webdataset>=0.2.100",
+  "xformers==0.0.27.post2",
+  "yapf>=0.43.0",
 ]
-
+description = "SANA"
+name = "sana"
+readme = "README.md"
+requires-python = ">=3.12"
+version = "0.0.1"
 
 [project.scripts]
 sana-run = "sana.cli.run:main"
@@ -64,17 +66,17 @@ sana-upload = "sana.cli.upload2hf:main"
 [tool.pip]
 extra-index-url = ["https://download.pytorch.org/whl/cu121"]
 
-[tool.black]
-line-length = 120
+# [tool.black]
+# line-length = 120
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-line_length = 120
+# [tool.isort]
+# profile = "black"
+# multi_line_output = 3
+# include_trailing_comma = true
+# force_grid_wrap = 0
+# use_parentheses = true
+# ensure_newline_before_comments = true
+# line_length = 120
 
 [tool.setuptools.packages.find]
 exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]

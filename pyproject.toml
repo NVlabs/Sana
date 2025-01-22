@@ -59,12 +59,15 @@ version = "0.0.1"
 sana-run = "sana.cli.run:main"
 sana-upload = "sana.cli.upload2hf:main"
 
-[project.optional-dependencies]
+[tool.uv.sources]
+torch = {index = "pytorch-cu121"}
+torchaudio = {index = "pytorch-cu121"}
+torchvision = {index = "pytorch-cu121"}
 
-[project.urls]
-
-[tool.pip]
-extra-index-url = ["https://download.pytorch.org/whl/cu121"]
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
 
 # [tool.black]
 # line-length = 120

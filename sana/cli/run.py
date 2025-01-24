@@ -67,10 +67,10 @@ def main() -> None:
     timeout = f"{timeout}m"
 
     # Get SLURM account and partition
-    if "VILA_SLURM_ACCOUNT" not in os.environ or "VILA_SLURM_PARTITION" not in os.environ:
-        raise ValueError("`VILA_SLURM_ACCOUNT` and `VILA_SLURM_PARTITION` must be set in the environment.")
-    account = os.environ["VILA_SLURM_ACCOUNT"]
-    partition = os.environ["VILA_SLURM_PARTITION"]
+    if "SANA_SLURM_ACCOUNT" not in os.environ or "SANA_SLURM_PARTITION" not in os.environ:
+        raise ValueError("`SANA_SLURM_ACCOUNT` and `SANA_SLURM_PARTITION` must be set in the environment.")
+    account = os.environ["SANA_SLURM_ACCOUNT"]
+    partition = os.environ["SANA_SLURM_PARTITION"]
 
     # Set environment variables
     env = os.environ.copy()

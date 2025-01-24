@@ -34,6 +34,7 @@ jobs:
           bash environment_setup.sh
       - name: Run tests with Slurm
         run: |
+          source ~/.bashrc
           sana-run --pty -m ci -J tests-bash bash tests/bash/entry.sh
 
 # tests-python:

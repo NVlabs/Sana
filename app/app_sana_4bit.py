@@ -29,13 +29,12 @@ from datetime import datetime
 
 import gradio as gr
 import numpy as np
-import nunchaku.models.transformer_sana
 import spaces
 import torch
 from diffusers import SanaPipeline
+from nunchaku.models.transformer_sana import NunchakuSanaTransformer2DModel
 from torchvision.utils import save_image
 
-from sana.tools import hf_download_or_fpath
 
 MAX_SEED = np.iinfo(np.int32).max
 CACHE_EXAMPLES = torch.cuda.is_available() and os.getenv("CACHE_EXAMPLES", "1") == "1"
@@ -132,17 +131,7 @@ def get_args():
         type=str,
         help="Path to the model file (positional)",
     )
-    parser.add_argument("--cfg_scale", default=5.0, type=float)
-    parser.add_argument("--pag_scale", default=2.0, type=float)
-    parser.add_argument("--seed", default=42, type=int)
-    parser.add_argument("--step", default=-1, type=int)
     parser.add_argument("--share", action="store_true")
-    parser.add_argument(
-        "--shield_model_path",
-        type=str,
-        help="The path to shield model, we employ ShieldGemma-2B by default.",
-        default="google/shieldgemma-2b",
-    )
 
     return parser.parse_known_args()[0]
 
@@ -151,26 +140,13 @@ args = get_args()
 
 if torch.cuda.is_available():
 
+    transformer = NunchakuSanaTransformer2DModel.from_pretrained("mit-han-lab/svdq-int4-sana-1600m")
     pipe = SanaPipeline.from_pretrained(
-        args.model_path,
+        "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers",
+        transformer=transformer,
         variant="bf16",
         torch_dtype=torch.bfloat16,
-        use_safetensors=True,
     ).to(device)
-
-    quant_model_path = hf_download_or_fpath(
-        f"hf://{args.model_path}/transformer/diffusion_pytorch_model.int4.safetensors"
-    )
-
-    nunchaku.models.transformer_sana.inject_quantized_module(
-        pipe.transformer,
-        nunchaku.models.transformer_sana.load_quantized_module(
-            pipe.transformer,
-            quant_model_path,
-            device,
-        ),
-        device,
-    )
 
     pipe.text_encoder.to(torch.bfloat16)
     pipe.vae.to(torch.bfloat16)
@@ -207,7 +183,6 @@ def generate(
     height: int = 1024,
     width: int = 1024,
     flow_dpms_guidance_scale: float = 5.0,
-    flow_dpms_pag_guidance_scale: float = 2.0,
     flow_dpms_inference_steps: int = 20,
     randomize_seed: bool = False,
 ):
@@ -221,7 +196,6 @@ def generate(
 
     num_inference_steps = flow_dpms_inference_steps
     guidance_scale = flow_dpms_guidance_scale
-    pag_guidance_scale = flow_dpms_pag_guidance_scale
 
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
@@ -237,7 +211,7 @@ def generate(
         num_inference_steps=num_inference_steps,
         num_images_per_prompt=num_imgs,
         generator=generator,
-    )[0]
+    ).images
     INFER_SPEED = (time.time() - time_start) / num_imgs
 
     save_img = False
@@ -351,13 +325,6 @@ with gr.Blocks(css=css, theme=theme, title="Sana") as demo:
                     step=0.1,
                     value=4.5,
                 )
-                flow_dpms_pag_guidance_scale = gr.Slider(
-                    label="PAG Guidance scale",
-                    minimum=1,
-                    maximum=1,
-                    step=0.5,
-                    value=1,
-                )
             with gr.Row():
                 use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=True)
             negative_prompt = gr.Text(
@@ -432,7 +399,6 @@ with gr.Blocks(css=css, theme=theme, title="Sana") as demo:
             height,
             width,
             flow_dpms_guidance_scale,
-            flow_dpms_pag_guidance_scale,
             flow_dpms_inference_steps,
             randomize_seed,
         ],

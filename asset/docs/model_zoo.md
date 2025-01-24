@@ -9,6 +9,7 @@
 | Sana-1.6B | 1024px | [Sana_1600M_1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px)                     | [Efficient-Large-Model/Sana_1600M_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers)                     | fp16/fp32     | -              |
 | Sana-1.6B | 1024px | [Sana_1600M_1024px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing) | [Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers) | fp16/fp32     | Multi-Language |
 | Sana-1.6B | 1024px | [Sana_1600M_1024px_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16)           | [Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers)           | **bf16**/fp32 | Multi-Language |
+| Sana-1.6B | 1024px | -                                                                                                       | [mit-han-lab/svdq-int4-sana-1600m](https://huggingface.co/mit-han-lab/svdq-int4-sana-1600m)                                                       | **int4**      | Multi-Language |
 | Sana-1.6B | 2Kpx   | [Sana_1600M_2Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16)               | [Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
 | Sana-1.6B | 4Kpx   | [Sana_1600M_4Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16)               | [Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
 
@@ -115,4 +116,38 @@ image = pipe(
 )[0]
 
 image[0].save("sana_4K.png")
+```
+
+## ❗ 4. int4 inference
+
+This int4 model is quantized with [SVDQuant-Nunchaku](https://github.com/mit-han-lab/nunchaku). You need first follow the [guidance of installation](https://github.com/mit-han-lab/nunchaku?tab=readme-ov-file#installation) of nunchaku engine, then you can use the following code snippet to perform inference with int4 Sana model.
+
+Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the [SanaPAGPipeline](https://github.com/mit-han-lab/nunchaku/blob/main/examples/sana_1600m_pag.py) section.
+
+```python
+import torch
+from diffusers import SanaPipeline
+
+from nunchaku.models.transformer_sana import NunchakuSanaTransformer2DModel
+
+transformer = NunchakuSanaTransformer2DModel.from_pretrained("mit-han-lab/svdq-int4-sana-1600m")
+pipe = SanaPipeline.from_pretrained(
+    "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers",
+    transformer=transformer,
+    variant="bf16",
+    torch_dtype=torch.bfloat16,
+).to("cuda")
+
+pipe.text_encoder.to(torch.bfloat16)
+pipe.vae.to(torch.bfloat16)
+
+image = pipe(
+    prompt="A cute 🐼 eating 🎋, ink drawing style",
+    height=1024,
+    width=1024,
+    guidance_scale=4.5,
+    num_inference_steps=20,
+    generator=torch.Generator().manual_seed(42),
+).images[0]
+image.save("sana_1600m.png")
 ```

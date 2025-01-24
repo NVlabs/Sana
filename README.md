@@ -3,7 +3,8 @@
 </p>
 
 # ⚡️Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer
-### <div align="center"> ICLR 2025 <div> 
+
+### <div align="center"> ICLR 2025 <div>
 
 <div align="center">
   <a href="https://nvlabs.github.io/Sana/"><img src="https://img.shields.io/static/v1?label=Project&message=Github&color=blue&logo=github-pages"></a> &ensp;
@@ -40,7 +41,9 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion models (e
 - (🔥 New) \[2025/1/24\] 4bit-Sana is released, powered by [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku) inference engine. Now run your Sana within **8GB** GPU VRAM [\[Guidance\]](asset/docs/4bit_sana.md) [\[Demo\]](https://svdquant.mit.edu/) [\[Model\]](asset/docs/model_zoo.md)
 - (🔥 New) \[2025/1/24\] DCAE-1.1 is released, better reconstruction quality. [\[Model\]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1) [\[diffusers\]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers)
 - (🔥 New) \[2025/1/23\] Sana is accepted by ICLR-2025. 🎉🎉🎉
------- 
+
+______________________________________________________________________
+
 - (🔥 New) \[2025/1/12\] DC-AE tiling makes Sana-4K inferences 4096x4096px images within 22GB GPU memory. With model offload and 8bit/4bit quantize. The 4K Sana run within **8GB** GPU VRAM. [\[Guidance\]](asset/docs/model_zoo.md#-3-4k-models)
 - (🔥 New) \[2025/1/11\] Sana code-base license changed to Apache 2.0.
 - (🔥 New) \[2025/1/10\] Inference Sana with 8bit quantization.[\[Guidance\]](asset/docs/8bit_sana.md#quantization)

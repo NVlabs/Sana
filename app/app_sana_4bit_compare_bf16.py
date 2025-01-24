@@ -9,13 +9,12 @@ import GPUtil
 
 # import gradio last to avoid conflicts with other imports
 import gradio as gr
+import safety_check
 import spaces
 import torch
 from diffusers import SanaPipeline
 from nunchaku.models.transformer_sana import NunchakuSanaTransformer2DModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
-import safety_check
 
 MAX_IMAGE_SIZE = 2048
 MAX_SEED = 1000000000

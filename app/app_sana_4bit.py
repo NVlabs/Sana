@@ -35,7 +35,6 @@ from diffusers import SanaPipeline
 from nunchaku.models.transformer_sana import NunchakuSanaTransformer2DModel
 from torchvision.utils import save_image
 
-
 MAX_SEED = np.iinfo(np.int32).max
 CACHE_EXAMPLES = torch.cuda.is_available() and os.getenv("CACHE_EXAMPLES", "1") == "1"
 MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", "4096"))

@@ -38,7 +38,8 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion models (e
 
 ## 🔥🔥 News
 
-- (🔥 New) \[2025/1/29\] SANA 1.5 is out! [\[Tech Report\]](asset/SANA_1.5.pdf)
+- (🔥 New) \[2025/1/30\] Release CAME-8bit optimizer code. Saving more GPU memory during training. [\[Guidance\]](configs/sana_config/1024ms/Sana_1600M_img1024_CAME8bit.yaml)
+- (🔥 New) \[2025/1/29\] SANA 1.5 is out! Figure out how to do efficient training & inference scaling!🚀[\[Tech Report\]](asset/SANA_1.5.pdf)
 - (🔥 New) \[2025/1/24\] 4bit-Sana is released, powered by [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku) inference engine. Now run your Sana within **8GB** GPU VRAM [\[Guidance\]](asset/docs/4bit_sana.md) [\[Demo\]](https://svdquant.mit.edu/) [\[Model\]](asset/docs/model_zoo.md)
 - (🔥 New) \[2025/1/24\] DCAE-1.1 is released, better reconstruction quality. [\[Model\]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1) [\[diffusers\]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers)
 - (🔥 New) \[2025/1/23\] **Sana is accepted by ICLR-2025.** 🎉🎉🎉

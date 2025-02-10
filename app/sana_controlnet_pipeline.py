@@ -199,7 +199,6 @@ class SanaControlNetPipeline(nn.Module):
         generator=torch.Generator().manual_seed(42),
         latents=None,
     ):
-
         self.ori_height, self.ori_width = ref_image.height, ref_image.width
         self.guidance_type = guidance_type_select(self.guidance_type, pag_guidance_scale, self.config.model.attn_type)
 

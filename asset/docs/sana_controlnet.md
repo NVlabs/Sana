@@ -45,6 +45,31 @@ python tools/controlnet/inference_controlnet.py \
         --json_file asset/controlnet/samples_controlnet.json
 ```
 
+### 3). Inference code snap
+
+```python
+import torch
+from PIL import Image
+from app.sana_controlnet_pipeline import SanaControlNetPipeline
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+pipe = SanaControlNetPipeline("configs/sana_controlnet_config/Sana_1600M_1024px_controlnet_bf16.yaml")
+pipe.from_pretrained("hf://Efficient-Large-Model/Sana_1600M_1024px_BF16_ControlNet_HED/checkpoints/Sana_1600M_1024px_BF16_ControlNet_HED.pth")
+
+ref_image = Image.open("asset/controlnet/ref_images/A transparent sculpture of a duck made out of glass. The sculpture is in front of a painting of a la.jpg")
+prompt = "A transparent sculpture of a duck made out of glass. The sculpture is in front of a painting of a landscape."
+
+images = pipe(
+    prompt=prompt,
+    ref_image=ref_image,
+    guidance_scale=4.5,
+    num_inference_steps=10,
+    sketch_thickness=2,
+    generator=torch.Generator(device=device).manual_seed(0),
+)
+```
+
 ## Training of `Sana + ControlNet`
 
 ### Coming soon

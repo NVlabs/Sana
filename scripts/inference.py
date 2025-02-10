@@ -237,7 +237,7 @@ class SanaInference(SanaConfig):
     model_path: Optional[str] = "hf://Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth"
     work_dir: str = "output/inference"
     version: str = "sigma"
-    txt_file: str = "asset/samples_mini.txt"
+    txt_file: str = "asset/samples/samples_mini.txt"
     json_file: Optional[str] = None
     sample_nums: int = 100_000
     bs: int = 1
@@ -309,7 +309,6 @@ if __name__ == "__main__":
     model = build_model(
         config.model.model, use_fp32_attention=config.model.get("fp32_attention", False), **model_kwargs
     ).to(device)
-    # model = build_model(config.model, **model_kwargs).to(device)
     logger.info(
         f"{model.__class__.__name__}:{config.model.model}, Model Parameters: {sum(p.numel() for p in model.parameters()):,}"
     )

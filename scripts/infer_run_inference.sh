@@ -11,7 +11,7 @@ default_bs=50    # 1
 default_sample_nums=30000   # 10, 10000, 30000
 default_sampling_algo="flow_dpm-solver"
 default_add_label=''
-default_txt_file="asset/samples.txt"
+default_txt_file="asset/samples/samples.txt"
 default_json_file="data/test/PG-eval-data/MJHQ-30K/meta_data.json"
 
 # parser

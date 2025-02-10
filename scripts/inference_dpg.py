@@ -236,7 +236,7 @@ class SanaInference(SanaConfig):
     skip_grid: bool = False
     position_model_path: str = "output/pretrained_models/Sana.pth"
     model_path: str = None
-    txt_file: str = "asset/samples.txt"
+    txt_file: str = "asset/samples/samples.txt"
     json_file: str = None
     sample_nums: int = 1065
     cfg_scale: float = 4.5

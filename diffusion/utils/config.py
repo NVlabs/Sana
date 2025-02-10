@@ -176,6 +176,20 @@ class TrainingConfig(BaseConfig):
 
 
 @dataclass
+class ControlNetConfig(BaseConfig):
+    control_signal_type: str = "scribble"
+    validation_scribble_maps: List[str] = field(
+        default_factory=lambda: [
+            "output/tmp_embed/controlnet/dog_scribble_thickness_3.jpg",
+            "output/tmp_embed/controlnet/girl_scribble_thickness_3.jpg",
+            "output/tmp_embed/controlnet/cyborg_scribble_thickness_3.jpg",
+            "output/tmp_embed/controlnet/Astronaut_scribble_thickness_3.jpg",
+            "output/tmp_embed/controlnet/mountain_scribble_thickness_3.jpg",
+        ]
+    )
+
+
+@dataclass
 class SanaConfig(BaseConfig):
     data: DataConfig
     model: ModelConfig
@@ -183,6 +197,7 @@ class SanaConfig(BaseConfig):
     text_encoder: TextEncoderConfig
     scheduler: SchedulerConfig
     train: TrainingConfig
+    controlnet: ControlNetConfig
     work_dir: str = "output/"
     resume_from: Optional[str] = None
     load_from: Optional[str] = None

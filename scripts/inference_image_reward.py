@@ -217,7 +217,7 @@ def get_args():
 class SanaInference(SanaConfig):
     config: str = ""
     model_path: Optional[str] = field(default=None, metadata={"help": "Path to the model file (optional)"})
-    txt_file: str = "asset/samples.txt"
+    txt_file: str = "asset/samples/samples.txt"
     json_file: Optional[str] = None
     sample_nums: int = 100_000
     bs: int = 1

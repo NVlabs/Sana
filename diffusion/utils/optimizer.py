@@ -17,6 +17,7 @@
 import math
 from typing import Callable, Optional, Tuple
 
+import numpy as np
 import torch
 from came_pytorch import CAME
 from mmcv import Config

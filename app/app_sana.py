@@ -199,7 +199,6 @@ def get_args():
 args = get_args()
 
 if torch.cuda.is_available():
-    weight_dtype = torch.float16
     model_path = args.model_path
     pipe = SanaPipeline(args.config)
     pipe.from_pretrained(model_path)

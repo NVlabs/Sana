@@ -23,6 +23,7 @@ from .sana_multi_scale_adaln import (
     SanaMSAdaLN_1600M_P2_D20,
     SanaMSAdaLNBlock,
 )
+from .sana_multi_scale_controlnet import SanaMSControlNet_600M_P1_D28
 from .sana_U_shape import (
     SanaU,
     SanaU_600M_P1_D28,

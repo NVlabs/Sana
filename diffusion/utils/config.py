@@ -197,7 +197,7 @@ class SanaConfig(BaseConfig):
     text_encoder: TextEncoderConfig
     scheduler: SchedulerConfig
     train: TrainingConfig
-    controlnet: ControlNetConfig
+    controlnet: Optional[ControlNetConfig] = None
     work_dir: str = "output/"
     resume_from: Optional[str] = None
     load_from: Optional[str] = None

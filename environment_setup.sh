@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 set -e
 
-CONDA_ENV=${1:-""}
-if [ -n "$CONDA_ENV" ]; then
-    # This is required to activate conda environment
-    eval "$(conda shell.bash hook)"
+# Default virtual environment directory
+VENV_DIR=".venv"
 
-    conda create -n $CONDA_ENV python=3.10.0 -y
-    conda activate $CONDA_ENV
-    # This is optional if you prefer to use built-in nvcc
-    conda install -c nvidia cuda-toolkit -y
+# Check if the virtual environment needs to be created
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment in '$VENV_DIR' using uv..."
+    uv venv $VENV_DIR
 else
-    echo "Skipping conda environment creation. Make sure you have the correct environment activated."
+    echo "Virtual environment '$VENV_DIR' already exists. Skipping creation."
 fi
 
-# init a raw torch to avoid installation errors.
-# pip install torch
+# Activate the virtual environment
+echo "Activating virtual environment..."
+source $VENV_DIR/bin/activate
 
-# update pip to latest version for pyproject.toml setup.
-pip install -U pip
+# Update pip to the latest version
+echo "Updating pip to the latest version..."
+uv pip install -U pip
 
-# for fast attn
-pip install -U xformers==0.0.27.post2 --index-url https://download.pytorch.org/whl/cu121
-
-# install sana
-pip install -e .
+# Install required dependencies
+echo "Installing dependencies..."
+uv pip install -r pyproject.toml
 
 # install torchprofile
-# pip install git+https://github.com/zhijian-liu/torchprofile
+# uv pip install git+https://github.com/zhijian-liu/torchprofile
+
+echo "Environment setup completed."

@@ -21,7 +21,7 @@ import torch
 
 from diffusion.model.sa_solver import NoiseScheduleVP, SASolver, model_wrapper
 
-from .model import gaussian_diffusion as gd
+from diffusion.model import gaussian_diffusion as gd
 
 
 class SASolverSampler:

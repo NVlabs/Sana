@@ -28,6 +28,7 @@ from diffusion.model.nets.sana_blocks import (
     FlashAttention,
     LiteLA,
     MultiHeadCrossAttention,
+    MultiHeadCrossVallinaAttention,
     PatchEmbedMS,
     T2IFinalLayer,
     t2i_modulate,
@@ -57,13 +58,13 @@ class SanaMSBlock(nn.Module):
         num_heads,
         mlp_ratio=4.0,
         drop_path=0.0,
-        input_size=None,
         qk_norm=False,
         attn_type="flash",
         ffn_type="mlp",
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
         cross_norm=False,
+        cross_attn_type="flash",
         **block_kwargs,
     ):
         super().__init__()
@@ -97,7 +98,12 @@ class SanaMSBlock(nn.Module):
         else:
             raise ValueError(f"{attn_type} type is not defined.")
 
-        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        if cross_attn_type in ["flash", "linear"]:
+            self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        elif cross_attn_type == "vanilla":
+            self.cross_attn = MultiHeadCrossVallinaAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        else:
+            raise ValueError(f"{cross_attn_type} type is not defined.")
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         if ffn_type == "dwmlp":
             approx_gelu = lambda: nn.GELU(approximate="tanh")
@@ -203,6 +209,14 @@ class SanaMS(Sana):
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
         cross_norm=False,
+        cross_attn_type="flash",
+        logvar=False,
+        logvar_scale_factor=1.0,
+        cfg_embed=False,
+        cfg_embed_scale=1.0,
+        lr_scale=None,
+        timestep_norm_scale_factor=1.0,
+        discrete_norm_timestep=False,
         **kwargs,
     ):
         super().__init__(
@@ -231,12 +245,18 @@ class SanaMS(Sana):
             patch_embed_kernel=patch_embed_kernel,
             mlp_acts=mlp_acts,
             linear_head_dim=linear_head_dim,
+            cross_norm=cross_norm,
+            cross_attn_type=cross_attn_type,
+            cfg_embed=cfg_embed,
+            timestep_norm_scale_factor=timestep_norm_scale_factor,
+            discrete_norm_timestep=discrete_norm_timestep,
             **kwargs,
         )
         self.h = self.w = 0
         approx_gelu = lambda: nn.GELU(approximate="tanh")
         self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
         self.pos_embed_ms = None
+        self.cfg_embed_scale = cfg_embed_scale
 
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbedMS(patch_size, in_channels, hidden_size, kernel_size=kernel_size, bias=True)
@@ -262,15 +282,22 @@ class SanaMS(Sana):
                     mlp_acts=mlp_acts,
                     linear_head_dim=linear_head_dim,
                     cross_norm=cross_norm,
+                    cross_attn_type=cross_attn_type,
                 )
                 for i in range(depth)
             ]
         )
         self.final_layer = T2IFinalLayer(hidden_size, patch_size, self.out_channels)
+        self.logvar_linear = None
+        if logvar:
+            self.logvar_scale_factor = logvar_scale_factor
+            self.logvar_linear = nn.Linear(hidden_size, 1)
+
+        self.lr_scale = lr_scale
 
         self.initialize()
 
-    def forward(self, x, timestep, y, mask=None, data_info=None, **kwargs):
+    def forward(self, x, timestep, y, mask=None, data_info=None, return_logvar=False, jvp=False, **kwargs):
         """
         Forward pass of Sana.
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -324,12 +351,27 @@ class SanaMS(Sana):
             raise ValueError(f"Attention type is not available due to _xformers_available={_xformers_available}.")
 
         for block in self.blocks:
-            x = auto_grad_checkpoint(
-                block, x, y, t0, y_lens, (self.h, self.w), **kwargs
-            )  # (N, T, D) #support grad checkpoint
+            if jvp:
+                x = block(x, y, t0, y_lens, (self.h, self.w), **kwargs)
+            # gradient checkpointing is not supported for JVP
+            else:
+                x = auto_grad_checkpoint(
+                    block,
+                    x,
+                    y,
+                    t0,
+                    y_lens,
+                    (self.h, self.w),
+                    **kwargs,
+                    use_reentrant=False,
+                )  # (N, T, D) #support grad checkpoint
 
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
+
+        if return_logvar and self.logvar_linear is not None:
+            logvar = self.logvar_linear(t) * self.logvar_scale_factor
+            return x, logvar
 
         return x
 
@@ -386,6 +428,37 @@ class SanaMS(Sana):
         nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
 
 
+class SanaMSCM(SanaMS):
+    def forward(self, x, timestep, y, data_info=None, return_logvar=False, **kwargs):
+
+        # TrigFlow --> Flow Transformation
+        # the input now is [0, np.pi/2], arctan(N(P_mean, P_std))
+        t = torch.sin(timestep) / (torch.cos(timestep) + torch.sin(timestep))
+
+        pretrain_timestep = t * 1000  # stabilize large resolution training
+        t = t.view(-1, 1, 1, 1)
+
+        x = x * torch.sqrt(t**2 + (1 - t) ** 2)
+
+        # forward in original flow
+        if return_logvar:
+            model_out, logvar = super().forward(
+                x, pretrain_timestep, y, data_info=data_info, return_logvar=return_logvar, **kwargs
+            )
+        else:
+            model_out = super().forward(x, pretrain_timestep, y, data_info=data_info, **kwargs)
+
+        # Flow --> TrigFlow Transformation
+        trigflow_model_out = ((1 - 2 * t) * x + (1 - 2 * t + 2 * t**2) * model_out) / torch.sqrt(
+            t**2 + (1 - t) ** 2
+        )
+
+        if return_logvar:
+            return trigflow_model_out, logvar
+        else:
+            return trigflow_model_out
+
+
 #################################################################################
 #                                   Sana Multi-scale Configs                              #
 #################################################################################
@@ -416,3 +489,20 @@ def SanaMS_1600M_P1_D20(**kwargs):
 def SanaMS_1600M_P2_D20(**kwargs):
     # 28 layers, 1648.48M
     return SanaMS(depth=20, hidden_size=2240, patch_size=2, num_heads=20, **kwargs)
+
+
+# TrigFlow/sCM model
+@MODELS.register_module()
+def SanaMSCM_600M_P1_D28(**kwargs):
+    return SanaMSCM(depth=28, hidden_size=1152, patch_size=1, num_heads=16, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSCM_1600M_P1_D20(**kwargs):
+    return SanaMSCM(depth=20, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSCM_2400M_P1_D30(**kwargs):
+    # 30 layers, 2400M
+    return SanaMSCM(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)

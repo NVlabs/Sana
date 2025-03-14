@@ -1,6 +1,6 @@
 import json
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 @dataclass
@@ -28,6 +28,7 @@ class DataConfig(BaseConfig):
     external_clipscore_suffixes: List[str] = field(default_factory=list)
     clip_thr_temperature: float = 1.0
     clip_thr: float = 0.0
+    del_img_clip_thr: float = 0.0
     sort_dataset: bool = False
     load_text_feat: bool = False
     load_vae_feat: bool = False
@@ -47,7 +48,7 @@ class ModelConfig(BaseConfig):
     mixed_precision: str = "fp16"  # ['fp16', 'fp32', 'bf16']
     fp32_attention: bool = True
     load_from: Optional[str] = None
-    resume_from: Optional[Dict[str, Any]] = field(
+    resume_from: Optional[Union[Dict[str, Any], str]] = field(
         default_factory=lambda: {
             "checkpoint": None,
             "load_ema": False,
@@ -65,6 +66,7 @@ class ModelConfig(BaseConfig):
     mlp_acts: List[Optional[str]] = field(default_factory=lambda: ["silu", "silu", None])
     mlp_ratio: float = 2.5
     use_pe: bool = False
+    pos_embed_type: str = "sincos"
     qk_norm: bool = False
     class_dropout_prob: float = 0.0
     linear_head_dim: int = 32
@@ -79,7 +81,7 @@ class ModelConfig(BaseConfig):
 class AEConfig(BaseConfig):
     vae_type: str = "dc-ae"
     vae_pretrained: str = "mit-han-lab/dc-ae-f32c32-sana-1.0"
-    weight_dtype: str = "bfloat16"
+    weight_dtype: str = "float32"
     scale_factor: float = 0.41407
     vae_latent_dim: int = 32
     vae_downsample_rate: int = 32
@@ -102,6 +104,8 @@ class TextEncoderConfig(BaseConfig):
 class SchedulerConfig(BaseConfig):
     train_sampling_steps: int = 1000
     predict_v: bool = True
+    predict_flow_v: bool = True
+    predict_trigflow_v: bool = True
     noise_schedule: str = "linear_flow"
     pred_sigma: bool = False
     learn_sigma: bool = True
@@ -109,8 +113,14 @@ class SchedulerConfig(BaseConfig):
     flow_shift: float = 1.0
     # logit-normal timestep
     weighting_scheme: Optional[str] = "logit_normal"
+    weighting_scheme_discriminator: Optional[str] = "logit_normal_trigflow"
+    add_noise_timesteps: List[float] = field(default_factory=lambda: [1.57080])
     logit_mean: float = 0.0
     logit_std: float = 1.0
+    logit_mean_discriminator: float = 0.0
+    logit_std_discriminator: float = 1.0
+    sigma_data: float = 0.5
+    timestep_norm_scale_factor: float = 1.0
     extra: Any = None
 
 
@@ -127,10 +137,12 @@ class TrainingConfig(BaseConfig):
     optimizer: Dict[str, Any] = field(
         default_factory=lambda: {"eps": 1.0e-10, "lr": 0.0001, "type": "AdamW", "weight_decay": 0.03}
     )
+    load_from_optimizer: bool = False
+    load_from_lr_scheduler: bool = False
+    resume_lr_scheduler: bool = True
     lr_schedule: str = "constant"
     lr_schedule_args: Dict[str, int] = field(default_factory=lambda: {"num_warmup_steps": 500})
     auto_lr: Dict[str, str] = field(default_factory=lambda: {"rule": "sqrt"})
-    ema_rate: float = 0.9999
     eval_batch_size: int = 16
     use_fsdp: bool = False
     use_flash_attn: bool = False
@@ -168,10 +180,29 @@ class TrainingConfig(BaseConfig):
     loss_type: str = "huber"
     huber_c: float = 0.001
     num_ddim_timesteps: int = 50
-    w_max: float = 15.0
-    w_min: float = 3.0
     ema_decay: float = 0.95
     debug_nan: bool = False
+    ema_update: bool = False
+    ema_rate: float = 0.9999
+    early_stop_hours: float = 100
+    ### SANA-Sprint related below
+    tangent_warmup_steps: int = 10000
+    scm_cfg_scale: Union[float, List[float]] = field(default_factory=lambda: [1.0])
+    # for ladd
+    adv_lambda: float = 1.0
+    scm_loss: bool = True
+    scm_lambda: float = 1.0
+    loss_scale: float = 1.0
+    r1_penalty: bool = False
+    r1_penalty_weight: float = 1.0e-5
+    diff_timesteps_D: bool = True
+    # for adversarial loss
+    suffix_checkpoints: Optional[str] = "disc"
+    misaligned_pairs_D: bool = False
+    discriminator_loss: str = "cross entropy"
+    largest_timestep: float = 1.57080
+    train_largest_timestep: bool = False
+    largest_timestep_prob: float = 0.5
     extra: Any = None
 
 
@@ -190,6 +221,22 @@ class ControlNetConfig(BaseConfig):
 
 
 @dataclass
+class ModelGrowthConfig(BaseConfig):
+    """Model growth configuration for initializing larger models from smaller ones"""
+
+    pretrained_ckpt_path: str = ""
+    init_strategy: str = "constant"  # ['cyclic', 'block_expand', 'progressive', 'interpolation', 'random', 'constant']
+    init_params: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "expand_ratio": 3,
+            "noise_scale": 0.01,
+        }
+    )
+    source_num_layers: int = 20
+    target_num_layers: int = 60
+
+
+@dataclass
 class SanaConfig(BaseConfig):
     data: DataConfig
     model: ModelConfig
@@ -198,6 +245,7 @@ class SanaConfig(BaseConfig):
     scheduler: SchedulerConfig
     train: TrainingConfig
     controlnet: Optional[ControlNetConfig] = None
+    model_growth: Optional[ModelGrowthConfig] = None
     work_dir: str = "output/"
     resume_from: Optional[str] = None
     load_from: Optional[str] = None
@@ -221,6 +269,7 @@ def model_init_config(config: SanaConfig, latent_size: int = 32):
         "qk_norm": config.model.qk_norm,
         "micro_condition": config.model.micro_condition,
         "caption_channels": config.text_encoder.caption_channels,
+        "class_dropout_prob": config.model.class_dropout_prob,
         "y_norm": config.text_encoder.y_norm,
         "attn_type": config.model.attn_type,
         "ffn_type": config.model.ffn_type,
@@ -229,8 +278,10 @@ def model_init_config(config: SanaConfig, latent_size: int = 32):
         "in_channels": config.vae.vae_latent_dim,
         "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
         "use_pe": config.model.use_pe,
+        "pos_embed_type": config.model.pos_embed_type,
         "linear_head_dim": config.model.linear_head_dim,
         "pred_sigma": pred_sigma,
         "learn_sigma": learn_sigma,
         "cross_norm": config.model.cross_norm,
+        "timestep_norm_scale_factor": config.scheduler.timestep_norm_scale_factor,
     }

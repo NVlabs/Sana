@@ -33,8 +33,8 @@ from PIL import Image
 from torchvision.utils import make_grid, save_image
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from app import safety_check
-from app.sana_pipeline import SanaPipeline
+import safety_check
+from sana_pipeline import SanaPipeline
 
 MAX_SEED = np.iinfo(np.int32).max
 CACHE_EXAMPLES = torch.cuda.is_available() and os.getenv("CACHE_EXAMPLES", "1") == "1"

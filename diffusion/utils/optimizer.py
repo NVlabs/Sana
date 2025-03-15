@@ -444,13 +444,6 @@ class CAMEWrapper(torch.optim.Optimizer):
 
 
 @OPTIMIZERS.register_module()
-class CAMEEnzeWrapper(CAMEWrapper):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        deprecate(("CAMEEnzeWrapper", "0.1.5", "Use CAMEWrapper instead"))
-
-
-@OPTIMIZERS.register_module()
 class CAME8BitWrapper(torch.optim.Optimizer):
     """8-bit implementation of the CAME optimizer
 

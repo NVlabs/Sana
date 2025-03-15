@@ -359,7 +359,7 @@ bash train_scripts/train.sh \
 We prepared a toy TAR dataset containing 100 random images from Journey-DB, duplicated for testing purposes. Note that this dataset is not intended for training.
 
 ```bash
-huggingface-cli download --repo-type dataset Efficient-Large-Model/toy_data --local-dir data/toy_data
+huggingface-cli download Efficient-Large-Model/toy_data --repo-type dataset --local-dir ./data/toy_data --local-dir-use-symlinks False
 ```
 
 Then, you are ready to run with FSDP or DDP:

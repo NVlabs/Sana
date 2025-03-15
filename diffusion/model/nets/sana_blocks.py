@@ -62,7 +62,6 @@ class MultiHeadCrossAttention(nn.Module):
         self.proj = nn.Linear(d_model, d_model)
         self.proj_drop = nn.Dropout(proj_drop)
         if qk_norm:
-            # not used for now
             self.q_norm = RMSNorm(d_model, scale_factor=1.0, eps=1e-6)
             self.k_norm = RMSNorm(d_model, scale_factor=1.0, eps=1e-6)
         else:
@@ -388,7 +387,7 @@ class FlashAttention(Attention_):
 #   AMP attention with fp32 softmax to fix loss NaN problem during training     #
 #################################################################################
 class Attention(Attention_):
-    def forward(self, x, HW=None):
+    def forward(self, x, HW=None, **kwargs):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         # B,N,3,H,C -> B,H,N,C

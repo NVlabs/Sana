@@ -2,14 +2,15 @@
 set -e
 
 work_dir=output/debug
-np=8
+np=2
 
 
 if [[ $1 == *.yaml ]]; then
     config=$1
     shift
 else
-    config="configs/sana_config/512ms/sample_dataset.yaml"
+    config="configs/sana1-5_config/1024ms/Sana_1600M_1024px_allqknorm_bf16_lr2e5.yaml"
+    # config="configs/sana1-5_config/1024ms/Sana_1600M_1024px_AdamW_fsdp.yaml"      FSDP config file
     echo "Only support .yaml files, but get $1. Set to --config_path=$config"
 fi
 

@@ -31,6 +31,7 @@ from diffusion.model.nets.sana_blocks import (
     LiteLA,
     MultiHeadCrossAttention,
     PatchEmbed,
+    RopePosEmbed,
     T2IFinalLayer,
     TimestepEmbedder,
     t2i_modulate,
@@ -59,8 +60,8 @@ class SanaBlock(nn.Module):
         num_heads,
         mlp_ratio=4.0,
         drop_path=0,
-        input_size=None,
         qk_norm=False,
+        cross_norm=False,
         attn_type="flash",
         ffn_type="mlp",
         mlp_acts=("silu", "silu", None),
@@ -98,7 +99,7 @@ class SanaBlock(nn.Module):
         else:
             raise ValueError(f"{attn_type} type is not defined.")
 
-        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, **block_kwargs)
+        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         # to be compatible with lower version pytorch
         if ffn_type == "dwmlp":
@@ -203,6 +204,10 @@ class Sana(nn.Module):
         patch_embed_kernel=None,
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
+        cross_norm=False,
+        pos_embed_type="sincos",
+        timestep_norm_scale_factor=1.0,
+        null_embed_path=None,
         **kwargs,
     ):
         super().__init__()
@@ -214,8 +219,11 @@ class Sana(nn.Module):
         self.pe_interpolation = pe_interpolation
         self.depth = depth
         self.use_pe = use_pe
+        self.pos_embed_type = pos_embed_type
         self.y_norm = y_norm
+        self.timestep_norm_scale_factor = timestep_norm_scale_factor
         self.fp32_attention = kwargs.get("use_fp32_attention", False)
+        self.null_embed_path = null_embed_path
 
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbed(
@@ -246,8 +254,8 @@ class Sana(nn.Module):
                     num_heads,
                     mlp_ratio=mlp_ratio,
                     drop_path=drop_path[i],
-                    input_size=(input_size // patch_size, input_size // patch_size),
                     qk_norm=qk_norm,
+                    cross_norm=cross_norm,
                     attn_type=attn_type,
                     ffn_type=ffn_type,
                     mlp_acts=mlp_acts,
@@ -260,17 +268,19 @@ class Sana(nn.Module):
 
         self.initialize_weights()
 
-        if config:
+        if config and config.work_dir:
             logger = get_root_logger(os.path.join(config.work_dir, "train_log.log"))
             logger = logger.warning
         else:
             logger = print
         if get_rank() == 0:
             logger(
-                f"use pe: {use_pe}, position embed interpolation: {self.pe_interpolation}, base size: {self.base_size}"
+                f"use pe: {use_pe}, pos embed type: {pos_embed_type}, "
+                f"position embed interpolation: {self.pe_interpolation}, base size: {self.base_size}"
             )
             logger(
                 f"attention type: {attn_type}; ffn type: {ffn_type}; "
+                f"self-attn qk norm: {qk_norm}; cross-attn qk norm: {cross_norm}; "
                 f"autocast linear attn: {os.environ.get('AUTOCAST_LINEAR_ATTN', False)}"
             )
 
@@ -372,6 +382,13 @@ class Sana(nn.Module):
         # Initialize caption embedding MLP:
         nn.init.normal_(self.y_embedder.y_proj.fc1.weight, std=0.02)
         nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
+
+        # load null embed
+        try:
+            null_embed = torch.load(self.null_embed_path, map_location="cpu")
+            self.y_embedder.y_embedding.data = null_embed["uncond_prompt_embeds"][0]
+        except Exception as e:
+            print(f"Failed to load null embed....")
 
     @property
     def dtype(self):

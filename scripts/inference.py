@@ -235,7 +235,7 @@ def get_args():
 class SanaInference(SanaConfig):
     config: Optional[str] = "configs/sana_config/1024ms/Sana_1600M_img1024.yaml"  # config
     model_path: Optional[str] = "hf://Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth"
-    work_dir: str = "output/inference"
+    work_dir: Optional[str] = None
     version: str = "sigma"
     txt_file: str = "asset/samples/samples_mini.txt"
     json_file: Optional[str] = None
@@ -278,8 +278,6 @@ if __name__ == "__main__":
     # only support fixed latent size currently
     latent_size = args.image_size // config.vae.vae_downsample_rate
     max_sequence_length = config.text_encoder.model_max_length
-    pe_interpolation = config.model.pe_interpolation
-    micro_condition = config.model.micro_condition
     flow_shift = config.scheduler.flow_shift
     pag_applied_layers = config.model.pag_applied_layers
     guidance_type = "classifier-free_PAG"
@@ -314,6 +312,13 @@ if __name__ == "__main__":
     )
     logger.info("Generating sample from ckpt: %s" % args.model_path)
     state_dict = find_model(args.model_path)
+
+    if args.model_path.endswith(".bin"):
+        logger.info("Loading fsdp bin checkpoint....")
+        old_state_dict = state_dict
+        state_dict = dict()
+        state_dict["state_dict"] = old_state_dict
+
     if "pos_embed" in state_dict["state_dict"]:
         del state_dict["state_dict"]["pos_embed"]
 
@@ -334,9 +339,10 @@ if __name__ == "__main__":
             if args.model_path.startswith("/")
             else os.path.join(*args.model_path.split("/")[:-2])
         )
-        img_save_dir = os.path.join(str(work_dir), "vis")
     else:
-        img_save_dir = args.work_dir
+        work_dir = args.work_dir
+    config.work_dir = work_dir
+    img_save_dir = os.path.join(str(work_dir), "vis")
 
     logger.info(colored(f"Saving images at {img_save_dir}", "green"))
     dict_prompt = args.json_file is not None

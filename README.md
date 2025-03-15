@@ -40,6 +40,7 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion models (e
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/3/14\] FSDP training is supported.
 - (🔥 New) \[2025/3/14\] 🏃SANA-Sprint is coming out!🎉 A new one/few-step generator of Sana. 0.1s per 1024px image on H100, 0.3s on RTX 4090. Find out more details: [\[Page\]](https://nvlabs.github.io/Sana/Sprint/) | [\[Arxiv\]](https://arxiv.org/abs/2503.09641). Code is coming very soon along with `diffusers`
 - (🔥 New) \[2025/2/10\] 🚀Sana + ControlNet is released. [\[Guidance\]](asset/docs/sana_controlnet.md) | [\[Model\]](asset/docs/model_zoo.md) | [\[Demo\]](https://nv-sana.mit.edu/ctrlnet/)
 - (🔥 New) \[2025/1/30\] Release CAME-8bit optimizer code. Saving more GPU memory during training. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_config/1024ms/Sana_1600M_img1024_CAME8bit.yaml#L86)
@@ -353,6 +354,41 @@ bash train_scripts/train.sh \
   --train.train_batch_size=32
 ```
 
+### 3). Train with TAR file
+
+We prepared a toy TAR dataset containing 100 random images from Journey-DB, duplicated for testing purposes. Note that this dataset is not intended for training.
+
+```bash
+huggingface-cli download Efficient-Large-Model/toy_data --repo-type dataset --local-dir ./data/toy_data --local-dir-use-symlinks False
+```
+
+Then, you are ready to run with FSDP or DDP:
+
+```bash
+# DDP
+# Example of training Sana 1.6B with 512x512 resolution from scratch
+bash train_scripts/train.sh \
+      configs/sana1-5_config/1024ms/Sana_1600M_1024px_allqknorm_bf16_lr2e5.yaml \
+      --data.data_dir="[data/toy_data]" \
+      --data.type=SanaWebDatasetMS \
+      --model.multi_scale=true \
+      --data.load_vae_feat=true \
+      --train.train_batch_size=2
+```
+
+```bash
+# FSDP
+# Example of training Sana 1.6B with 512x512 resolution from scratch
+bash train_scripts/train.sh \
+      configs/sana1-5_config/1024ms/Sana_1600M_1024px_AdamW_fsdp.yaml \
+      --data.data_dir="[data/toy_data]" \
+      --data.type=SanaWebDatasetMS \
+      --model.multi_scale=true \
+      --data.load_vae_feat=true \
+      --train.use_fsdp=true \
+      --train.train_batch_size=2
+```
+
 # 💻 4. Metric toolkit
 
 Refer to [Toolkit Manual](asset/docs/metrics_toolkit.md).
@@ -371,9 +407,9 @@ We will try our best to release
 - \[✅\] 2K/4K resolution models.(Thanks [@SUPIR](https://github.com/Fanghua-Yu/SUPIR) to provide a 4K super-resolution model)
 - \[✅\] 8bit / 4bit Laptop development
 - \[✅\] ControlNet (train & inference & models)
-- \[💻\] Larger model size
+- \[✅\] FSDP Training
+- \[✅\] **SANA-1.5 (Larger model size / Inference Scaling)**
 - \[💻\] Better re-construction F32/F64 VAEs.
-- \[💻\] **SANA-1.5 (Focus on: Human body / Human face / Text rendering / Realism / Efficiency)**
 - \[💻\] **SANA-Sprint: Few-step generator**
 
 # 🤗Acknowledgements

@@ -21,7 +21,6 @@ import numpy as np
 import torch
 import torch.optim
 from bitsandbytes.optim import AdamW8bit
-from came_pytorch import CAME
 from mmcv import Config
 from mmcv.runner import OPTIMIZER_BUILDERS, OPTIMIZERS, DefaultOptimizerConstructor
 from mmcv.runner import build_optimizer as mm_build_optimizer
@@ -29,7 +28,6 @@ from mmcv.utils import _BatchNorm, _InstanceNorm
 from torch.nn import GroupNorm, LayerNorm
 from torch.optim.optimizer import Optimizer
 
-from .import_utils import deprecate
 from .logger import get_root_logger
 
 

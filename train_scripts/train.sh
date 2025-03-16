@@ -2,7 +2,7 @@
 set -e
 
 work_dir=output/debug
-np=4
+np=2
 
 
 if [[ $1 == *.yaml ]]; then

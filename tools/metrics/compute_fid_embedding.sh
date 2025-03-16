@@ -38,6 +38,10 @@ do
         tracker_pattern="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         *)
         ;;
     esac
@@ -48,11 +52,13 @@ sample_nums=${sample_nums:-$default_sample_nums}
 tracker_pattern=${tracker_pattern:-"epoch_step"}
 log_suffix_label=${suffix_label:-$default_log_suffix_label}
 log_fid=${log_fid:-true}
+tracker_project_name=${tracker_project_name:-"t2i-evit-baseline"}
 echo "img_size: $img_size"
 echo "sample_nums: $sample_nums"
 echo "log_fid: $log_fid"
 echo "log_suffix_label: $log_suffix_label"
 echo "tracker_pattern: $tracker_pattern"
+echo "wandb_project_name: $tracker_project_name"
 
 JSON_PATH="data/test/PG-eval-data/MJHQ-30K/meta_data.json"
 refer_path="data/test/PG-eval-data/MJHQ-30K/MJHQ_30K_${img_size}px_fid_embeddings_${sample_nums}.npz"
@@ -73,7 +79,8 @@ if [ "$fid" = true ]; then
   echo "==================== computing fid ===================="
   cmd_template="python $py --img_size $img_size --path $refer_path $JSON_PATH \
               --exp_name {exp_name} --txt_path {img_path} --img_path {img_path} --sample_nums $sample_nums \
-              --report_to $report_to --name {job_name} --gpu_id {gpu_id} --tracker_pattern $tracker_pattern"
+              --report_to $report_to --name {job_name} --gpu_id {gpu_id} --tracker_pattern $tracker_pattern \
+              --tracker_project_name $tracker_project_name"
 
   if [[ "$exp_names" != *.txt ]]; then
     cmd="${cmd_template//\{img_path\}/$img_path}"

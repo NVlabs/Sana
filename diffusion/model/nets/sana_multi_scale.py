@@ -30,6 +30,7 @@ from diffusion.model.nets.sana_blocks import (
     MultiHeadCrossAttention,
     MultiHeadCrossVallinaAttention,
     PatchEmbedMS,
+    RopePosEmbed,
     T2IFinalLayer,
     t2i_modulate,
 )
@@ -275,7 +276,6 @@ class SanaMS(Sana):
                     num_heads,
                     mlp_ratio=mlp_ratio,
                     drop_path=drop_path[i],
-                    input_size=(input_size // patch_size, input_size // patch_size),
                     qk_norm=qk_norm,
                     attn_type=attn_type,
                     ffn_type=ffn_type,
@@ -306,33 +306,42 @@ class SanaMS(Sana):
         """
         bs = x.shape[0]
         x = x.to(self.dtype)
-        timestep = timestep.to(self.dtype)
+        if self.timestep_norm_scale_factor != 1.0:
+            timestep = (timestep.float() / self.timestep_norm_scale_factor).to(self.dtype)
+        else:
+            timestep = timestep.long().to(self.dtype)
         y = y.to(self.dtype)
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
+        x = self.x_embedder(x)
+        image_pos_embed = None
         if self.use_pe:
-            x = self.x_embedder(x)
-            if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
-                self.pos_embed_ms = (
-                    torch.from_numpy(
-                        get_2d_sincos_pos_embed(
-                            self.pos_embed.shape[-1],
-                            (self.h, self.w),
-                            pe_interpolation=self.pe_interpolation,
-                            base_size=self.base_size,
+            if self.pos_embed_type == "sincos":
+                if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
+                    self.pos_embed_ms = (
+                        torch.from_numpy(
+                            get_2d_sincos_pos_embed(
+                                self.pos_embed.shape[-1],
+                                (self.h, self.w),
+                                pe_interpolation=self.pe_interpolation,
+                                base_size=self.base_size,
+                            )
                         )
+                        .unsqueeze(0)
+                        .to(x.device)
+                        .to(self.dtype)
                     )
-                    .unsqueeze(0)
-                    .to(x.device)
-                    .to(self.dtype)
-                )
-            x += self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
-        else:
-            x = self.x_embedder(x)
+                x += self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
+            elif self.pos_embed_type == "3d_rope":
+                self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[0, 16, 16])
+                latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(bs, self.h, self.w, x.device, x.dtype)
+                image_pos_embed = self.pos_embed_ms(latent_image_ids)
+            else:
+                raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
 
         t = self.t_embedder(timestep)  # (N, D)
 
         t0 = self.t_block(t)
-        y = self.y_embedder(y, self.training, mask=mask)  # (N, D)
+        y = self.y_embedder(y, self.training)  # (N, D)
         if self.y_norm:
             y = self.attention_y_norm(y)
 
@@ -405,6 +414,7 @@ class SanaMS(Sana):
         return imgs
 
     def initialize(self):
+        super().initialize_weights()
         # Initialize transformer layers:
         def _basic_init(module):
             if isinstance(module, nn.Linear):
@@ -506,3 +516,19 @@ def SanaMSCM_1600M_P1_D20(**kwargs):
 def SanaMSCM_2400M_P1_D30(**kwargs):
     # 30 layers, 2400M
     return SanaMSCM(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMS_2400M_P1_D30(**kwargs):
+    return SanaMS(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMS_3200M_P1_D40(**kwargs):
+    return SanaMS(depth=40, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMS_4800M_P1_D60(**kwargs):
+    # 60 layers, 4800M
+    return SanaMS(depth=60, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)

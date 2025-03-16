@@ -15,51 +15,82 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import datetime
+import gc
 import getpass
 import hashlib
 import json
 import os
 import os.path as osp
-import random
 import time
-import types
 import warnings
+from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
+
+warnings.filterwarnings("ignore")  # ignore warning
 
 import numpy as np
 import pyrallis
 import torch
 from accelerate import Accelerator, InitProcessGroupKwargs
-from accelerate.utils import DistributedType
 from PIL import Image
 from termcolor import colored
-
-warnings.filterwarnings("ignore")  # ignore warning
-
 
 from diffusion import DPMS, FlowEuler, Scheduler
 from diffusion.data.builder import build_dataloader, build_dataset
 from diffusion.data.wids import DistributedRangedSampler
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
+from diffusion.model.model_growth_utils import ModelGrowthInitializer
 from diffusion.model.respace import compute_density_for_timestep_sampling
+from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
-from diffusion.utils.config import SanaConfig
+from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
-from diffusion.utils.dist_utils import clip_grad_norm_, flush, get_world_size
+from diffusion.utils.dist_utils import flush, get_world_size
 from diffusion.utils.logger import LogBuffer, get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
-from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, read_config, set_random_seed
+from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_random_seed
 from diffusion.utils.optimizer import auto_scale_lr, build_optimizer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def set_fsdp_env():
+    # Basic FSDP settings
     os.environ["ACCELERATE_USE_FSDP"] = "true"
+
+    # Auto wrapping policy
     os.environ["FSDP_AUTO_WRAP_POLICY"] = "TRANSFORMER_BASED_WRAP"
+    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaMSBlock"  # Your transformer block name
+
+    # Performance optimization settings
     os.environ["FSDP_BACKWARD_PREFETCH"] = "BACKWARD_PRE"
-    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaBlock"
+    os.environ["FSDP_FORWARD_PREFETCH"] = "false"
+
+    # State dict settings
+    os.environ["FSDP_STATE_DICT_TYPE"] = "FULL_STATE_DICT"
+    os.environ["FSDP_SYNC_MODULE_STATES"] = "true"
+    os.environ["FSDP_USE_ORIG_PARAMS"] = "true"
+
+    # Sharding strategy
+    os.environ["FSDP_SHARDING_STRATEGY"] = "FULL_SHARD"
+
+    # Memory optimization settings (optional)
+    os.environ["FSDP_CPU_RAM_EFFICIENT_LOADING"] = "false"
+    os.environ["FSDP_OFFLOAD_PARAMS"] = "false"
+
+    # Precision settings
+    os.environ["FSDP_REDUCE_SCATTER_PRECISION"] = "fp32"
+    os.environ["FSDP_ALL_GATHER_PRECISION"] = "fp32"
+    os.environ["FSDP_OPTIMIZER_STATE_PRECISION"] = "fp32"
+
+
+def ema_update(model_dest, model_src, rate):
+    param_dict_src = dict(model_src.named_parameters())
+    for p_name, p_dest in model_dest.named_parameters():
+        p_src = param_dict_src[p_name]
+        assert p_src is not p_dest
+        p_dest.data.mul_(rate).add_((1 - rate) * p_src.data)
 
 
 @torch.inference_mode()
@@ -90,8 +121,6 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                 map_location="cpu",
             )
             caption_embs, emb_masks = embed["caption_embeds"].to(device), embed["emb_mask"].to(device)
-            # caption_embs = caption_embs[:, None]
-            # emb_masks = emb_masks[:, None]
             model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
 
             if sampler == "dpm-solver":
@@ -138,9 +167,9 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
             latents.append(denoised)
         torch.cuda.empty_cache()
         if vae is None:
-            vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(torch.float16)
+            vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(vae_dtype)
         for prompt, latent in zip(validation_prompts, latents):
-            latent = latent.to(torch.float16)
+            latent = latent.to(vae_dtype)
             samples = vae_decode(config.vae.vae_type, vae, latent)
             samples = (
                 torch.clamp(127.5 * samples + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
@@ -155,6 +184,8 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
 
     # Second run with init_noise if provided
     if init_noise is not None:
+        torch.cuda.empty_cache()
+        gc.collect()
         init_noise = torch.clone(init_noise).to(device)
         image_logs += run_sampling(init_z=init_noise, label_suffix=" w/ init noise", vae=vae, sampler=vis_sampler)
 
@@ -220,14 +251,17 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
         )
         concatenated_image.save(save_path)
 
+    model.train()
     del vae
     flush()
     return image_logs
 
 
-def train(config, args, accelerator, model, optimizer, lr_scheduler, train_dataloader, train_diffusion, logger):
+def train(
+    config, args, accelerator, model, model_ema, optimizer, lr_scheduler, train_dataloader, train_diffusion, logger
+):
     if getattr(config.train, "debug_nan", False):
-        DebugUnderflowOverflow(model)
+        DebugUnderflowOverflow(model, max_frames_to_save=100)
         logger.info("NaN debugger registered. Start to detect overflow during training.")
     log_buffer = LogBuffer()
 
@@ -235,6 +269,13 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
     skip_step = max(config.train.skip_step, global_step) % train_dataloader_len
     skip_step = skip_step if skip_step < (train_dataloader_len - 20) else 0
     loss_nan_timer = 0
+
+    if config.train.use_fsdp:
+        model_instance = model
+    elif model_ema is not None:
+        model_instance = model_ema
+    else:
+        model_instance = model
 
     # Cache Dataset for BatchSampler
     if args.caching and config.model.multi_scale:
@@ -333,9 +374,9 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                         else:
                             chi_prompt = "\n".join(config.text_encoder.chi_prompt)
                             prompt = [chi_prompt + i for i in batch[1]]
-                            num_chi_prompt_tokens = len(tokenizer.encode(chi_prompt))
+                            num_sys_prompt_tokens = len(tokenizer.encode(chi_prompt))
                             max_length_all = (
-                                num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
+                                num_sys_prompt_tokens + config.text_encoder.model_max_length - 2
                             )  # magic number 2: [bos], [_]
                         txt_tokens = tokenizer(
                             prompt,
@@ -382,8 +423,12 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                 )
                 loss = loss_term["loss"].mean()
                 accelerator.backward(loss)
+
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.train.gradient_clip)
+                    if not config.train.use_fsdp and config.train.ema_update and model_ema is not None:
+                        ema_update(model_ema, model, config.train.ema_rate)
+
                 optimizer.step()
                 lr_scheduler.step()
                 accelerator.wait_for_everyone()
@@ -419,6 +464,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                     global_step - sampler.step_start // config.train.train_batch_size
                 ) % train_dataloader_len
                 current_step = train_dataloader_len if current_step == 0 else current_step
+
                 info = (
                     f"Epoch: {epoch} | Global Step: {global_step} | Local Step: {current_step} // {train_dataloader_len}, "
                     f"total_eta: {eta}, epoch_eta:{eta_epoch}, time: all:{t:.3f}, model:{t_m:.3f}, data:{t_d:.3f}, "
@@ -450,21 +496,42 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                 raise ValueError("Loss is NaN too much times. Break here.")
             if (
                 global_step % config.train.save_model_steps == 0
-                or (time.time() - training_start_time) / 3600 > config.train.training_hours
+                or (time.time() - training_start_time) / 3600 > config.train.early_stop_hours
             ):
+                torch.cuda.synchronize()
                 accelerator.wait_for_everyone()
-                if accelerator.is_main_process:
+
+                # Choose different saving methods based on whether FSDP is used
+                if config.train.use_fsdp:
+                    # FSDP mode
                     os.umask(0o000)
                     ckpt_saved_path = save_checkpoint(
-                        osp.join(config.work_dir, "checkpoints"),
+                        work_dir=osp.join(config.work_dir, "checkpoints"),
                         epoch=epoch,
-                        step=global_step,
-                        model=accelerator.unwrap_model(model),
+                        model=model,
+                        accelerator=accelerator,
                         optimizer=optimizer,
                         lr_scheduler=lr_scheduler,
-                        generator=generator,
+                        step=global_step,
                         add_symlink=True,
                     )
+                else:
+                    # DDP mode
+                    if accelerator.is_main_process:
+                        os.umask(0o000)
+                        ckpt_saved_path = save_checkpoint(
+                            work_dir=osp.join(config.work_dir, "checkpoints"),
+                            epoch=epoch,
+                            model=accelerator.unwrap_model(model),
+                            model_ema=accelerator.unwrap_model(model_ema) if model_ema is not None else None,
+                            optimizer=optimizer,
+                            lr_scheduler=lr_scheduler,
+                            step=global_step,
+                            generator=generator,
+                            add_symlink=True,
+                        )
+
+                if accelerator.is_main_process:
                     if config.train.online_metric and global_step % config.train.eval_metric_step == 0 and step > 1:
                         online_metric_monitor_dir = osp.join(config.work_dir, config.train.online_metric_dir)
                         os.makedirs(online_metric_monitor_dir, exist_ok=True)
@@ -472,17 +539,23 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                             f.write(osp.join(config.work_dir, "config.py") + "\n")
                             f.write(ckpt_saved_path)
 
-                if (time.time() - training_start_time) / 3600 > config.train.training_hours:
+                if (time.time() - training_start_time) / 3600 > config.train.early_stop_hours:
                     logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to time limit.")
                     return
+
             if config.train.visualize and (global_step % config.train.eval_sampling_steps == 0 or (step + 1) == 1):
+                if config.train.use_fsdp:
+                    merged_state_dict = accelerator.get_state_dict(model)
+
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
+                    if config.train.use_fsdp:
+                        model_instance.load_state_dict(merged_state_dict)
                     if validation_noise is not None:
                         log_validation(
                             accelerator=accelerator,
                             config=config,
-                            model=model,
+                            model=model_instance,
                             logger=logger,
                             step=global_step,
                             device=accelerator.device,
@@ -493,7 +566,7 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                         log_validation(
                             accelerator=accelerator,
                             config=config,
-                            model=model,
+                            model=model_instance,
                             logger=logger,
                             step=global_step,
                             device=accelerator.device,
@@ -501,12 +574,13 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
                         )
 
             # avoid dead-lock of multiscale data batch sampler
-            # for internal, refactor dataloader logic to remove the ad-hoc implementation
             if (
                 config.model.multi_scale
                 and (train_dataloader_len - sampler.step_start // config.train.train_batch_size - step) < 30
             ):
-                global_step = epoch * train_dataloader_len
+                global_step = (
+                    (global_step + train_dataloader_len - 1) // train_dataloader_len
+                ) * train_dataloader_len + 1
                 logger.info("Early stop current iteration")
                 break
 
@@ -514,19 +588,39 @@ def train(config, args, accelerator, model, optimizer, lr_scheduler, train_datal
 
         if epoch % config.train.save_model_epochs == 0 or epoch == config.train.num_epochs and not config.debug:
             accelerator.wait_for_everyone()
-            if accelerator.is_main_process:
-                # os.umask(0o000)
+            torch.cuda.synchronize()
+
+            # Choose different saving methods based on whether FSDP is used
+            if config.train.use_fsdp:
+                # FSDP mode
+                os.umask(0o000)
                 ckpt_saved_path = save_checkpoint(
-                    osp.join(config.work_dir, "checkpoints"),
+                    work_dir=osp.join(config.work_dir, "checkpoints"),
                     epoch=epoch,
-                    step=global_step,
-                    model=accelerator.unwrap_model(model),
+                    model=model,
+                    accelerator=accelerator,
                     optimizer=optimizer,
                     lr_scheduler=lr_scheduler,
-                    generator=generator,
+                    step=global_step,
                     add_symlink=True,
                 )
+            else:
+                # DDP mode
+                if accelerator.is_main_process:
+                    os.umask(0o000)
+                    ckpt_saved_path = save_checkpoint(
+                        osp.join(config.work_dir, "checkpoints"),
+                        epoch=epoch,
+                        step=global_step,
+                        model=accelerator.unwrap_model(model),
+                        model_ema=accelerator.unwrap_model(model_ema) if model_ema is not None else None,
+                        optimizer=optimizer,
+                        lr_scheduler=lr_scheduler,
+                        generator=generator,
+                        add_symlink=True,
+                    )
 
+            if accelerator.is_main_process:
                 online_metric_monitor_dir = osp.join(config.work_dir, config.train.online_metric_dir)
                 os.makedirs(online_metric_monitor_dir, exist_ok=True)
                 with open(f"{online_metric_monitor_dir}/{ckpt_saved_path.split('/')[-1]}.txt", "w") as f:
@@ -540,53 +634,48 @@ def main(cfg: SanaConfig) -> None:
     global train_dataloader_len, start_epoch, start_step, vae, generator, num_replicas, rank, training_start_time
     global load_vae_feat, load_text_feat, validation_noise, text_encoder, tokenizer
     global max_length, validation_prompts, latent_size, valid_prompt_embed_suffix, null_embed_path
-    global image_size, cache_file, total_steps
+    global image_size, cache_file, total_steps, vae_dtype
 
     config = cfg
     args = cfg
-    # config = read_config(args.config)
+
+    # 1.Initialize training mode
+    if config.train.use_fsdp:
+        set_fsdp_env()
+        init_train = "FSDP"
+    else:
+        init_train = "DDP"
 
     training_start_time = time.time()
     load_from = True
+
     if args.resume_from or config.model.resume_from:
         load_from = False
         config.model.resume_from = dict(
             checkpoint=args.resume_from or config.model.resume_from,
             load_ema=False,
             resume_optimizer=True,
-            resume_lr_scheduler=True,
+            resume_lr_scheduler=config.train.resume_lr_scheduler,
         )
 
     if args.debug:
         config.train.log_interval = 1
         config.train.train_batch_size = min(64, config.train.train_batch_size)
         args.report_to = "tensorboard"
+        config.train.visualize = False
 
     os.umask(0o000)
     os.makedirs(config.work_dir, exist_ok=True)
 
     init_handler = InitProcessGroupKwargs()
     init_handler.timeout = datetime.timedelta(seconds=5400)  # change timeout to avoid a strange NCCL bug
+
     # Initialize accelerator and tensorboard logging
-    if config.train.use_fsdp:
-        init_train = "FSDP"
-        from accelerate import FullyShardedDataParallelPlugin
-        from torch.distributed.fsdp.fully_sharded_data_parallel import FullStateDictConfig
-
-        set_fsdp_env()
-        fsdp_plugin = FullyShardedDataParallelPlugin(
-            state_dict_config=FullStateDictConfig(offload_to_cpu=False, rank0_only=False),
-        )
-    else:
-        init_train = "DDP"
-        fsdp_plugin = None
-
     accelerator = Accelerator(
         mixed_precision=config.model.mixed_precision,
         gradient_accumulation_steps=config.train.gradient_accumulation_steps,
         log_with=args.report_to,
         project_dir=osp.join(config.work_dir, "logs"),
-        fsdp_plugin=fsdp_plugin,
         kwargs_handlers=[init_handler],
     )
 
@@ -608,19 +697,22 @@ def main(cfg: SanaConfig) -> None:
     logger.info(f"Config: \n{config}")
     logger.info(f"World_size: {get_world_size()}, seed: {config.train.seed}")
     logger.info(f"Initializing: {init_train} for training")
+
     image_size = config.model.image_size
     latent_size = int(image_size) // config.vae.vae_downsample_rate
     pred_sigma = getattr(config.scheduler, "pred_sigma", True)
     learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
     max_length = config.text_encoder.model_max_length
     vae = None
+    vae_dtype = get_weight_dtype(config.vae.weight_dtype)
+
     validation_noise = (
         torch.randn(1, config.vae.vae_latent_dim, latent_size, latent_size, device="cpu", generator=generator)
         if getattr(config.train, "deterministic_validation", False)
         else None
     )
     if not config.data.load_vae_feat:
-        vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(torch.float16)
+        vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(vae_dtype)
     tokenizer = text_encoder = None
     if not config.data.load_text_feat:
         tokenizer, text_encoder = get_tokenizer_and_text_encoder(
@@ -640,22 +732,23 @@ def main(cfg: SanaConfig) -> None:
         config.train.null_embed_root,
         f"null_embed_diffusers_{config.text_encoder.text_encoder_name}_{max_length}token_{text_embed_dim}.pth",
     )
+
+    # 2.preparing embeddings for visualization. We put it here for saving GPU memory
     if config.train.visualize and len(config.train.validation_prompts):
-        # preparing embeddings for visualization. We put it here for saving GPU memory
         valid_prompt_embed_suffix = f"{max_length}token_{config.text_encoder.text_encoder_name}_{text_embed_dim}.pth"
         validation_prompts = config.train.validation_prompts
         skip = True
         if config.text_encoder.chi_prompt:
-            uuid_chi_prompt = hashlib.sha256(chi_prompt.encode()).hexdigest()
+            uuid_sys_prompt = hashlib.sha256(chi_prompt.encode()).hexdigest()
         else:
-            uuid_chi_prompt = hashlib.sha256(b"").hexdigest()
-        config.train.valid_prompt_embed_root = osp.join(config.train.valid_prompt_embed_root, uuid_chi_prompt)
+            uuid_sys_prompt = hashlib.sha256(b"").hexdigest()
+        config.train.valid_prompt_embed_root = osp.join(config.train.valid_prompt_embed_root, uuid_sys_prompt)
         Path(config.train.valid_prompt_embed_root).mkdir(parents=True, exist_ok=True)
 
         if config.text_encoder.chi_prompt:
-            # Save complex human instruct to a file
-            chi_prompt_file = osp.join(config.train.valid_prompt_embed_root, "chi_prompt.txt")
-            with open(chi_prompt_file, "w", encoding="utf-8") as f:
+            # Save system prompt to a file
+            system_prompt_file = osp.join(config.train.valid_prompt_embed_root, "system_prompt.txt")
+            with open(system_prompt_file, "w", encoding="utf-8") as f:
                 f.write(chi_prompt)
 
         for prompt in validation_prompts:
@@ -689,9 +782,9 @@ def main(cfg: SanaConfig) -> None:
                     else:
                         chi_prompt = "\n".join(config.text_encoder.chi_prompt)
                         prompt = chi_prompt + prompt
-                        num_chi_prompt_tokens = len(tokenizer.encode(chi_prompt))
+                        num_sys_prompt_tokens = len(tokenizer.encode(chi_prompt))
                         max_length_all = (
-                            num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
+                            num_sys_prompt_tokens + config.text_encoder.model_max_length - 2
                         )  # magic number 2: [bos], [_]
 
                     txt_tokens = tokenizer(
@@ -733,7 +826,7 @@ def main(cfg: SanaConfig) -> None:
 
     os.environ["AUTOCAST_LINEAR_ATTN"] = "true" if config.model.autocast_linear_attn else "false"
 
-    # 1. build scheduler
+    # 3. build scheduler
     train_diffusion = Scheduler(
         str(config.scheduler.train_sampling_steps),
         noise_schedule=config.scheduler.noise_schedule,
@@ -753,33 +846,25 @@ def main(cfg: SanaConfig) -> None:
         )
     logger.info(predict_info)
 
-    # 2. build models
-    model_kwargs = {
-        "pe_interpolation": config.model.pe_interpolation,
-        "config": config,
-        "model_max_length": max_length,
-        "qk_norm": config.model.qk_norm,
-        "micro_condition": config.model.micro_condition,
-        "caption_channels": text_embed_dim,
-        "y_norm": config.text_encoder.y_norm,
-        "attn_type": config.model.attn_type,
-        "ffn_type": config.model.ffn_type,
-        "mlp_ratio": config.model.mlp_ratio,
-        "mlp_acts": list(config.model.mlp_acts),
-        "in_channels": config.vae.vae_latent_dim,
-        "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
-        "use_pe": config.model.use_pe,
-        "linear_head_dim": config.model.linear_head_dim,
-        "pred_sigma": pred_sigma,
-        "learn_sigma": learn_sigma,
-    }
+    # 4. build models
+    model_kwargs = model_init_config(config, latent_size=latent_size)
     model = build_model(
         config.model.model,
         config.train.grad_checkpointing,
         getattr(config.model, "fp32_attention", False),
-        input_size=latent_size,
+        null_embed_path=null_embed_path,
         **model_kwargs,
     ).train()
+
+    if (not config.train.use_fsdp) and config.train.ema_update:
+        model_ema = deepcopy(model).eval()
+        logger.info("Creating EMA model for DDP mode")
+    elif config.train.use_fsdp and config.train.ema_update:
+        logger.warning("EMA update is not supported in FSDP mode. Setting model_ema to None.")
+        model_ema = None
+    else:
+        model_ema = None
+
     logger.info(
         colored(
             f"{model.__class__.__name__}:{config.model.model}, "
@@ -788,25 +873,34 @@ def main(cfg: SanaConfig) -> None:
             attrs=["bold"],
         )
     )
-    # 2-1. load model
+
+    # 4-1. load model
     if args.load_from is not None:
         config.model.load_from = args.load_from
     if config.model.load_from is not None and load_from:
         _, missing, unexpected, _ = load_checkpoint(
-            config.model.load_from,
-            model,
+            checkpoint=config.model.load_from,
+            model=model,
+            model_ema=model_ema,
+            FSDP=config.train.use_fsdp,
             load_ema=config.model.resume_from.get("load_ema", False),
             null_embed_path=null_embed_path,
         )
         logger.warning(f"Missing keys: {missing}")
         logger.warning(f"Unexpected keys: {unexpected}")
 
-    # prepare for FSDP clip grad norm calculation
-    if accelerator.distributed_type == DistributedType.FSDP:
-        for m in accelerator._models:
-            m.clip_grad_norm_ = types.MethodType(clip_grad_norm_, m)
+    # 4-2. model growth
+    if config.model_growth is not None:
+        assert config.model.load_from is None
+        model_growth_initializer = ModelGrowthInitializer(model, config.model_growth)
+        model = model_growth_initializer.initialize(
+            strategy=config.model_growth.init_strategy, **config.model_growth.init_params
+        )
 
-    # 3. build dataloader
+    if config.train.ema_update and not config.train.use_fsdp and model_ema is not None:
+        ema_update(model_ema, model, 0.0)
+
+    # 5. build dataloader
     config.data.data_dir = config.data.data_dir if isinstance(config.data.data_dir, list) else [config.data.data_dir]
     config.data.data_dir = [
         data if data.startswith(("https://", "http://", "gs://", "/", "~")) else osp.abspath(osp.expanduser(data))
@@ -855,6 +949,7 @@ def main(cfg: SanaConfig) -> None:
             hq_only=config.data.hq_only,
             cache_file=cache_file,
             caching=args.caching,
+            clipscore_filter_thres=args.data.del_img_clip_thr,
         )
         train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.train.num_workers)
         train_dataloader_len = len(train_dataloader)
@@ -872,7 +967,7 @@ def main(cfg: SanaConfig) -> None:
     load_vae_feat = getattr(train_dataloader.dataset, "load_vae_feat", False)
     load_text_feat = getattr(train_dataloader.dataset, "load_text_feat", False)
 
-    # 4. build optimizer and lr scheduler
+    # 6. build optimizer and lr scheduler
     lr_scale_ratio = 1
     if getattr(config.train, "auto_lr", None):
         lr_scale_ratio = auto_scale_lr(
@@ -907,13 +1002,16 @@ def main(cfg: SanaConfig) -> None:
     start_step = 0
     total_steps = train_dataloader_len * config.train.num_epochs
 
-    # Resume training
+    # 7. Resume training
     if config.model.resume_from is not None and config.model.resume_from["checkpoint"] is not None:
         rng_state = None
         ckpt_path = osp.join(config.work_dir, "checkpoints")
         check_flag = osp.exists(ckpt_path) and len(os.listdir(ckpt_path)) != 0
+
         if config.model.resume_from["checkpoint"] == "latest":
             if check_flag:
+                config.model.resume_from["resume_optimizer"] = True
+                config.model.resume_from["resume_lr_scheduler"] = True
                 checkpoints = os.listdir(ckpt_path)
                 if "latest.pth" in checkpoints and osp.exists(osp.join(ckpt_path, "latest.pth")):
                     config.model.resume_from["checkpoint"] = osp.realpath(osp.join(ckpt_path, "latest.pth"))
@@ -922,14 +1020,18 @@ def main(cfg: SanaConfig) -> None:
                     checkpoints = sorted(checkpoints, key=lambda x: int(x.replace(".pth", "").split("_")[3]))
                     config.model.resume_from["checkpoint"] = osp.join(ckpt_path, checkpoints[-1])
             else:
+                config.model.resume_from["resume_optimizer"] = config.train.load_from_optimizer
+                config.model.resume_from["resume_lr_scheduler"] = config.train.load_from_lr_scheduler
                 config.model.resume_from["checkpoint"] = config.model.load_from
 
         if config.model.resume_from["checkpoint"] is not None:
-            _, missing, unexpected, rng_state = load_checkpoint(
+            _, missing, unexpected, _ = load_checkpoint(
                 **config.model.resume_from,
                 model=model,
-                optimizer=optimizer if check_flag else None,
-                lr_scheduler=lr_scheduler if check_flag else None,
+                model_ema=model_ema if not config.train.use_fsdp else None,
+                FSDP=config.train.use_fsdp,
+                optimizer=optimizer,
+                lr_scheduler=lr_scheduler,
                 null_embed_path=null_embed_path,
             )
 
@@ -943,23 +1045,28 @@ def main(cfg: SanaConfig) -> None:
         except:
             pass
 
-        # resume randomise
-        if rng_state:
-            logger.info("resuming randomise")
-            torch.set_rng_state(rng_state["torch"])
-            np.random.set_state(rng_state["numpy"])
-            random.setstate(rng_state["python"])
-            generator.set_state(rng_state["generator"])  # resume generator status
-            try:
-                torch.cuda.set_rng_state_all(rng_state["torch_cuda"])
-            except:
-                logger.warning("Failed to resume torch_cuda rng state")
-
-    # Prepare everything
+    # 8. Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
     model = accelerator.prepare(model)
+    if model_ema is not None and not config.train.use_fsdp:
+        model_ema = accelerator.prepare(model_ema)
     optimizer, lr_scheduler = accelerator.prepare(optimizer, lr_scheduler)
+
+    # load everything except model when resume
+    if (
+        config.train.use_fsdp
+        and config.model.resume_from is not None
+        and config.model.resume_from["checkpoint"] is not None
+    ):
+        logger.info(f"FSDP resume: Loading optimizer, scheduler, scaler, random_states...")
+        accelerator.load_state(
+            os.path.join(config.model.resume_from["checkpoint"], "model"),
+            state_dict_key=["optimizer", "scheduler", "scaler", "random_states"],
+        )
+
+    set_random_seed((start_step + 1) // config.train.save_model_steps + int(os.environ["LOCAL_RANK"]))
+    logger.info(f'Set seed: {(start_step + 1) // config.train.save_model_steps + int(os.environ["LOCAL_RANK"])}')
 
     # Start Training
     train(
@@ -967,6 +1074,7 @@ def main(cfg: SanaConfig) -> None:
         args=args,
         accelerator=accelerator,
         model=model,
+        model_ema=model_ema,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         train_dataloader=train_dataloader,
@@ -976,5 +1084,4 @@ def main(cfg: SanaConfig) -> None:
 
 
 if __name__ == "__main__":
-
     main()

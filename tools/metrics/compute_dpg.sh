@@ -35,6 +35,10 @@ do
         log_dpg="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         *)
         ;;
     esac
@@ -45,10 +49,12 @@ sample_nums=${sample_nums:-$default_sample_nums}
 pic_nums_per_prompt=4
 log_suffix_label=${suffix_label:-$default_log_suffix_label}
 log_dpg=${log_dpg:-true}
+tracker_project_name=${tracker_project_name:-"t2i-evit-baseline"}
 PORT=${PORT:-29500}
 echo "img_size: $img_size"
 echo "sample_nums: $sample_nums"
 echo "log_dpg: $log_dpg"
+echo "wandb_project_name: $tracker_project_name"
 if [ "$dpg" = true ]; then
   # =============== compute DPG-Bench from json ==================
   echo "==================== computing DPG-Bench ===================="
@@ -56,7 +62,7 @@ if [ "$dpg" = true ]; then
   cmd_template="accelerate launch --num_machines 1 --num_processes $np --multi_gpu --mixed_precision 'fp16' --main_process_port $PORT \
               $py --image-root-path {img_path} --exp_name {exp_name} \
               --pic-num $pic_nums_per_prompt --resolution $img_size --vqa-model mplug \
-              --report_to $report_to --name {job_name} "
+              --report_to $report_to --name {job_name} --tracker_project_name $tracker_project_name"
 
   if [[ "$exp_names" != *.txt ]]; then
     cmd="${cmd_template//\{img_path\}/$img_path}"

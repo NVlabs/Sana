@@ -154,7 +154,7 @@ class TrainingConfig(BaseConfig):
     load_mask_index: bool = False
     snr_loss: bool = False
     real_prompt_ratio: float = 1.0
-    training_hours: float = 10000.0
+    early_stop_hours: float = 10000.0
     save_image_epochs: int = 1
     save_model_epochs: int = 1
     save_model_steps: int = 1000000
@@ -184,7 +184,6 @@ class TrainingConfig(BaseConfig):
     debug_nan: bool = False
     ema_update: bool = False
     ema_rate: float = 0.9999
-    early_stop_hours: float = 100
     ### SANA-Sprint related below
     tangent_warmup_steps: int = 10000
     scm_cfg_scale: Union[float, List[float]] = field(default_factory=lambda: [1.0])
@@ -252,7 +251,7 @@ class SanaConfig(BaseConfig):
     debug: bool = False
     caching: bool = False
     report_to: str = "wandb"
-    tracker_project_name: str = "t2i-evit-baseline"
+    tracker_project_name: str = "sana-baseline"
     name: str = "baseline"
     loss_report_name: str = "loss"
 

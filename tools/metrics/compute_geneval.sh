@@ -30,6 +30,10 @@ do
         log_geneval="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         *)
         ;;
     esac
@@ -39,20 +43,24 @@ sample_nums=${sample_nums:-$default_sample_nums}
 samples_per_gpu=$((sample_nums / np))
 log_suffix_label=${suffix_label:-$default_log_suffix_label}
 log_geneval=${log_geneval:-true}
+tracker_project_name=${tracker_project_name:-"t2i-evit-baseline"}
 echo "sample_nums: $sample_nums"
 echo "log_geneval: $log_geneval"
+echo "wandb_project_name: $tracker_project_name"
 
 mask2former_path=output/pretrained_models/geneval
 if [ ! -d "$mask2former_path" ]; then
   echo "Model path does not exist. Running download_models.sh..."
   bash tools/metrics/geneval/evaluation/download_models.sh $mask2former_path
 fi
+
+cmd_template="python $py --img_path {img_path} --exp_name {exp_name} \
+            --model-path  $mask2former_path \
+            --report_to $report_to --name {job_name} --tracker_project_name $tracker_project_name"
+
 if [ "$geneval" = true ]; then
   # =============== compute GenEval from json ==================
   echo "==================== computing geneval ===================="
-  cmd_template="python $py --img_path {img_path} --exp_name {exp_name} \
-              --model-path  $mask2former_path \
-              --report_to $report_to --name {job_name} "
 
   if [[ "$exp_names" != *.txt ]]; then
     exp_name=$(basename "$exp_names")
@@ -106,9 +114,6 @@ fi
 # =============== log GenEval result online after the above result saving ==================
 if [ "$log_geneval" = true ] && [ "$geneval" = true ]; then
   echo "==================== logging onto $report_to ===================="
-  cmd_template="python $py --img_path {img_path} --exp_name {exp_name} \
-              --model-path $mask2former_path \
-              --report_to $report_to --name {job_name} "
 
   if [ -n "${log_suffix_label}" ]; then
     echo "log_suffix_label: $log_suffix_label"

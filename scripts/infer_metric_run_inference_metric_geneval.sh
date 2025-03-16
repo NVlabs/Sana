@@ -78,12 +78,24 @@ do
         tracker_pattern="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         --ablation_key=*)
         ablation_key="${arg#*=}"
         shift
         ;;
         --ablation_selections=*)
         ablation_selections="${arg#*=}"
+        shift
+        ;;
+        --inference_script=*)
+        inference_script="${arg#*=}"
+        shift
+        ;;
+        --cleanup=*)
+        cleanup="${arg#*=}"
         shift
         ;;
         *)
@@ -105,9 +117,11 @@ ablation_selections=${ablation_selections:-''}
 
 suffix_label=${suffix_label:-$default_suffix_label}
 tracker_pattern=${tracker_pattern:-"epoch_step"}
+tracker_project_name=${tracker_project_name:-"sana-baseline"}
 auto_ckpt=${auto_ckpt:-false}
 auto_ckpt_interval=${auto_ckpt_interval:-0}
 log_geneval=${log_geneval:-$default_log_geneval}
+cleanup=${cleanup:-false}
 
 job_name=$(basename $(dirname $(dirname "$model_paths_file")))
 metric_dir=$output_dir/$job_name/metrics
@@ -130,11 +144,12 @@ if [ ! -e "$model_paths_file" ]; then
 fi
 
 if [ "$inference" = true ]; then
+  inference_script=${inference_script:-"scripts/inference_geneval.py"}
   cache_file_path=$output_dir/$job_name/metrics/cached_img_paths_geneval.txt
   rm $metric_dir/tmp_geneval_* || true
   read -r -d '' cmd <<EOF
 bash scripts/infer_run_inference_geneval.sh $config_file $model_paths_file \
-      --step=$step --sample_nums=$sample_nums --add_label=$add_label \
+      --inference_script=$inference_script --step=$step --sample_nums=$sample_nums --add_label=$add_label \
       --cfg_scale=$cfg_scale \
       --exist_time_prefix=$exist_time_prefix --if_save_dirname=true --sampling_algo=$sampling_algo \
       --ablation_key=$ablation_key --ablation_selections="$ablation_selections"
@@ -152,16 +167,35 @@ EOF
   rm -r $metric_dir/tmp_geneval_* || true
 fi
 
-img_path=${output_dir}/${job_name}/vis
 exp_paths_file=${cache_file_path}
+img_path=$(dirname $(dirname $exp_paths_file))/vis
+echo "img_path: $img_path, exp_paths_file: $exp_paths_file"
 
 # ============ 2. start of geneval compute block  =================
 if [ "$geneval" = true ]; then
   read -r -d '' cmd <<EOF
 bash tools/metrics/compute_geneval.sh $img_path $exp_paths_file \
       --sample_nums=$sample_nums --suffix_label=$suffix_label \
-       --log_geneval=$log_geneval --tracker_pattern=$tracker_pattern
+      --log_geneval=$log_geneval --tracker_pattern=$tracker_pattern \
+      --tracker_project_name=$tracker_project_name
 EOF
   echo $cmd
   bash -c "${cmd}"
+fi
+
+# ============ 3. start of cleanup block  =================
+if [ "$cleanup" = true ]; then
+  echo "Cleaning up generated images and paths files at $img_path..."
+
+  while IFS= read -r folder || [ -n "$folder" ]; do
+    if [ ! -z "$folder" ]; then
+      folder_path="$img_path/$folder"
+      if [ -d "$folder_path" ]; then
+        echo "Removing folder: $folder_path"
+        rm -r "$folder_path"
+      fi
+    fi
+  done < "$exp_paths_file"
+
+  echo "Cleanup completed"
 fi

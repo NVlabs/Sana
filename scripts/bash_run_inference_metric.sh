@@ -86,6 +86,10 @@ do
         auto_ckpt_interval="${arg#*=}"
         shift
         ;;
+        --inference_script=*)
+        inference_script="${arg#*=}"
+        shift
+        ;;
         --inference=*)
         inference="${arg#*=}"
         shift
@@ -102,6 +106,10 @@ do
         tracker_pattern="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         --ablation_key=*)
         ablation_key="${arg#*=}"
         shift
@@ -110,11 +118,16 @@ do
         ablation_selections="${arg#*=}"
         shift
         ;;
+        --cleanup=*)
+        cleanup="${arg#*=}"
+        shift
+        ;;
         *)
         ;;
     esac
 done
 
+inference_script=${inference_script:-"scripts/inference.py"}
 inference=${inference:-true}    # if run model inference
 fid=${fid:-true}                # if compute fid
 clipscore=${clipscore:-true}    # if compute clip-score
@@ -132,21 +145,24 @@ ablation_key=${ablation_key:-''}
 ablation_selections=${ablation_selections:-''}
 
 tracker_pattern=${tracker_pattern:-"epoch_step"}
+tracker_project_name=${tracker_project_name:-"sana-baseline"}
 log_fid=${log_fid:-$default_log_fid}
 log_clip_score=${log_clip_score:-$default_log_clip_score}
 auto_ckpt=${auto_ckpt:-false} # if collect ckpt path automatically, use with the following one $auto_ckpt_interval
 auto_ckpt_interval=${auto_ckpt_interval:-0} # 0:last step in one epoch; 1000: every 1000 steps
+cleanup=${cleanup:-false}
 
 read -r -d '' cmd <<EOF
 bash scripts/infer_metric_run_inference_metric.sh $config_file $model_paths_file \
-      --inference=$inference --fid=$fid --clipscore=$clipscore \
+      --inference_script=$inference_script --inference=$inference --fid=$fid --clipscore=$clipscore \
       --step=$step --bs=$bs --sample_nums=$sample_nums --json_file=$json_file \
       --exist_time_prefix=$exist_time_prefix --img_size=$img_size --cfg_scale=$cfg_scale \
       --fid_suffix_label=$fid_suffix_label --add_label=$add_label --dataset=$dataset \
       --log_fid=$log_fid --log_clip_score=$log_clip_score \
       --output_dir=$output_dir --auto_ckpt=$auto_ckpt --sampling_algo=$sampling_algo \
       --auto_ckpt_interval=$auto_ckpt_interval --tracker_pattern=$tracker_pattern \
-      --ablation_key=$ablation_key --ablation_selections="$ablation_selections"
+      --ablation_key=$ablation_key --ablation_selections="$ablation_selections" --cleanup=$cleanup \
+      --tracker_project_name=$tracker_project_name
 EOF
 
 echo $cmd '\n'

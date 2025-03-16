@@ -33,6 +33,10 @@ do
         tracker_pattern="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         *)
         ;;
     esac
@@ -42,10 +46,11 @@ sample_nums=${sample_nums:-$default_sample_nums}
 tracker_pattern=${tracker_pattern:-"epoch_step"}
 log_suffix_label=${suffix_label:-$default_log_suffix_label}
 log_clip_score=${log_clip_score:-true}
+tracker_project_name=${tracker_project_name:-"t2i-evit-baseline"}
 echo "sample_nums: $sample_nums"
 echo "log_clip_score: $log_clip_score"
 echo "tracker_pattern: $tracker_pattern"
-
+echo "wandb_project_name: $tracker_project_name"
 IMG_PATH="data/test/PG-eval-data/MJHQ-30K/meta_data.json"
 TXT_PATH="data/test/PG-eval-data/MJHQ-30K/meta_data.json"
 
@@ -56,7 +61,8 @@ if [ "$clip_score" = true ]; then
   echo "==================== computing clip-score ===================="
   cmd_template="python $py --real_path $IMG_PATH --fake_path $TXT_PATH \
               --exp_name {exp_name} --txt_path {img_path} --img_path {img_path} --sample_nums $sample_nums \
-              --report_to $report_to --name {job_name} --gpu_id {gpu_id} --tracker_pattern $tracker_pattern"
+              --report_to $report_to --name {job_name} --gpu_id {gpu_id} --tracker_pattern $tracker_pattern \
+              --tracker_project_name $tracker_project_name"
 
   if [[ "$exp_names" != *.txt ]]; then
     cmd="${cmd_template//\{img_path\}/$img_path}"

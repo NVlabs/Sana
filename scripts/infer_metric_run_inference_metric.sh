@@ -130,6 +130,10 @@ do
         tracker_pattern="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         --ablation_key=*)
         ablation_key="${arg#*=}"
         shift
@@ -140,6 +144,10 @@ do
         ;;
         --inference_script=*)
         inference_script="${arg#*=}"
+        shift
+        ;;
+        --cleanup=*)
+        cleanup="${arg#*=}"
         shift
         ;;
         *)
@@ -169,12 +177,16 @@ ablation_selections=${ablation_selections:-''}
 img_size=${img_size:-$default_img_size}
 fid_suffix_label=${fid_suffix_label:-$default_fid_suffix_label}
 tracker_pattern=${tracker_pattern:-"epoch_step"}
+tracker_project_name=${tracker_project_name:-"sana-baseline"}
 log_fid=${log_fid:-$default_log_fid}
 log_clip_score=${log_clip_score:-$default_log_clip_score}
 log_image_reward=${log_image_reward:-$default_log_image_reward}
 log_dpg=${log_dpg:-$default_log_dpg}
 auto_ckpt=${auto_ckpt:-false}
 auto_ckpt_interval=${auto_ckpt_interval:-0}
+cleanup=${cleanup:-false}
+
+echo "Metrics suffix label: $fid_suffix_label"
 
 job_name=$(basename $(dirname $(dirname "$model_paths_file")))
 metric_dir=$output_dir/$job_name/metrics
@@ -190,6 +202,7 @@ fi
 
 # ============ 1. start of inference block ===========
 cache_file_path=$model_paths_file
+echo "model_paths_file: $model_paths_file, cache_file_path: $cache_file_path"
 
 if [ ! -e "$model_paths_file" ]; then
   cache_file_path=$output_dir/$job_name/metrics/cached_img_paths_${dataset}.txt
@@ -221,15 +234,17 @@ EOF
   rm -r $metric_dir/tmp_${dataset}* || true
 fi
 
-img_path=${output_dir}/${job_name}/vis
 exp_paths_file=${cache_file_path}
+img_path=$(dirname $(dirname $exp_paths_file))/vis
+echo "img_path: $img_path, exp_paths_file: $exp_paths_file"
 
 # ============ 2. start of fid block  =================
 if [ "$fid" = true ]; then
   read -r -d '' cmd <<EOF
 bash tools/metrics/compute_fid_embedding.sh $img_path $exp_paths_file \
       --sample_nums=$sample_nums --img_size=$img_size --suffix_label=$fid_suffix_label \
-       --log_fid=$log_fid --tracker_pattern=$tracker_pattern
+      --log_fid=$log_fid --tracker_pattern=$tracker_pattern \
+      --tracker_project_name=$tracker_project_name
 EOF
   echo $cmd
   bash -c "${cmd}"
@@ -241,7 +256,8 @@ if [ "$clipscore" = true ]; then
   read -r -d '' cmd <<EOF
 bash tools/metrics/compute_clipscore.sh $img_path $exp_paths_file \
       --sample_nums=$sample_nums --suffix_label=$fid_suffix_label \
-      --log_clip_score=$log_clip_score --tracker_pattern=$tracker_pattern
+      --log_clip_score=$log_clip_score --tracker_pattern=$tracker_pattern \
+      --tracker_project_name=$tracker_project_name
 EOF
   echo $cmd
   bash -c "${cmd}"
@@ -252,7 +268,8 @@ if [ "$imagereward" = true ]; then
   read -r -d '' cmd <<EOF
 bash tools/metrics/compute_imagereward.sh $img_path $exp_paths_file \
       --sample_nums=$sample_nums --suffix_label=$fid_suffix_label \
-      --log_image_reward=$log_image_reward --tracker_pattern=$tracker_pattern
+      --log_image_reward=$log_image_reward --tracker_pattern=$tracker_pattern \
+      --tracker_project_name=$tracker_project_name
 EOF
   echo $cmd
   bash -c "${cmd}"
@@ -263,8 +280,38 @@ if [ "$dpg" = true ]; then
   read -r -d '' cmd <<EOF
 bash tools/metrics/compute_dpg.sh $img_path $exp_paths_file \
       --sample_nums=$sample_nums --img_size=$img_size --suffix_label=$fid_suffix_label \
-      --log_dpg=$log_dpg --tracker_pattern=$tracker_pattern
+      --log_dpg=$log_dpg --tracker_pattern=$tracker_pattern \
+      --tracker_project_name=$tracker_project_name
 EOF
   echo $cmd
   bash -c "${cmd}"
+fi
+
+# ============ 5. start of hpsv2 block  =================
+if [ "$hps" = true ]; then
+  read -r -d '' cmd <<EOF
+bash tools/metrics/compute_hpsv2.sh $img_path $exp_paths_file \
+      --sample_nums=$sample_nums --suffix_label=$fid_suffix_label \
+      --log_hpsv2=$log_hpsv2 --tracker_pattern=$tracker_pattern \
+      --tracker_project_name=$tracker_project_name
+EOF
+  echo $cmd
+  bash -c "${cmd}"
+fi
+
+# ============ 6. start of cleanup block  =================
+if [ "$cleanup" = true ]; then
+  echo "Cleaning up generated images and paths files at $img_path..."
+
+  while IFS= read -r folder || [ -n "$folder" ]; do
+    if [ ! -z "$folder" ]; then
+      folder_path="$img_path/$folder"
+      if [ -d "$folder_path" ]; then
+        echo "Removing folder: $folder_path"
+        rm -r "$folder_path"
+      fi
+    fi
+  done < "$exp_paths_file"
+
+  echo "Cleanup completed"
 fi

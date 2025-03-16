@@ -12,7 +12,6 @@ default_log_suffix_label=''
 img_path=$1
 exp_names=$2
 job_name=$(basename $(dirname "$img_path"))
-#job_name=online_monitor_debug
 
 for arg in "$@"
 do
@@ -33,6 +32,10 @@ do
         tracker_pattern="${arg#*=}"
         shift
         ;;
+        --tracker_project_name=*)
+        tracker_project_name="${arg#*=}"
+        shift
+        ;;
         *)
         ;;
     esac
@@ -42,12 +45,13 @@ sample_nums=${sample_nums:-$default_sample_nums}
 tracker_pattern=${tracker_pattern:-"epoch_step"}
 log_suffix_label=${suffix_label:-$default_log_suffix_label}
 log_image_reward=${log_image_reward:-true}
+tracker_project_name=${tracker_project_name:-"t2i-evit-baseline"}
 echo "img_size: $img_size"
 echo "sample_nums: $sample_nums"
 echo "log_image_reward: log_image_reward"
 echo "log_suffix_label: $log_suffix_label"
 echo "tracker_pattern: $tracker_pattern"
-
+echo "wandb_project_name: $tracker_project_name"
 JSON_PATH="tools/metrics/image_reward/benchmark-prompts-dict.json"
 
 if [ "$imagereward" = true ]; then
@@ -55,7 +59,8 @@ if [ "$imagereward" = true ]; then
   echo "==================== computing image-reward ===================="
   cmd_template="python $py --json_path $JSON_PATH \
               --exp_name {exp_name} --txt_path {img_path} --img_path {img_path} --sample_nums $sample_nums \
-              --report_to $report_to --name {job_name} --gpu_id {gpu_id} --tracker_pattern $tracker_pattern"
+              --report_to $report_to --name {job_name} --gpu_id {gpu_id} --tracker_pattern $tracker_pattern \
+              --tracker_project_name $tracker_project_name"
 
   if [[ "$exp_names" != *.txt ]]; then
     cmd="${cmd_template//\{img_path\}/$img_path}"

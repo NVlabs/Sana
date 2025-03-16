@@ -42,6 +42,7 @@ from diffusion.data.wids import DistributedRangedSampler
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
 from diffusion.model.model_growth_utils import ModelGrowthInitializer
 from diffusion.model.respace import compute_density_for_timestep_sampling
+from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
 from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
@@ -166,10 +167,8 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
             latents.append(denoised)
         torch.cuda.empty_cache()
         if vae is None:
-            vae_dtype = getattr(config.vae, "weight_dtype", torch.float32)
             vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, accelerator.device).to(vae_dtype)
         for prompt, latent in zip(validation_prompts, latents):
-            vae_dtype = getattr(config.vae, "weight_dtype", torch.float32)
             latent = latent.to(vae_dtype)
             samples = vae_decode(config.vae.vae_type, vae, latent)
             samples = (
@@ -705,7 +704,8 @@ def main(cfg: SanaConfig) -> None:
     learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
     max_length = config.text_encoder.model_max_length
     vae = None
-    vae_dtype = getattr(config.vae, "weight_dtype", torch.float32)
+    vae_dtype = get_weight_dtype(config.vae.weight_dtype)
+
     validation_noise = (
         torch.randn(1, config.vae.vae_latent_dim, latent_size, latent_size, device="cpu", generator=generator)
         if getattr(config.train, "deterministic_validation", False)
@@ -883,7 +883,7 @@ def main(cfg: SanaConfig) -> None:
             model=model,
             model_ema=model_ema,
             FSDP=config.train.use_fsdp,
-            load_ema=getattr(config.model.resume_from, "load_ema", False),
+            load_ema=config.model.resume_from.get("load_ema", False),
             null_embed_path=null_embed_path,
         )
         logger.warning(f"Missing keys: {missing}")
@@ -949,7 +949,7 @@ def main(cfg: SanaConfig) -> None:
             hq_only=config.data.hq_only,
             cache_file=cache_file,
             caching=args.caching,
-            clipscore_filter_thres=getattr(args.data, "del_img_clip_thr", None),
+            clipscore_filter_thres=args.data.del_img_clip_thr,
         )
         train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.train.num_workers)
         train_dataloader_len = len(train_dataloader)

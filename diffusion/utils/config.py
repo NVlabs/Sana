@@ -44,10 +44,14 @@ class DataConfig(BaseConfig):
 @dataclass
 class ModelConfig(BaseConfig):
     model: str = "SanaMS_600M_P1_D28"
+    teacher: Optional[str] = None
     image_size: int = 512
     mixed_precision: str = "fp16"  # ['fp16', 'fp32', 'bf16']
     fp32_attention: bool = True
     load_from: Optional[str] = None
+    discriminator_model: Optional[str] = None
+    teacher_model: Optional[str] = None
+    teacher_model_weight_dtype: Optional[str] = None
     resume_from: Optional[Union[Dict[str, Any], str]] = field(
         default_factory=lambda: {
             "checkpoint": None,
@@ -71,9 +75,16 @@ class ModelConfig(BaseConfig):
     class_dropout_prob: float = 0.0
     linear_head_dim: int = 32
     cross_norm: bool = False
+    cross_attn_type: str = "flash"
+    logvar: bool = False
     cfg_scale: int = 4
+    cfg_embed: bool = False
+    cfg_embed_scale: float = 1.0
     guidance_type: str = "classifier-free"
     pag_applied_layers: List[int] = field(default_factory=lambda: [14])
+    # for ladd
+    ladd_multi_scale: bool = True
+    head_block_ids: Optional[List[int]] = None
     extra: Any = None
 
 
@@ -127,7 +138,7 @@ class SchedulerConfig(BaseConfig):
 @dataclass
 class TrainingConfig(BaseConfig):
     num_workers: int = 4
-    seed: int = 43
+    seed: int = 42
     train_batch_size: int = 32
     num_epochs: int = 100
     gradient_accumulation_steps: int = 1
@@ -135,6 +146,9 @@ class TrainingConfig(BaseConfig):
     gradient_clip: float = 1.0
     gc_step: int = 1
     optimizer: Dict[str, Any] = field(
+        default_factory=lambda: {"eps": 1.0e-10, "lr": 0.0001, "type": "AdamW", "weight_decay": 0.03}
+    )
+    optimizer_D: Dict[str, Any] = field(
         default_factory=lambda: {"eps": 1.0e-10, "lr": 0.0001, "type": "AdamW", "weight_decay": 0.03}
     )
     load_from_optimizer: bool = False
@@ -185,8 +199,17 @@ class TrainingConfig(BaseConfig):
     ema_update: bool = False
     ema_rate: float = 0.9999
     ### SANA-Sprint related below
+    # for sCM
     tangent_warmup_steps: int = 10000
     scm_cfg_scale: Union[float, List[float]] = field(default_factory=lambda: [1.0])
+    cfg_interval: Optional[List[float]] = None
+    scm_logvar_loss: bool = True
+    norm_invariant_to_spatial_dim: bool = True
+    norm_same_as_512_scale: bool = False
+    g_norm_constant: float = 0.1
+    g_norm_r: float = 1.0
+    show_gradient: bool = False
+    lr_scale: Optional[Dict[str, List[str]]] = None
     # for ladd
     adv_lambda: float = 1.0
     scm_loss: bool = True
@@ -282,5 +305,6 @@ def model_init_config(config: SanaConfig, latent_size: int = 32):
         "pred_sigma": pred_sigma,
         "learn_sigma": learn_sigma,
         "cross_norm": config.model.cross_norm,
+        "cross_attn_type": config.model.cross_attn_type,
         "timestep_norm_scale_factor": config.scheduler.timestep_norm_scale_factor,
     }

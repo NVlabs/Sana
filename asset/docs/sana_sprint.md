@@ -10,11 +10,13 @@
   <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
 </div>
 
-<div style="text-align: center">
-  <video width="80%" controls muted loop autoplay>
-    <source src="https://nvlabs.github.io/Sana/Sprint/asset/video/sana-sprint-speed-video-4images.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nI_Ohgf8eOU" target="_blank">
+    <img src="https://img.youtube.com/vi/nI_Ohgf8eOU/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; display: block; margin: 0 auto;">
+  </a>
+  <a href="https://www.youtube.com/watch?v=OOZzkirgsAc" target="_blank">
+    <img src="https://img.youtube.com/vi/OOZzkirgsAc/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; display: block; margin: 0 auto;">
+  </a>
 </div>
 
 ## How to Inference

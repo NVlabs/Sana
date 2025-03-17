@@ -31,7 +31,7 @@ ______________________________________________________________________
 
 | Model            | Reso   | pth link                                                                                          | diffusers                                                                                                                                                   | Precision | Description    |
 |------------------|--------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
-| SANA-Sprint-1.6B | 1024px | [SANA-Sprint_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px)   | [Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers]((https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers)(coming soon)     | bf16      | Multi-Language |
+| SANA-Sprint-1.6B | 1024px | [SANA-Sprint_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px)   | \[Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers\]((https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers)(coming soon)     | bf16      | Multi-Language |
 
 ______________________________________________________________________
 

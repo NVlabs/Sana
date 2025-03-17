@@ -15,7 +15,7 @@ fi
 
 cmd="TRITON_PRINT_AUTOTUNING=1 \
     torchrun --nproc_per_node=$np --master_port=$((RANDOM % 10000 + 20000)) \
-        train_scripts/train_sCM_ladd.py \
+        train_scripts/train_scm_ladd.py \
         --config_path=$config \
         --work_dir=$work_dir \
         --name=tmp \

@@ -23,15 +23,16 @@ ______________________________________________________________________
 
 ### SANA-1.5
 
-| Model        | Reso   | pth link                                                                                | diffusers                                                                | Precision | Description    |
-|--------------|--------|-----------------------------------------------------------------------------------------|--------------------------------------------------------------------------|-----------|----------------|
-| SANA1.5-4.8B | 1024px | [SANA1.5_4.8B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px) | [Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers](<>)(coming soon)   | bf16      | Multi-Language |
+| Model        | Reso   | pth link                                                                                | diffusers                                                                                                                                          | Precision | Description    |
+|--------------|--------|-----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
+| SANA1.5-4.8B | 1024px | [SANA1.5_4.8B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px) | [Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers)(coming soon)     | bf16      | Multi-Language |
+| SANA1.5-1.6B | 1024px | [SANA1.5_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px) | [Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers)(coming soon)     | bf16      | Multi-Language |
 
 ### SANA-1.5
 
-| Model            | Reso   | pth link                                                                                          | diffusers                                                                                                                                                   | Precision | Description    |
-|------------------|--------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
-| SANA-Sprint-1.6B | 1024px | [SANA-Sprint_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px)   | \[Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers\]((https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers)(coming soon)     | bf16      | Multi-Language |
+| Model            | Reso   | pth link                                                                                        | diffusers                                                                                                                                                   | Precision | Description    |
+|------------------|--------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
+| SANA-Sprint-1.6B | 1024px | [SANA-Sprint_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px) | \[Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers\]((https://huggingface.co/Efficient-Large-Model/SANA-Sprint_1.6B_1024px_diffusers)(coming soon)   | bf16      | Multi-Language |
 
 ______________________________________________________________________
 

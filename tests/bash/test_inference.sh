@@ -14,3 +14,8 @@ python tools/controlnet/inference_controlnet.py \
     --config=configs/sana_controlnet_config/Sana_600M_img1024_controlnet.yaml \
     --model_path=hf://Efficient-Large-Model/Sana_600M_1024px_ControlNet_HED/checkpoints/Sana_600M_1024px_ControlNet_HED.pth \
     --json_file=asset/controlnet/samples_controlnet.json
+
+python scripts/inference_sana_sprint.py \
+    --config=configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml \
+    --model_path=hf://Lawrence-cj/Sana_Sprint_1600M_1024px/checkpoints/Sana_Sprint_1600M_1024px.pth \
+    --txt_file=asset/samples/samples_mini.txt

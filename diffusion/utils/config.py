@@ -114,9 +114,7 @@ class TextEncoderConfig(BaseConfig):
 @dataclass
 class SchedulerConfig(BaseConfig):
     train_sampling_steps: int = 1000
-    predict_v: bool = True
     predict_flow_v: bool = True
-    predict_trigflow_v: bool = True
     noise_schedule: str = "linear_flow"
     pred_sigma: bool = False
     learn_sigma: bool = True

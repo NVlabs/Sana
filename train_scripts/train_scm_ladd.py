@@ -1221,7 +1221,6 @@ def main(cfg: SanaConfig) -> None:
         str(config.scheduler.train_sampling_steps),
         noise_schedule=config.scheduler.noise_schedule,
         predict_flow_v=config.scheduler.predict_flow_v,
-        predict_trigflow_v=config.scheduler.predict_trigflow_v,
         learn_sigma=learn_sigma,
         pred_sigma=pred_sigma,
         snr=config.train.snr_loss,
@@ -1229,7 +1228,6 @@ def main(cfg: SanaConfig) -> None:
     )
     predict_info = (
         f"predict_flow_v: {config.scheduler.predict_flow_v}, "
-        f"predict_trigflow_v: {config.scheduler.predict_trigflow_v}, "
         f"noise schedule: {config.scheduler.noise_schedule}"
     )
     if "flow" in config.scheduler.noise_schedule:

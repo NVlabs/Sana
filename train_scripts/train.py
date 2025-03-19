@@ -830,13 +830,13 @@ def main(cfg: SanaConfig) -> None:
     train_diffusion = Scheduler(
         str(config.scheduler.train_sampling_steps),
         noise_schedule=config.scheduler.noise_schedule,
-        predict_v=config.scheduler.predict_v,
+        predict_flow_v=config.scheduler.predict_flow_v,
         learn_sigma=learn_sigma,
         pred_sigma=pred_sigma,
         snr=config.train.snr_loss,
         flow_shift=config.scheduler.flow_shift,
     )
-    predict_info = f"v-prediction: {config.scheduler.predict_v}, noise schedule: {config.scheduler.noise_schedule}"
+    predict_info = f"flow-prediction: {config.scheduler.predict_flow_v}, noise schedule: {config.scheduler.noise_schedule}"
     if "flow" in config.scheduler.noise_schedule:
         predict_info += f", flow shift: {config.scheduler.flow_shift}"
     if config.scheduler.weighting_scheme in ["logit_normal", "mode"]:

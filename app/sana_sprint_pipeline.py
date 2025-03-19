@@ -24,6 +24,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 warnings.filterwarnings("ignore")  # ignore warning
+os.environ["DISABLE_XFORMERS"] = "1"
 
 
 from diffusion import SCMScheduler

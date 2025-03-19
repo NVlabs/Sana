@@ -35,6 +35,7 @@ from torchvision.utils import _log_api_usage_once, make_grid, save_image
 from tqdm import tqdm
 
 warnings.filterwarnings("ignore")  # ignore warning
+os.environ["DISABLE_XFORMERS"] = "1"
 
 from diffusion import SCMScheduler, TrigFlowScheduler
 from diffusion.data.datasets.utils import (

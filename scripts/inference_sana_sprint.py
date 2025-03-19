@@ -31,6 +31,7 @@ from torchvision.utils import save_image
 from tqdm import tqdm
 
 warnings.filterwarnings("ignore")  # ignore warning
+os.environ["DISABLE_XFORMERS"] = "1"
 
 from diffusion import SCMScheduler
 from diffusion.data.datasets.utils import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST

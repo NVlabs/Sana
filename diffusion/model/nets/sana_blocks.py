@@ -86,7 +86,7 @@ class MultiHeadCrossAttention(nn.Module):
         else:
             q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
             if mask is not None and mask.ndim == 2:
-                mask = (1 - mask.to(x.dtype)) * -10000.0
+                mask = (1 - mask.to(q.dtype)) * -10000.0
                 mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
             x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
             x = x.transpose(1, 2)

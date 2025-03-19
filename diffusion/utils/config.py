@@ -90,8 +90,8 @@ class ModelConfig(BaseConfig):
 
 @dataclass
 class AEConfig(BaseConfig):
-    vae_type: str = "dc-ae"
-    vae_pretrained: str = "mit-han-lab/dc-ae-f32c32-sana-1.0"
+    vae_type: str = "AutoencoderDC"
+    vae_pretrained: str = "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers"
     weight_dtype: str = "float32"
     scale_factor: float = 0.41407
     vae_latent_dim: int = 32

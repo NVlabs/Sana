@@ -321,7 +321,6 @@ class SanaMS(Sana):
         if self.y_norm:
             y = self.attention_y_norm(y)
 
-        print(f"11111111111 xformers_available: {_xformers_available}")
         if mask is not None:
             mask = mask.repeat(y.shape[0] // mask.shape[0], 1) if mask.shape[0] != y.shape[0] else mask
             mask = mask.squeeze(1).squeeze(1)

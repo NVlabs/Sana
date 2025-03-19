@@ -38,6 +38,7 @@ def save_checkpoint(
     keep_last=False,
     step=None,
     add_symlink=False,
+    add_suffix=None,
 ):
     if accelerator is not None and accelerator.distributed_type == DistributedType.FSDP:
         return save_checkpoint_fsdp(
@@ -49,6 +50,7 @@ def save_checkpoint(
             keep_last=keep_last,
             step=step,
             add_symlink=add_symlink,
+            add_suffix=add_suffix,
         )
     else:
         return save_checkpoint_ddp(
@@ -62,6 +64,7 @@ def save_checkpoint(
             keep_last=keep_last,
             step=step,
             add_symlink=add_symlink,
+            add_suffix=add_suffix,
         )
 
 
@@ -76,6 +79,7 @@ def save_checkpoint_ddp(
     keep_last=False,
     step=None,
     add_symlink=False,
+    add_suffix=None,
 ):
     os.makedirs(work_dir, exist_ok=True)
     state_dict = dict(state_dict=model.state_dict())
@@ -90,7 +94,8 @@ def save_checkpoint_ddp(
         file_path = os.path.join(work_dir, f"epoch_{epoch}.pth")
         if step is not None:
             file_path = file_path.split(".pth")[0] + f"_step_{step}.pth"
-
+    if add_suffix is not None:
+        file_path = file_path.replace(".pth", f"_{add_suffix}.pth")
     rng_state = {
         "torch": torch.get_rng_state(),
         "torch_cuda": torch.cuda.get_rng_state_all(),
@@ -126,6 +131,7 @@ def save_checkpoint_fsdp(
     keep_last=False,
     step=None,
     add_symlink=False,
+    add_suffix=None,
 ):
     """FSDP checkpoint save function, sharding"""
     logger = get_root_logger()
@@ -133,6 +139,8 @@ def save_checkpoint_fsdp(
     checkpoint_dir = os.path.join(work_dir, f"epoch_{epoch}")
     if step is not None:
         checkpoint_dir = checkpoint_dir + f"_step_{step}"
+    if add_suffix is not None:
+        checkpoint_dir = checkpoint_dir + f"_{add_suffix}"
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     model_dir = os.path.join(checkpoint_dir, "model")

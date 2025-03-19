@@ -1,4 +1,4 @@
-# Copyright 2024 NVIDIA CORPORATION & AFFILIATES
+# Copyright 2023 Stanford University Team and The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# SPDX-License-Identifier: Apache-2.0
+
+# DISCLAIMER: This code is strongly influenced by https://github.com/pesser/pytorch_diffusion
+# and https://github.com/hojonathanho/diffusion
 
 import math
 import warnings
@@ -27,7 +28,7 @@ from diffusers.utils import BaseOutput
 
 
 @dataclass
-# Copied from diffusers.schedulers.scheduling_ddpm.DDPMSchedulerOutput
+# Copied from diffusers.schedulers.scheduling_ddpm.DDPMSchedulerOutput with DDPM->DDIM
 class SCMSchedulerOutput(BaseOutput):
     """
     Output class for the scheduler's `step` function output.
@@ -44,7 +45,6 @@ class SCMSchedulerOutput(BaseOutput):
     denoised: Optional[torch.FloatTensor] = None
 
 
-# Copied from diffusers.schedulers.scheduling_ddpm.LCMScheduler
 class SCMScheduler(SchedulerMixin, ConfigMixin):
     """
     `SCMScheduler` extends the denoising procedure introduced in denoising diffusion probabilistic models (DDPMs) with
@@ -54,6 +54,10 @@ class SCMScheduler(SchedulerMixin, ConfigMixin):
     Args:
         num_train_timesteps (`int`, defaults to 1000):
             The number of diffusion steps to train the model.
+        prediction_type (`str`, defaults to `epsilon`, *optional*):
+            Prediction type of the scheduler function; can be `epsilon` (predicts the noise of the diffusion process),
+            `sample` (directly predicts the noisy sample`) or `v_prediction` (see section 2.4 of [Imagen
+            Video](https://imagen.research.google/video/paper.pdf) paper).
     """
 
     # _compatibles = [e.name for e in KarrasDiffusionSchedulers]
@@ -63,6 +67,7 @@ class SCMScheduler(SchedulerMixin, ConfigMixin):
     def __init__(
         self,
         num_train_timesteps: int = 1000,
+        prediction_type: str = "trigflow",
     ):
         # standard deviation of the initial noise distribution
         self.init_noise_sigma = 1.0

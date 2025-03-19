@@ -119,54 +119,26 @@ class SanaMSBlock(nn.Module):
                 norm=(None, None, None),
                 act=mlp_acts,
             )
-        elif ffn_type == "glumbconv_dilate":
-            self.mlp = GLUMBConv(
-                in_features=hidden_size,
-                hidden_features=int(hidden_size * mlp_ratio),
-                use_bias=(True, True, False),
-                norm=(None, None, None),
-                act=mlp_acts,
-                dilation=2,
-            )
-        elif ffn_type == "triton_mbconvpreglu":
-            if not _triton_modules_available:
-                raise ValueError(
-                    f"{ffn_type} type is not available due to _triton_modules_available={_triton_modules_available}."
-                )
-            self.mlp = TritonMBConvPreGLU(
-                in_dim=hidden_size,
-                out_dim=hidden_size,
-                mid_dim=int(hidden_size * mlp_ratio),
-                use_bias=(True, True, False),
-                norm=None,
-                act=("silu", "silu", None),
-            )
         elif ffn_type == "mlp":
             approx_gelu = lambda: nn.GELU(approximate="tanh")
             self.mlp = Mlp(
                 in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
-            )
-        elif ffn_type == "mbconvpreglu":
-            self.mlp = MBConvPreGLU(
-                in_dim=hidden_size,
-                out_dim=hidden_size,
-                mid_dim=int(hidden_size * mlp_ratio),
-                use_bias=(True, True, False),
-                norm=None,
-                act=mlp_acts,
             )
         else:
             raise ValueError(f"{ffn_type} type is not defined.")
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
-    def forward(self, x, y, t, mask=None, HW=None, **kwargs):
+    def forward(self, x, y, t, mask=None, HW=None, image_rotary_emb=None, **kwargs):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
         ).chunk(6, dim=1)
-        x = x + self.drop_path(gate_msa * self.attn(t2i_modulate(self.norm1(x), shift_msa, scale_msa), HW=HW))
+        x = x + self.drop_path(
+            gate_msa
+            * self.attn(t2i_modulate(self.norm1(x), shift_msa, scale_msa), HW=HW, image_rotary_emb=image_rotary_emb)
+        )
         x = x + self.cross_attn(x, y, mask)
         x = x + self.drop_path(gate_mlp * self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), HW=HW))
 
@@ -217,7 +189,6 @@ class SanaMS(Sana):
         cfg_embed_scale=1.0,
         lr_scale=None,
         timestep_norm_scale_factor=1.0,
-        discrete_norm_timestep=False,
         **kwargs,
     ):
         super().__init__(
@@ -250,7 +221,6 @@ class SanaMS(Sana):
             cross_attn_type=cross_attn_type,
             cfg_embed=cfg_embed,
             timestep_norm_scale_factor=timestep_norm_scale_factor,
-            discrete_norm_timestep=discrete_norm_timestep,
             **kwargs,
         )
         self.h = self.w = 0
@@ -335,6 +305,7 @@ class SanaMS(Sana):
                 self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[0, 16, 16])
                 latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(bs, self.h, self.w, x.device, x.dtype)
                 image_pos_embed = self.pos_embed_ms(latent_image_ids)
+                x += image_pos_embed
             else:
                 raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
 
@@ -361,7 +332,7 @@ class SanaMS(Sana):
 
         for block in self.blocks:
             if jvp:
-                x = block(x, y, t0, y_lens, (self.h, self.w), **kwargs)
+                x = block(x, y, t0, y_lens, (self.h, self.w), image_pos_embed, **kwargs)
             # gradient checkpointing is not supported for JVP
             else:
                 x = auto_grad_checkpoint(
@@ -371,6 +342,7 @@ class SanaMS(Sana):
                     t0,
                     y_lens,
                     (self.h, self.w),
+                    image_pos_embed,
                     **kwargs,
                     use_reentrant=False,
                 )  # (N, T, D) #support grad checkpoint

@@ -206,7 +206,7 @@ class LiteLA(Attention_):
 
         return out
 
-    def forward(self, x: torch.Tensor, mask=None, HW=None, block_id=None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
         B, N, C = x.shape
 
         qkv = self.qkv(x).reshape(B, N, 3, C)
@@ -218,10 +218,14 @@ class LiteLA(Attention_):
         v = v.transpose(-1, -2)
 
         q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-        k = k.reshape(B, C // self.dim, self.dim, N).transpose(-1, -2)  # (B, h, N, h_d)
+        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
         v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
 
-        out = self.attn_matmul(q, k, v).to(dtype)
+        if image_rotary_emb is not None:
+            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+
+        out = self.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.proj(out)
@@ -248,7 +252,7 @@ class PAGCFGIdentitySelfAttnProcessorLiteLA:
     def __init__(self, attn):
         self.attn = attn
 
-    def __call__(self, x: torch.Tensor, mask=None, HW=None, block_id=None) -> torch.Tensor:
+    def __call__(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
         x_uncond, x_org, x_ptb = x.chunk(3)
         x_org = torch.cat([x_uncond, x_org])
         B, N, C = x_org.shape
@@ -262,10 +266,14 @@ class PAGCFGIdentitySelfAttnProcessorLiteLA:
         v = v.transpose(-1, -2)
 
         q = q.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
-        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N).transpose(-1, -2)  # (B, h, N, h_d)
+        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
         v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
 
-        out = self.attn.attn_matmul(q, k, v).to(dtype)
+        if image_rotary_emb is not None:
+            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+
+        out = self.attn.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.attn.proj(out)
@@ -293,7 +301,7 @@ class PAGIdentitySelfAttnProcessorLiteLA:
     def __init__(self, attn):
         self.attn = attn
 
-    def __call__(self, x: torch.Tensor, mask=None, HW=None, block_id=None) -> torch.Tensor:
+    def __call__(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
         x_org, x_ptb = x.chunk(2)
         B, N, C = x_org.shape
 
@@ -306,10 +314,14 @@ class PAGIdentitySelfAttnProcessorLiteLA:
         v = v.transpose(-1, -2)
 
         q = q.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
-        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N).transpose(-1, -2)  # (B, h, N, h_d)
+        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
         v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
 
-        out = self.attn.attn_matmul(q, k, v).to(dtype)
+        if image_rotary_emb is not None:
+            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+
+        out = self.attn.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.attn.proj(out)
@@ -337,7 +349,7 @@ class SelfAttnProcessorLiteLA:
     def __init__(self, attn):
         self.attn = attn
 
-    def __call__(self, x: torch.Tensor, mask=None, HW=None, block_id=None) -> torch.Tensor:
+    def __call__(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
         B, N, C = x.shape
         if HW is None:
             H = W = int(N**0.5)
@@ -352,10 +364,14 @@ class SelfAttnProcessorLiteLA:
         v = v.transpose(-1, -2)
 
         q = q.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
-        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N).transpose(-1, -2)  # (B, h, N, h_d)
+        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
         v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
 
-        out = self.attn.attn_matmul(q, k, v).to(dtype)
+        if image_rotary_emb is not None:
+            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+
+        out = self.attn.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.attn.proj(out)
@@ -392,7 +408,7 @@ class FlashAttention(Attention_):
             self.q_norm = nn.Identity()
             self.k_norm = nn.Identity()
 
-    def forward(self, x, mask=None, HW=None, block_id=None):
+    def forward(self, x, mask=None, HW=None, block_id=None, **kwargs):
         B, N, C = x.shape
 
         qkv = self.qkv(x).reshape(B, N, 3, C)

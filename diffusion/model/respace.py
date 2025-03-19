@@ -24,8 +24,8 @@ import math
 import numpy as np
 import torch as th
 
-from ..model import gaussian_diffusion as gd
-from .gaussian_diffusion import GaussianDiffusion
+from diffusion.model import gaussian_diffusion as gd
+from diffusion.model.gaussian_diffusion import GaussianDiffusion
 
 
 def space_timesteps(num_timesteps, section_counts):
@@ -93,6 +93,10 @@ def compute_density_for_timestep_sampling(
     elif weighting_scheme == "mode":
         u = th.rand(size=(batch_size,), device="cpu")
         u = 1 - u - mode_scale * (th.cos(math.pi * u / 2) ** 2 - 1 + u)
+    elif weighting_scheme == "logit_normal_trigflow":
+        sigma = th.randn(batch_size, device="cpu")
+        sigma = (sigma * logit_std + logit_mean).exp()
+        u = th.atan(sigma / 0.5)  # TODO: 0.5 should be a hyper-parameter
     else:
         u = th.rand(size=(batch_size,), device="cpu")
     return u
@@ -115,7 +119,13 @@ class SpacedDiffusion(GaussianDiffusion):
         diffusion_steps = kwargs.pop("diffusion_steps")
         base_diffusion = GaussianDiffusion(**kwargs)  # pylint: disable=missing-kwoa
         last_alpha_cumprod = 1.0
-        if kwargs.get("model_mean_type", False) != gd.ModelMeanType.VELOCITY:
+        if kwargs.get("model_mean_type", False) == gd.ModelMeanType.FLOW_VELOCITY:
+            new_sigmas = flow_shift * base_diffusion.sigmas / (1 + (flow_shift - 1) * base_diffusion.sigmas)
+            self.timestep_map = new_sigmas * diffusion_steps
+            # self.timestep_map = list(self.use_timesteps)
+            kwargs["sigmas"] = np.array(new_sigmas)
+            super().__init__(**kwargs)
+        else:
             new_betas = []
             for i, alpha_cumprod in enumerate(base_diffusion.alphas_cumprod):
                 if i in self.use_timesteps:
@@ -123,12 +133,6 @@ class SpacedDiffusion(GaussianDiffusion):
                     last_alpha_cumprod = alpha_cumprod
                     self.timestep_map.append(i)
             kwargs["betas"] = np.array(new_betas)
-            super().__init__(**kwargs)
-        else:
-            new_sigmas = flow_shift * base_diffusion.sigmas / (1 + (flow_shift - 1) * base_diffusion.sigmas)
-            self.timestep_map = new_sigmas * diffusion_steps
-            # self.timestep_map = list(self.use_timesteps)
-            kwargs["sigmas"] = np.array(new_sigmas)
             super().__init__(**kwargs)
 
     def p_mean_variance(self, model, *args, **kwargs):  # pylint: disable=signature-differs
@@ -164,8 +168,13 @@ class _WrappedModel:
         self.original_num_steps = original_num_steps
 
     def __call__(self, x, timestep, **kwargs):
-        map_tensor = th.tensor(self.timestep_map, device=timestep.device, dtype=timestep.dtype)
-        new_ts = map_tensor[timestep]
+        if self.timestep_map is None:
+            return self.model(x, timestep=timestep, **kwargs)
+        if callable(self.timestep_map):
+            new_ts = self.timestep_map(timestep)
+        else:
+            map_tensor = th.tensor(self.timestep_map, device=timestep.device, dtype=timestep.dtype)
+            new_ts = map_tensor[timestep]
         # if self.rescale_timesteps:
         #     new_ts = new_ts.float() * (1000.0 / self.original_num_steps)
         return self.model(x, timestep=new_ts, **kwargs)

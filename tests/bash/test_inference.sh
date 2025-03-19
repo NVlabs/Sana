@@ -17,5 +17,5 @@ python tools/controlnet/inference_controlnet.py \
 
 python scripts/inference_sana_sprint.py \
     --config=configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml \
-    --model_path=hf://Lawrence-cj/Sana_Sprint_1600M_1024px/checkpoints/Sana_Sprint_1600M_1024px_36K.pth \
+    --model_path=hf://Lawrence-cj/Sana_Sprint_1600M_1024px/Sana_Sprint_1600M_1024px_36K.pth \
     --txt_file=asset/samples/samples_mini.txt

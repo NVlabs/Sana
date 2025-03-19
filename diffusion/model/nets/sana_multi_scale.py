@@ -15,6 +15,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
+import os
+
 import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
@@ -43,9 +45,9 @@ if is_triton_module_available():
 
     _triton_modules_available = True
 
-_xformers_available = False
-if is_xformers_available():
-    _xformers_available = True
+_xformers_available = False if os.environ.get("DISABLE_XFORMERS", "0") == "1" else is_xformers_available()
+if _xformers_available:
+    import xformers.ops
 
 
 class SanaMSBlock(nn.Module):
@@ -310,12 +312,16 @@ class SanaMS(Sana):
                 raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
 
         t = self.t_embedder(timestep)  # (N, D)
+        if self.cfg_embedder:
+            cfg_embed = self.cfg_embedder(data_info["cfg_scale"] * self.cfg_embed_scale)
+            t += cfg_embed
 
         t0 = self.t_block(t)
-        y = self.y_embedder(y, self.training)  # (N, D)
+        y = self.y_embedder(y, self.training, mask=mask)  # (N, D)
         if self.y_norm:
             y = self.attention_y_norm(y)
 
+        print(f"11111111111 xformers_available: {_xformers_available}")
         if mask is not None:
             mask = mask.repeat(y.shape[0] // mask.shape[0], 1) if mask.shape[0] != y.shape[0] else mask
             mask = mask.squeeze(1).squeeze(1)

@@ -722,7 +722,7 @@ def main(cfg: SanaConfig) -> None:
     else:
         text_embed_dim = config.text_encoder.caption_channels
 
-    logger.info(f"vae type: {config.vae.vae_type}")
+    logger.info(f"vae type: {config.vae.vae_type}, path: {config.vae.vae_pretrained}")
     if config.text_encoder.chi_prompt:
         chi_prompt = "\n".join(config.text_encoder.chi_prompt)
         logger.info(f"Complex Human Instruct: {chi_prompt}")
@@ -836,7 +836,9 @@ def main(cfg: SanaConfig) -> None:
         snr=config.train.snr_loss,
         flow_shift=config.scheduler.flow_shift,
     )
-    predict_info = f"flow-prediction: {config.scheduler.predict_flow_v}, noise schedule: {config.scheduler.noise_schedule}"
+    predict_info = (
+        f"flow-prediction: {config.scheduler.predict_flow_v}, noise schedule: {config.scheduler.noise_schedule}"
+    )
     if "flow" in config.scheduler.noise_schedule:
         predict_info += f", flow shift: {config.scheduler.flow_shift}"
     if config.scheduler.weighting_scheme in ["logit_normal", "mode"]:

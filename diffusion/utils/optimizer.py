@@ -25,6 +25,7 @@ from mmcv import Config
 from mmcv.runner import OPTIMIZER_BUILDERS, OPTIMIZERS, DefaultOptimizerConstructor
 from mmcv.runner import build_optimizer as mm_build_optimizer
 from mmcv.utils import _BatchNorm, _InstanceNorm
+from termcolor import colored
 from torch.nn import GroupNorm, LayerNorm
 from torch.optim.optimizer import Optimizer
 
@@ -171,7 +172,7 @@ def build_optimizer(model, optimizer_cfg):
             learnable_count += 1
         else:
             fix_count += 1
-    fix_info = f"{learnable_count} are learnable, {fix_count} are fix"
+    fix_info = colored(f"{learnable_count} are learnable, {fix_count} are fix", "green")
     lr_info = "Lr group: " + ", ".join([f"{len(group)} params with lr {lr:.5f}" for lr, group in lr_groups.items()])
     wd_info = "Weight decay group: " + ", ".join(
         [f"{len(group)} params with weight decay {wd}" for wd, group in weight_decay_groups.items()]

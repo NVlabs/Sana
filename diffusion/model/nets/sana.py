@@ -30,6 +30,7 @@ from diffusion.model.nets.sana_blocks import (
     FlashAttention,
     LiteLA,
     MultiHeadCrossAttention,
+    MultiHeadCrossVallinaAttention,
     PatchEmbed,
     T2IFinalLayer,
     TimestepEmbedder,
@@ -65,6 +66,7 @@ class SanaBlock(nn.Module):
         ffn_type="mlp",
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
+        cross_attn_type="flash",
         **block_kwargs,
     ):
         super().__init__()
@@ -98,7 +100,12 @@ class SanaBlock(nn.Module):
         else:
             raise ValueError(f"{attn_type} type is not defined.")
 
-        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        if cross_attn_type in ["flash", "linear"]:
+            self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        elif cross_attn_type == "vanilla":
+            self.cross_attn = MultiHeadCrossVallinaAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        else:
+            raise ValueError(f"{cross_attn_type} type is not defined.")
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         # to be compatible with lower version pytorch
         if ffn_type == "dwmlp":
@@ -122,28 +129,6 @@ class SanaBlock(nn.Module):
                 norm=(None, None, None),
                 act=mlp_acts,
                 dilation=2,
-            )
-        elif ffn_type == "mbconvpreglu":
-            self.mlp = MBConvPreGLU(
-                in_dim=hidden_size,
-                out_dim=hidden_size,
-                mid_dim=int(hidden_size * mlp_ratio),
-                use_bias=(True, True, False),
-                norm=None,
-                act=("silu", "silu", None),
-            )
-        elif ffn_type == "triton_mbconvpreglu":
-            if not _triton_modules_available:
-                raise ValueError(
-                    f"{ffn_type} type is not available due to _triton_modules_available={_triton_modules_available}."
-                )
-            self.mlp = TritonMBConvPreGLU(
-                in_dim=hidden_size,
-                out_dim=hidden_size,
-                mid_dim=int(hidden_size * mlp_ratio),
-                use_bias=(True, True, False),
-                norm=None,
-                act=("silu", "silu", None),
             )
         elif ffn_type == "mlp":
             approx_gelu = lambda: nn.GELU(approximate="tanh")
@@ -264,6 +249,7 @@ class Sana(nn.Module):
                     ffn_type=ffn_type,
                     mlp_acts=mlp_acts,
                     linear_head_dim=linear_head_dim,
+                    cross_attn_type=cross_attn_type,
                 )
                 for i in range(depth)
             ]

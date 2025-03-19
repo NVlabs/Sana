@@ -40,6 +40,7 @@ from termcolor import colored
 from tqdm import tqdm
 
 warnings.filterwarnings("ignore")  # ignore warning
+os.environ["DISABLE_XFORMERS"] = "1"
 
 
 from diffusion import DPMS, FlowEuler, Scheduler, SCMScheduler
@@ -110,61 +111,32 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
             caption_embs, emb_masks = embed["caption_embeds"].to(device), embed["emb_mask"].to(device)
             model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
 
-            if sampler == "flow_euler":
-                flow_solver = FlowEuler(
-                    model, condition=caption_embs, uncondition=null_y, cfg_scale=1, model_kwargs=model_kwargs
-                )
-                denoised = flow_solver.sample(z, steps=1)
-            elif sampler == "flow_dpm-solver":
-                dpm_solver = DPMS(
-                    model.forward_with_dpmsolver,
-                    condition=caption_embs,
-                    uncondition=null_y,
-                    cfg_scale=4.5,
-                    model_type="flow",
-                    model_kwargs=model_kwargs,
-                    schedule="FLOW",
-                )
-                denoised = dpm_solver.sample(
-                    z,
-                    steps=20,
-                    order=2,
-                    skip_type="time_uniform_flow",
-                    method="multistep",
-                    flow_shift=config.scheduler.flow_shift,
-                )
-            elif sampler == "scm":
-                scheduler = SCMScheduler()
-                scheduler.set_timesteps(
-                    num_inference_steps=2,
-                    max_timesteps=1.57080,
-                    intermediate_timesteps=1.0,
-                )
-                timesteps = scheduler.timesteps
+            scheduler = SCMScheduler()
+            scheduler.set_timesteps(
+                num_inference_steps=2,
+                max_timesteps=1.57080,
+                intermediate_timesteps=1.0,
+            )
+            timesteps = scheduler.timesteps
 
-                model_kwargs["data_info"].update(
-                    {"cfg_scale": torch.tensor([config.model.cfg_scale] * latents.shape[0]).to(device)}
+            model_kwargs["data_info"].update(
+                {"cfg_scale": torch.tensor([config.model.cfg_scale] * latents.shape[0]).to(device)}
+            )
+
+            #  sCM MultiStep Sampling Loop:
+            for i, t in tqdm(list(enumerate(timesteps[:-1]))):
+                timestep = t.expand(latents.shape[0]).to(device)
+
+                # model prediction
+                model_pred = sigma_data * model(
+                    latents / sigma_data,
+                    timestep,
+                    caption_embs,
+                    **model_kwargs,
                 )
 
-                #  sCM MultiStep Sampling Loop:
-                for i, t in tqdm(list(enumerate(timesteps[:-1]))):
-                    timestep = t.expand(latents.shape[0]).to(device)
-
-                    # model prediction
-                    model_pred = sigma_data * model(
-                        latents / sigma_data,
-                        timestep,
-                        caption_embs,
-                        **model_kwargs,
-                    )
-
-                    # compute the previous noisy sample x_t -> x_t-1
-                    latents, denoised = scheduler.step(
-                        model_pred, i, t, latents, generator=generator, return_dict=False
-                    )
-
-            else:
-                raise ValueError(f"{sampler} not implemented")
+                # compute the previous noisy sample x_t -> x_t-1
+                latents, denoised = scheduler.step(model_pred, i, t, latents, generator=generator, return_dict=False)
 
             latent_outputs.append(denoised / sigma_data)
 
@@ -268,7 +240,6 @@ def train(
     optimizer_D,
     lr_scheduler,
     train_dataloader,
-    train_diffusion,
     logger,
     pretrained_model,
     disc,
@@ -622,21 +593,7 @@ def train(
 
                 total_loss = total_loss / config.train.gradient_accumulation_steps
 
-                # Backward pass
-                if config.train.vis_grad:
-                    accelerator.backward(loss, retain_graph=True)
-                    grad_norm_scm = accelerator.clip_grad_norm_(model.parameters(), config.train.gradient_clip)
-                    optimizer_G.zero_grad()
-                    accelerator.backward(adv_loss, retain_graph=True)
-                    grad_norm_adv = accelerator.clip_grad_norm_(model.parameters(), config.train.gradient_clip)
-                    optimizer_G.zero_grad()
-                    accelerator.backward(total_loss)
-                    scm_adv_grad_info = {
-                        "scm_grad_norm": accelerator.gather(grad_norm_scm).mean().item(),
-                        "adv_grad_norm": accelerator.gather(grad_norm_adv).mean().item(),
-                    }
-                else:
-                    accelerator.backward(total_loss)
+                accelerator.backward(total_loss)
 
                 g_step += 1
 
@@ -835,8 +792,6 @@ def train(
                     )
                     if config.train.r1_penalty:
                         logs.update({"r1_penalty": accelerator.gather(r1_penalty).mean().item()})
-                if config.train.vis_grad:
-                    logs.update(scm_adv_grad_info)
                 if grad_norm is not None:
                     logs.update(grad_norm=accelerator.gather(grad_norm).mean().item())
                 log_buffer.update(logs)
@@ -1113,7 +1068,7 @@ def main(cfg: SanaConfig) -> None:
         text_embed_dim = config.text_encoder.caption_channels
     config.text_encoder.caption_channels = text_embed_dim
 
-    logger.info(f"vae type: {config.vae.vae_type}")
+    logger.info(f"vae type: {config.vae.vae_type}, path: {config.vae.vae_pretrained}")
     if config.text_encoder.chi_prompt:
         chi_prompt = "\n".join(config.text_encoder.chi_prompt)
         logger.info(f"Complex Human Instruct: {chi_prompt}")
@@ -1217,25 +1172,12 @@ def main(cfg: SanaConfig) -> None:
     os.environ["AUTOCAST_LINEAR_ATTN"] = "true" if config.model.autocast_linear_attn else "false"
 
     # 1. build scheduler
-    train_diffusion = Scheduler(
-        str(config.scheduler.train_sampling_steps),
-        noise_schedule=config.scheduler.noise_schedule,
-        predict_flow_v=config.scheduler.predict_flow_v,
-        learn_sigma=learn_sigma,
-        pred_sigma=pred_sigma,
-        snr=config.train.snr_loss,
-        flow_shift=config.scheduler.flow_shift,
-    )
-    predict_info = (
-        f"predict_flow_v: {config.scheduler.predict_flow_v}, "
-        f"noise schedule: {config.scheduler.noise_schedule}"
-    )
-    if "flow" in config.scheduler.noise_schedule:
-        predict_info += f", flow shift: {config.scheduler.flow_shift}"
-    if config.scheduler.weighting_scheme in ["logit_normal", "mode"]:
+    predict_info = ""
+    if config.scheduler.weighting_scheme in ["logit_normal", "mode", "logit_normal_trigflow"]:
         predict_info += (
-            f", flow weighting: {config.scheduler.weighting_scheme}, "
-            f"logit-mean: {config.scheduler.logit_mean}, logit-std: {config.scheduler.logit_std}"
+            f"flow weighting: {config.scheduler.weighting_scheme}, "
+            f"logit-mean: {config.scheduler.logit_mean}, logit-std: {config.scheduler.logit_std}, "
+            f"logit-mean-discriminator: {config.scheduler.logit_mean_discriminator}, logit-std-discriminator: {config.scheduler.logit_std_discriminator}"
         )
     logger.info(predict_info)
 
@@ -1526,7 +1468,6 @@ def main(cfg: SanaConfig) -> None:
         optimizer_D=optimizer_D,
         lr_scheduler=lr_scheduler,
         train_dataloader=train_dataloader,
-        train_diffusion=train_diffusion,
         logger=logger,
         pretrained_model=pretrained_model,
         disc=disc,

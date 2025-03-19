@@ -23,6 +23,7 @@ import torch
 from accelerate.state import DistributedType
 
 from diffusion.utils.logger import get_root_logger
+from tools.download import find_model
 
 
 def save_checkpoint(
@@ -229,7 +230,8 @@ def load_checkpoint_ddp(
     assert isinstance(checkpoint, str)
     logger = get_root_logger()
     ckpt_file = checkpoint
-    checkpoint = torch.load(ckpt_file, map_location="cpu")
+    checkpoint = find_model(ckpt_file)
+    # checkpoint = torch.load(ckpt_file, map_location="cpu")
 
     state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
     for key in state_dict_keys:
@@ -257,7 +259,7 @@ def load_checkpoint_ddp(
         lr_scheduler.load_state_dict(checkpoint["scheduler"])
 
     epoch = 0
-    if optimizer is not None:
+    if optimizer is not None and resume_optimizer:
         epoch_match = re.search(r"epoch_(\d+)", ckpt_file)
         epoch = int(epoch_match.group(1)) if epoch_match else 0
         logger.info(
@@ -281,7 +283,7 @@ def load_checkpoint_fsdp(
     assert os.path.isdir(checkpoint), f"Checkpoint directory {checkpoint} does not exist!"
 
     # 1 load model
-    state_dict_model = torch.load(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"), map_location="cpu")
+    state_dict_model = find_model(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"), map_location="cpu")
 
     state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
     for key in state_dict_keys:

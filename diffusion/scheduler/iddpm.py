@@ -19,8 +19,8 @@
 #     ADM:   https://github.com/openai/guided-diffusion/blob/main/guided_diffusion
 #     IDDPM: https://github.com/openai/improved-diffusion/blob/main/improved_diffusion/gaussian_diffusion.py
 
-from diffusion.model.respace import SpacedDiffusion, space_timesteps
 from diffusion.model import gaussian_diffusion as gd
+from diffusion.model.respace import SpacedDiffusion, space_timesteps
 
 
 def Scheduler(

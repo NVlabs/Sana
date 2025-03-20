@@ -461,7 +461,7 @@ def dc_ae_f32c32(name: str, pretrained_path: str) -> DCAEConfig:
             "decoder.width_list=[128,256,512,512,1024,1024] decoder.depth_list=[0,5,10,2,2,2] "
             "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
         )
-    elif name in ["dc-ae-f32c32-sana-1.0"]:
+    elif name in ["dc-ae-f32c32-sana-1.0", "dc-ae-f32c32-sana-1.1"]:
         cfg_str = (
             "latent_channels=32 "
             "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViTS5_GLU,EViTS5_GLU,EViTS5_GLU] "

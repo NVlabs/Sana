@@ -261,7 +261,7 @@ save_image(image, 'output/sana.png', nrow=1, normalize=True, value_range=(-1, 1)
 # Pull related models
 huggingface-cli download google/gemma-2b-it
 huggingface-cli download google/shieldgemma-2b
-huggingface-cli download mit-han-lab/dc-ae-f32c32-sana-1.0
+huggingface-cli download mit-han-lab/dc-ae-f32c32-sana-1.1
 huggingface-cli download Efficient-Large-Model/Sana_1600M_1024px
 
 # Run with docker

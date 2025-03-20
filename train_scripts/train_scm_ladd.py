@@ -318,13 +318,9 @@ def train(
                 z = batch[0].to(accelerator.device)
             else:
                 with torch.no_grad():
-                    with torch.amp.autocast(
-                        "cuda",
-                        enabled=(config.model.mixed_precision == "fp16" or config.model.mixed_precision == "bf16"),
-                    ):
-                        z = vae_encode(
-                            config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device
-                        )
+                    z = vae_encode(
+                        config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device
+                    )
 
             vae_time_all += time.time() - vae_time_start
 
@@ -1043,7 +1039,7 @@ def main(cfg: SanaConfig) -> None:
     max_length = config.text_encoder.model_max_length
     model_weight_dtype = get_weight_dtype(config.model.mixed_precision)
     vae = None
-    vae_dtype = torch.bfloat16
+    vae_dtype = get_weight_dtype(config.vae.weight_dtype)
     validation_noise = (
         torch.randn(
             1,
@@ -1068,7 +1064,7 @@ def main(cfg: SanaConfig) -> None:
         text_embed_dim = config.text_encoder.caption_channels
     config.text_encoder.caption_channels = text_embed_dim
 
-    logger.info(f"vae type: {config.vae.vae_type}, path: {config.vae.vae_pretrained}")
+    logger.info(f"vae type: {config.vae.vae_type}, path: {config.vae.vae_pretrained}, weight_dtype: {vae_dtype}")
     if config.text_encoder.chi_prompt:
         chi_prompt = "\n".join(config.text_encoder.chi_prompt)
         logger.info(f"Complex Human Instruct: {chi_prompt}")

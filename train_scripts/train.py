@@ -338,13 +338,9 @@ def train(
                 z = batch[0].to(accelerator.device)
             else:
                 with torch.no_grad():
-                    with torch.amp.autocast(
-                        "cuda",
-                        enabled=(config.model.mixed_precision == "fp16" or config.model.mixed_precision == "bf16"),
-                    ):
-                        z = vae_encode(
-                            config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device
-                        )
+                    z = vae_encode(
+                        config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device
+                    )
 
             accelerator.wait_for_everyone()
             vae_time_all += time.time() - vae_time_start
@@ -722,7 +718,7 @@ def main(cfg: SanaConfig) -> None:
     else:
         text_embed_dim = config.text_encoder.caption_channels
 
-    logger.info(f"vae type: {config.vae.vae_type}, path: {config.vae.vae_pretrained}")
+    logger.info(f"vae type: {config.vae.vae_type}, path: {config.vae.vae_pretrained}, weight_dtype: {vae_dtype}")
     if config.text_encoder.chi_prompt:
         chi_prompt = "\n".join(config.text_encoder.chi_prompt)
         logger.info(f"Complex Human Instruct: {chi_prompt}")

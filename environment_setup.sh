@@ -9,7 +9,7 @@ if [ -n "$CONDA_ENV" ]; then
     conda create -n $CONDA_ENV python=3.10.0 -y
     conda activate $CONDA_ENV
     # This is optional if you prefer to use built-in nvcc
-    conda install -c nvidia cuda-toolkit -y
+    conda install -c nvidia cuda-toolkit=12.4 -y
 else
     echo "Skipping conda environment creation. Make sure you have the correct environment activated."
 fi

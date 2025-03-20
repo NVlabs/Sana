@@ -202,36 +202,36 @@ class GaussianDiffusion:
         assert len(betas.shape) == 1, "betas must be 1-D"
         assert (betas > 0).all() and (betas <= 1).all()
 
+        alphas = 1.0 - betas
+        self.alphas = alphas
+        self.alphas_cumprod = np.cumprod(alphas, axis=0)
+
+        self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
+        self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
+        assert self.alphas_cumprod_prev.shape == (self.num_timesteps,)
+
+        # calculations for diffusion q(x_t | x_{t-1}) and others
+        self.sqrt_alphas_cumprod = np.sqrt(self.alphas_cumprod)
+        self.sqrt_one_minus_alphas_cumprod = np.sqrt(1.0 - self.alphas_cumprod)
+        self.log_one_minus_alphas_cumprod = np.log(1.0 - self.alphas_cumprod)
+        self.sqrt_recip_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod)
+        self.sqrt_recipm1_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod - 1)
+
+        # calculations for posterior q(x_{t-1} | x_t, x_0)
+        self.posterior_variance = betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+        # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
+        self.posterior_log_variance_clipped = (
+            np.log(np.append(self.posterior_variance[1], self.posterior_variance[1:]))
+            if len(self.posterior_variance) > 1
+            else np.array([])
+        )
+
+        self.posterior_mean_coef1 = betas * np.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+        self.posterior_mean_coef2 = (1.0 - self.alphas_cumprod_prev) * np.sqrt(alphas) / (1.0 - self.alphas_cumprod)
+
         if self.flow:
             self.sigmas = 1.0 - betas if sigmas is None else sigmas
             self.alphas = 1.0 - self.sigmas
-        else:
-            alphas = 1.0 - betas
-            self.alphas = alphas
-            self.alphas_cumprod = np.cumprod(alphas, axis=0)
-
-            self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
-            self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
-            assert self.alphas_cumprod_prev.shape == (self.num_timesteps,)
-
-            # calculations for diffusion q(x_t | x_{t-1}) and others
-            self.sqrt_alphas_cumprod = np.sqrt(self.alphas_cumprod)
-            self.sqrt_one_minus_alphas_cumprod = np.sqrt(1.0 - self.alphas_cumprod)
-            self.log_one_minus_alphas_cumprod = np.log(1.0 - self.alphas_cumprod)
-            self.sqrt_recip_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod)
-            self.sqrt_recipm1_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod - 1)
-
-            # calculations for posterior q(x_{t-1} | x_t, x_0)
-            self.posterior_variance = betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
-            # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
-            self.posterior_log_variance_clipped = (
-                np.log(np.append(self.posterior_variance[1], self.posterior_variance[1:]))
-                if len(self.posterior_variance) > 1
-                else np.array([])
-            )
-
-            self.posterior_mean_coef1 = betas * np.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
-            self.posterior_mean_coef2 = (1.0 - self.alphas_cumprod_prev) * np.sqrt(alphas) / (1.0 - self.alphas_cumprod)
 
     def q_mean_variance(self, x_start, t):
         """

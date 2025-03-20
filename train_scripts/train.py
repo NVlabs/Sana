@@ -338,9 +338,7 @@ def train(
                 z = batch[0].to(accelerator.device)
             else:
                 with torch.no_grad():
-                    z = vae_encode(
-                        config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device
-                    )
+                    z = vae_encode(config.vae.vae_type, vae, batch[0], config.vae.sample_posterior, accelerator.device)
 
             accelerator.wait_for_everyone()
             vae_time_all += time.time() - vae_time_start

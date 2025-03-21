@@ -39,7 +39,7 @@ As a result, Sana-0.6B is very competitive with modern giant diffusion models (e
 </p>
 
 ## 🔥🔥 News
-
+- (🔥 New) \[2025/3/21\] 🚀Sana + Inference Scaling is released. [\[Guidance\]](asset/inference_scaling/inference_scaling.md)
 - (🔥 New) \[2025/3/16\] 🔥**SANA-1.5 code & weights are released!** 🎉 Include: [DDP/FSDP](#3-train-with-tar-file) | [TAR file WebDataset](#3-train-with-tar-file) | [Multi-Scale](#3-train-with-tar-file) Training code and [Weights](asset/docs/model_zoo.md) | [HF](https://huggingface.co/collections/Efficient-Large-Model/sana-15-67d6803867cb21c230b780e4) are all released.
 - (🔥 New) \[2025/3/14\] 🏃SANA-Sprint is coming out!🎉 A new one/few-step generator of Sana. 0.1s per 1024px image on H100, 0.3s on RTX 4090. Find out more details: [\[Page\]](https://nvlabs.github.io/Sana/Sprint/) | [\[Arxiv\]](https://arxiv.org/abs/2503.09641). Code is coming very soon along with `diffusers`
 - (🔥 New) \[2025/2/10\] 🚀Sana + ControlNet is released. [\[Guidance\]](asset/docs/sana_controlnet.md) | [\[Model\]](asset/docs/model_zoo.md) | [\[Demo\]](https://nv-sana.mit.edu/ctrlnet/)
@@ -392,6 +392,19 @@ bash train_scripts/train.sh \
 # 💻 4. Metric toolkit
 
 Refer to [Toolkit Manual](asset/docs/metrics_toolkit.md).
+
+# 🚀 5. Inference Scaling
+
+We trained a specialized [NVILA-2B](https://huggingface.co/Efficient-Large-Model/NVILA-Lite-2B-Verifier) model to score images, which we named VISA (VIla as SAna verifier). By selecting the top 4 images from 2,048 candidates, we enhanced the GenEval performance of SD1.5 and SANA-1.5-4.8B v2, increasing their scores from 42 to 87 and 81 to 96, respectively.
+
+| Method                         | Overall | Single | Two  | Counting | Colors | Position | Color Attribution |
+|--------------------------------|---------|--------|------|----------|--------|----------|------------------|
+| SD1.5                          | 0.42    | 0.98   | 0.39 | 0.31     | 0.72   | 0.04     | 0.06             |
+| **+ Inference Scaling**        | **0.87** | **1.00** | **0.97** | **0.93** | **0.96** | **0.75** | **0.62** |
+| SANA-1.5 4.8B v2              | 0.81    | 0.99   | 0.86 | 0.86     | 0.84   | 0.59     | 0.65             |
+| **+ Inference Scaling**        | **0.96** | **1.00** | **1.00** | **0.97** | **0.94** | **0.96** | **0.87** |
+
+Details refer to [Inference Scaling Manual](asset/inference_scaling/inference_scaling.md).
 
 # 💪To-Do List
 

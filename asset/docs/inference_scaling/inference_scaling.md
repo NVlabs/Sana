@@ -47,7 +47,7 @@ bash tools/inference_scaling/nvila_sana_pick.sh \
 
 ### 3. Calculate the GenEval metric
 
-You need to use the GenEval environment for the final evaluation. The document about installation can be found [here](../../tools/metrics/geneval/geneval_env.md).
+You need to use the GenEval environment for the final evaluation. The document about installation can be found [here](../../../tools/metrics/geneval/geneval_env.md).
 
 ```bash
 # activate geneval env

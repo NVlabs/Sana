@@ -1,6 +1,6 @@
 ## 🔥 1. We provide all the links of Sana pth and diffusers safetensor below
 
-### SANA
+### [SANA](https://arxiv.org/abs/2410.10629)
 
 | Model                | Reso   | pth link                                                                                                                    | diffusers                                                                                                                                         | Precision     | Description    |
 |----------------------|--------|-----------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|---------------|----------------|
@@ -21,14 +21,14 @@
 
 ______________________________________________________________________
 
-### SANA-1.5
+### [SANA-1.5](https://arxiv.org/abs/2501.18427)
 
 | Model        | Reso   | pth link                                                                                | diffusers                                                                                                                         | Precision | Description    |
 |--------------|--------|-----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
 | SANA1.5-4.8B | 1024px | [SANA1.5_4.8B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px) | [Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers) | bf16      | Multi-Language |
 | SANA1.5-1.6B | 1024px | [SANA1.5_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px) | [Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers) | bf16      | Multi-Language |
 
-### SANA-1.5
+### [SANA-Sprint](https://arxiv.org/pdf/2503.09641)
 
 | Model            | Reso   | pth link                                                                                        | diffusers                                                                                                                                     | Precision | Description    |
 |------------------|--------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|

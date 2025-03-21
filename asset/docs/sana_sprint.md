@@ -75,7 +75,6 @@ save_image(image, 'sana_sprint.png', nrow=1, normalize=True, value_range=(-1, 1)
 
 ## How to Train
 
-Working on it
 
 ```bash
 bash train_scripts/train_scm_ladd.sh \

@@ -151,6 +151,7 @@ def parse_args():
         help="skip saving grid",
     )
 
+    parser.add_argument("--work_dir", default=None, type=str)
     parser.add_argument("--sample_nums", default=553, type=int)
     parser.add_argument("--add_label", default="", type=str)
     parser.add_argument("--exist_time_prefix", default="", type=str)
@@ -193,12 +194,17 @@ if __name__ == "__main__":
     logger.info(f"Eval {len(metadatas)} samples")
 
     # save path
-    work_dir = (
-        f"/{os.path.join(*args.model_path.split('/')[:-1])}"
-        if args.model_path.startswith("/")
-        else os.path.join(*args.model_path.split("/")[:-1])
-    )
+    if args.work_dir is None:
+        work_dir = (
+            f"/{os.path.join(*args.model_path.split('/')[:-1])}"
+            if args.model_path.startswith("/")
+            else os.path.join(*args.model_path.split("/")[:-1])
+        )
+    else:
+        work_dir = args.work_dir
+    args.work_dir = work_dir
     img_save_dir = os.path.join(str(work_dir), "vis")
+
     os.umask(0o000)
     os.makedirs(img_save_dir, exist_ok=True)
 
@@ -214,6 +220,7 @@ if __name__ == "__main__":
 
     if args.if_save_dirname and args.gpu_id == 0:
         # save at work_dir/metrics/tmp_xxx.txt for metrics testing
+        os.makedirs(f"{work_dir}/metrics", exist_ok=True)
         with open(f"{work_dir}/metrics/tmp_geneval_{time.time()}.txt", "w") as f:
             print(f"save tmp file at {work_dir}/metrics/tmp_geneval_{time.time()}.txt")
             f.write(os.path.basename(save_root))

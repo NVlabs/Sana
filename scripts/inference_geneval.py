@@ -30,6 +30,7 @@ import pyrallis
 import torch
 from einops import rearrange
 from PIL import Image
+from termcolor import colored
 from torchvision.utils import _log_api_usage_once, make_grid, save_image
 from tqdm import tqdm
 
@@ -173,7 +174,6 @@ def visualize(sample_steps, cfg_scale, pag_scale):
         os.makedirs(sample_path, exist_ok=True)
 
         prompt = metadata["prompt"]
-        # print(f"Prompt ({index: >3}/{len(metadatas)}): '{prompt}'")
         with open(os.path.join(outpath, "metadata.jsonl"), "w") as fp:
             json.dump(metadata, fp)
 
@@ -347,7 +347,7 @@ def parse_args():
 class SanaInference(SanaConfig):
     config: str = ""
     dataset: str = "GenEval"
-    outdir: str = field(default="outputs", metadata={"help": "dir to write results to"})
+    output_dir: str = field(default=None, metadata={"help": "dir to write results to"})
     n_samples: int = field(default=4, metadata={"help": "number of samples"})
     batch_size: int = field(default=1, metadata={"help": "how many samples can be produced simultaneously"})
     skip_grid: bool = field(default=False, metadata={"help": "skip saving grid"})
@@ -394,8 +394,9 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger = get_root_logger()
 
-    n_rows = batch_size = args.n_samples
-    assert args.batch_size == 1, ValueError(f"{batch_size} > 1 is not available in GenEval")
+    batch_size = args.batch_size
+    n_rows = 4 if args.n_samples > 4 else args.n_samples
+    assert args.n_samples % args.batch_size == 0, ValueError(f"{args.n_samples} cannot be divided by {args.batch_size}")
 
     # only support fixed latent size currently
     latent_size = args.image_size // config.vae.vae_downsample_rate
@@ -448,12 +449,25 @@ if __name__ == "__main__":
         if ("flow" not in args.model_path or args.sampling_algo == "flow_dpm-solver")
         else "flow_euler"
     )
+    logger.info(f"Sampler {args.sampling_algo}")
 
-    work_dir = (
-        f"/{os.path.join(*args.model_path.split('/')[:-2])}"
-        if args.model_path.startswith("/")
-        else os.path.join(*args.model_path.split("/")[:-2])
-    )
+    # save path
+    if args.output_dir is None:
+        work_dir = (
+            f"/{os.path.join(*args.model_path.split('/')[:-2])}"
+            if args.model_path.startswith("/")
+            else os.path.join(*args.model_path.split("/")[:-2])
+        )
+        img_save_dir = os.path.join(str(work_dir), "vis")
+
+        os.umask(0o000)
+        os.makedirs(img_save_dir, exist_ok=True)
+        logger.info(colored(f"Saving images at {img_save_dir}", "green"))
+    else:
+        work_dir = args.output_dir
+
+        os.umask(0o000)
+        os.makedirs(work_dir, exist_ok=True)
 
     # dataset
     metadatas = datasets.load_dataset(
@@ -465,15 +479,9 @@ if __name__ == "__main__":
     match = re.search(r".*epoch_(\d+).*step_(\d+).*", args.model_path)
     epoch_name, step_name = match.groups() if match else ("unknown", "unknown")
 
-    img_save_dir = os.path.join(str(work_dir), "vis")
-    os.umask(0o000)
-    os.makedirs(img_save_dir, exist_ok=True)
-    logger.info(f"Sampler {args.sampling_algo}")
-
     def create_save_root(args, dataset, epoch_name, step_name, sample_steps, guidance_type):
         save_root = os.path.join(
             img_save_dir,
-            # f"{datetime.now().date() if args.exist_time_prefix == '' else args.exist_time_prefix}_"
             f"{dataset}_epoch{epoch_name}_step{step_name}_scale{args.cfg_scale}"
             f"_step{sample_steps}_size{args.image_size}_bs{batch_size}_samp{args.sampling_algo}"
             f"_seed{args.seed}_{str(weight_dtype).split('.')[-1]}",
@@ -487,6 +495,10 @@ if __name__ == "__main__":
             save_root += f"_{guidance_type}"
         if args.interval_guidance[0] != 0 and args.interval_guidance[1] != 1:
             save_root += f"_intervalguidance{args.interval_guidance[0]}{args.interval_guidance[1]}"
+        if not DATA_URL.endswith("evaluation_metadata.jsonl"):
+            save_root += f"_metadata{DATA_URL.split('/')[-1]}"
+        if args.n_samples != 4:
+            save_root += f"_nsample{args.n_samples}"
 
         save_root += f"_imgnums{args.sample_nums}" + args.add_label
         return save_root
@@ -505,7 +517,10 @@ if __name__ == "__main__":
             sample_steps = args.step if args.step != -1 else sample_steps_dict[args.sampling_algo]
             guidance_type = guidance_type_select(guidance_type, args.pag_scale, config.model.attn_type)
 
-            save_root = create_save_root(args, args.dataset, epoch_name, step_name, sample_steps, guidance_type)
+            if args.output_dir is None:
+                save_root = create_save_root(args, args.dataset, epoch_name, step_name, sample_steps, guidance_type)
+            else:
+                save_root = args.output_dir
             os.makedirs(save_root, exist_ok=True)
             if args.if_save_dirname and args.gpu_id == 0:
                 # save at work_dir/metrics/tmp_xxx.txt for metrics testing
@@ -519,7 +534,10 @@ if __name__ == "__main__":
         guidance_type = guidance_type_select(guidance_type, args.pag_scale, config.model.attn_type)
         logger.info(f"Inference with {weight_dtype}, guidance_type: {guidance_type}, flow_shift: {flow_shift}")
 
-        save_root = create_save_root(args, args.dataset, epoch_name, step_name, sample_steps, guidance_type)
+        if args.output_dir is None:
+            save_root = create_save_root(args, args.dataset, epoch_name, step_name, sample_steps, guidance_type)
+        else:
+            save_root = args.output_dir
         os.makedirs(save_root, exist_ok=True)
         if args.if_save_dirname and args.gpu_id == 0:
             os.makedirs(f"{work_dir}/metrics", exist_ok=True)

@@ -193,7 +193,6 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale, pag_scale
             z = torch.randn(
                 n, config.vae.vae_latent_dim, latent_size_h, latent_size_w, device=device, generator=generator
             )
-            model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
 
             if args.reference_image_path is not None:
                 input_image = cv2.imread(args.reference_image_path)
@@ -211,7 +210,10 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale, pag_scale
                 config.vae.vae_type, vae, control_signal, config.vae.sample_posterior, device
             )
 
-            model_kwargs["control_signal"] = control_signal_latent
+            model_kwargs = dict(
+                data_info={"img_hw": hw, "aspect_ratio": ar, "control_signal": control_signal_latent},
+                mask=emb_masks,
+            )
             if args.sampling_algo == "flow_dpm-solver":
                 dpm_solver = DPMS(
                     model.forward_with_dpmsolver,

@@ -335,7 +335,7 @@ bash train_scripts/train.sh \
   --train.train_batch_size=8
 ```
 
-### 2). Train with image-text pairs in directory
+### 2). Train with Multi-Scale WebDataset
 
 We also provide conversion scripts to convert your data to the required format. You can refer to the [data conversion scripts](asset/data_conversion_scripts) for more details.
 
@@ -426,7 +426,7 @@ We will try our best to release
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=NVlabs/Sana&type=Date)](https://star-history.com/#NVlabs/sana&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=NVlabs/sana&type=Date)](https://www.star-history.com/#NVlabs/sana&Date)
 
 # 📖BibTeX
 

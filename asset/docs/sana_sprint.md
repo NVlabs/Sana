@@ -12,10 +12,10 @@
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=nI_Ohgf8eOU" target="_blank">
-    <img src="https://img.youtube.com/vi/nI_Ohgf8eOU/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; display: block; margin: 0 auto;">
+    <img src="https://img.youtube.com/vi/nI_Ohgf8eOU/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; margin: 0 auto; display: inline-block">
   </a>
   <a href="https://www.youtube.com/watch?v=OOZzkirgsAc" target="_blank">
-    <img src="https://img.youtube.com/vi/OOZzkirgsAc/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; display: block; margin: 0 auto;">
+    <img src="https://img.youtube.com/vi/OOZzkirgsAc/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; margin: 0 auto; display: inline-block">
   </a>
 </div>
 
@@ -35,12 +35,11 @@
 from diffusers import SanaSprintPipeline
 import torch
 
-device = "cuda:0"
-
-repo = "Efficient-Large-Model/SANA_Sprint_1.6B_1024px_diffusers"
-
-pipeline = SanaSprintPipeline.from_pretrained(repo, torch_dtype=torch.bfloat16)
-pipeline.to(device)
+pipeline = SanaSprintPipeline.from_pretrained(
+    "Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers",
+    torch_dtype=torch.bfloat16
+)
+pipeline.to("cuda:0")
 
 prompt = "a tiny astronaut hatching from an egg on the moon"
 
@@ -59,7 +58,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 generator = torch.Generator(device=device).manual_seed(42)
 
 sana = SanaSprintPipeline("configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml")
-sana.from_pretrained("hf://Efficient-Large-Model/SANA_Sprint_1.6B_1024px/checkpoints/SANA_Sprint_1.6B_1024px.pth")
+sana.from_pretrained("hf://Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth")
 
 prompt = "a tiny astronaut hatching from an egg on the moon",
 
@@ -87,3 +86,22 @@ bash train_scripts/train_scm_ladd.sh \
       --data.load_vae_feat=true \
       --train.train_batch_size=2
 ```
+
+## Convert pth to diffusers safetensor
+
+```bash
+python scripts/convert_sana_to_diffusers.py \
+      --orig_ckpt_path Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth \
+      --model_type SanaSprint_1600M_P1_D20 \
+      --scheduler_type scm \
+      --dtype bf16 \
+      --dump_path output/Sana_Sprint_1.6B_1024px_diffusers \
+      --save_full_pipeline
+```
+
+## performance
+
+| Methods (1024x1024)                                                                           | Inference Steps | Throughput (samples/s) | Latency (s) | Params (B) | FID 👇   | CLIP 👆   | GenEval 👆 |
+|-----------------------------------------------------------------------------------------------|-----------------|------------------------|-------------|------------|----------|-----------|------------|
+| **[Sana-Sprint_0.6B](<>)**                                                                      | 2               | 6.46                   | 0.25        | 0.6        | 6.54     | 28.40     | 0.76       |
+| **[Sana-Sprint-1.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px)**  | 2               | 5.68                   | 0.24        | 1.6        | **6.50** | **28.45** | **0.77**   |

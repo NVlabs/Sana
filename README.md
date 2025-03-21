@@ -398,6 +398,7 @@ Refer to [Toolkit Manual](asset/docs/metrics_toolkit.md).
 # 🚀 5. Inference Scaling
 
 We trained a specialized [NVILA-2B](https://huggingface.co/Efficient-Large-Model/NVILA-Lite-2B-Verifier) model to score images, which we named VISA (VIla as SAna verifier). By selecting the top 4 images from 2,048 candidates, we enhanced the GenEval performance of SD1.5 and SANA-1.5-4.8B v2, increasing their scores from 42 to 87 and 81 to 96, respectively.
+Details refer to [Inference Scaling Manual](asset/docs/inference_scaling/inference_scaling.md).
 
 | Method                         | Overall | Single | Two  | Counting | Colors | Position | Color Attribution |
 |--------------------------------|---------|--------|------|----------|--------|----------|------------------|
@@ -406,7 +407,15 @@ We trained a specialized [NVILA-2B](https://huggingface.co/Efficient-Large-Model
 | SANA-1.5 4.8B v2              | 0.81    | 0.99   | 0.86 | 0.86     | 0.84   | 0.59     | 0.65             |
 | **+ Inference Scaling**        | **0.96** | **1.00** | **1.00** | **0.97** | **0.94** | **0.96** | **0.87** |
 
-Details refer to [Inference Scaling Manual](asset/docs/inference_scaling/inference_scaling.md).
+# 🏃 6. SANA-Sprint
+
+Our SANA-Sprint models focus on timestep distillation, achieving high-quality generation with 1-4 inference steps. Refer to [SANA-Sprint Manual](asset/docs/sana_sprint.md) for more details.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nI_Ohgf8eOU" target="_blank">
+    <img src="https://img.youtube.com/vi/nI_Ohgf8eOU/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 60%; margin: 0 auto; display: block">
+  </a>
+</div>
 
 # 💪To-Do List
 
@@ -424,8 +433,8 @@ We will try our best to release
 - \[✅\] ControlNet (train & inference & models)
 - \[✅\] FSDP Training
 - \[✅\] **SANA-1.5 (Larger model size / Inference Scaling)**
+- \[✅\] **SANA-Sprint: Few-step generator**
 - \[💻\] Better re-construction F32/F64 VAEs.
-- \[💻\] **SANA-Sprint: Few-step generator**
 
 # 🤗Acknowledgements
 

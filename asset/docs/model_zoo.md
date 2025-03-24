@@ -11,9 +11,8 @@
 | Sana-1.6B            | 1024px | [Sana_1600M_1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px)                                         | [Efficient-Large-Model/Sana_1600M_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers)                     | fp16/fp32     | -              |
 | Sana-1.6B            | 1024px | [Sana_1600M_1024px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing)                     | [Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers) | fp16/fp32     | Multi-Language |
 | Sana-1.6B            | 1024px | [Sana_1600M_1024px_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16)                               | [Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers)           | **bf16**/fp32 | Multi-Language |
-| Sana-1.6B            | 1024px | -                                                                                                                           | [mit-han-lab/svdq-int4-sana-1600m](https://huggingface.co/mit-han-lab/svdq-int4-sana-1600m)                                                       | **int4**      | Multi-Language |
+| Sana-1.6B-int4       | 1024px | -                                                                                                                           | [mit-han-lab/svdq-int4-sana-1600m](https://huggingface.co/mit-han-lab/svdq-int4-sana-1600m)                                                       | **int4**      | Multi-Language |
 | Sana-1.6B            | 2Kpx   | [Sana_1600M_2Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16)                                   | [Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
-| Sana-1.6B            | 4Kpx   | [Sana_1600M_4Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16)                                   | [Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
 | Sana-1.6B            | 4Kpx   | [Sana_1600M_4Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16)                                   | [Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
 | ControlNet           |        |                                                                                                                             |                                                                                                                                                   |               |                |
 | Sana-1.6B-ControlNet | 1Kpx   | [Sana_1600M_1024px_BF16_ControlNet_HED](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_ControlNet_HED) | Coming soon                                                                                                                                       | **bf16**/fp32 | Multi-Language |
@@ -101,7 +100,7 @@ image = pipe(
 image[0].save('sana.png')
 ```
 
-## ❗ 3. 4K models
+## ❗ 3. 2K & 4K models
 
 4K models need VAE tiling to avoid OOM issue.(16 GPU is recommended)
 
@@ -110,6 +109,8 @@ image[0].save('sana.png')
 import torch
 from diffusers import SanaPipeline
 
+# 2K model: Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers
+# 4K model:Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers
 pipe = SanaPipeline.from_pretrained(
     "Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers",
     variant="bf16",

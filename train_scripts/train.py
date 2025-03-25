@@ -656,7 +656,6 @@ def main(cfg: SanaConfig) -> None:
         config.train.log_interval = 1
         config.train.train_batch_size = min(64, config.train.train_batch_size)
         args.report_to = "tensorboard"
-        config.train.visualize = False
 
     os.umask(0o000)
     os.makedirs(config.work_dir, exist_ok=True)

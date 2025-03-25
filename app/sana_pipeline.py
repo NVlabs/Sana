@@ -67,8 +67,8 @@ class SanaInference(SanaConfig):
     output: str = "./output"
     bs: int = 1
     image_size: int = 1024
-    cfg_scale: float = 5.0
-    pag_scale: float = 2.0
+    cfg_scale: float = 4.5
+    pag_scale: float = 1.0
     seed: int = 42
     step: int = -1
     custom_image_size: Optional[int] = None
@@ -98,7 +98,7 @@ class SanaPipeline(nn.Module):
         self.latent_size = self.image_size // config.vae.vae_downsample_rate
         self.max_sequence_length = config.text_encoder.model_max_length
         self.flow_shift = config.scheduler.flow_shift
-        guidance_type = "classifier-free_PAG"
+        guidance_type = "classifier-free"
 
         weight_dtype = get_weight_dtype(config.model.mixed_precision)
         self.weight_dtype = weight_dtype
@@ -172,14 +172,18 @@ class SanaPipeline(nn.Module):
         width=1024,
         negative_prompt="",
         num_inference_steps=20,
-        guidance_scale=5,
-        pag_guidance_scale=2.5,
+        guidance_scale=4.5,
+        pag_guidance_scale=1.0,
         num_images_per_prompt=1,
         generator=torch.Generator().manual_seed(42),
         latents=None,
+        use_resolution_binning=True,
     ):
         self.ori_height, self.ori_width = height, width
-        self.height, self.width = classify_height_width_bin(height, width, ratios=self.base_ratios)
+        if use_resolution_binning:
+            self.height, self.width = classify_height_width_bin(height, width, ratios=self.base_ratios)
+        else:
+            self.height, self.width = height, width
         self.latent_size_h, self.latent_size_w = (
             self.height // self.config.vae.vae_downsample_rate,
             self.width // self.config.vae.vae_downsample_rate,
@@ -296,7 +300,8 @@ class SanaPipeline(nn.Module):
             with torch.no_grad():
                 sample = vae_decode(self.config.vae.vae_type, self.vae, sample)
 
-            sample = resize_and_crop_tensor(sample, self.ori_width, self.ori_height)
+            if use_resolution_binning:
+                sample = resize_and_crop_tensor(sample, self.ori_width, self.ori_height)
             samples.append(sample)
 
             return sample

@@ -81,7 +81,7 @@ class ModelConfig(BaseConfig):
     cfg_embed: bool = False
     cfg_embed_scale: float = 1.0
     guidance_type: str = "classifier-free"
-    pag_applied_layers: List[int] = field(default_factory=lambda: [14])
+    pag_applied_layers: List[int] = field(default_factory=lambda: [8])
     # for ladd
     ladd_multi_scale: bool = True
     head_block_ids: Optional[List[int]] = None

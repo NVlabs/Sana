@@ -87,7 +87,7 @@ if torch.cuda.is_available():
 
 def save_image(img):
     if isinstance(img, dict):
-        return img['composite']
+        return img["composite"]
     if isinstance(img, dict):
         img = img["composite"]
     temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
@@ -115,7 +115,7 @@ def run(
 ) -> tuple[Image, str]:
 
     print(f"Prompt: {prompt}, cond: {image['composite']}")
-    image["composite"] = Image.open(image["composite"]).convert('RGB')
+    image["composite"] = Image.open(image["composite"]).convert("RGB")
     image_numpy = np.array(image["composite"])
 
     if prompt.strip() == "" and (np.sum(image_numpy == 255) >= 3145628 or np.sum(image_numpy == 0) >= 3145628):
@@ -302,22 +302,22 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
     gr.Examples(
         examples=[
             [
-                'https://huggingface.co/mit-han-lab/svdq-int4-flux.1-canny-dev/resolve/main/logo_example.png',
+                "https://huggingface.co/mit-han-lab/svdq-int4-flux.1-canny-dev/resolve/main/logo_example.png",
                 "A logo of 'MIT HAN Lab'.",
-                'Fantasy art',
+                "Fantasy art",
             ],
             [
-                'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/robot.png',
-                'A robot made of exotic candies and chocolates of different kinds. The background is filled with confetti and celebratory gifts.',
-                'None',
+                "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/robot.png",
+                "A robot made of exotic candies and chocolates of different kinds. The background is filled with confetti and celebratory gifts.",
+                "None",
             ],
             [
-                'https://huggingface.co/mit-han-lab/svdq-int4-flux.1-fill-dev/resolve/main/example.png',
-                'A wooden basket of several individual cartons of strawberries.',
-                'None',
+                "https://huggingface.co/mit-han-lab/svdq-int4-flux.1-fill-dev/resolve/main/example.png",
+                "A wooden basket of several individual cartons of strawberries.",
+                "None",
             ],
         ],
-        inputs=[canvas, prompt, style]
+        inputs=[canvas, prompt, style],
     )
 
     download_sketch.click(fn=save_image, inputs=canvas, outputs=download_sketch)

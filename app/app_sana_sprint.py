@@ -159,7 +159,7 @@ def get_args():
     parser.add_argument(
         "--model_path",
         nargs="?",
-        default="hf://Efficient-Large-Model/SANA_Sprint_1.6B_1024px/checkpoints/SANA_Sprint_1.6B_1024px.pth",
+        default="hf://Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth",
         type=str,
         help="Path to the model file (positional)",
     )

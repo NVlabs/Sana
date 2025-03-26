@@ -184,7 +184,6 @@ def get_args():
 args = get_args()
 
 if torch.cuda.is_available():
-    weight_dtype = torch.float16
     model_path = args.model_path
     pipe = SanaSprintPipeline(args.config)
     pipe.from_pretrained(model_path)
@@ -300,7 +299,7 @@ def generate(
     )
 
 
-model_size = "1.6" if "1600M" in args.model_path else "0.6"
+model_size = "1.6" if "1.6B" in args.model_path else "0.6"
 title = f"""
     <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>
         <img src="https://nvlabs.github.io/Sana/Sprint/asset/SANA-Sprint.png" width="50%" alt="logo"/>

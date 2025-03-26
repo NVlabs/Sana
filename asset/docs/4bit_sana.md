@@ -19,6 +19,22 @@
 
 Follow the official [SVDQuant-Nunchaku](https://github.com/mit-han-lab/nunchaku) repository to set up the environment. The guidance can be found [here](https://github.com/mit-han-lab/nunchaku?tab=readme-ov-file#installation).
 
+### 1-1. Quantize Sana with SVDQuant-4bit (Optional)
+
+1. Convert pth to SVDQuant required safetensor
+
+```
+python tools/convert_sana_to_svdquant.py \
+      --orig_ckpt_path Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth \
+      --model_type SanaMS1.5_1600M_P1_D20 \
+      --dtype bf16 \
+      --dump_path output/SANA1.5_1.6B_1024px_svdquant_diffusers \
+      --save_full_pipeline
+```
+
+2. follow the guidance to compress model
+   [Quantization guidance](https://github.com/mit-han-lab/deepcompressor/tree/main/examples/diffusion)
+
 ### 2. Code snap for inference
 
 Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the [SanaPAGPipeline](https://github.com/mit-han-lab/nunchaku/blob/main/examples/sana_1600m_pag.py) section.

@@ -163,6 +163,7 @@ def get_args():
         type=str,
         help="Path to the model file (positional)",
     )
+    parser.add_argument("--image_size", default=1024, type=int)
     parser.add_argument("--share", action="store_true")
     parser.add_argument(
         "--shield_model_path",
@@ -361,14 +362,14 @@ with gr.Blocks(css=css, title="SANA-Sprint") as demo:
                     minimum=256,
                     maximum=MAX_IMAGE_SIZE,
                     step=32,
-                    value=1024,
+                    value=args.image_size,
                 )
                 width = gr.Slider(
                     label="Width",
                     minimum=256,
                     maximum=MAX_IMAGE_SIZE,
                     step=32,
-                    value=1024,
+                    value=args.image_size,
                 )
                 use_resolution_binning = gr.Checkbox(label="Use resolution binning", value=True)
             with gr.Row():

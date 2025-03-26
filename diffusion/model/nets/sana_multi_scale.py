@@ -22,7 +22,7 @@ import torch.nn as nn
 from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
-from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, MBConvPreGLU, Mlp
+from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, Mlp
 from diffusion.model.nets.sana import Sana, get_2d_sincos_pos_embed
 from diffusion.model.nets.sana_blocks import (
     Attention,
@@ -279,9 +279,9 @@ class SanaMS(Sana):
         bs = x.shape[0]
         x = x.to(self.dtype)
         if self.timestep_norm_scale_factor != 1.0:
-            timestep = (timestep.float() / self.timestep_norm_scale_factor).to(self.dtype)
+            timestep = (timestep.float() / self.timestep_norm_scale_factor).to(torch.float32)
         else:
-            timestep = timestep.long().to(self.dtype)
+            timestep = timestep.long().to(torch.float32)
         y = y.to(self.dtype)
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
         x = self.x_embedder(x)
@@ -322,6 +322,7 @@ class SanaMS(Sana):
             y = self.attention_y_norm(y)
 
         if mask is not None:
+            mask = mask.to(torch.int16)
             mask = mask.repeat(y.shape[0] // mask.shape[0], 1) if mask.shape[0] != y.shape[0] else mask
             mask = mask.squeeze(1).squeeze(1)
             if _xformers_available:
@@ -478,6 +479,22 @@ def SanaMS_1600M_P2_D20(**kwargs):
     return SanaMS(depth=20, hidden_size=2240, patch_size=2, num_heads=20, **kwargs)
 
 
+@MODELS.register_module()
+def SanaMS_2400M_P1_D30(**kwargs):
+    return SanaMS(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMS_3200M_P1_D40(**kwargs):
+    return SanaMS(depth=40, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMS_4800M_P1_D60(**kwargs):
+    # 60 layers, 4800M
+    return SanaMS(depth=60, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
 # TrigFlow/sCM model
 @MODELS.register_module()
 def SanaMSCM_600M_P1_D28(**kwargs):
@@ -493,19 +510,3 @@ def SanaMSCM_1600M_P1_D20(**kwargs):
 def SanaMSCM_2400M_P1_D30(**kwargs):
     # 30 layers, 2400M
     return SanaMSCM(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMS_2400M_P1_D30(**kwargs):
-    return SanaMS(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMS_3200M_P1_D40(**kwargs):
-    return SanaMS(depth=40, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMS_4800M_P1_D60(**kwargs):
-    # 60 layers, 4800M
-    return SanaMS(depth=60, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)

@@ -46,7 +46,7 @@ from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
 from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
-from diffusion.utils.dist_utils import flush, get_world_size, dist
+from diffusion.utils.dist_utils import dist, flush, get_world_size
 from diffusion.utils.logger import LogBuffer, get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_random_seed

@@ -46,7 +46,7 @@ from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
 from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
-from diffusion.utils.dist_utils import flush, get_world_size
+from diffusion.utils.dist_utils import flush, get_world_size, dist
 from diffusion.utils.logger import LogBuffer, get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_random_seed
@@ -576,6 +576,8 @@ def train(
                     (global_step + train_dataloader_len - 1) // train_dataloader_len
                 ) * train_dataloader_len + 1
                 logger.info("Early stop current iteration")
+                if dist.is_initialized():
+                    dist.destroy_process_group()
                 break
 
             data_time_start = time.time()
@@ -620,7 +622,6 @@ def train(
                 with open(f"{online_metric_monitor_dir}/{ckpt_saved_path.split('/')[-1]}.txt", "w") as f:
                     f.write(osp.join(config.work_dir, "config.py") + "\n")
                     f.write(ckpt_saved_path)
-        accelerator.wait_for_everyone()
 
 
 @pyrallis.wrap()

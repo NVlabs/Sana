@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")  # ignore warning
 import numpy as np
 import pyrallis
 import torch
-from accelerate import Accelerator, InitProcessGroupKwargs, skip_first_batches
+from accelerate import Accelerator, InitProcessGroupKwargs
 from PIL import Image
 from termcolor import colored
 
@@ -46,7 +46,7 @@ from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
 from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
-from diffusion.utils.dist_utils import dist, flush, get_world_size
+from diffusion.utils.dist_utils import flush, get_world_size, dist
 from diffusion.utils.logger import LogBuffer, get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_random_seed
@@ -269,13 +269,7 @@ def train(
     skip_step = max(config.train.skip_step, global_step) % train_dataloader_len
     skip_step = skip_step if skip_step < (train_dataloader_len - 20) else 0
     loss_nan_timer = 0
-
-    if config.train.use_fsdp:
-        model_instance = model
-    elif model_ema is not None:
-        model_instance = model_ema
-    else:
-        model_instance = model
+    model_instance.to(accelerator.device)
 
     # Cache Dataset for BatchSampler
     if args.caching and config.model.multi_scale:
@@ -321,7 +315,8 @@ def train(
         )
         sampler.set_epoch(epoch)
         sampler.set_start(max((skip_step - 1) * config.train.train_batch_size, 0))
-        logger.info(f"Skipped Steps: {skip_step}")
+        if skip_step > 1 and accelerator.is_main_process:
+            logger.info(f"Skipped Steps: {skip_step}")
         skip_step = 1
         data_time_start = time.time()
         data_time_all = 0
@@ -536,16 +531,16 @@ def train(
                     logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to time limit.")
                     return
 
-            print(1111111)
             if config.train.visualize and (global_step % config.train.eval_sampling_steps == 0 or (step + 1) == 1):
                 if config.train.use_fsdp:
                     merged_state_dict = accelerator.get_state_dict(model)
-                print(2222222)
 
                 accelerator.wait_for_everyone()
+                print(rank, 111111)
                 if accelerator.is_main_process:
                     if config.train.use_fsdp:
                         model_instance.load_state_dict(merged_state_dict)
+                    print(rank, 222222)
                     if validation_noise is not None:
                         log_validation(
                             accelerator=accelerator,
@@ -567,8 +562,8 @@ def train(
                             device=accelerator.device,
                             vae=vae,
                         )
-            print(3333333)
 
+                print(rank, 333333)
             # avoid dead-lock of multiscale data batch sampler
             if (
                 config.model.multi_scale
@@ -578,7 +573,8 @@ def train(
                     (global_step + train_dataloader_len - 1) // train_dataloader_len
                 ) * train_dataloader_len + 1
                 logger.info("Early stop current iteration")
-                skip_first_batches(train_dataloader, float('inf'))
+                if dist.is_initialized():
+                    dist.destroy_process_group()
                 break
 
             data_time_start = time.time()
@@ -630,7 +626,7 @@ def main(cfg: SanaConfig) -> None:
     global train_dataloader_len, start_epoch, start_step, vae, generator, num_replicas, rank, training_start_time
     global load_vae_feat, load_text_feat, validation_noise, text_encoder, tokenizer
     global max_length, validation_prompts, latent_size, valid_prompt_embed_suffix, null_embed_path
-    global image_size, cache_file, total_steps, vae_dtype
+    global image_size, cache_file, total_steps, vae_dtype, model_instance
 
     config = cfg
     args = cfg
@@ -870,6 +866,13 @@ def main(cfg: SanaConfig) -> None:
             attrs=["bold"],
         )
     )
+
+    if config.train.use_fsdp:
+        model_instance = deepcopy(model)
+    elif model_ema is not None:
+        model_instance = deepcopy(model_ema)
+    else:
+        model_instance = model
 
     # 4-1. load model
     if args.load_from is not None:

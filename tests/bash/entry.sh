@@ -7,4 +7,3 @@ set -e
 
 echo "Testing training"
 bash tests/bash/test_training_1epoch.sh
-

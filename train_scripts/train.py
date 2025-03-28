@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")  # ignore warning
 import numpy as np
 import pyrallis
 import torch
-from accelerate import Accelerator, InitProcessGroupKwargs
+from accelerate import Accelerator, InitProcessGroupKwargs, skip_first_batches
 from PIL import Image
 from termcolor import colored
 
@@ -321,8 +321,7 @@ def train(
         )
         sampler.set_epoch(epoch)
         sampler.set_start(max((skip_step - 1) * config.train.train_batch_size, 0))
-        if skip_step > 1 and accelerator.is_main_process:
-            logger.info(f"Skipped Steps: {skip_step}")
+        logger.info(f"Skipped Steps: {skip_step}")
         skip_step = 1
         data_time_start = time.time()
         data_time_all = 0
@@ -576,8 +575,7 @@ def train(
                     (global_step + train_dataloader_len - 1) // train_dataloader_len
                 ) * train_dataloader_len + 1
                 logger.info("Early stop current iteration")
-                if dist.is_initialized():
-                    dist.destroy_process_group()
+                skip_first_batches(train_dataloader, float('inf'))
                 break
 
             data_time_start = time.time()

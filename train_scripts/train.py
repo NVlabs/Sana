@@ -536,9 +536,11 @@ def train(
                     logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to time limit.")
                     return
 
+            print(1111111)
             if config.train.visualize and (global_step % config.train.eval_sampling_steps == 0 or (step + 1) == 1):
                 if config.train.use_fsdp:
                     merged_state_dict = accelerator.get_state_dict(model)
+                print(2222222)
 
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
@@ -565,6 +567,7 @@ def train(
                             device=accelerator.device,
                             vae=vae,
                         )
+            print(3333333)
 
             # avoid dead-lock of multiscale data batch sampler
             if (

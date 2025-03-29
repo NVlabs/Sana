@@ -17,6 +17,7 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
+import cv2
 import numpy as np
 import pyrallis
 import torch
@@ -282,7 +283,6 @@ class SanaControlNetPipeline(nn.Module):
                     )
                 else:
                     z = latents.to(self.device)
-                model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
 
                 # control signal
                 if isinstance(ref_image, str):
@@ -302,7 +302,10 @@ class SanaControlNetPipeline(nn.Module):
                     self.config.vae.vae_type, self.vae, control_signal, self.config.vae.sample_posterior, self.device
                 )
 
-                model_kwargs["control_signal"] = control_signal_latent
+                model_kwargs = dict(
+                    data_info={"img_hw": hw, "aspect_ratio": ar, "control_signal": control_signal_latent},
+                    mask=emb_masks,
+                )
 
                 if self.vis_sampler == "flow_euler":
                     flow_solver = FlowEuler(

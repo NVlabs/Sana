@@ -269,13 +269,7 @@ def train(
     skip_step = max(config.train.skip_step, global_step) % train_dataloader_len
     skip_step = skip_step if skip_step < (train_dataloader_len - 20) else 0
     loss_nan_timer = 0
-
-    if config.train.use_fsdp:
-        model_instance = model
-    elif model_ema is not None:
-        model_instance = model_ema
-    else:
-        model_instance = model
+    model_instance.to(accelerator.device)
 
     # Cache Dataset for BatchSampler
     if args.caching and config.model.multi_scale:
@@ -542,9 +536,11 @@ def train(
                     merged_state_dict = accelerator.get_state_dict(model)
 
                 accelerator.wait_for_everyone()
+                print(rank, 111111)
                 if accelerator.is_main_process:
                     if config.train.use_fsdp:
                         model_instance.load_state_dict(merged_state_dict)
+                    print(rank, 222222)
                     if validation_noise is not None:
                         log_validation(
                             accelerator=accelerator,
@@ -567,6 +563,7 @@ def train(
                             vae=vae,
                         )
 
+                print(rank, 333333)
             # avoid dead-lock of multiscale data batch sampler
             if (
                 config.model.multi_scale
@@ -629,7 +626,7 @@ def main(cfg: SanaConfig) -> None:
     global train_dataloader_len, start_epoch, start_step, vae, generator, num_replicas, rank, training_start_time
     global load_vae_feat, load_text_feat, validation_noise, text_encoder, tokenizer
     global max_length, validation_prompts, latent_size, valid_prompt_embed_suffix, null_embed_path
-    global image_size, cache_file, total_steps, vae_dtype
+    global image_size, cache_file, total_steps, vae_dtype, model_instance
 
     config = cfg
     args = cfg
@@ -869,6 +866,13 @@ def main(cfg: SanaConfig) -> None:
             attrs=["bold"],
         )
     )
+
+    if config.train.use_fsdp:
+        model_instance = deepcopy(model)
+    elif model_ema is not None:
+        model_instance = deepcopy(model_ema)
+    else:
+        model_instance = model
 
     # 4-1. load model
     if args.load_from is not None:

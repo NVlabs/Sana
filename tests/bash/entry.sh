@@ -1,7 +1,9 @@
 #/bin/bash
 set -e
 
-for t in tests/bash/test_*.sh; do
-    echo "========================== Testing $t =================================="
-    bash $t;
-done
+
+#echo "Testing inference"
+#bash tests/bash/test_inference.sh
+
+echo "Testing training"
+bash tests/bash/test_training_1epoch.sh

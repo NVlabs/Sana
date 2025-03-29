@@ -270,7 +270,7 @@ class SanaMSControlNet(SanaMS):
         """
         dpm solver donnot need variance prediction
         """
-        control_signal = data_info["control_signal"]
+        control_signal = kwargs.pop("control_signal", None)
         assert control_signal is not None, "control_signal is required for dpm solver"
         assert control_signal.dim() == 4, "control_signal should be a 4D tensor"
 

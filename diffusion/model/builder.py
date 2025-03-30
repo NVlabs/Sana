@@ -53,7 +53,7 @@ def get_tokenizer_and_text_encoder(name="T5", device="cuda"):
         "gemma-2b": "google/gemma-2b",
         "gemma-2b-it": "google/gemma-2b-it",
         "gemma-2-2b": "google/gemma-2-2b",
-        "gemma-2-2b-it": "google/gemma-2-2b-it",
+        "gemma-2-2b-it": "Efficient-Large-Model/gemma-2-2b-it",
         "gemma-2-9b": "google/gemma-2-9b",
         "gemma-2-9b-it": "google/gemma-2-9b-it",
         "Qwen2-0.5B-Instruct": "Qwen/Qwen2-0.5B-Instruct",

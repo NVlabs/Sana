@@ -25,8 +25,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 CTX = init_empty_weights if is_accelerate_available else nullcontext
 
 ckpt_ids = [
-    "Efficient-Large-Model/Sana_Sprint_0.6B_1024px/checkpoints/Sana_Sprint_0.6B_1024px.pth"
     "Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth"
+    "Efficient-Large-Model/Sana_Sprint_0.6B_1024px/checkpoints/Sana_Sprint_0.6B_1024px.pth"
+    "Efficient-Large-Model/Sana_Sprint_1.6B_1024px_teacher/checkpoints/Sana_Sprint_1.6B_1024px_teacher.pth"
+    "Efficient-Large-Model/Sana_Sprint_0.6B_1024px_teacher/checkpoints/Sana_Sprint_0.6B_1024px_teacher.pth"
     "Efficient-Large-Model/SANA1.5_4.8B_1024px/checkpoints/SANA1.5_4.8B_1024px.pth",
     "Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth",
     "Efficient-Large-Model/Sana_1600M_4Kpx_BF16/checkpoints/Sana_1600M_4Kpx_BF16.pth",
@@ -119,9 +121,9 @@ def main(args):
         flow_shift = 3.0
 
     # model config
-    if args.model_type in ["SanaMS_1600M_P1_D20", "SanaSprint_1600M_P1_D20", "SanaMS1.5_1600M_P1_D20"]:
+    if args.model_type in ["SanaMS_1600M_P1_D20", "SanaSprint_1600M_P1_D20", "SanaMS1.5_1600M_P1_D20", "SanaSprint_1600M_1024px_teacher"]:
         layer_num = 20
-    elif args.model_type in ["SanaMS_600M_P1_D28", "SanaSprint_600M_P1_D28"]:
+    elif args.model_type in ["SanaMS_600M_P1_D28", "SanaSprint_600M_P1_D28", "SanaSprint_600M_1024px_teacher"]:
         layer_num = 28
     elif args.model_type == "SanaMS_4800M_P1_D60":
         layer_num = 60
@@ -132,9 +134,17 @@ def main(args):
     qk_norm = (
         "rms_norm_across_heads"
         if args.model_type
-        in ["SanaMS1.5_1600M_P1_D20", "SanaMS1.5_4800M_P1_D60", "SanaSprint_600M_P1_D28", "SanaSprint_1600M_P1_D20"]
+        in [
+            "SanaMS1.5_1600M_P1_D20",
+            "SanaMS1.5_4800M_P1_D60",
+            "SanaSprint_600M_P1_D28",
+            "SanaSprint_1600M_P1_D20",
+            "SanaSprint_600M_1024px_teacher",
+            "SanaSprint_1600M_1024px_teacher",
+        ]
         else None
     )
+    timestep_scale = (0.001 if args.model_type in ["SanaSprint_1600M_1024px_teacher", "SanaSprint_600M_1024px_teacher"] else 1.0)
 
     for depth in range(layer_num):
         # Transformer blocks.
@@ -233,6 +243,7 @@ def main(args):
             "norm_elementwise_affine": False,
             "norm_eps": 1e-6,
             "interpolation_scale": interpolation_scale[args.image_size],
+            "timestep_scale": timestep_scale,
         }
 
         # Add qk_norm parameter for Sana Sprint
@@ -374,6 +385,8 @@ if __name__ == "__main__":
             "SanaMS1.5_4800M_P1_D60",
             "SanaSprint_1600M_P1_D20",
             "SanaSprint_600M_P1_D28",
+            "SanaSprint_1600M_1024px_teacher",
+            "SanaSprint_600M_1024px_teacher",
         ],
     )
     parser.add_argument(
@@ -406,14 +419,6 @@ if __name__ == "__main__":
             "cross_attention_dim": 1152,
             "num_layers": 28,
         },
-        "SanaMS1.5_1600M_P1_D20": {
-            "num_attention_heads": 70,
-            "attention_head_dim": 32,
-            "num_cross_attention_heads": 20,
-            "cross_attention_head_dim": 112,
-            "cross_attention_dim": 2240,
-            "num_layers": 20,
-        },
         "SanaMS1.5_4800M_P1_D60": {
             "num_attention_heads": 70,
             "attention_head_dim": 32,
@@ -422,23 +427,14 @@ if __name__ == "__main__":
             "cross_attention_dim": 2240,
             "num_layers": 60,
         },
-        "SanaSprint_600M_P1_D28": {
-            "num_attention_heads": 36,
-            "attention_head_dim": 32,
-            "num_cross_attention_heads": 16,
-            "cross_attention_head_dim": 72,
-            "cross_attention_dim": 1152,
-            "num_layers": 28,
-        },
-        "SanaSprint_1600M_P1_D20": {
-            "num_attention_heads": 70,
-            "attention_head_dim": 32,
-            "num_cross_attention_heads": 20,
-            "cross_attention_head_dim": 112,
-            "cross_attention_dim": 2240,
-            "num_layers": 20,
-        },
     }
+    model_kwargs.update({
+        "SanaMS1.5_1600M_P1_D20": model_kwargs["SanaMS_1600M_P1_D20"],
+        "SanaSprint_600M_P1_D28": model_kwargs["SanaMS_600M_P1_D28"],
+        "SanaSprint_1600M_P1_D20": model_kwargs["SanaMS_1600M_P1_D20"],
+        "SanaSprint_1600M_1024px_teacher": model_kwargs["SanaMS_1600M_P1_D20"],
+        "SanaSprint_600M_1024px_teacher": model_kwargs["SanaMS_600M_P1_D28"],
+    })
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     weight_dtype = DTYPE_MAPPING[args.dtype]

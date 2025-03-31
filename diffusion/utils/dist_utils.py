@@ -336,7 +336,7 @@ def global_synchronized_skip(dataloader, skip_signal: bool):
     """
     if not dist.is_initialized():
         if skip_signal:
-            skip_first_batches(dataloader, float('inf'))
+            skip_first_batches(dataloader, float("inf"))
         return
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -344,7 +344,7 @@ def global_synchronized_skip(dataloader, skip_signal: bool):
     dist.all_reduce(signal_tensor, op=dist.ReduceOp.MAX)
 
     if signal_tensor.item() == 1:
-        skip_first_batches(dataloader, float('inf'))
+        skip_first_batches(dataloader, float("inf"))
         dist.barrier()
 
 

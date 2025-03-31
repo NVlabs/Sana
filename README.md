@@ -182,7 +182,7 @@ cd Sana
 DEMO_PORT=15432 \
 python app/app_sana.py \
     --share \
-    --config=hf://Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth \
+    --config=configs/sana_config/1024ms/Sana_1600M_img1024.yaml \
     --model_path=hf://Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth \
     --image_size=1024
 ```

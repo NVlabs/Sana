@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")  # ignore warning
 import numpy as np
 import pyrallis
 import torch
-from accelerate import Accelerator, InitProcessGroupKwargs
+from accelerate import Accelerator, InitProcessGroupKwargs, skip_first_batches
 from PIL import Image
 from termcolor import colored
 
@@ -46,7 +46,7 @@ from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
 from diffusion.utils.config import SanaConfig, model_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
-from diffusion.utils.dist_utils import dist, flush, get_world_size
+from diffusion.utils.dist_utils import flush, get_world_size
 from diffusion.utils.logger import LogBuffer, get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_random_seed
@@ -536,11 +536,9 @@ def train(
                     merged_state_dict = accelerator.get_state_dict(model)
 
                 accelerator.wait_for_everyone()
-                print(rank, 111111)
                 if accelerator.is_main_process:
                     if config.train.use_fsdp:
                         model_instance.load_state_dict(merged_state_dict)
-                    print(rank, 222222)
                     if validation_noise is not None:
                         log_validation(
                             accelerator=accelerator,
@@ -563,7 +561,6 @@ def train(
                             vae=vae,
                         )
 
-                print(rank, 333333)
             # avoid dead-lock of multiscale data batch sampler
             if (
                 config.model.multi_scale
@@ -573,8 +570,7 @@ def train(
                     (global_step + train_dataloader_len - 1) // train_dataloader_len
                 ) * train_dataloader_len + 1
                 logger.info("Early stop current iteration")
-                if dist.is_initialized():
-                    dist.destroy_process_group()
+                skip_first_batches(train_dataloader, True)
                 break
 
             data_time_start = time.time()

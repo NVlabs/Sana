@@ -121,7 +121,12 @@ def main(args):
         flow_shift = 3.0
 
     # model config
-    if args.model_type in ["SanaMS_1600M_P1_D20", "SanaSprint_1600M_P1_D20", "SanaMS1.5_1600M_P1_D20", "SanaSprint_1600M_1024px_teacher"]:
+    if args.model_type in [
+        "SanaMS_1600M_P1_D20",
+        "SanaSprint_1600M_P1_D20",
+        "SanaMS1.5_1600M_P1_D20",
+        "SanaSprint_1600M_1024px_teacher",
+    ]:
         layer_num = 20
     elif args.model_type in ["SanaMS_600M_P1_D28", "SanaSprint_600M_P1_D28", "SanaSprint_600M_1024px_teacher"]:
         layer_num = 28
@@ -144,7 +149,9 @@ def main(args):
         ]
         else None
     )
-    timestep_scale = (0.001 if args.model_type in ["SanaSprint_1600M_1024px_teacher", "SanaSprint_600M_1024px_teacher"] else 1.0)
+    timestep_scale = (
+        0.001 if args.model_type in ["SanaSprint_1600M_1024px_teacher", "SanaSprint_600M_1024px_teacher"] else 1.0
+    )
 
     for depth in range(layer_num):
         # Transformer blocks.
@@ -428,13 +435,15 @@ if __name__ == "__main__":
             "num_layers": 60,
         },
     }
-    model_kwargs.update({
-        "SanaMS1.5_1600M_P1_D20": model_kwargs["SanaMS_1600M_P1_D20"],
-        "SanaSprint_600M_P1_D28": model_kwargs["SanaMS_600M_P1_D28"],
-        "SanaSprint_1600M_P1_D20": model_kwargs["SanaMS_1600M_P1_D20"],
-        "SanaSprint_1600M_1024px_teacher": model_kwargs["SanaMS_1600M_P1_D20"],
-        "SanaSprint_600M_1024px_teacher": model_kwargs["SanaMS_600M_P1_D28"],
-    })
+    model_kwargs.update(
+        {
+            "SanaMS1.5_1600M_P1_D20": model_kwargs["SanaMS_1600M_P1_D20"],
+            "SanaSprint_600M_P1_D28": model_kwargs["SanaMS_600M_P1_D28"],
+            "SanaSprint_1600M_P1_D20": model_kwargs["SanaMS_1600M_P1_D20"],
+            "SanaSprint_1600M_1024px_teacher": model_kwargs["SanaMS_1600M_P1_D20"],
+            "SanaSprint_600M_1024px_teacher": model_kwargs["SanaMS_600M_P1_D28"],
+        }
+    )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     weight_dtype = DTYPE_MAPPING[args.dtype]

@@ -239,7 +239,6 @@ def load_checkpoint_ddp(
     logger = get_root_logger()
     ckpt_file = checkpoint
     checkpoint = find_model(ckpt_file)
-    # checkpoint = torch.load(ckpt_file, map_location="cpu")
 
     state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
     for key in state_dict_keys:
@@ -286,12 +285,16 @@ def load_checkpoint_fsdp(
     assert isinstance(checkpoint, str)
     logger = get_root_logger()
 
-    if os.path.isfile(checkpoint):
-        checkpoint = os.path.dirname(checkpoint)
-    assert os.path.isdir(checkpoint), f"Checkpoint directory {checkpoint} does not exist!"
-
     # 1 load model
-    state_dict_model = find_model(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"), map_location="cpu")
+    if ".pth" in checkpoint:
+        state_dict_model = find_model(checkpoint)
+        state_dict_model = state_dict_model.get("state_dict", state_dict_model)
+    else:
+        if os.path.isfile(checkpoint):
+            checkpoint = os.path.dirname(checkpoint)
+        assert os.path.isdir(checkpoint), f"Checkpoint directory {checkpoint} does not exist!"
+
+        state_dict_model = find_model(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"), map_location="cpu")
 
     state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
     for key in state_dict_keys:

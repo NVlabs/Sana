@@ -61,6 +61,8 @@ import torch
 from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig, SanaTransformer2DModel, SanaPipeline
 from transformers import BitsAndBytesConfig as BitsAndBytesConfig, AutoModel
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 quant_config = BitsAndBytesConfig(load_in_8bit=True)
 text_encoder_8bit = AutoModel.from_pretrained(
     "Efficient-Large-Model/Sana_1600M_1024px_diffusers",
@@ -84,6 +86,7 @@ pipeline = SanaPipeline.from_pretrained(
     torch_dtype=torch.float16,
     device_map="balanced",
 )
+pipeline.to(device)
 
 prompt = "a tiny astronaut hatching from an egg on the moon"
 image = pipeline(prompt).images[0]

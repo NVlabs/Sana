@@ -1054,6 +1054,8 @@ def main(cfg: SanaConfig) -> None:
         config.train.use_fsdp
         and config.model.resume_from is not None
         and config.model.resume_from["checkpoint"] is not None
+        and config.model.resume_from["resume_optimizer"]
+        and config.model.resume_from["resume_lr_scheduler"]
     ):
         logger.info(f"FSDP resume: Loading optimizer, scheduler, scaler, random_states...")
         accelerator.load_state(

@@ -136,19 +136,15 @@ def main(args):
         raise ValueError(f"{args.model_type} is not supported.")
     # Positional embedding interpolation scale.
     interpolation_scale = {512: None, 1024: None, 2048: 1.0, 4096: 2.0}
-    qk_norm = (
-        "rms_norm_across_heads"
-        if args.model_type
-        in [
-            "SanaMS1.5_1600M_P1_D20",
-            "SanaMS1.5_4800M_P1_D60",
-            "SanaSprint_600M_P1_D28",
-            "SanaSprint_1600M_P1_D20",
-            "SanaSprint_600M_1024px_teacher",
-            "SanaSprint_1600M_1024px_teacher",
-        ]
-        else None
-    )
+    qk_norm_model_types = [
+        "SanaMS1.5_1600M_P1_D20",
+        "SanaMS1.5_4800M_P1_D60",
+        "SanaSprint_600M_P1_D28",
+        "SanaSprint_1600M_P1_D20",
+        "SanaSprint_600M_1024px_teacher",
+        "SanaSprint_1600M_1024px_teacher",
+    ]
+    qk_norm = "rms_norm_across_heads" if args.model_type in qk_norm_model_types else None
     timestep_scale = (
         0.001 if args.model_type in ["SanaSprint_1600M_1024px_teacher", "SanaSprint_600M_1024px_teacher"] else 1.0
     )
@@ -254,12 +250,7 @@ def main(args):
         }
 
         # Add qk_norm parameter for Sana Sprint
-        if args.model_type in [
-            "SanaMS1.5_1600M_P1_D20",
-            "SanaMS1.5_4800M_P1_D60",
-            "SanaSprint_600M_P1_D28",
-            "SanaSprint_1600M_P1_D20",
-        ]:
+        if args.model_type in qk_norm_model_types:
             transformer_kwargs["qk_norm"] = "rms_norm_across_heads"
         if args.model_type in ["SanaSprint_1600M_P1_D20", "SanaSprint_600M_P1_D28"]:
             transformer_kwargs["guidance_embeds"] = True

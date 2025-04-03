@@ -294,7 +294,7 @@ def load_checkpoint_fsdp(
             checkpoint = os.path.dirname(checkpoint)
         assert os.path.isdir(checkpoint), f"Checkpoint directory {checkpoint} does not exist!"
 
-        state_dict_model = find_model(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"), map_location="cpu")
+        state_dict_model = find_model(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"))
 
     state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
     for key in state_dict_keys:

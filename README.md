@@ -10,9 +10,11 @@
   <a href="https://nvlabs.github.io/Sana/"><img src="https://img.shields.io/static/v1?label=Project&message=Github&color=blue&logo=github-pages"></a> &ensp;
   <a href="https://hanlab.mit.edu/projects/sana/"><img src="https://img.shields.io/static/v1?label=Page&message=MIT&color=darkred&logo=github-pages"></a> &ensp;
   <a href="https://arxiv.org/abs/2410.10629"><img src="https://img.shields.io/static/v1?label=Arxiv&message=Sana&color=red&logo=arxiv"></a> &ensp;
-  <a href="https://nv-sana.mit.edu/"><img src="https://img.shields.io/static/v1?label=Demo:6x3090&message=MIT&color=yellow"></a> &ensp;
+  <a href="https://nv-sana.mit.edu/"><img src="https://img.shields.io/static/v1?label=Demo:6x3090&message=SANA&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/4bit/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=4bit&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=yellow"></a> &ensp;
+  <a href="https://nv-sana.mit.edu/sprint/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=SANA-Sprint&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=Huggingface Demo&message=SANA-Sprint&color=yellow"></a> &ensp;
   <a href="https://replicate.com/chenxwh/sana"><img src="https://img.shields.io/static/v1?label=API:H100&message=Replicate&color=pink"></a> &ensp;
   <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
 </div>
@@ -25,7 +27,7 @@
 
 ### 🚶 Basic:
 
-**Demo**: [SANA-1.5](https://nv-sana.mit.edu/) | [SANA-ControlNet](https://nv-sana.mit.edu/ctrlnet/) | [SANA-4bit](https://nv-sana.mit.edu/4bit/) | [SANA-Sprint](https://nv-sana.mit.edu/sprint/) <br>
+**Demo**: [SANA-1.5](https://nv-sana.mit.edu/) | [SANA-ControlNet](https://nv-sana.mit.edu/ctrlnet/) | [SANA-4bit](https://nv-sana.mit.edu/4bit/) | [SANA-Sprint](https://nv-sana.mit.edu/sprint/) | [SANA-Sprint (HF)](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint) <br>
 **ComfyUI**: [ComfyUI Guidance](asset/docs/ComfyUI/comfyui.md) <br>
 **Model Zoo:** [Model Card Collects All Models](asset/docs/model_zoo.md) <br>
 **Env Preparation:** [One-Click Env Install](#-1-dependencies-and-installation) <br>
@@ -53,6 +55,7 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/3/22\] 🔥**SANA-Sprint demo is hosted on Huggingface, try it!** 🎉 [\[Demo Link\]](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint)
 - (🔥 New) \[2025/3/22\] 🔥**SANA-1.5 is supported in ComfyUI!** 🎉: [ComfyUI Guidance](asset/docs/ComfyUI/comfyui.md) | [ComfyUI Work Flow SANA-1.5 4.8B](asset/docs/ComfyUI/SANA-1.5_FlowEuler.json)
 - (🔥 New) \[2025/3/22\] 🔥**SANA-Sprint code & weights are released!** 🎉 Include: [Training & Inference](asset/docs/sana_sprint.md) code and [Weights](asset/docs/model_zoo.md) / [HF](https://huggingface.co/collections/Efficient-Large-Model/sana-15-67d6803867cb21c230b780e4) are all released. [\[Guidance\]](asset/docs/sana_sprint.md)
 - (🔥 New) \[2025/3/21\] 🚀Sana + **Inference Scaling** is released. [\[Guidance\]](asset/docs/inference_scaling/inference_scaling.md)

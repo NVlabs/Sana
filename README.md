@@ -37,7 +37,7 @@
 **2K & 4K Resolution Generation**: [SANA is Capable to Generate 2K & 4K Images (Only 8BG)](asset/docs/model_zoo.md#-3-2k--4k-models) <br>
 **ControlNet**: [Train&Inference Guidance](asset/docs/sana_controlnet.md) | [Model Zoo](asset/docs/model_zoo.md#sana) | [Demo](https://nv-sana.mit.edu/ctrlnet/) <br>
 **Dreambooth / LoRA Training**: [Train&Inference Guidance](asset/docs/sana_lora_dreambooth.md) <br>
-**Quantization**: [Inference with 8bit](asset/docs/8bit_sana.md) | [Infernece with 4bit (8BG)](asset/docs/4bit_sana.md) | [4bit Model](asset/docs/model_zoo.md#sana) | [4bit Demo](https://svdquant.mit.edu/) | [4bit Demo2](https://nv-sana.mit.edu/4bit/) <br>
+**Quantization**: [Inference with 8bit](asset/docs/quantize/8bit_sana.md) | [Inference with 4bit (8BG)](asset/docs/quantize/4bit_sana.md) | [4bit Model](asset/docs/model_zoo.md#sana) | [4bit Demo](https://svdquant.mit.edu/) | [4bit Demo2](https://nv-sana.mit.edu/4bit/) <br>
 **8bit Optimizer**: [How to Config](https://github.com/NVlabs/Sana/blob/main/configs/sana_config/1024ms/Sana_1600M_img1024_CAME8bit.yaml#L86) <br>
 **Inference Scaling:** [SANA Generate VILA Pick Inference Scaling](asset/docs/inference_scaling/inference_scaling.md) <br>
 **Metrics:** [Metric Toolkit: (FID, CLIP-Score, GenEval, DPG-Bench)](#-4-metric-toolkit) <br>
@@ -61,7 +61,7 @@
 - (🔥 New) \[2025/2/10\] 🚀Sana + ControlNet is released. [\[Guidance\]](asset/docs/sana_controlnet.md) | [\[Model\]](asset/docs/model_zoo.md) | [\[Demo\]](https://nv-sana.mit.edu/ctrlnet/)
 - (🔥 New) \[2025/1/30\] Release CAME-8bit optimizer code. Saving more GPU memory during training. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_config/1024ms/Sana_1600M_img1024_CAME8bit.yaml#L86)
 - (🔥 New) \[2025/1/29\] 🎉 🎉 🎉**SANA 1.5 is out! Figure out how to do efficient training & inference scaling!** 🚀[\[Tech Report\]](https://arxiv.org/abs/2501.18427)
-- (🔥 New) \[2025/1/24\] 4bit-Sana is released, powered by [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku) inference engine. Now run your Sana within **8GB** GPU VRAM [\[Guidance\]](asset/docs/4bit_sana.md) [\[Demo\]](https://svdquant.mit.edu/) [\[Model\]](asset/docs/model_zoo.md)
+- (🔥 New) \[2025/1/24\] 4bit-Sana is released, powered by [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku) inference engine. Now run your Sana within **8GB** GPU VRAM [\[Guidance\]](asset/docs/quantize/4bit_sana.md) [\[Demo\]](https://svdquant.mit.edu/) [\[Model\]](asset/docs/model_zoo.md)
 - (🔥 New) \[2025/1/24\] DCAE-1.1 is released, better reconstruction quality. [\[Model\]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1) [\[diffusers\]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers)
 - (🔥 New) \[2025/1/23\] **Sana is accepted as Oral by ICLR-2025.** 🎉🎉🎉
 
@@ -70,7 +70,7 @@
 
 - (🔥 New) \[2025/1/12\] DC-AE tiling makes Sana-4K inferences 4096x4096px images within 22GB GPU memory. With model offload and 8bit/4bit quantize. The 4K Sana run within **8GB** GPU VRAM. [\[Guidance\]](asset/docs/model_zoo.md#-3-2k--4k-models)
 - (🔥 New) \[2025/1/11\] Sana code-base license changed to Apache 2.0.
-- (🔥 New) \[2025/1/10\] Inference Sana with 8bit quantization.[\[Guidance\]](asset/docs/8bit_sana.md#quantization)
+- (🔥 New) \[2025/1/10\] Inference Sana with 8bit quantization.[\[Guidance\]](asset/docs/quantize/8bit_sana.md#quantization)
 - (🔥 New) \[2025/1/8\] 4K resolution [Sana models](asset/docs/model_zoo.md) is supported in [Sana-ComfyUI](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels) and [work flow](asset/docs/ComfyUI/Sana_FlowEuler_4K.json) is also prepared. [\[4K guidance\]](asset/docs/ComfyUI/comfyui.md)
 - (🔥 New) \[2025/1/8\] 1.6B 4K resolution [Sana models](asset/docs/model_zoo.md) are released: [\[BF16 pth\]](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16) or [\[BF16 diffusers\]](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers). 🚀 Get your 4096x4096 resolution images within 20 seconds! Find more samples in [Sana page](https://nvlabs.github.io/Sana/). Thanks [SUPIR](https://github.com/Fanghua-Yu/SUPIR) for their wonderful work and support.
 - (🔥 New) \[2025/1/2\] Bug in the `diffusers` pipeline is solved. [Solved PR](https://github.com/huggingface/diffusers/pull/10431)

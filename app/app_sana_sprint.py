@@ -44,6 +44,7 @@ ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "0") == "1"
 DEMO_PORT = int(os.getenv("DEMO_PORT", "15432"))
 os.environ["GRADIO_EXAMPLES_CACHE"] = "./.gradio/cache"
 COUNTER_DB = os.getenv("COUNTER_DB", ".count.db")
+ROOT_PATH = os.getenv("ROOT_PATH", None)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -326,6 +327,7 @@ examples = [
 
 css = """
 .gradio-container{max-width: 640px !important}
+body{align-items: center;}
 h1{text-align:center}
 """
 with gr.Blocks(css=css, title="SANA-Sprint") as demo:
@@ -350,7 +352,7 @@ with gr.Blocks(css=css, title="SANA-Sprint") as demo:
                 container=False,
             )
             run_button = gr.Button("Run", scale=0)
-        result = gr.Gallery(label="Result", show_label=False, columns=NUM_IMAGES_PER_PROMPT, format="jpeg")
+        result = gr.Gallery(label="Result", show_label=False, columns=NUM_IMAGES_PER_PROMPT, format="webp", height=600)
     speed_box = gr.Markdown(
         value=f"<span style='font-size: 16px; font-weight: bold;'>Inference speed: {INFER_SPEED} s/Img</span>"
     )
@@ -441,7 +443,7 @@ with gr.Blocks(css=css, title="SANA-Sprint") as demo:
         examples=examples,
         inputs=prompt,
         outputs=[result, seed],
-        fn=generate,
+        fn=generate if CACHE_EXAMPLES else None,
         cache_examples=CACHE_EXAMPLES,
     )
 
@@ -471,4 +473,6 @@ with gr.Blocks(css=css, title="SANA-Sprint") as demo:
     )
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share)
+    demo.queue(max_size=20).launch(
+        server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share, root_path=ROOT_PATH
+    )

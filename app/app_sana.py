@@ -363,10 +363,7 @@ with gr.Blocks(css=css, title="Sana", delete_cache=(86400, 86400)) as demo:
         elem_id="duplicate-button",
         visible=os.getenv("SHOW_DUPLICATE_BUTTON") == "1",
     )
-    info_box = gr.Markdown(
-        value=update_inference_count,
-        every=10
-    )
+    info_box = gr.Markdown(value=update_inference_count, every=10)
     # demo.load(fn=update_inference_count, outputs=info_box, api_name=False)  # update the value when re-loading the page
     # with gr.Row(equal_height=False):
     with gr.Group():
@@ -464,7 +461,7 @@ with gr.Blocks(css=css, title="Sana", delete_cache=(86400, 86400)) as demo:
         inputs=prompt,
         outputs=[result, seed],
         run_on_click=CACHE_EXAMPLES,
-        cache_mode='lazy',
+        cache_mode="lazy",
         examples_per_page=len(examples),
         fn=generate if CACHE_EXAMPLES else None,
         cache_examples=CACHE_EXAMPLES,
@@ -485,7 +482,7 @@ with gr.Blocks(css=css, title="Sana", delete_cache=(86400, 86400)) as demo:
         fn=deselect,
         inputs=None,
         outputs=result,
-        show_progress='hidden',
+        show_progress="hidden",
         api_name=False,
         queue=False,
     ).then(
@@ -510,7 +507,7 @@ with gr.Blocks(css=css, title="Sana", delete_cache=(86400, 86400)) as demo:
         fn=select_first,
         inputs=None,
         outputs=result,
-        show_progress='full',
+        show_progress="full",
         api_name=False,
         queue=False,
     )
@@ -519,4 +516,6 @@ with gr.Blocks(css=css, title="Sana", delete_cache=(86400, 86400)) as demo:
     )
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share, root_path=ROOT_PATH)
+    demo.queue(max_size=20).launch(
+        server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share, root_path=ROOT_PATH
+    )

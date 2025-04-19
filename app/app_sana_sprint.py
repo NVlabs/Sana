@@ -473,4 +473,6 @@ with gr.Blocks(css=css, title="SANA-Sprint") as demo:
     )
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share, root_path=ROOT_PATH)
+    demo.queue(max_size=20).launch(
+        server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share, root_path=ROOT_PATH
+    )

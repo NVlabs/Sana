@@ -260,7 +260,7 @@ class SanaPipeline(nn.Module):
                         # dtype=self.weight_dtype,
                     )
                 else:
-                    z = latents.to(self.weight_dtype).to(self.device)
+                    z = latents.to(self.device)
                 model_kwargs = dict(data_info={"img_hw": hw, "aspect_ratio": ar}, mask=emb_masks)
                 if self.vis_sampler == "flow_euler":
                     flow_solver = FlowEuler(

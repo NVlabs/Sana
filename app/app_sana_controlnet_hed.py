@@ -15,26 +15,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from app import safety_check
 from app.sana_controlnet_pipeline import SanaControlNetPipeline
 
-STYLES = {
-    "None": "{prompt}",
-    "Cinematic": "cinematic still {prompt}. emotional, harmonious, vignette, highly detailed, high budget, bokeh, cinemascope, moody, epic, gorgeous, film grain, grainy",
-    "3D Model": "professional 3d model {prompt}. octane render, highly detailed, volumetric, dramatic lighting",
-    "Anime": "anime artwork {prompt}. anime style, key visual, vibrant, studio anime,  highly detailed",
-    "Digital Art": "concept art {prompt}. digital artwork, illustrative, painterly, matte painting, highly detailed",
-    "Photographic": "cinematic photo {prompt}. 35mm photograph, film, bokeh, professional, 4k, highly detailed",
-    "Pixel art": "pixel-art {prompt}. low-res, blocky, pixel art style, 8-bit graphics",
-    "Fantasy art": "ethereal fantasy concept art of  {prompt}. magnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy",
-    "Neonpunk": "neonpunk style {prompt}. cyberpunk, vaporwave, neon, vibes, vibrant, stunningly beautiful, crisp, detailed, sleek, ultramodern, magenta highlights, dark purple shadows, high contrast, cinematic, ultra detailed, intricate, professional",
-    "Manga": "manga style {prompt}. vibrant, high-energy, detailed, iconic, Japanese comic style",
-}
-DEFAULT_STYLE_NAME = "None"
-STYLE_NAMES = list(STYLES.keys())
-
 MAX_SEED = 1000000000
 DEFAULT_SKETCH_GUIDANCE = 0.28
 DEMO_PORT = int(os.getenv("DEMO_PORT", "15432"))
+ROOT_PATH = os.getenv("ROOT_PATH", None)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+gr.set_static_paths(paths=["asset"])
 
 blank_image = Image.new("RGB", (1024, 1024), (255, 255, 255))
 
@@ -106,14 +94,12 @@ def norm_ip(img, low, high):
 def run(
     image,
     prompt: str,
-    prompt_template: str,
     sketch_thickness: int,
     guidance_scale: float,
     inference_steps: int,
     seed: int,
     blend_alpha: float,
 ) -> tuple[Image, str]:
-
     print(f"Prompt: {prompt}, cond: {image['composite']}")
     image["composite"] = Image.open(image["composite"]).convert("RGB")
     image_numpy = np.array(image["composite"])
@@ -124,7 +110,6 @@ def run(
     if safety_check.is_dangerous(safety_checker_tokenizer, safety_checker_model, prompt, threshold=0.2):
         prompt = "A red heart."
 
-    prompt = prompt_template.format(prompt=prompt)
     pipe.set_blend_alpha(blend_alpha)
     start_time = time.time()
     images = pipe(
@@ -166,7 +151,7 @@ def run(
 model_size = "1.6" if "1600M" in args.model_path else "0.6"
 title = f"""
     <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>
-        <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="50%" alt="logo"/>
+        <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="25%" alt="logo"/>
     </div>
 """
 DESCRIPTION = f"""
@@ -211,20 +196,17 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
                     prompt = gr.Text(label="Prompt", placeholder="Enter your prompt", scale=6)
                     run_button = gr.Button("Run", scale=1, elem_id="run_button")
             download_sketch = gr.DownloadButton("Download Sketch", scale=1, elem_id="download_sketch")
-            with gr.Row():
-                style = gr.Dropdown(label="Style", choices=STYLE_NAMES, value=DEFAULT_STYLE_NAME, scale=1)
-                prompt_template = gr.Textbox(
-                    label="Prompt Style Template", value=STYLES[DEFAULT_STYLE_NAME], scale=2, max_lines=1
-                )
 
             with gr.Row():
                 sketch_thickness = gr.Slider(
-                    label="Sketch Thickness",
+                    label="Sketch",
                     minimum=1,
                     maximum=4,
                     step=1,
                     value=2,
                 )
+                seed = gr.Slider(label="Seed", show_label=True, minimum=0, maximum=MAX_SEED, value=233, step=1, scale=4)
+                randomize_seed = gr.Button("Random Seed", scale=1, min_width=50, elem_id="random_seed")
             with gr.Row():
                 inference_steps = gr.Slider(
                     label="Sampling steps",
@@ -247,15 +229,12 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
                     step=0.1,
                     value=0,
                 )
-            with gr.Row():
-                seed = gr.Slider(label="Seed", show_label=True, minimum=0, maximum=MAX_SEED, value=233, step=1, scale=4)
-                randomize_seed = gr.Button("Random Seed", scale=1, min_width=50, elem_id="random_seed")
 
         with gr.Column(elem_id="column_output"):
             gr.Markdown("## OUTPUT", elem_id="output_header")
             with gr.Group():
                 result = gr.Image(
-                    format="png",
+                    format="webp",
                     height=640,
                     image_mode="RGB",
                     type="pil",
@@ -271,10 +250,9 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
             gr.Markdown("### Instructions")
             gr.Markdown("**1**. Enter a text prompt (e.g. a cat)")
             gr.Markdown("**2**. Start sketching or upload a reference image")
-            gr.Markdown("**3**. Change the image style using a style template")
-            gr.Markdown("**4**. Try different seeds to generate different results")
+            gr.Markdown("**3**. Try different seeds to generate different results")
 
-    run_inputs = [canvas, prompt, prompt_template, sketch_thickness, guidance_scale, inference_steps, seed, blend_alpha]
+    run_inputs = [canvas, prompt, sketch_thickness, guidance_scale, inference_steps, seed, blend_alpha]
     run_outputs = [result, latency_result]
     randomize_seed.click(
         lambda: random.randint(0, MAX_SEED),
@@ -282,17 +260,10 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
         outputs=seed,
         api_name=False,
         queue=False,
-    ).then(run, inputs=run_inputs, outputs=run_outputs, api_name=False)
+    )
 
-    style.change(
-        lambda x: STYLES[x],
-        inputs=[style],
-        outputs=[prompt_template],
-        api_name=False,
-        queue=False,
-    ).then(fn=run, inputs=run_inputs, outputs=run_outputs, api_name=False)
     gr.on(
-        triggers=[prompt.submit, run_button.click, canvas.change],
+        triggers=[run_button.click],
         fn=run,
         inputs=run_inputs,
         outputs=run_outputs,
@@ -302,22 +273,19 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
     gr.Examples(
         examples=[
             [
-                "https://huggingface.co/mit-han-lab/svdq-int4-flux.1-canny-dev/resolve/main/logo_example.png",
-                "A logo of 'MIT HAN Lab'.",
-                "Fantasy art",
+                "asset/mit-logo.jpg",
+                "Ethereal fantasy concept art of  A logo of MIT. magnificent, celestial, ethereal, painterly, epic, majestic, magical, fantasy art, cover art, dreamy.",
             ],
             [
-                "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/robot.png",
+                "asset/robot.png",
                 "A robot made of exotic candies and chocolates of different kinds. The background is filled with confetti and celebratory gifts.",
-                "None",
             ],
             [
-                "https://huggingface.co/mit-han-lab/svdq-int4-flux.1-fill-dev/resolve/main/example.png",
-                "A wooden basket of several individual cartons of strawberries.",
-                "None",
+                "asset/apple.webp",
+                "A blue melting apple.",
             ],
         ],
-        inputs=[canvas, prompt, style],
+        inputs=[canvas, prompt],
     )
 
     download_sketch.click(fn=save_image, inputs=canvas, outputs=download_sketch)
@@ -326,4 +294,6 @@ with gr.Blocks(css_paths="asset/app_styles/controlnet_app_style.css", title=f"Sa
 
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share)
+    demo.queue(max_size=20).launch(
+        server_name="0.0.0.0", server_port=DEMO_PORT, debug=False, share=args.share, root_path=ROOT_PATH
+    )

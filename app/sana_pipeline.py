@@ -257,6 +257,7 @@ class SanaPipeline(nn.Module):
                         self.latent_size_w,
                         generator=generator,
                         device=self.device,
+                        # dtype=self.weight_dtype,
                     )
                 else:
                     z = latents.to(self.device)

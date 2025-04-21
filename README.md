@@ -207,7 +207,7 @@ import torch
 from diffusers import SanaPipeline
 
 pipe = SanaPipeline.from_pretrained(
-    "Efficient-Large-Model/SANA1.5_1.6B_1024px",
+    "Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers",
     torch_dtype=torch.bfloat16,
 )
 pipe.to("cuda")

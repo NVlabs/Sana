@@ -55,6 +55,7 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/5/4\] **SANA-1.5 (Inference-time scaling) is accepted by ICML-2025.** 🎉🎉🎉
 - (🔥 New) \[2025/3/22\] 🔥**SANA-Sprint demo is hosted on Huggingface, try it!** 🎉 [\[Demo Link\]](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint)
 - (🔥 New) \[2025/3/22\] 🔥**SANA-1.5 is supported in ComfyUI!** 🎉: [ComfyUI Guidance](asset/docs/ComfyUI/comfyui.md) | [ComfyUI Work Flow SANA-1.5 4.8B](asset/docs/ComfyUI/SANA-1.5_FlowEuler.json)
 - (🔥 New) \[2025/3/22\] 🔥**SANA-Sprint code & weights are released!** 🎉 Include: [Training & Inference](asset/docs/sana_sprint.md) code and [Weights](asset/docs/model_zoo.md) / [HF](https://huggingface.co/collections/Efficient-Large-Model/sana-15-67d6803867cb21c230b780e4) are all released. [\[Guidance\]](asset/docs/sana_sprint.md)

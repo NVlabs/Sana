@@ -527,7 +527,7 @@ Thanks goes to these wonderful contributors:
     }
 @misc{chen2025sanasprint,
       title={SANA-Sprint: One-Step Diffusion with Continuous-Time Consistency Distillation},
-      author={Junsong Chen and Shuchen Xue and Yuyang Zhao and Jincheng Yu and Sayak Paul and Junyu Chen and Han Cai and Enze Xie and Song Han},
+      author={Junsong Chen and Shuchen Xue and Yuyang Zhao and Jincheng Yu and Sayak Paul and Junyu Chen and Han Cai and Song Han and Enze Xie},
       year={2025},
       eprint={2503.09641},
       archivePrefix={arXiv},

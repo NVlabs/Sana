@@ -1,6 +1,14 @@
 name: ci
 on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run tests-bash'
+        required: false
+        type: boolean
+        default: false
   pull_request:
+    types: [labeled, unlabeled]
   push:
     branches: [main, feat/Sana-public, feat/Sana-public-for-NVLab]
 concurrency:
@@ -21,7 +29,12 @@ jobs:
         uses: pre-commit/action@v3.0.1
   tests-bash:
     # needs: pre-commit
-    runs-on: self-hosted
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
@@ -35,6 +48,18 @@ jobs:
       - name: Run tests with Slurm
         run: |
           sana-run --pty -m ci -J tests-bash bash tests/bash/entry.sh
+      - name: Remove run-tests label
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'run-tests'
+            })
 
 # tests-python:
 #     needs: pre-commit

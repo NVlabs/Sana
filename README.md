@@ -55,6 +55,7 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/6/4\] SANA-Sprint [ComfyUI Node](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels) is released [\[Example\]](asset/docs/ComfyUI/SANA-Sprint.json) | [\[PR\]](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels/pull/15).
 - (🔥 New) \[2025/5/8\] SANA-Sprint (One-step diffusion) diffusers training code is released [\[Guidance\]](https://github.com/huggingface/diffusers/blob/main/examples/research_projects/sana/README.md).
 - (🔥 New) \[2025/5/4\] **SANA-1.5 (Inference-time scaling) is accepted by ICML-2025.** 🎉🎉🎉
 - (🔥 New) \[2025/3/22\] 🔥**SANA-Sprint demo is hosted on Huggingface, try it!** 🎉 [\[Demo Link\]](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint)
@@ -468,7 +469,7 @@ We will try our best to achieve
 - \[✅\] Training code
 - \[✅\] Inference code
 - \[✅\] Model zoo
-- \[✅\] ComfyUI
+- \[✅\] [ComfyUI Nodes](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels)(SANA, SANA-1.5, SANA-Sprint)
 - \[✅\] DC-AE Diffusers
 - \[✅\] Sana merged in Diffusers(https://github.com/huggingface/diffusers/pull/9982)
 - \[✅\] LoRA training by [@paul](https://github.com/sayakpaul)(`diffusers`: https://github.com/huggingface/diffusers/pull/10234)
@@ -476,9 +477,8 @@ We will try our best to achieve
 - \[✅\] 8bit / 4bit Laptop development
 - \[✅\] ControlNet (train & inference & models)
 - \[✅\] FSDP Training
-- \[✅\] **SANA-1.5 (Larger model size / Inference Scaling)**
-- \[✅\] **SANA-Sprint: Few-step generator**
-- \[💻\] Better re-construction F32/F64 VAEs.
+- \[✅\] SANA-1.5 (Larger model size / Inference Scaling)
+- \[✅\] SANA-Sprint: Few-step generator
 - \[🚀\] Video Generation
 
 # 🤗Acknowledgements

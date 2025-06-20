@@ -383,7 +383,7 @@ bash train_scripts/train.sh \
 
 ### 2). Train with Multi-Scale WebDataset
 
-We also provide conversion scripts to convert your data to the required format. You can refer to the [data conversion scripts](asset/data_conversion_scripts) for more details.
+We also provide conversion scripts to convert your data to the required format. You can refer to the [data conversion scripts](tools/convert_ImgDataset_to_WebDatasetMS_format.py) for more details.
 
 ```bash
 python tools/convert_ImgDataset_to_WebDatasetMS_format.py

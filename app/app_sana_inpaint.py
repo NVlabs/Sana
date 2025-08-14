@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 import cv2
 import torch
+import os
 from app.sana_pipeline_inpaint import SanaPipelineInpaint, tensor_to_pil
 import argparse
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -266,16 +267,45 @@ class InpaintingInterface:
 def create_interface():
     interface = InpaintingInterface()
     
-    with gr.Blocks(title="Inpainting Mask Creator") as demo:
-        gr.Markdown("""
-        # Inpainting Mask Creator
+    # Get model information for display
+    args = get_args()
+    
+    title = f"""
+        <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>
+            <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="50%" alt="logo"/>
+        </div>
+    """
+    
+    DESCRIPTION = f"""
+            <p><span style="font-size: 36px; font-weight: bold;">Sana</span><span style="font-size: 20px; font-weight: bold;"> Inpainting</span></p>
+            <p style="font-size: 16px; font-weight: bold;"><a href="https://nvlabs.github.io/Sana">Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer</a></p>
+            <p style="font-size: 16px; font-weight: bold;">Powered by <a href="https://hanlab.mit.edu/projects/dc-ae">DC-AE</a>, <a href="https://github.com/mit-han-lab/deepcompressor">deepcompressor</a>, and <a href="https://github.com/mit-han-lab/nunchaku">nunchaku</a>.</p>
+            <p style="font-size: 16px; font-weight: bold;">Upload an image, paint mask areas in white, enter a prompt, and generate inpainted results.</p>
+            <p style="font-size: 16px; font-weight: bold;">Unsafe words will give you a 'Red Heart❤️' in the image instead.</p>
+            """
+    
+    css = """
+    .gradio-container{max-width: 1200px !important}
+    body{align-items: center;}
+    h1{text-align:center}
+    """
+    
+    with gr.Blocks(css=css, title="Sana Inpainting", delete_cache=(86400, 86400)) as demo:
+        gr.Markdown(title)
+        gr.HTML(DESCRIPTION)
+        gr.DuplicateButton(
+            value="Duplicate Space for private use",
+            elem_id="duplicate-button",
+            visible=os.getenv("SHOW_DUPLICATE_BUTTON") == "1",
+        )
         
+        gr.Markdown("""
+        ### How to use:
         1. **Upload an image** using the image editor below
         2. **Paint white areas** directly on the image where you want inpainting to occur
-        3. **Use the eraser** to remove mask areas
-        4. **Save** both the original image and mask for your inpainting model
-        
-        The mask will be saved as a grayscale image where white areas indicate regions to inpaint.
+        3. **Use the eraser** to remove mask areas  
+        4. **Enter a prompt** describing what you want to generate in the masked areas
+        5. **Adjust settings** and click "Run Inpainting"
         """)
         
         with gr.Row():
@@ -326,26 +356,54 @@ def create_interface():
                         max_lines=5
                     )
                     
-                    # Mask processing controls
-                    gr.Markdown("### Mask Processing")
-                    blur_factor = gr.Slider(
-                        minimum=0,
-                        maximum=50,
-                        value=33,
-                        step=1,
-                        label="Blur Factor",
-                        info="Higher = softer mask edges"
-                    )
-                    dilate_kernel = gr.Slider(
-                        minimum=0,
-                        maximum=30,
-                        value=0,
-                        step=1,
-                        label="Dilate Kernel",
-                        info="Expand mask regions (0 = no dilation)"
-                    )
-                    
                     run_btn = gr.Button("Run Inpainting", variant="primary", size="lg")
+                    
+                    # Advanced Settings accordion
+                    with gr.Accordion("Advanced Settings", open=False):
+                        with gr.Group():
+                            # Sampling parameters
+                            gr.Markdown("#### Sampling Parameters")
+                            with gr.Row():
+                                sampling_steps = gr.Slider(
+                                    label="Sampling Steps",
+                                    minimum=5,
+                                    maximum=40,
+                                    step=1,
+                                    value=20,
+                                )
+                                cfg_guidance_scale = gr.Slider(
+                                    label="CFG Guidance Scale",
+                                    minimum=1,
+                                    maximum=10,
+                                    step=0.1,
+                                    value=4.5,
+                                )
+                            pag_guidance_scale = gr.Slider(
+                                label="PAG Guidance Scale",
+                                minimum=0,
+                                maximum=4,
+                                step=0.1,
+                                value=1.0,
+                            )
+                            
+                            # Mask processing controls
+                            gr.Markdown("#### Mask Processing")
+                            blur_factor = gr.Slider(
+                                minimum=0,
+                                maximum=50,
+                                value=33,
+                                step=1,
+                                label="Blur Factor",
+                                info="Higher = softer mask edges"
+                            )
+                            dilate_kernel = gr.Slider(
+                                minimum=0,
+                                maximum=30,
+                                value=0,
+                                step=1,
+                                label="Dilate Kernel",
+                                info="Expand mask regions (0 = no dilation)"
+                            )
                     gr.Markdown("---")
                     reset_btn = gr.Button("Reset All", variant="secondary", size="lg")
                     clear_btn = gr.Button("Clear Mask", variant="secondary", size="lg")
@@ -446,13 +504,18 @@ def create_interface():
         def on_save_original():
             return interface.save_original()
         
-        def run_inpainting(prompt, blur_factor, dilate_kernel):
+        def run_inpainting(prompt, sampling_steps, cfg_guidance_scale, pag_guidance_scale, blur_factor, dilate_kernel):
             """
             Run the inpainting pipeline with the current image, mask, and prompt.
             
             This is where you can implement your inpainting model!
             The function receives:
             - prompt: String with the user's inpainting prompt
+            - sampling_steps: int, number of inference steps
+            - cfg_guidance_scale: float, CFG guidance scale
+            - pag_guidance_scale: float, PAG guidance scale
+            - blur_factor: int, mask blur factor
+            - dilate_kernel: int, mask dilation kernel size
             - interface.original_image: PIL Image of the original image
             - interface.current_mask: PIL Image of the mask (grayscale, white areas = inpaint)
             
@@ -460,7 +523,6 @@ def create_interface():
             - result_image: PIL Image of the inpainted result
             - status_message: String with status information
             """
-            print('start inpainting')
             if interface.original_image is None:
                 return None, "Please upload an image first"
             
@@ -485,32 +547,29 @@ def create_interface():
                 dilate_kernel=dilate_kernel
             )
             
-            # Save processed mask for debugging
-            processed_mask.save('processed_mask.png')
-            
-            # Resize images to 1024x1024 for the model
-            img = interface.original_image.resize((1024, 1024), Image.LANCZOS)
-            processed_mask = processed_mask.resize((1024, 1024), Image.LANCZOS)
+            img = interface.original_image
+            processed_mask = processed_mask
 
             # Convert images to numpy for the pipeline
             mask_array = np.array(processed_mask)
-            
+            width, height = img.size
             # Run the inpainting pipeline
             image = interface.pipe.forward(
                 image=img,
                 mask=mask_array,
                 prompt=prompt,
-                height=1024,
-                width=1024,
-                guidance_scale=4.5,
-                num_inference_steps=20,
+                height=height,
+                width=width,
+                guidance_scale=cfg_guidance_scale,
+                pag_guidance_scale=pag_guidance_scale,
+                num_inference_steps=sampling_steps,
                 generator=torch.Generator(device="cuda").manual_seed(42),
                 return_latent=False,
             )[0]
             
             result_image = tensor_to_pil(image)
             
-            return result_image, f"Inpainting completed with prompt: '{prompt}' | Blur: {blur_factor}, Dilate: {dilate_kernel}"
+            return result_image, f"Inpainting completed with prompt: '{prompt}' | Steps: {sampling_steps}, CFG: {cfg_guidance_scale}, PAG: {pag_guidance_scale}, Blur: {blur_factor}, Dilate: {dilate_kernel}"
                 
         
         # Connect events
@@ -522,7 +581,7 @@ def create_interface():
         
         run_btn.click(
             fn=run_inpainting,
-            inputs=[prompt_input, blur_factor, dilate_kernel],
+            inputs=[prompt_input, sampling_steps, cfg_guidance_scale, pag_guidance_scale, blur_factor, dilate_kernel],
             outputs=[result_display, status]
         )
         
@@ -546,14 +605,19 @@ def create_interface():
             outputs=[status]
         )
     
+        gr.HTML(
+            value="<p style='text-align: center; font-size: 14px;'>Useful link: <a href='https://accessibility.mit.edu'>MIT Accessibility</a></p>"
+        )
+    
     return demo
 
 if __name__ == "__main__":
+    args = get_args()
     # Create and launch the interface
     demo = create_interface()
-    demo.launch(
-        server_name="127.0.0.1",
+    demo.queue(max_size=20).launch(
+        server_name="0.0.0.0",
         server_port=7860,
-        share=False,
-        debug=True
+        share=args.share,
+        debug=False
     )

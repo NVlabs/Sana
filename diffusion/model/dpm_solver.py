@@ -1610,6 +1610,130 @@ class DPM_Solver:
             return x, intermediates
         else:
             return x
+ 
+    def sample_mask(
+        self,
+        x,
+        img_latent,
+        latent_mask=None,
+        steps=20,
+        t_start=None,
+        t_end=None,
+        order=2,
+        skip_type="time_uniform",
+        method="multistep",
+        lower_order_final=True,
+        denoise_to_zero=False,
+        solver_type="dpmsolver",
+        atol=0.0078,
+        rtol=0.05,
+        return_intermediate=False,
+        flow_shift=1.0,
+    ):  
+        t_0 = 1.0 / self.noise_schedule.total_N if t_end is None else t_end
+        t_T = self.noise_schedule.T if t_start is None else t_start
+        assert (
+            t_0 > 0 and t_T > 0
+        ), "Time range needs to be greater than 0. For discrete-time DPMs, it needs to be in [1 / N, 1], where N is the length of betas array"
+        if return_intermediate:
+            assert method in [
+                "multistep",
+                "singlestep",
+                "singlestep_fixed",
+            ], "Cannot use adaptive solver when saving intermediate values"
+        if self.correcting_xt_fn is not None:
+            assert method in [
+                "multistep",
+                "singlestep",
+                "singlestep_fixed",
+            ], "Cannot use adaptive solver when correcting_xt_fn is not None"
+        device = x.device
+        intermediates = []
+        
+        with torch.no_grad():
+            if method == "multistep":
+                assert steps >= order
+                timesteps = self.get_time_steps(
+                    skip_type=skip_type, t_T=t_T, t_0=t_0, N=steps, device=device, shift=flow_shift
+                )
+                assert timesteps.shape[0] - 1 == steps
+                # Init the initial values.
+                step = 0
+                t = timesteps[step]
+                t_prev_list = [t]
+                model_prev_list = [self.model_fn(x, t)]
+                if self.correcting_xt_fn is not None:
+                    x = self.correcting_xt_fn(x, t, step)
+                if return_intermediate:
+                    intermediates.append(x)
+                self.update_progress(step + 1, len(timesteps))
+                # Init the first `order` values by lower order multistep DPM-Solver.
+                t_start = 1./ steps
+
+                step = 1
+                t_end = t_start * (steps - step)
+                num_noise_steps = int(steps - step)
+                noise_source_latents, intermediates = self.inverse(img_latent, steps=num_noise_steps, t_end=t_end, return_intermediate=True)
+
+                for step in range(1, order):
+                    t = timesteps[step]
+                    
+                    noise_source_latents = intermediates[-step]
+                    x = self.multistep_dpm_solver_update(
+                        x, model_prev_list, t_prev_list, t, step, solver_type=solver_type
+                    )
+                    if self.correcting_xt_fn is not None:
+                        x = self.correcting_xt_fn(x, t, step)
+                    
+                    x = x * latent_mask + noise_source_latents * (1 - latent_mask)
+                    if return_intermediate:
+                        intermediates.append(x)
+                    t_prev_list.append(t)
+                    model_prev_list.append(self.model_fn(x, t))
+                    # update progress bar
+                    self.update_progress(step + 1, len(timesteps))
+                # Compute the remaining values by `order`-th order multistep DPM-Solver.
+                
+                for step in tqdm(range(order, steps + 1), disable=os.getenv("DPM_TQDM", "False") == "True"):
+                    t = timesteps[step]
+                    t_end = t_start * (steps - step)
+                    num_noise_steps = int(steps - step)
+                    order = 2 
+                    if num_noise_steps == 1: 
+                        order = 1
+                    if num_noise_steps >= 1:
+                        noise_source_latents = intermediates[-step]
+                    else : 
+                        noise_source_latents = img_latent
+                    # We only use lower order for steps < 10
+                    # if lower_order_final and steps < 10:
+                    if lower_order_final:  # recommended by Shuchen Xue
+                        step_order = min(order, steps + 1 - step)
+                    else:
+                        step_order = order
+                    x = self.multistep_dpm_solver_update(
+                        x, model_prev_list, t_prev_list, t, step_order, solver_type=solver_type
+                    )
+                    if self.correcting_xt_fn is not None:
+                        x = self.correcting_xt_fn(x, t, step)
+                    
+                    x = x * latent_mask + noise_source_latents * (1 - latent_mask)
+                    if return_intermediate:
+                        intermediates.append(x)
+                    for i in range(order - 1):
+                        t_prev_list[i] = t_prev_list[i + 1]
+                        model_prev_list[i] = model_prev_list[i + 1]
+                    t_prev_list[-1] = t
+                    # We do not need to evaluate the final model value.
+                    if step < steps:
+                        model_prev_list[-1] = self.model_fn(x, t)
+                    # update progress bar
+                    self.update_progress(step + 1, len(timesteps))
+                    
+        if return_intermediate:
+            return x, intermediates
+        else:
+            return x
 
 
 #############################################################

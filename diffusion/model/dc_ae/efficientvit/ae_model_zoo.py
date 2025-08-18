@@ -37,6 +37,7 @@ REGISTERED_DCAE_MODEL: dict[str, tuple[Callable, Optional[str]]] = {
     #################################################################################################
     "dc-ae-f32c32-sana-1.0": (dc_ae_f32c32, None),
     "dc-ae-f32c32-sana-1.1": (dc_ae_f32c32, None),
+    "dc-ae-turbo-f32c32-sana-1.1": (dc_ae_f32c32, None),
 }
 
 

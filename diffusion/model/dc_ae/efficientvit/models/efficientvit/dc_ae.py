@@ -473,6 +473,19 @@ def dc_ae_f32c32(name: str, pretrained_path: str) -> DCAEConfig:
             "decoder.norm=rms2d decoder.act=silu "
             "scaling_factor=0.41407"
         )
+    elif name in ["dc-ae-turbo-f32c32-sana-1.1"]:
+        cfg_str = (
+            "latent_channels=32 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViTS5_GLU,EViTS5_GLU,EViTS5_GLU] "
+            "encoder.width_list=[128,256,512,512,1024,1024] encoder.depth_list=[2,2,2,3,3,3] "
+            "encoder.downsample_block_type=Conv "
+            "decoder.block_type=ResBlock "
+            "decoder.width_list=[128,256,512,512,1024,1024] "
+            "decoder.depth_list=[0,3,5,4,4,4] "
+            "decoder.out_act=silu "
+            "pretrained_source=dc-ae "
+            "scaling_factor=0.41407"
+        )
     else:
         raise NotImplementedError
     cfg = OmegaConf.from_dotlist(cfg_str.split(" "))

@@ -39,6 +39,9 @@ pipeline = SanaSprintPipeline.from_pretrained(
     "Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers",
     torch_dtype=torch.bfloat16
 )
+# Use DC-AE-Turbo for faster speed.
+# vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-turbo-f32c32-sana-1.1-diffusers")
+# pipeline.vae = vae
 pipeline.to("cuda:0")
 
 prompt = "a tiny astronaut hatching from an egg on the moon"

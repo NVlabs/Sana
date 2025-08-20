@@ -53,7 +53,7 @@ image.save("test_out.png")
 
 ```python
 # if you want to compile the vae. You need to upgrade to torch>=2.6.0
-# DCAE1.1: 1287GB/0.12s; DCAE1.1Turbor:11299GB/0.06s; DCAE1.1Turbo-compile: 112999GB/0.03s
+# DCAE1.1: 1287MB/0.12s; DCAE1.1Turbor:11299MB/0.06s; DCAE1.1Turbo-compile: 10385MB/0.03s
 import torch
 from diffusers import AutoencoderDC
 

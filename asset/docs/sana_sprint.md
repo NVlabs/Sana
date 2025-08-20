@@ -40,6 +40,7 @@ pipeline = SanaSprintPipeline.from_pretrained(
     torch_dtype=torch.bfloat16
 )
 # Use DC-AE-Turbo for faster speed.
+# from diffusers import AutoencoderDC
 # vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-turbo-f32c32-sana-1.1-diffusers")
 # pipeline.vae = vae
 pipeline.to("cuda:0")
@@ -48,6 +49,20 @@ prompt = "a tiny astronaut hatching from an egg on the moon"
 
 image = pipeline(prompt=prompt, num_inference_steps=2).images[0]
 image.save("test_out.png")
+```
+
+```python
+# if you want to compile the vae. You need to upgrade to torch>=2.6.0
+# DCAE1.1: 1287GB/0.12s; DCAE1.1Turbor:11299GB/0.06s; DCAE1.1Turbo-compile: 112999GB/0.03s
+import torch
+from diffusers import AutoencoderDC
+
+torch._dynamo.config.force_parameter_static_shapes = False
+torch._dynamo.config.dynamic_shapes = True
+torch._dynamo.config.recompile_limit = 16
+
+vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-turbo-f32c32-sana-1.1-diffusers").to('cuda')
+vae.decode = torch.compile(vae.decode, dynamic=True)
 ```
 
 ### 2. How to use `SanaSprintPipeline`  in this repo

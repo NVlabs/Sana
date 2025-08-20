@@ -233,6 +233,7 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
 def deselect():
     return gr.Gallery(selected_index=None)
 
+
 @torch.no_grad()
 @torch.inference_mode()
 @spaces.GPU(enable_queue=True)
@@ -499,10 +500,7 @@ with gr.Blocks(css=css, title="Sana", delete_cache=(86400, 86400)) as demo:
         outputs=[result, seed],
         api_name="run",
     ).then(
-        fn=lambda: gr.Gallery(selected_index=0),
-        inputs=None,
-        outputs=result,
-        js=True
+        fn=lambda: gr.Gallery(selected_index=0), inputs=None, outputs=result, js=True
     )
     gr.HTML(
         value="<p style='text-align: center; font-size: 14px;'>Useful link: <a href='https://accessibility.mit.edu'>MIT Accessibility</a></p>"

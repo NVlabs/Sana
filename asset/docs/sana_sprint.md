@@ -39,9 +39,9 @@ pipeline = SanaSprintPipeline.from_pretrained(
     "Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers",
     torch_dtype=torch.bfloat16
 )
-# Use DC-AE-Turbo for faster speed.
+# Use DC-AE-Lite for faster speed.
 # from diffusers import AutoencoderDC
-# vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-turbo-f32c32-sana-1.1-diffusers")
+# vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers")
 # pipeline.vae = vae
 pipeline.to("cuda:0")
 
@@ -53,7 +53,7 @@ image.save("test_out.png")
 
 ```python
 # if you want to compile the vae. You need to upgrade to torch>=2.6.0
-# DCAE1.1: 1287MB/0.12s; DCAE1.1Turbor:11299MB/0.06s; DCAE1.1Turbo-compile: 10385MB/0.03s
+# DCAE1.1: 1287MB/0.12s; DCAE1.1Lite:11299MB/0.06s; DCAE1.1Lite compile: 10385MB/0.03s
 import torch
 from diffusers import AutoencoderDC
 
@@ -61,7 +61,7 @@ torch._dynamo.config.force_parameter_static_shapes = False
 torch._dynamo.config.dynamic_shapes = True
 torch._dynamo.config.recompile_limit = 16
 
-vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-turbo-f32c32-sana-1.1-diffusers").to('cuda')
+vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers").to('cuda')
 vae.decode = torch.compile(vae.decode, dynamic=True)
 ```
 

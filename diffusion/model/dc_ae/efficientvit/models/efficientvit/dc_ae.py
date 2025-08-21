@@ -473,7 +473,7 @@ def dc_ae_f32c32(name: str, pretrained_path: str) -> DCAEConfig:
             "decoder.norm=rms2d decoder.act=silu "
             "scaling_factor=0.41407"
         )
-    elif name in ["dc-ae-turbo-f32c32-sana-1.1"]:
+    elif name in ["dc-ae-lite-f32c32-sana-1.1"]:
         cfg_str = (
             "latent_channels=32 "
             "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViTS5_GLU,EViTS5_GLU,EViTS5_GLU] "

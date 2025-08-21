@@ -3,7 +3,7 @@ set -e
 
 
 echo "Testing inference"
-bash tests/bash/test_inference.sh
+bash tests/bash/inference/test_inference.sh
 
 echo "Testing training"
-bash tests/bash/test_training_1epoch.sh
+bash tests/bash/training/test_training_all.sh

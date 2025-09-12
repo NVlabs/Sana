@@ -18,11 +18,11 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
+import cv2
+import numpy as np
 import pyrallis
 import torch
-import numpy as np
 import torch.nn as nn
-import cv2
 from PIL import Image
 
 warnings.filterwarnings("ignore")  # ignore warning
@@ -61,19 +61,21 @@ def classify_height_width_bin(height: int, width: int, ratios: dict) -> Tuple[in
     default_hw = ratios[closest_ratio]
     return int(default_hw[0]), int(default_hw[1])
 
+
 def tensor_to_pil(tensor):
     # Ensure tensor is on CPU and convert to uint8
     tensor = (tensor / 2 + 0.5).clamp(0, 1).cpu()
-    
-    tensor = (tensor * 255).byte()     # Convert to [0, 255] and uint8
-    
+
+    tensor = (tensor * 255).byte()  # Convert to [0, 255] and uint8
+
     # Convert CHW to HWC format
     if tensor.dim() == 3:
         tensor = tensor.permute(1, 2, 0)
-    
+
     # Convert to numpy and create PIL Image
     numpy_array = tensor.numpy()
     return Image.fromarray(numpy_array)
+
 
 @dataclass
 class SanaInference(SanaConfig):
@@ -180,8 +182,8 @@ class SanaPipelineInpaint(nn.Module):
 
     def register_progress_bar(self, progress_fn=None):
         self.progress_fn = progress_fn if progress_fn is not None else self.progress_fn
-        
-    def _extract_into_tensor(self,arr, timesteps, broadcast_shape):
+
+    def _extract_into_tensor(self, arr, timesteps, broadcast_shape):
         """
         Extract values from a 1-D numpy array for a batch of indices.
         :param arr: the 1-D numpy array.
@@ -194,11 +196,10 @@ class SanaPipelineInpaint(nn.Module):
         while len(res.shape) < len(broadcast_shape):
             res = res[..., None]
         return res + torch.zeros(broadcast_shape, device=timesteps.device)
-   
-        
+
     def encode_latent(self, image):
         return vae_encode(self.config.vae.vae_type, self.vae, image, self.config.vae.sample_posterior, self.device)
-    
+
     def decode_latent(self, latent):
         image_space = vae_decode(self.config.vae.vae_type, self.vae, latent)
 
@@ -206,30 +207,32 @@ class SanaPipelineInpaint(nn.Module):
             image_tensor = image_space[0]  # Take first image from batch
         else:
             image_tensor = image_space  # Already [C, H, W]
-        
+
         image_tensor = image_tensor.cpu().float()  # Convert to float32 on CPU
         image_tensor = (image_tensor / 2 + 0.5).clamp(0, 1)  # Normalize from [-1,1] to [0,1]
         image_tensor = (image_tensor * 255).byte()  # Convert to uint8
-        
+
         if image_tensor.dim() == 3:
             image_tensor = image_tensor.permute(1, 2, 0)
-        
+
         numpy_array = image_tensor.numpy()
         img = Image.fromarray(numpy_array)
-        return img 
-        
-    def renoise_image(self, image, scheduler,total_steps,renoise_steps):
-        latent_clean = vae_encode(self.config.vae.vae_type, self.vae, image, self.config.vae.sample_posterior, self.device)
-        t_start = 1.0/total_steps
+        return img
+
+    def renoise_image(self, image, scheduler, total_steps, renoise_steps):
+        latent_clean = vae_encode(
+            self.config.vae.vae_type, self.vae, image, self.config.vae.sample_posterior, self.device
+        )
+        t_start = 1.0 / total_steps
         t_end = t_start * renoise_steps
         assert t_end < 1.0, "t_end should be less than or equal to 1.0"
         noised_latent = scheduler.inverse(latent_clean, steps=renoise_steps, t_end=t_end)
-        
+
         noisy_image = self.decode_latent(noised_latent)
-        noisy_image.save('renoised_image.png')
+        noisy_image.save("renoised_image.png")
         return noised_latent
-    
-    def get_prompt_embed(self,prompt,num_images_per_prompt=1):
+
+    def get_prompt_embed(self, prompt, num_images_per_prompt=1):
         if prompt is None:
             prompt = [""]
         prompts = prompt if isinstance(prompt, list) else [prompt]
@@ -273,15 +276,15 @@ class SanaPipelineInpaint(nn.Module):
                     :, :, select_index
                 ].to(self.weight_dtype)
                 emb_masks = caption_token.attention_mask[:, select_index]
-                null_y = self.null_caption_embs.repeat(len(prompts), 1, 1)[:, None].to(self.weight_dtype) 
+                null_y = self.null_caption_embs.repeat(len(prompts), 1, 1)[:, None].to(self.weight_dtype)
 
         return caption_embs, emb_masks, null_y
-    
-    def get_mask_latent(self,mask,use_resolution_binning=True, height=1024, width=1024):
-        '''
+
+    def get_mask_latent(self, mask, use_resolution_binning=True, height=1024, width=1024):
+        """
         rescale the mask to latent space size according to latent blended diffusion
-        '''
-        
+        """
+
         self.ori_height, self.ori_width = height, width
         if use_resolution_binning:
             self.height, self.width = classify_height_width_bin(height, width, ratios=self.base_ratios)
@@ -291,13 +294,13 @@ class SanaPipelineInpaint(nn.Module):
             self.height // self.config.vae.vae_downsample_rate,
             self.width // self.config.vae.vae_downsample_rate,
         )
-        
+
         # Ensure mask is a tensor and has the right dimensions
         if isinstance(mask, Image.Image):
             mask = torch.from_numpy(np.array(mask)).float()
         elif not isinstance(mask, torch.Tensor):
             mask = torch.tensor(mask).float()
-        
+
         # Add batch and channel dimensions if needed
         if mask.dim() == 2:  # [H, W]
             mask = mask.unsqueeze(0).unsqueeze(0)  # [1, 1, H, W]
@@ -308,20 +311,17 @@ class SanaPipelineInpaint(nn.Module):
                 mask = mask.unsqueeze(0)  # [1, C, H, W]
         elif mask.dim() == 4:  # [B, C, H, W]
             pass  # Already correct format
-        
+
         # Rescale mask to latent dimensions
         mask = torch.nn.functional.interpolate(
-            mask,
-            size=(self.latent_size_h, self.latent_size_w),
-            mode='bilinear',
-            align_corners=False
+            mask, size=(self.latent_size_h, self.latent_size_w), mode="bilinear", align_corners=False
         )
-        
+
         # Convert to binary mask if needed (threshold at 0.5)
         mask = (mask > 0.5).float()
-        
+
         return mask
-    
+
     @torch.inference_mode()
     def forward(
         self,
@@ -352,7 +352,7 @@ class SanaPipelineInpaint(nn.Module):
         self.guidance_type = guidance_type_select(self.guidance_type, pag_guidance_scale, self.config.model.attn_type)
 
         latent_mask = self.get_mask_latent(mask, use_resolution_binning, height, width)
-        
+
         # 1. pre-compute negative embedding
         if negative_prompt != "":
             null_caption_token = self.tokenizer(
@@ -456,8 +456,10 @@ class SanaPipelineInpaint(nn.Module):
                     noised_latent = vae_encode(
                         self.config.vae.vae_type, self.vae, image, self.config.vae.sample_posterior, self.device
                     )
-                    latent_mask = latent_mask.repeat(1,noised_latent.shape[1],1,1).to(self.device).to(self.weight_dtype)
-                    #noised_latent = self.renoise_image(image, scheduler, total_steps=num_inference_steps,renoise_steps=renoise_steps)  # Example usage of renoise_image
+                    latent_mask = (
+                        latent_mask.repeat(1, noised_latent.shape[1], 1, 1).to(self.device).to(self.weight_dtype)
+                    )
+                    # noised_latent = self.renoise_image(image, scheduler, total_steps=num_inference_steps,renoise_steps=renoise_steps)  # Example usage of renoise_image
                     sample = scheduler.sample_mask(
                         x=z,
                         img_latent=noised_latent,
@@ -468,12 +470,11 @@ class SanaPipelineInpaint(nn.Module):
                         method="multistep",
                         flow_shift=self.flow_shift,
                     )
-                    
-                
+
             sample = sample.to(self.vae_dtype)
             if return_latent:
                 return sample
-            
+
             with torch.no_grad():
                 sample = vae_decode(self.config.vae.vae_type, self.vae, sample)
 
@@ -484,6 +485,3 @@ class SanaPipelineInpaint(nn.Module):
             return sample
 
         return samples
-
-    
-

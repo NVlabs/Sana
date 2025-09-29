@@ -226,7 +226,7 @@ const videoData = {
             ]
         },
         {
-            description: "Medium close-up, daylight with soft lighting, center composition. A professional chef in a pristine white coat stands in a sleek, modern kitchen, skillfully piping the word \"Wan\" in delicate melted chocolate onto an elegant dessert plate. The chocolate flows smoothly into precise cursive letters as the chef maintains steady hands and a focused expression. Stainless steel appliances and neatly arranged culinary tools frame the sophisticated upscale kitchen background.",
+            description: "Medium close-up, daylight with soft lighting, center composition. A professional chef in a pristine white coat stands in a sleek, modern kitchen, skillfully piping the word \"SANA\" in delicate melted chocolate onto an elegant dessert plate. The chocolate flows smoothly into precise cursive letters as the chef maintains steady hands and a focused expression. Stainless steel appliances and neatly arranged culinary tools frame the sophisticated upscale kitchen background.",
             width: 832,
             height: 480,
             videos: [

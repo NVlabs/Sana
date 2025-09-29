@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANA Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+            min-height: 100vh;
+        }
+        
+        /* Light theme */
+        @media (prefers-color-scheme: light) {
+            body {
+                color: #555;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f1f3f4 100%);
+            }
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0 0 0;
+            color: #ffffff;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+            background: linear-gradient(45deg, #64b5f6, #42a5f5, #2196f3, #1e88e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo {
+            height: 2em;
+            vertical-align: middle;
+            max-width: 100%;
+            width: auto;
+        }
+
+        .subtitle {
+            font-size: medium;
+            line-height: 1.8;
+            margin-top: 40px;
+            color: #eeeeee;
+            text-align: left;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 30px;
+            padding-top: 15px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .subtitle {
+                color: #555;
+                background: linear-gradient(145deg, rgba(0,0,0,0.02), rgba(0,0,0,0.05));
+                border: 1px solid rgba(0,0,0,0.1);
+            }
+        }
+
+        .abstract-title {
+            display: inline-block;
+            width: 100%;
+            font-size: x-large;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .section {
+            background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
+            margin: 40px 0;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            border-top: 3px solid #64b5f6;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .section {
+                background: linear-gradient(145deg, #ffffff, #f8f9fa);
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                border: 1px solid #e9ecef;
+                border-top: 3px solid #64b5f6;
+            }
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #ffffff;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .section-title {
+                color: #1976d2;
+                text-shadow: 0 0 10px rgba(25,118,210,0.1);
+            }
+        }
+
+        .section-description {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #b0b0b0;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .section-description {
+                color: #777;
+            }
+        }
+
+        .video-grid {
+            column-count: 1;
+            column-gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (min-width: 768px) {
+            .video-grid {
+                column-count: 2;
+            }
+        }
+        
+        @media (min-width: 1000px) {
+            .video-grid {
+                column-count: 3;
+            }
+        }
+        
+        @media (min-width: 1300px) {
+            .video-grid {
+                column-count: 4;
+            }
+        }
+        
+        @media (min-width: 1600px) {
+            .video-grid {
+                column-count: 5;
+            }
+        }
+
+        .video-item {
+            break-inside: avoid;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .video-item {
+                background: #ffffff;
+                border-radius: 15px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                border: 1px solid #e9ecef;
+            }
+        }
+
+        .video-item {
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 1px solid #444;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .video-item {
+                background: linear-gradient(145deg, #ffffff, #f8f9fa);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                border: 1px solid #e9ecef;
+            }
+        }
+
+        .video-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(100, 181, 246, 0.2);
+            border-color: #64b5f6;
+        }
+
+        /* Comparison section styles */
+        .comparison-grid {
+            column-count: 1;
+            column-gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (min-width: 1600px) {
+            .comparison-grid {
+                column-count: 2;
+            }
+        }
+
+        .comparison-item {
+            break-inside: avoid;
+            margin-bottom: 30px;
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 1px solid #444;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .comparison-item {
+                background: linear-gradient(145deg, #ffffff, #f8f9fa);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                border: 1px solid #e9ecef;
+            }
+        }
+
+        .comparison-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(100, 181, 246, 0.2);
+            border-color: #64b5f6;
+        }
+
+        .comparison-videos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .comparison-video-container {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .comparison-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .comparison-video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .comparison-video-container:hover .comparison-video-overlay {
+            opacity: 1;
+        }
+
+        .model-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .model-badge.model-a {
+            background: rgba(255, 107, 107, 0.9);
+        }
+
+        .model-badge.model-b {
+            background: rgba(76, 175, 80, 0.9);
+        }
+
+        .model-badge.model-c {
+            background: rgba(33, 150, 243, 0.9);
+        }
+
+        .model-badge.model-d {
+            background: rgba(156, 39, 176, 0.9);
+        }
+
+        .i2v-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .reference-image {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(45deg, #333, #2a2a2a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffb74d;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-bottom: 2px solid #ffb74d;
+            position: relative;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .reference-image {
+                background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+                color: #f57c00;
+                border-bottom: 2px solid #f57c00;
+            }
+        }
+
+        .reference-image::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        .reference-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(255, 183, 77, 0.9);
+            color: #1a1a1a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .video-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .video-placeholder {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .video-player {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .video-placeholder:hover .video-overlay {
+            opacity: 1;
+        }
+
+        /* Fullscreen modal styles */
+        .fullscreen-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .fullscreen-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .fullscreen-modal {
+                background: rgba(255, 255, 255, 0.95);
+            }
+        }
+
+        .fullscreen-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 90%;
+            max-height: 90%;
+            transform: scale(0.8);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .fullscreen-modal.active .fullscreen-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .fullscreen-content {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                padding: 30px;
+            }
+        }
+
+        .fullscreen-video {
+            width: 100%;
+            max-width: min(90vw, var(--video-width, 800px));
+            height: auto;
+            aspect-ratio: var(--video-aspect-ratio, 16/9);
+            max-height: calc(60vh - 100px);
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .fullscreen-modal.active .fullscreen-video {
+            transform: scale(1);
+            opacity: 1;
+            transition-delay: 0.15s;
+        }
+        
+        @media (max-width: 768px) {
+            .fullscreen-video {
+                max-width: 95vw;
+                max-height: calc(50vh - 50px);
+            }
+            
+            .fullscreen-prompt {
+                max-width: 95vw;
+                max-height: 35vh;
+                padding: 10px 15px;
+            }
+            
+            .fullscreen-prompt-title {
+                font-size: 1rem;
+            }
+            
+            .fullscreen-prompt-description {
+                font-size: 0.9rem;
+            }
+        }
+
+        .fullscreen-video-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .fullscreen-model-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .fullscreen-prompt {
+            padding: 15px 25px;
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 15px;
+            border: 1px solid #444;
+            text-align: center;
+            width: 100%;
+            max-width: min(90vw, var(--video-width, 800px));
+            box-sizing: border-box;
+            flex-shrink: 0;
+            overflow-y: auto;
+            max-height: 30vh;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .fullscreen-modal.active .fullscreen-prompt {
+            transform: translateY(0);
+            opacity: 1;
+            transition-delay: 0.2s;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .fullscreen-prompt {
+                background: linear-gradient(145deg, #ffffff, #f8f9fa);
+                border: 1px solid #e9ecef;
+            }
+        }
+
+        .fullscreen-prompt-title {
+            color: #ffb74d;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .fullscreen-prompt-title {
+                color: #f57c00;
+            }
+        }
+
+        .fullscreen-prompt-description {
+            color: #b0b0b0;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .fullscreen-prompt-description {
+                color: #777;
+            }
+        }
+
+        .close-button {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            transform: scale(0.8);
+            opacity: 0;
+        }
+        
+        .fullscreen-modal.active .close-button {
+            transform: scale(1);
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .close-button {
+                color: #555;
+                background: rgba(255, 255, 255, 0.8);
+            }
+        }
+
+        .close-button:hover {
+            background: rgba(255, 107, 107, 0.8);
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .close-button:hover {
+                background: rgba(255, 107, 107, 0.9);
+            }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .video-info {
+            padding: 20px;
+            display: none;
+        }
+
+        .video-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #ffb74d;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .video-title {
+                color: #f57c00;
+            }
+        }
+
+        .video-description {
+            color: #b0b0b0;
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            line-height: 1.5;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .video-description {
+                color: #777;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .video-description {
+                font-size: clamp(0.75rem, 3vw, 0.9rem);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .video-description {
+                font-size: clamp(0.7rem, 3.5vw, 0.85rem);
+            }
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 107, 107, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .play-button:hover {
+            background: rgba(255, 107, 107, 1);
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 10px;
+            border: 1px solid #444;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .stat-item {
+                background: linear-gradient(145deg, #ffffff, #f8f9fa);
+                border: 1px solid #e9ecef;
+            }
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ba68c8;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(186, 104, 200, 0.3);
+        }
+
+        .stat-label {
+            color: #b0b0b0;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #b0b0b0;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .logo {
+                height: 2.5em;
+                max-width: 90vw;
+            }
+            
+            .section {
+                padding: 20px;
+                margin: 20px 0;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .video-grid {
+                column-gap: 20px;
+            }
+            
+            .video-item {
+                margin-bottom: 20px;
+            }
+            
+            .comparison-grid {
+                column-gap: 20px;
+            }
+            
+            .comparison-item {
+                margin-bottom: 20px;
+            }
+            
+            .reference-image {
+                height: 100px;
+                font-size: 0.8rem;
+            }
+            
+            .reference-label {
+                font-size: 0.6rem;
+                padding: 3px 6px;
+            }
+
+            .comparison-videos {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 8px;
+            }
+
+            .model-badge {
+                font-size: 0.6rem;
+                padding: 3px 6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                height: 2em;
+                max-width: 95vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><img src="logo.svg" alt="SANA Video" class="logo"></h1>
+            <p class="subtitle">
+                <span class="abstract-title">About SANA-Video</span><br/>
+                We introduce <strong>SANA-Video</strong>, a small diffusion model that can efficiently generate videos up to 720×1280 resolution and minute-length duration. 
+            <strong>SANA-Video</strong> synthesizes high-resolution, high-quality and long videos with strong text-video alignment at a remarkably fast speed, deployable on RTX 5090 GPU. Two core designs ensure our efficient, effective and long video generation:
+            (1) <strong>Linear DiT:</strong> We leverage linear attention as the core operation, which is more efficient than vanilla attention given the large number of tokens processed in video generation.
+            (2) <strong>Constant-Memory KV cache for Block Linear Attention:</strong> we design block-wise autoregressive approach for long video generation by employing a constant-memory state, derived from the cumulative properties of linear attention. This KV cache provides the Linear DiT with global context at a fixed memory cost, eliminating the need for a traditional KV cache and enabling efficient, minute-long video generation.
+            In addition, we explore effective data filters and model training strategies, narrowing the training cost to <strong>12 days on 64 H100 GPUs</strong>, which is only <strong>1%</strong> of the cost of MovieGen.
+            Given its low cost, <strong>SANA-Video</strong> achieves competitive performance compared to modern state-of-the-art small diffusion models (<em>e.g.</em>, Wan 2.1-1.3B and SkyReel-V2-1.3B) while being <strong>16×</strong> faster in measured latency. Moreover, <strong>SANA-Video</strong> can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (<strong>2.4×</strong> speedup).
+            In summary, <strong>SANA-Video</strong> enables low-cost, high-quality video generation.
+            Code and model will be publicly released.</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Statistics Section -->
+        <section class="section">
+            <h2 class="section-title">Model Performance</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">720P</div>
+                    <div class="stat-label">Maximum Resolution</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">16fps</div>
+                    <div class="stat-label">Frame Rate</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">1min</div>
+                    <div class="stat-label">Maximum Duration</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">60s</div>
+                    <div class="stat-label">Latency generating 5-second video</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Image-to-Video Section -->
+        <section class="section">
+            <h2 class="section-title">Image-to-Video (I2V)</h2>
+            <p class="section-description">
+                Generate dynamic videos from static images, bringing still frames to life
+            </p>
+            <div class="video-grid i2v-grid" id="i2v-grid">
+                <!-- I2V videos will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Text-to-Video Section -->
+        <section class="section">
+            <h2 class="section-title">Text-to-Video (T2V)</h2>
+            <p class="section-description">
+                Generate high-quality video content through natural language descriptions, supporting multiple styles and scenes
+            </p>
+            <div class="video-grid t2v-grid" id="t2v-grid">
+                <!-- T2V videos will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Long Video Section -->
+        <section class="section" style="display: none;">
+            <h2 class="section-title">Long Video Generation</h2>
+            <p class="section-description">
+                Generate longer, more complex narrative video content with multi-scene transitions
+            </p>
+            <div class="video-grid long-video-grid" id="long-video-grid">
+                <!-- Long video content will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- I2V Model Comparison Section -->
+        <section class="section">
+            <h2 class="section-title">Image-to-Video (I2V) Model Comparison</h2>
+            <p class="section-description">
+                Compare different I2V models side by side with the same input prompt and reference image
+            </p>
+            <div class="comparison-grid" id="i2v-comparison-grid">
+                <!-- I2V Comparison videos will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Model Comparison Section -->
+        <section class="section">
+            <h2 class="section-title">Model Comparison</h2>
+            <p class="section-description">
+                Compare different models side by side with the same input prompt
+            </p>
+            <div class="comparison-grid" id="comparison-grid">
+                <!-- Comparison videos will be dynamically added here -->
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 SANA-Video. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Fullscreen video modal -->
+    <div class="fullscreen-modal" id="fullscreen-modal" onclick="if(event.target===this) closeFullscreen()">
+        <div class="close-button" id="close-button" onclick="closeFullscreen()">×</div>
+        <div class="fullscreen-content">
+            <div class="fullscreen-video-container">
+                <video class="fullscreen-video" id="fullscreen-video" controls loop autoplay playsinline>
+                    <source src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="fullscreen-model-badge" id="fullscreen-model-badge" style="display: none;"></div>
+            </div>
+            <div class="fullscreen-prompt" id="fullscreen-prompt">
+                <div class="fullscreen-prompt-title" id="fullscreen-prompt-title"></div>
+                <div class="fullscreen-prompt-description" id="fullscreen-prompt-description"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load video data from external file -->
+    <script src="videoData.js"></script>
+    
+    <script>
+
+        // Function to create video item (T2V or I2V)
+        function createVideoItem(videoData, prefix) {
+            const titleHtml = videoData.title ? `<h3 class="video-title">${videoData.title}</h3>` : '';
+            const videoSrc = `${prefix}/${videoData.videoSrc}`;
+            const videoWidth = videoData.width;
+            const videoHeight = videoData.height;
+            
+            return `
+                <div class="video-item">
+                    <div class="video-placeholder" style="aspect-ratio: ${videoData.width}/${videoData.height};">
+                        <video class="video-player" muted loop autoplay playsinline onclick="openFullscreenFromVideo(this, '${videoSrc}', ${videoWidth}, ${videoHeight})">
+                            <source src="${videoSrc}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="video-overlay">
+                            <div class="play-button">▶</div>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        ${titleHtml}
+                        <p class="video-description">${videoData.description}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to create T2V video item
+        function createT2VVideoItem(videoData) {
+            return createVideoItem(videoData, 't2v');
+        }
+
+        // Function to create I2V video item
+        function createI2VVideoItem(videoData) {
+            return createVideoItem(videoData, 'i2v');
+        }
+
+        // Function to create Long Video item
+        function createLongVideoItem(videoData) {
+            const titleHtml = videoData.title ? `<h3 class="video-title">${videoData.title}</h3>` : '';
+            const videoSrc = `long-video/${videoData.videoSrc}`;
+            const videoWidth = videoData.width;
+            const videoHeight = videoData.height;
+            
+            return `
+                <div class="video-item">
+                    <div class="video-placeholder" style="aspect-ratio: ${videoData.width}/${videoData.height};">
+                        <video class="video-player" muted loop autoplay playsinline onclick="openFullscreenFromVideo(this, '${videoSrc}', ${videoWidth}, ${videoHeight})">
+                            <source src="${videoSrc}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="video-overlay">
+                            <div class="play-button">▶</div>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        ${titleHtml}
+                        <p class="video-description">${videoData.description}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to create Comparison item
+        function createComparisonItem(comparisonData, prefix) {
+            const videosHtml = comparisonData.videos.map(video => {
+                const videoSrc = `${prefix}/${video.videoSrc}`;
+                const videoWidth = comparisonData.width;
+                const videoHeight = comparisonData.height;
+                const modelName = video.model;
+                
+                return `
+                    <div class="comparison-video-container" style="aspect-ratio: ${comparisonData.width}/${comparisonData.height};">
+                        <video class="comparison-video" muted loop autoplay playsinline data-model="${modelName}" onclick="openFullscreenFromComparisonVideo(this, '${videoSrc}', ${videoWidth}, ${videoHeight})">
+                            <source src="${videoSrc}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="comparison-video-overlay">
+                            <div class="play-button">▶</div>
+                        </div>
+                        <div class="model-badge ${video.modelClass}">${video.model}</div>
+                    </div>
+                `;
+            }).join('');
+
+            const titleHtml = comparisonData.title ? `<h3 class="video-title">${comparisonData.title}</h3>` : '';
+            return `
+                <div class="comparison-item">
+                    <div class="comparison-videos">
+                        ${videosHtml}
+                    </div>
+                    <div class="video-info">
+                        ${titleHtml}
+                        <p class="video-description">${comparisonData.description}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createT2VComparisonItem(comparisonData) {
+            return createComparisonItem(comparisonData, 'comparison');
+        }
+
+        // Function to create Comparison item
+        function createI2VComparisonItem(comparisonData) {
+            return createComparisonItem(comparisonData, 'i2v-comparison');
+        }
+
+        // Function to populate video grids
+        function populateVideoGrids() {
+            // Populate T2V grid
+            const t2vGrid = document.getElementById('t2v-grid');
+            t2vGrid.innerHTML = videoData.t2v.map(createT2VVideoItem).join('');
+
+            // Populate I2V grid
+            const i2vGrid = document.getElementById('i2v-grid');
+            i2vGrid.innerHTML = videoData.i2v.map(createI2VVideoItem).join('');
+
+            // Populate Long Video grid
+            const longVideoGrid = document.getElementById('long-video-grid');
+            longVideoGrid.innerHTML = videoData.longVideo.map(createLongVideoItem).join('');
+
+            // Populate Comparison grid
+            const comparisonGrid = document.getElementById('comparison-grid');
+            comparisonGrid.innerHTML = videoData.comparison.map(createT2VComparisonItem).join('');
+
+            // Populate I2V Comparison grid
+            const i2vComparisonGrid = document.getElementById('i2v-comparison-grid');
+            i2vComparisonGrid.innerHTML = videoData.i2vComparison.map(createI2VComparisonItem).join('');
+        }
+
+        // Function to add new video to any section
+        function addVideoToSection(sectionType, videoData) {
+            const gridId = sectionType === 't2v' ? 't2v-grid' : 
+                          sectionType === 'i2v' ? 'i2v-grid' : 'long-video-grid';
+            const grid = document.getElementById(gridId);
+            
+            let videoHTML;
+            if (sectionType === 'i2v') {
+                videoHTML = createI2VVideoItem(videoData);
+            } else if (sectionType === 't2v') {
+                videoHTML = createT2VVideoItem(videoData);
+            } else {
+                videoHTML = createLongVideoItem(videoData);
+            }
+            
+            grid.insertAdjacentHTML('beforeend', videoHTML);
+            
+            // Initialize the new video
+            const newVideo = grid.lastElementChild.querySelector('.video-player');
+            if (newVideo) {
+                newVideo.addEventListener('loadstart', function() {
+                    this.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                    });
+                });
+            }
+        }
+
+        // Function to add multiple videos at once
+        function addVideosToSection(sectionType, videosArray) {
+            videosArray.forEach(video => {
+                addVideoToSection(sectionType, video);
+            });
+        }
+
+        // Initialize video grids when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            populateVideoGrids();
+            
+            // Ensure videos are playing automatically
+            document.querySelectorAll('.video-player').forEach(video => {
+                video.addEventListener('loadstart', function() {
+                    this.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                    });
+                });
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                const modal = document.getElementById('fullscreen-modal');
+                // Close on Escape key
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeFullscreen();
+                }
+            });
+        });
+        
+        // Open fullscreen from regular video (T2V, I2V, Long Video)
+        function openFullscreenFromVideo(videoElement, videoSrc, videoWidth, videoHeight) {
+            const videoItem = videoElement.closest('.video-item');
+            const titleElement = videoItem.querySelector('.video-title');
+            const title = titleElement ? titleElement.textContent : '';
+            const description = videoItem.querySelector('.video-description').textContent;
+            
+            openFullscreen(videoSrc, title, description, videoWidth, videoHeight);
+        }
+        
+        // Open fullscreen from comparison video
+        function openFullscreenFromComparisonVideo(videoElement, videoSrc, videoWidth, videoHeight) {
+            const comparisonItem = videoElement.closest('.comparison-item');
+            const titleElement = comparisonItem.querySelector('.video-title');
+            const title = titleElement ? titleElement.textContent : '';
+            const description = comparisonItem.querySelector('.video-description').textContent;
+            const modelName = videoElement.getAttribute('data-model');
+            
+            openFullscreen(videoSrc, title, description, videoWidth, videoHeight, modelName);
+        }
+        
+        // Open fullscreen modal
+        function openFullscreen(videoSrc, title, description, videoWidth = null, videoHeight = null, modelName = null) {
+            const modal = document.getElementById('fullscreen-modal');
+            const fullscreenVideo = document.getElementById('fullscreen-video');
+            const fullscreenSource = fullscreenVideo.querySelector('source');
+            const promptTitle = document.getElementById('fullscreen-prompt-title');
+            const promptDescription = document.getElementById('fullscreen-prompt-description');
+            const promptContainer = document.getElementById('fullscreen-prompt');
+            const modelBadge = document.getElementById('fullscreen-model-badge');
+            
+            // Set video source
+            fullscreenSource.src = videoSrc;
+            fullscreenVideo.load(); // Reload video with new source
+            
+            // Set prompt content
+            promptTitle.textContent = title;
+            promptDescription.textContent = description;
+            
+            // Show/hide model badge
+            if (modelName) {
+                modelBadge.textContent = modelName;
+                modelBadge.style.display = 'block';
+            } else {
+                modelBadge.style.display = 'none';
+            }
+            
+            // Set video dimensions using CSS variables
+            if (videoWidth && videoHeight) {
+                const aspectRatio = videoWidth / videoHeight;
+                fullscreenVideo.style.setProperty('--video-width', videoWidth + 'px');
+                fullscreenVideo.style.setProperty('--video-aspect-ratio', aspectRatio);
+                promptContainer.style.setProperty('--video-width', videoWidth + 'px');
+            } else {
+                // Reset to default values
+                fullscreenVideo.style.removeProperty('--video-width');
+                fullscreenVideo.style.removeProperty('--video-aspect-ratio');
+                promptContainer.style.removeProperty('--video-width');
+            }
+            
+            // Unmute for fullscreen
+            fullscreenVideo.muted = false;
+            
+            // Show modal
+            modal.classList.add('active');
+            
+            // Play video in fullscreen
+            fullscreenVideo.play().catch(e => {
+                console.log('Autoplay prevented in fullscreen:', e);
+            });
+        }
+        
+        // Close fullscreen modal
+        function closeFullscreen() {
+            const modal = document.getElementById('fullscreen-modal');
+            const fullscreenVideo = document.getElementById('fullscreen-video');
+            const fullscreenSource = fullscreenVideo.querySelector('source');
+            
+            modal.classList.remove('active');
+            fullscreenVideo.pause();
+            
+            // Restore muted state for grid videos
+            document.querySelectorAll('.video-player').forEach(video => {
+                video.muted = true;
+            });
+            
+            fullscreenSource.src = '';
+            fullscreenVideo.load(); // Clear the video
+        }
+
+
+    </script>
+</body>
+</html>
+
+

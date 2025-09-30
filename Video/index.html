@@ -60,7 +60,6 @@
         .subtitle {
             font-size: medium;
             line-height: 1.8;
-            margin-top: 40px;
             color: #eeeeee;
             text-align: left;
             max-width: 900px;
@@ -93,6 +92,15 @@
         .author-name {
             font-weight: 700;
             color: #e0e0e0;
+        }
+
+        .author-name a {
+            color: #76b900;
+            text-decoration: none;
+        }
+
+        .author-name a:hover {
+            text-decoration: underline;
         }
         
         @media (prefers-color-scheme: light) {
@@ -127,6 +135,115 @@
 
         .project-link a:hover {
             text-decoration: underline;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #90caf9;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #d0d0d0;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+
+        .badge:hover {
+            transform: translateY(-1px);
+            border-color: #64b5f6;
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.1);
+        }
+
+        .badge.paper {
+            border-color: #ef9a9a;
+            color: #d0d0d0;
+        }
+
+        .badge.paper:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        .badge.code {
+            border-color: #90caf9;
+            color: #d0d0d0;
+        }
+
+        .badge.code:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+            background: rgba(25, 118, 210, 0.1);
+        }
+
+        .badge.demo {
+            border-color: #a5d6a7;
+            color: #d0d0d0;
+        }
+
+        .badge.demo:hover {
+            border-color: #388e3c;
+            color: #388e3c;
+            background: rgba(56, 142, 60, 0.1);
+        }
+
+        .badge-icon {
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .badge {
+                background: transparent;
+                border: 1px solid #90caf9;
+                color: #555;
+            }
+
+            .badge.paper {
+                border-color: #ef9a9a;
+                color: #555;
+            }
+
+            .badge.paper:hover {
+                border-color: #d32f2f;
+                color: #d32f2f;
+                background: rgba(211, 47, 47, 0.1);
+            }
+
+            .badge.code {
+                border-color: #90caf9;
+                color: #555;
+            }
+
+            .badge.code:hover {
+                border-color: #1976d2;
+                color: #1976d2;
+                background: rgba(25, 118, 210, 0.1);
+            }
+
+            .badge.demo {
+                border-color: #a5d6a7;
+                color: #555;
+            }
+
+            .badge.demo:hover {
+                border-color: #388e3c;
+                color: #388e3c;
+                background: rgba(56, 142, 60, 0.1);
+            }
         }
         
         @media (prefers-color-scheme: light) {
@@ -852,32 +969,32 @@
             <h1><img src="logo.svg" alt="SANA Video" class="logo"></h1>
             <div class="authors">
                 <div class="author-line">
-                    <span class="author-name"><a href="https://lawrence-cj.github.io/" target="_blank" style="color: #76b900;">Junsong Chen</a><sup>1,2*</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://yuyangzhao.com/" target="_blank" style="color: #76b900;">Yuyang Zhao</a><sup>1*</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://github.com/yujincheng08" target="_blank" style="color: #76b900;">Jincheng Yu</a><sup>1*</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://ruihang-chu.github.io/" target="_blank" style="color: #76b900;">Ruihang Chu</a><sup>4</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://chenjy2003.github.io/" target="_blank" style="color: #76b900;">Junyu Chen</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://andysonys.github.io/" target="_blank" style="color: #76b900;">Shuai Yang</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://lawrence-cj.github.io/" target="_blank">Junsong Chen</a><sup>1,2*</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://yuyangzhao.com/" target="_blank">Yuyang Zhao</a><sup>1*</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://github.com/yujincheng08" target="_blank">Jincheng Yu</a><sup>1*</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://ruihang-chu.github.io/" target="_blank">Ruihang Chu</a><sup>4</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://chenjy2003.github.io/" target="_blank">Junyu Chen</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://andysonys.github.io/" target="_blank">Shuai Yang</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
                 </div>
                 <div class="author-line">
-                    <span class="author-name"><a href="https://peppaking8.github.io/#about-me" target="_blank" style="color: #76b900;">Xianbang Wang</a><sup>3</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://ryanpyc27.github.io/" target="_blank" style="color: #76b900;">Yicheng Pan</a><sup>4</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://zhoudaquan.github.io/homepage.io/index.html" target="_blank" style="color: #76b900;">Daquan Zhou</a><sup>5</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://www.cs.toronto.edu/~linghuan/" target="_blank" style="color: #76b900;">Huan Ling</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://haozheliu-st.github.io/" target="_blank" style="color: #76b900;">Haozhe Liu</a><sup>6</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://scholar.google.com/citations?user=ocMf7fQAAAAJ&hl=en" target="_blank" style="color: #76b900;">Hongwei Yi</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://peppaking8.github.io/#about-me" target="_blank">Xianbang Wang</a><sup>3</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://ryanpyc27.github.io/" target="_blank">Yicheng Pan</a><sup>4</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://zhoudaquan.github.io/homepage.io/index.html" target="_blank">Daquan Zhou</a><sup>5</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://www.cs.toronto.edu/~linghuan/" target="_blank">Huan Ling</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://haozheliu-st.github.io/" target="_blank">Haozhe Liu</a><sup>6</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://scholar.google.com/citations?user=ocMf7fQAAAAJ&hl=en" target="_blank">Hongwei Yi</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
                 </div>
                 <div class="author-line">
-                    <span class="author-name"><a href="https://scholar.google.com/citations?user=B8hPxMQAAAAJ&hl=en" target="_blank" style="color: #76b900;">Hao Zhang</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://lmxyy.me/" target="_blank" style="color: #76b900;">Muyang Li</a><sup>3</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://yukangchen.com/" target="_blank" style="color: #76b900;">Yukang Chen</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://han-cai.github.io/" target="_blank" style="color: #76b900;">Han Cai</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://www.cs.utoronto.ca/~fidler/" target="_blank" style="color: #76b900;">Sanja Fidler</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="http://luoping.me/" target="_blank" style="color: #76b900;">Ping Luo</a><sup>2</sup></span>
+                    <span class="author-name"><a href="https://scholar.google.com/citations?user=B8hPxMQAAAAJ&hl=en" target="_blank">Hao Zhang</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://lmxyy.me/" target="_blank">Muyang Li</a><sup>3</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://yukangchen.com/" target="_blank">Yukang Chen</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://han-cai.github.io/" target="_blank">Han Cai</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://www.cs.utoronto.ca/~fidler/" target="_blank">Sanja Fidler</a><sup>1</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="http://luoping.me/" target="_blank">Ping Luo</a><sup>2</sup></span>
                 </div>
                 <div class="author-line">
-                    <span class="author-name"><a href="https://hanlab.mit.edu/songhan/" target="_blank" style="color: #76b900;">Song Han</a><sup>1,3</sup></span>,&nbsp;&nbsp;&nbsp;
-                    <span class="author-name"><a href="https://xieenze.github.io/" target="_blank" style="color: #76b900;">Enze Xie</a><sup>1</sup></span>
+                    <span class="author-name"><a href="https://hanlab.mit.edu/songhan/" target="_blank">Song Han</a><sup>1,3</sup></span>,&nbsp;&nbsp;&nbsp;
+                    <span class="author-name"><a href="https://xieenze.github.io/" target="_blank">Enze Xie</a><sup>1</sup></span>
                 </div>
                 <div class="author-affiliation">
                     <sup>1</sup><strong>NVIDIA</strong>&nbsp;&nbsp;&nbsp;
@@ -886,6 +1003,20 @@
                     <sup>4</sup><strong>THU</strong>&nbsp;&nbsp;&nbsp;
                     <sup>5</sup><strong>PKU</strong>&nbsp;&nbsp;&nbsp;
                     <sup>6</sup><strong>KAUST</strong>
+                </div>
+                <div class="badges">
+                    <a href="https://arxiv.org/pdf/2509.24695" target="_blank" class="badge paper">
+                        <span class="badge-icon">📄</span>
+                        Paper
+                    </a>
+                    <a href="https://github.com/NVlabs/Sana" target="_blank" class="badge code">
+                        <span class="badge-icon">💻</span>
+                        Code
+                    </a>
+                    <a href="about:blank" target="_blank" class="badge demo">
+                        <span class="badge-icon">🎬</span>
+                        Demo
+                    </a>
                 </div>
             </div>
             <p class="subtitle">

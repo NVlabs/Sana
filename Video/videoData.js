@@ -86,6 +86,72 @@ const videoData = {
             height: 800,
         }
     ],
+    application: [
+        {
+            description: "Minecraft Application",
+            videoSrc: "8 MC.mp4",
+            width: 832,
+            height: 480
+        },
+        {
+            description: "Minecraft Application",
+            videoSrc: "32 MC.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "Minecraft Application",
+            videoSrc: "36 MC.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "Minecraft Application",
+            videoSrc: "129 MC.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "AgiBot Application",
+            videoSrc: "2 Bot.mp4",
+            width: 832,
+            height: 480
+        },
+        {
+            description: "AgiBot Application",
+            videoSrc: "5 Bot.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "AgiBot Application",
+            videoSrc: "70 Bot.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "AgiBot Application",
+            videoSrc: "80 Bot.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "Autodrive Application",
+            videoSrc: "2 Drive.mp4",
+            width: 832,
+            height: 480
+        },
+        {
+            description: "Autodrive Application",
+            videoSrc: "14 Drive.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "Autodrive Application",
+            videoSrc: "18 Drive.mp4",
+            width: 832,
+            height: 480
+        },{
+            description: "Autodrive Application",
+            videoSrc: "48 Drive.mp4",
+            width: 832,
+            height: 480
+        }
+    ],
     i2v: [
         {
             description: "A serene sunset over a tranquil body of water, with the sun setting behind a dense line of palm trees. The sky is painted in hues of deep orange and pink, reflecting beautifully on the calm surface of the water below. The sun's golden rays create a shimmering path across the lake, adding a magical glow to the scene. The stillness of the water enhances the peaceful ambiance, making it a perfect moment for reflection and relaxation. A wide shot capturing the entire picturesque landscape.",

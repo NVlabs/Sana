@@ -1110,6 +1110,17 @@
                 <!-- Comparison videos will be dynamically added here -->
             </div>
         </section>
+
+        <!-- Application Section -->
+        <section class="section">
+            <h2 class="section-title">Application</h2>
+            <p class="section-description">
+                Real-world applications and use cases demonstrating the practical capabilities of SANA-Video
+            </p>
+            <div class="video-grid application-grid" id="application-grid">
+                <!-- Application videos will be dynamically added here -->
+            </div>
+        </section>
     </div>
 
     <footer>
@@ -1175,6 +1186,11 @@
         // Function to create I2V video item
         function createI2VVideoItem(videoData) {
             return createVideoItem(videoData, 'i2v');
+        }
+
+        // Function to create Application video item
+        function createApplicationVideoItem(videoData) {
+            return createVideoItem(videoData, 'application');
         }
 
         // Function to create Long Video item
@@ -1258,6 +1274,10 @@
             const i2vGrid = document.getElementById('i2v-grid');
             i2vGrid.innerHTML = videoData.i2v.map(createI2VVideoItem).join('');
 
+            // Populate Application grid
+            const applicationGrid = document.getElementById('application-grid');
+            applicationGrid.innerHTML = videoData.application.map(createApplicationVideoItem).join('');
+
             // Populate Long Video grid
             const longVideoGrid = document.getElementById('long-video-grid');
             longVideoGrid.innerHTML = videoData.longVideo.map(createLongVideoItem).join('');
@@ -1274,7 +1294,8 @@
         // Function to add new video to any section
         function addVideoToSection(sectionType, videoData) {
             const gridId = sectionType === 't2v' ? 't2v-grid' : 
-                          sectionType === 'i2v' ? 'i2v-grid' : 'long-video-grid';
+                          sectionType === 'i2v' ? 'i2v-grid' : 
+                          sectionType === 'application' ? 'application-grid' : 'long-video-grid';
             const grid = document.getElementById(gridId);
             
             let videoHTML;
@@ -1282,6 +1303,8 @@
                 videoHTML = createI2VVideoItem(videoData);
             } else if (sectionType === 't2v') {
                 videoHTML = createT2VVideoItem(videoData);
+            } else if (sectionType === 'application') {
+                videoHTML = createApplicationVideoItem(videoData);
             } else {
                 videoHTML = createLongVideoItem(videoData);
             }

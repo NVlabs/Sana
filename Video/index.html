@@ -57,6 +57,28 @@
             width: auto;
         }
 
+        .paper-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .paper-title {
+                color: #333;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .paper-title {
+                font-size: 1.3rem;
+            }
+        }
+
         .subtitle {
             font-size: medium;
             line-height: 1.8;
@@ -424,6 +446,41 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             padding: 10px;
+        }
+
+        /* Application section - single column layout with 1x4 videos */
+        .application-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .application-item .comparison-videos {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .application-item .video-info {
+            display: block;
+            text-align: center;
+            padding: 15px 20px;
+        }
+
+        .application-item .video-title {
+            font-size: 1.5rem;
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 1200px) {
+            .application-item .comparison-videos {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .application-item .comparison-videos {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         .comparison-video-container {
@@ -967,6 +1024,7 @@
     <header>
         <div class="container">
             <h1><img src="logo.svg" alt="SANA Video" class="logo"></h1>
+            <h2 class="paper-title">SANA-Video: Efficient Video Generation with Block Linear Diffusion Transformer</h2>
             <div class="authors">
                 <div class="author-line">
                     <span class="author-name"><a href="https://lawrence-cj.github.io/" target="_blank">Junsong Chen</a><sup>1,2*</sup></span>,&nbsp;&nbsp;&nbsp;
@@ -1113,11 +1171,11 @@
 
         <!-- Application Section -->
         <section class="section">
-            <h2 class="section-title">Application</h2>
+            <h2 class="section-title">World simulation and physical Intelligence</h2>
             <p class="section-description">
                 Real-world applications and use cases demonstrating the practical capabilities of SANA-Video
             </p>
-            <div class="video-grid application-grid" id="application-grid">
+            <div class="application-container" id="application-grid">
                 <!-- Application videos will be dynamically added here -->
             </div>
         </section>
@@ -1188,9 +1246,9 @@
             return createVideoItem(videoData, 'i2v');
         }
 
-        // Function to create Application video item
-        function createApplicationVideoItem(videoData) {
-            return createVideoItem(videoData, 'application');
+        // Function to create Application item (comparison style)
+        function createApplicationItem(applicationData) {
+            return createComparisonItem(applicationData, 'application');
         }
 
         // Function to create Long Video item
@@ -1221,11 +1279,15 @@
 
         // Function to create Comparison item
         function createComparisonItem(comparisonData, prefix) {
+            const isApplication = prefix === 'application';
             const videosHtml = comparisonData.videos.map(video => {
                 const videoSrc = `${prefix}/${video.videoSrc}`;
                 const videoWidth = comparisonData.width;
                 const videoHeight = comparisonData.height;
                 const modelName = video.model;
+                
+                // Hide model badge for application videos
+                const badgeHtml = isApplication ? '' : `<div class="model-badge ${video.modelClass}">${video.model}</div>`;
                 
                 return `
                     <div class="comparison-video-container" style="aspect-ratio: ${comparisonData.width}/${comparisonData.height};">
@@ -1236,23 +1298,41 @@
                         <div class="comparison-video-overlay">
                             <div class="play-button">▶</div>
                         </div>
-                        <div class="model-badge ${video.modelClass}">${video.model}</div>
+                        ${badgeHtml}
                     </div>
                 `;
             }).join('');
 
-            const titleHtml = comparisonData.title ? `<h3 class="video-title">${comparisonData.title}</h3>` : '';
-            return `
-                <div class="comparison-item">
-                    <div class="comparison-videos">
-                        ${videosHtml}
+            const itemClass = isApplication ? 'comparison-item application-item' : 'comparison-item';
+            
+            // For application: show title under the row, hide description
+            // For comparison: show title and description at the bottom
+            if (isApplication) {
+                const titleHtml = comparisonData.title ? `<h3 class="video-title">${comparisonData.title}</h3>` : '';
+                return `
+                    <div class="${itemClass}">
+                        <div class="comparison-videos">
+                            ${videosHtml}
+                        </div>
+                        <div class="video-info">
+                            ${titleHtml}
+                        </div>
                     </div>
-                    <div class="video-info">
-                        ${titleHtml}
-                        <p class="video-description">${comparisonData.description}</p>
+                `;
+            } else {
+                const titleHtml = comparisonData.title ? `<h3 class="video-title">${comparisonData.title}</h3>` : '';
+                return `
+                    <div class="${itemClass}">
+                        <div class="comparison-videos">
+                            ${videosHtml}
+                        </div>
+                        <div class="video-info">
+                            ${titleHtml}
+                            <p class="video-description">${comparisonData.description}</p>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         }
 
         function createT2VComparisonItem(comparisonData) {
@@ -1276,7 +1356,7 @@
 
             // Populate Application grid
             const applicationGrid = document.getElementById('application-grid');
-            applicationGrid.innerHTML = videoData.application.map(createApplicationVideoItem).join('');
+            applicationGrid.innerHTML = videoData.application.map(createApplicationItem).join('');
 
             // Populate Long Video grid
             const longVideoGrid = document.getElementById('long-video-grid');
@@ -1304,7 +1384,7 @@
             } else if (sectionType === 't2v') {
                 videoHTML = createT2VVideoItem(videoData);
             } else if (sectionType === 'application') {
-                videoHTML = createApplicationVideoItem(videoData);
+                videoHTML = createApplicationItem(videoData);
             } else {
                 videoHTML = createLongVideoItem(videoData);
             }
@@ -1312,7 +1392,7 @@
             grid.insertAdjacentHTML('beforeend', videoHTML);
             
             // Initialize the new video
-            const newVideo = grid.lastElementChild.querySelector('.video-player');
+            const newVideo = grid.lastElementChild.querySelector('.video-player, .comparison-video');
             if (newVideo) {
                 newVideo.addEventListener('loadstart', function() {
                     this.play().catch(e => {
@@ -1366,7 +1446,8 @@
             const comparisonItem = videoElement.closest('.comparison-item');
             const titleElement = comparisonItem.querySelector('.video-title');
             const title = titleElement ? titleElement.textContent : '';
-            const description = comparisonItem.querySelector('.video-description').textContent;
+            const descriptionElement = comparisonItem.querySelector('.video-description');
+            const description = descriptionElement ? descriptionElement.textContent : '';
             const modelName = videoElement.getAttribute('data-model');
             
             openFullscreen(videoSrc, title, description, videoWidth, videoHeight, modelName);
@@ -1389,6 +1470,13 @@
             // Set prompt content
             promptTitle.textContent = title;
             promptDescription.textContent = description;
+            
+            // Hide prompt container if no description (for application videos)
+            if (!description || description.trim() === '') {
+                promptContainer.style.display = 'none';
+            } else {
+                promptContainer.style.display = 'block';
+            }
             
             // Show/hide model badge
             if (modelName) {

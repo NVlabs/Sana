@@ -88,68 +88,88 @@ const videoData = {
     ],
     application: [
         {
-            description: "Minecraft Application",
-            videoSrc: "8 MC.mp4",
+            title: "Game Generation",
+            description: "Minecraft generation",
             width: 832,
-            height: 480
+            height: 480,
+            videos: [
+                {
+                    model: "Example 1",
+                    modelClass: "model-a",
+                    videoSrc: "8 MC.mp4"
+                },
+                {
+                    model: "Example 2",
+                    modelClass: "model-b",
+                    videoSrc: "32 MC.mp4"
+                },
+                {
+                    model: "Example 3",
+                    modelClass: "model-c",
+                    videoSrc: "36 MC.mp4"
+                },
+                {
+                    model: "Example 4",
+                    modelClass: "model-d",
+                    videoSrc: "129 MC.mp4"
+                }
+            ]
         },
         {
-            description: "Minecraft Application",
-            videoSrc: "32 MC.mp4",
+            title: "Embodied AI",
+            description: "AgiBot Generation",
             width: 832,
-            height: 480
-        },{
-            description: "Minecraft Application",
-            videoSrc: "36 MC.mp4",
-            width: 832,
-            height: 480
-        },{
-            description: "Minecraft Application",
-            videoSrc: "129 MC.mp4",
-            width: 832,
-            height: 480
-        },{
-            description: "AgiBot Application",
-            videoSrc: "2 Bot.mp4",
-            width: 832,
-            height: 480
+            height: 480,
+            videos: [
+                {
+                    model: "Example 1",
+                    modelClass: "model-a",
+                    videoSrc: "2 Bot.mp4"
+                },
+                {
+                    model: "Example 2",
+                    modelClass: "model-b",
+                    videoSrc: "5 Bot.mp4"
+                },
+                {
+                    model: "Example 3",
+                    modelClass: "model-c",
+                    videoSrc: "70 Bot.mp4"
+                },
+                {
+                    model: "Example 4",
+                    modelClass: "model-d",
+                    videoSrc: "80 Bot.mp4"
+                }
+            ]
         },
         {
-            description: "AgiBot Application",
-            videoSrc: "5 Bot.mp4",
+            title: "Autonomous Driving",
+            description: "Dashcam generation",
             width: 832,
-            height: 480
-        },{
-            description: "AgiBot Application",
-            videoSrc: "70 Bot.mp4",
-            width: 832,
-            height: 480
-        },{
-            description: "AgiBot Application",
-            videoSrc: "80 Bot.mp4",
-            width: 832,
-            height: 480
-        },{
-            description: "Autodrive Application",
-            videoSrc: "2 Drive.mp4",
-            width: 832,
-            height: 480
-        },
-        {
-            description: "Autodrive Application",
-            videoSrc: "14 Drive.mp4",
-            width: 832,
-            height: 480
-        },{
-            description: "Autodrive Application",
-            videoSrc: "18 Drive.mp4",
-            width: 832,
-            height: 480
-        },{
-            description: "Autodrive Application",
-            videoSrc: "48 Drive.mp4",
-            width: 832,
-            height: 480
+            height: 480,
+            videos: [
+                {
+                    model: "Example 1",
+                    modelClass: "model-a",
+                    videoSrc: "2 Drive.mp4"
+                },
+                {
+                    model: "Example 2",
+                    modelClass: "model-b",
+                    videoSrc: "14 Drive.mp4"
+                },
+                {
+                    model: "Example 3",
+                    modelClass: "model-c",
+                    videoSrc: "18 Drive.mp4"
+                },
+                {
+                    model: "Example 4",
+                    modelClass: "model-d",
+                    videoSrc: "48 Drive.mp4"
+                }
+            ]
         }
     ],
     i2v: [

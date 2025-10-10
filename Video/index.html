@@ -459,6 +459,39 @@
             grid-template-columns: repeat(4, 1fr);
         }
 
+        /* FP4 section - grid layout like comparison section */
+        .fp4-grid {
+            column-count: 1;
+            column-gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (min-width: 1600px) {
+            .fp4-grid {
+                column-count: 2;
+            }
+        }
+
+        .fp4-item {
+            break-inside: avoid;
+            margin-bottom: 30px;
+        }
+
+        .fp4-item .comparison-videos {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .fp4-item .video-info {
+            display: block;
+            text-align: center;
+            padding: 15px 20px;
+        }
+
+        .fp4-item .video-title {
+            font-size: 1.5rem;
+            margin-bottom: 0;
+        }
+
         .application-item .video-info {
             display: block;
             text-align: center;
@@ -1178,6 +1211,18 @@
                 <!-- Application videos will be dynamically added here -->
             </div>
         </section>
+
+        <!-- FP4 Section -->
+        <section class="section">
+            <h2 class="section-title">NVFP4 vs BF16</h2>
+            <p class="section-description">
+                SANA-Video with NVFP4 quantization on RTX 5090 GPU. Latency comparison between NVFP4 and BF16 can be seen the below figure.<br/>
+                <img src="fp4 vs fp16.png" alt="FP4 vs BF16" style="width: auto; height: 10em;">
+            </p>
+            <div class="fp4-grid" id="fp4-grid">
+                <!-- FP4 videos will be dynamically added here -->
+            </div>
+        </section>
     </div>
 
     <footer>
@@ -1248,6 +1293,46 @@
         // Function to create Application item (comparison style)
         function createApplicationItem(applicationData) {
             return createComparisonItem(applicationData, 'application');
+        }
+
+        // Function to create FP4 item (comparison style with 1x2 layout)
+        function createFP4Item(fp4Data) {
+            const videosHtml = fp4Data.videos.map(video => {
+                const videoSrc = `fp4/${video.videoSrc}`;
+                const videoWidth = fp4Data.width;
+                const videoHeight = fp4Data.height;
+                const modelName = video.model;
+                
+                // Show model badge for FP4 videos
+                const badgeHtml = `<div class="model-badge ${video.modelClass}">${video.model}</div>`;
+                
+                return `
+                    <div class="comparison-video-container" style="aspect-ratio: ${fp4Data.width}/${fp4Data.height};">
+                        <video class="comparison-video" muted loop autoplay playsinline data-model="${modelName}" onclick="openFullscreenFromComparisonVideo(this, '${videoSrc}', ${videoWidth}, ${videoHeight})">
+                            <source src="${videoSrc}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="comparison-video-overlay">
+                            <div class="play-button">▶</div>
+                        </div>
+                        ${badgeHtml}
+                    </div>
+                `;
+            }).join('');
+
+            // Don't show title, but include hidden description for fullscreen
+            const titleHtml = fp4Data.title ? `<h3 class="video-title">${fp4Data.title}</h3>` : '';
+            return `
+                <div class="comparison-item fp4-item">
+                    <div class="comparison-videos">
+                        ${videosHtml}
+                    </div>
+                    <div class="video-info" style="display: none;">
+                        ${titleHtml}
+                        <p class="video-description">${fp4Data.description}</p>
+                    </div>
+                </div>
+            `;
         }
 
         // Function to create Long Video item
@@ -1356,6 +1441,12 @@
             // Populate Application grid
             const applicationGrid = document.getElementById('application-grid');
             applicationGrid.innerHTML = videoData.application.map(createApplicationItem).join('');
+
+            // Populate FP4 grid
+            const fp4Grid = document.getElementById('fp4-grid');
+            if (videoData.fp4 && videoData.fp4.length > 0) {
+                fp4Grid.innerHTML = videoData.fp4.map(createFP4Item).join('');
+            }
 
             // Populate Long Video grid
             const longVideoGrid = document.getElementById('long-video-grid');

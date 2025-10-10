@@ -86,6 +86,76 @@ const videoData = {
             height: 800,
         }
     ],
+    fp4: [
+        {
+            description: "A large orange octopus rests on the ocean floor, blending with sand and rocks, tentacles spread, eyes closed. A brown, spiky king crab creeps closer, claws raised. Wide angle captures the vast, clear, sunlit blue sea, focusing on the octopus and crab with a depth of field blur.",
+            width: 832,
+            height: 480,
+            videos: [
+                {
+                    model: "NVFP4",
+                    modelClass: "model-a",
+                    videoSrc: "5.mp4"
+                },
+                {
+                    model: "BF16",
+                    modelClass: "model-b",
+                    videoSrc: "5 fp16.mp4"
+                }
+            ]
+        },
+        {
+            description: "A lively pink pig running swiftly towards the camera in a bustling Tokyo alleyway, surrounded by neon lights and signs. Close-up, dynamic shot.",
+            width: 832,
+            height: 480,
+            videos: [
+                {
+                    model: "NVFP4",
+                    modelClass: "model-a",
+                    videoSrc: "7.mp4"
+                },
+                {
+                    model: "BF16",
+                    modelClass: "model-b",
+                    videoSrc: "7 fp16.mp4"
+                }
+            ]
+        },
+        {
+            description: "Five extraterrestrial beings with sleek, metallic bodies examine a hovering, luminescent orb in a dense forest. The orb emits a humming energy. Close-up view, slight tilt up.",
+            width: 832,
+            height: 480,
+            videos: [
+                {
+                    model: "NVFP4",
+                    modelClass: "model-a",
+                    videoSrc: "20.mp4"
+                },
+                {
+                    model: "BF16",
+                    modelClass: "model-b",
+                    videoSrc: "20 fp16.mp4"
+                }
+            ]
+        },
+        {
+            description: "Brightly lit, lush green trees and foliage, cheerful and whimsical animation. In a medium shot, pan down to reveal four animated characters on a large pale rock. Two purple-haired characters in white outfits with red \"R\" symbols stand beside a brown character and a blue cat-like creature. A small pink and white, four-eyed turtle-like character sits at their feet.",
+            width: 832,
+            height: 480,
+            videos: [
+                {
+                    model: "NVFP4",
+                    modelClass: "model-a",
+                    videoSrc: "31.mp4"
+                },
+                {
+                    model: "BF16",
+                    modelClass: "model-b",
+                    videoSrc: "31 fp16.mp4"
+                }
+            ]
+        }
+    ],
     application: [
         {
             title: "Game Generation",

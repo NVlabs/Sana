@@ -305,26 +305,35 @@ const videoData = {
     ],
     longVideo: [
         {
-            title: "Short Story",
-            description: "Complete storyline with multiple scenes and character interactions",
-            videoSrc: "test.mp4",
-            width: 1920,
-            height: 1080
+            description: "A fluffy kitten with large, expressive eyes and bunny ears is peeking out of a cardboard box. The kitten's fur is a mix of white and light brown, and it has a curious and playful expression. The background is filled with colorful toys and cardboard boxes, suggesting a playful and child-friendly environment. The kitten moves its head slightly, looking around curiously, and then reaches out with one paw, as if trying to interact with something inside the box. The scene is bright and cheerful, capturing the kitten's innocent and endearing nature. A close-up shot focusing on the kitten's face and upper body.",
+            videoSrc: "5.mp4",
+            width: 832,
+            height: 480
         },
         {
-            title: "Documentary Style",
-            description: "Long-form recording showcasing complete event development",
-            videoSrc: "test.mp4",
-            width: 1280,
-            height: 720
+            description: "A cute, fluffy dog with a happy expression runs through a vibrant, whimsical forest filled with colorful flowers and mushrooms. The sunlight filters through the trees, casting a warm, golden glow over the scene. The dog's fur shimmers as it moves, and its tail wags joyfully. The camera follows the dog closely, capturing its playful energy and the enchanting beauty of the forest. A close-up shot from a low angle.",
+            videoSrc: "13.mp4",
+            width: 832,
+            height: 480
         },
         {
-            title: "Music Video",
-            description: "Visual changes and scene transitions synchronized with musical beats",
-            videoSrc: "test.mp4",
-            width: 1920,
-            height: 1080
-        }
+            description: "A medieval knight in shining armor riding a horse through a dense, foggy forest.",
+            videoSrc: "27.mp4",
+            width: 832,
+            height: 480
+        },
+        {
+            description: "A neon-lit, vibrant clip from N3on's live stream featuring fast-paced action and dynamic camera movements. N3on, a charismatic YouTuber, is seen playing an intense video game with quick reflexes and expressive reactions. The scene includes split-screen views of N3on’s face, his gaming setup, and the game footage. The background has a futuristic, colorful aesthetic with flashing lights and energetic music. Close-up shots focus on N3on's hands on the keyboard and mouse, as well as his facial expressions. The video transitions smoothly between these elements to maintain viewer engagement.",
+            videoSrc: "36.mp4",
+            width: 832,
+            height: 480
+        },
+        {
+            description: "A man in a long black coat walks down a narrow, wet street at night, illuminated by warm streetlights. He carries a briefcase in his right hand and moves steadily forward, his back to the camera. The buildings on either side are old and weathered, with closed shutters and small windows. The wet pavement reflects the lights, creating a moody and atmospheric scene. The camera follows him from behind, maintaining a steady distance as he continues down the street.",
+            videoSrc: "72.mp4",
+            width: 832,
+            height: 480
+        },
     ],
     comparison: [
         {

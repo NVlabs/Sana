@@ -328,6 +328,25 @@
             margin-right: auto;
         }
         
+        .section-description img {
+            max-width: 100%;
+            height: auto;
+            max-height: 14em;
+            object-fit: contain;
+        }
+        
+        @media (max-width: 768px) {
+            .section-description img {
+                max-height: 12em;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .section-description img {
+                max-height: 8em;
+            }
+        }
+        
         @media (prefers-color-scheme: light) {
             .section-description {
                 color: #777;
@@ -335,32 +354,32 @@
         }
 
         .video-grid {
-            column-count: 1;
+            column-count: 2;
             column-gap: 30px;
             margin-top: 30px;
         }
         
         @media (min-width: 768px) {
             .video-grid {
-                column-count: 2;
+                column-count: 3;
             }
         }
         
         @media (min-width: 1000px) {
             .video-grid {
-                column-count: 3;
+                column-count: 4;
             }
         }
         
         @media (min-width: 1300px) {
             .video-grid {
-                column-count: 4;
+                column-count: 5;
             }
         }
         
         @media (min-width: 1600px) {
             .video-grid {
-                column-count: 5;
+                column-count: 6;
             }
         }
 
@@ -459,6 +478,27 @@
             grid-template-columns: repeat(4, 1fr);
         }
 
+        /* Long Video section - 1 row with 4 videos */
+        .long-video-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+            column-count: unset !important;
+        }
+        
+        @media (max-width: 1400px) {
+            .long-video-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 1000px) {
+            .long-video-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
         /* FP4 section - grid layout like comparison section */
         .fp4-grid {
             column-count: 1;
@@ -1217,7 +1257,7 @@
             <h2 class="section-title">NVFP4 vs BF16</h2>
             <p class="section-description">
                 SANA-Video with NVFP4 quantization on RTX 5090 GPU. Latency comparison between NVFP4 and BF16 can be seen the below figure.<br/>
-                <img src="fp4 vs fp16.png" alt="FP4 vs BF16" style="width: auto; height: 10em;">
+                <img src="fp4 vs fp16.png" alt="FP4 vs BF16">
             </p>
             <div class="fp4-grid" id="fp4-grid">
                 <!-- FP4 videos will be dynamically added here -->

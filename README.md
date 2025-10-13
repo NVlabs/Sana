@@ -55,6 +55,7 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/10/13\] 📺**SANA-Video** is coming, 1). a 5s Linear DiT Video model, and 2). real-time minute-length video generation (with [LongLive](https://github.com/NVlabs/LongLive)). [\[paper\]](https://www.arxiv.org/pdf/2509.24695) | [\[Page\]](https://nvlabs.github.io/Sana/Video/)
 - (🔥 New) \[2025/8/20\] We release a new DC-AE-Lite for faster inference and smaller memory. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd_dc_ae_lite.yaml#L52) | [\[diffusers PR\]](https://github.com/huggingface/diffusers/pull/12169) | [Weight](https://huggingface.co/mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers)
 - (🔥 New) \[2025/6/25\] [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/) was accepted to ICCV'25 🏖️
 - (🔥 New) \[2025/6/4\] SANA-Sprint [ComfyUI Node](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels) is released [\[Example\]](asset/docs/ComfyUI/SANA-Sprint.json) | [\[PR\]](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels/pull/15).
@@ -481,7 +482,9 @@ We will try our best to achieve
 - \[✅\] FSDP Training
 - \[✅\] SANA-1.5 (Larger model size / Inference Scaling)
 - \[✅\] SANA-Sprint: Few-step generator
-- \[🚀\] Video Generation
+- \[✅\] Faster DCAE-Lite [weight](https://huggingface.co/dc-ai/dc-ae-lite-f32c32-diffusers)
+- \[✅\] Better re-construction F32/F64 [VAEs](https://github.com/dc-ai-projects/DC-Gen).
+- \[🚀\] SANA-Video: 5s Linear DiT Video model, and real-time minute-length video generation (See you in ICCV 2025)
 
 # 🤗Acknowledgements
 
@@ -494,6 +497,14 @@ We will try our best to achieve
 - [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku)
 - [diffusers](https://github.com/huggingface/diffusers)
 
+Thanks [Paper2Video](https://showlab.github.io/Paper2Video/) for generating Jeason presenting SANA😊. Refer to [Paper2Video](https://showlab.github.io/Paper2Video/) for more details.
+
+<div align="center">
+  <a href="https://showlab.github.io/Paper2Video/assets/huang/huang.mp4" target="_blank">
+    <img src="asset/paper2video.jpg" alt="Presenting Video of SANA" style="width: 60%; margin: 0 auto; display: block">
+  </a>
+</div>
+
 ## Contribution
 
 Thanks goes to these wonderful contributors:
@@ -501,6 +512,7 @@ Thanks goes to these wonderful contributors:
 <a href="https://github.com/NVlabs/Sana/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=NVlabs/Sana" />
 </a>
+
 
 ## 🌟 Star History
 

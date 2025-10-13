@@ -548,4 +548,13 @@ Thanks goes to these wonderful contributors:
       primaryClass={cs.CV},
       url={https://arxiv.org/abs/2503.09641},
     }
+@misc{chen2025sana,
+      title={SANA-Video: Efficient Video Generation with Block Linear Diffusion Transformer},
+      author={Chen, Junsong and Zhao, Yuyang and Yu, Jincheng and Chu, Ruihang and Chen, Junyu and Yang, Shuai and Wang, Xianbang and Pan, Yicheng and Zhou, Daquan and Ling, Huan and others},
+      year={2025},
+      eprint={2509.24695},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2509.24695},
+    }
 ```

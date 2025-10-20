@@ -28,13 +28,13 @@ from PIL import Image
 from termcolor import colored
 from torch.utils.data import Dataset
 
-from diffusion.data.builder import DATASETS, get_data_path
+from diffusion.data.builder import DATASETS
 from diffusion.data.wids import ShardListDataset, ShardListDatasetMulti, lru_json_load
 from diffusion.utils.logger import get_root_logger
 
 
 @DATASETS.register_module()
-class SanaImgDataset(torch.utils.data.Dataset):
+class SanaImgDataset(Dataset):
     def __init__(
         self,
         data_dir="",
@@ -162,7 +162,7 @@ class SanaImgDataset(torch.utils.data.Dataset):
                 return data
             except Exception as e:
                 print(f"Error details: {str(e)}")
-                idx = idx + 1
+                idx = (idx + 1) % len(self)
         raise RuntimeError("Too many bad data.")
 
     def __len__(self):
@@ -219,7 +219,7 @@ class SanaImgDataset(torch.utils.data.Dataset):
 
 
 @DATASETS.register_module()
-class SanaWebDataset(torch.utils.data.Dataset):
+class SanaWebDataset(Dataset):
     def __init__(
         self,
         data_dir="",
@@ -233,6 +233,7 @@ class SanaWebDataset(torch.utils.data.Dataset):
         max_length=300,
         config=None,
         caption_proportion=None,
+        caption_selection_type="clipscore",  # clipscore, proportion
         sort_dataset=False,
         num_replicas=None,
         external_caption_suffixes=None,
@@ -254,6 +255,7 @@ class SanaWebDataset(torch.utils.data.Dataset):
         self.load_text_feat = load_text_feat
         self.resolution = resolution
         self.max_length = max_length
+        self.caption_selection_type = caption_selection_type
         self.caption_proportion = caption_proportion if caption_proportion is not None else {"prompt": 1.0}
         self.external_caption_suffixes = external_caption_suffixes
         self.external_clipscore_suffixes = external_clipscore_suffixes
@@ -285,8 +287,12 @@ class SanaWebDataset(torch.utils.data.Dataset):
 
         self._initialize_dataset(num_replicas, sort_dataset)
 
-        self.logger.info(f"Loading external caption json from: original_filename{external_caption_suffixes}.json")
-        self.logger.info(f"Loading external clipscore json from: original_filename{external_clipscore_suffixes}.json")
+        if len(self.external_caption_suffixes) > 0:
+            self.logger.info(f"Loading external caption json from: original_filename{external_caption_suffixes}.json")
+        if len(self.external_clipscore_suffixes) > 0:
+            self.logger.info(
+                f"Loading external clipscore json from: original_filename{external_clipscore_suffixes}.json"
+            )
         self.logger.info(f"external caption clipscore threshold: {clip_thr}, temperature: {clip_thr_temperature}")
         self.logger.info(f"Text max token length: {self.max_length}")
         self.logger.warning(f"Sort the dataset: {sort_dataset}")
@@ -442,7 +448,22 @@ class SanaWebDataset(torch.utils.data.Dataset):
             info = data[".json"]
             key = data["__key__"]
             version = info.get("version", "others")
-            return {"height": info["height"], "width": info["width"], "version": version, "key": key}
+            default_promtp_clipscore_json = data["__shard__"].replace(".tar", f"_{self.default_prompt}_clip_score.json")
+            if osp.exists(default_promtp_clipscore_json):
+                clipscore_json = lru_json_load(default_promtp_clipscore_json)
+                clip_score = float(clipscore_json[key][self.default_prompt])
+            else:
+                clip_score = 100
+            return {
+                "height": info["height"],
+                "width": info["width"],
+                "version": version,
+                "key": key,
+                "clipscore": clip_score,
+                "index": data["__index__"],
+                "__shard__": data["__shard__"],
+                "shardindex": data["__shardindex__"],
+            }
         except Exception as e:
             print(f"Error details: {str(e)}")
             return None

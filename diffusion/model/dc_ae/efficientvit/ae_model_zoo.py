@@ -21,7 +21,19 @@ import torch
 from huggingface_hub import PyTorchModelHubMixin
 from torch import nn
 
-from ..efficientvit.models.efficientvit.dc_ae import DCAE, DCAEConfig, dc_ae_f32c32, dc_ae_f64c128, dc_ae_f128c512
+from ..efficientvit.models.efficientvit.dc_ae import (
+    DCAE,
+    DCAEConfig,
+    dc_ae_f32c32,
+    dc_ae_f64c128,
+    dc_ae_f128c512,
+    dc_vae_f32,
+)
+from ..efficientvit.models.efficientvit.dc_ae_with_temporal import (
+    DCAEWithTemporal,
+    DCAEWithTemporalConfig,
+    st_dc_ae_f32t4c32_chunked_causal,
+)
 
 __all__ = ["create_dc_ae_model_cfg", "DCAE_HF", "AutoencoderKL"]
 
@@ -38,6 +50,13 @@ REGISTERED_DCAE_MODEL: dict[str, tuple[Callable, Optional[str]]] = {
     "dc-ae-f32c32-sana-1.0": (dc_ae_f32c32, None),
     "dc-ae-f32c32-sana-1.1": (dc_ae_f32c32, None),
     "dc-ae-lite-f32c32-sana-1.1": (dc_ae_f32c32, None),
+    "dc-vae-f32t4c128": (dc_vae_f32, None),
+    "dc-vae-f32t1c128": (dc_vae_f32, None),
+    "dc-vae-f32t4c128-nospatialtiling": (dc_vae_f32, None),
+    ## st-dc-ae
+    "st-dc-ae-f32t4c32": (st_dc_ae_f32t4c32_chunked_causal, None),
+    "st-dc-ae-f32t4c32-chunk40": (st_dc_ae_f32t4c32_chunked_causal, None),
+    "st-dc-ae-f32t4c32-chunk40-ivj": (st_dc_ae_f32t4c32_chunked_causal, None),
 }
 
 
@@ -53,6 +72,23 @@ class DCAE_HF(DCAE, PyTorchModelHubMixin):
     def __init__(self, model_name: str):
         cfg = create_dc_ae_model_cfg(model_name)
         DCAE.__init__(self, cfg)
+
+
+class DCAEWithTemporal_HF(DCAEWithTemporal, PyTorchModelHubMixin):
+    def __init__(self, model_name: str):
+        cfg = create_dc_ae_model_cfg(model_name)
+        DCAEWithTemporal.__init__(self, cfg)
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path: str, **kwargs):
+        if pretrained_model_name_or_path.endswith(".pt"):
+            model_name = kwargs.get("model_name", "st-dc-ae-f32t4c32")
+            model = cls(model_name)
+            state_dict = torch.load(pretrained_model_name_or_path, map_location="cpu")["model_state_dict"]
+            model.load_state_dict(state_dict, strict=True)
+            return model
+        else:
+            super().from_pretrained(pretrained_model_name_or_path, **kwargs)
 
 
 class AutoencoderKL(nn.Module):

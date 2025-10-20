@@ -17,7 +17,6 @@
 import time
 from dataclasses import dataclass
 
-import ipdb
 import torch
 from modules.flash_attn import FlashAttention
 from modules.lite_mla import LiteMLA
@@ -200,7 +199,6 @@ def main():
                 dy = 0.1 * torch.randn_like(output)
                 output.backward(dy)
                 ref_output.backward(dy.float())
-                # ipdb.set_trace()
             ref_output_1 = ref_block(ref_x)
             assert torch.allclose(ref_output, ref_output_1)
             output_float = output.float()
@@ -226,7 +224,6 @@ def main():
                         f"max error: {(grad_float - ref_grad).abs().max()}, mean error: {(grad_float - ref_grad).abs().mean()}"
                     )
                     print(f"max error pos: {ref_grad.view(-1)[max_error_pos]} {grad_float.view(-1)[max_error_pos]}")
-            # ipdb.set_trace()
         if correct:
             print("correct!")
     elif cfg.use_cuda_graph:
@@ -279,7 +276,6 @@ def main():
         )
         grad_y = 0.1 * torch.randn_like(x)
         for i in range(cfg.warmup_iterations):
-            # ipdb.set_trace()
             with torch.autocast(device_type="cuda", dtype=autocast_dtype, enabled=cfg.autocast):
                 y = block(x)
             if cfg.backward:
@@ -295,27 +291,8 @@ def main():
         torch.cuda.synchronize()
         end_time = time.time()
         print(f"each step takes {(end_time - start_time) * 1000 / cfg.iterations:.2f} ms")
-        # ipdb.set_trace()
         print(f"max memory allocated: {torch.cuda.max_memory_allocated() / 1024 ** 3:.4f} GB")
-
-    # x = torch.randn(cfg.batch_size*2, (cfg.input_size*2)**2, cfg.num_channels, device=device, dtype=dtype, requires_grad=cfg.backward)
-    # grad_y = 0.1*torch.randn_like(x)
-    # with torch.autocast(device_type="cuda", dtype=autocast_dtype, enabled=cfg.autocast):
-    #     y = block(x)
-    # if cfg.backward:
-    #     y.backward(grad_y)
 
 
 if __name__ == "__main__":
     main()
-
-"""
-# 64x64 fp16
-python -m develop_triton_litemla attn_type=LiteMLA test_correctness=True
-each step takes 10.81 ms
-max memory allocated: 2.2984 GB
-
-python -m develop_triton_litemla attn_type=TritonLiteMLA test_correctness=True
-each step takes 4.70 ms
-max memory allocated: 1.6480 GB
-"""

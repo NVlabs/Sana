@@ -15,12 +15,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import math
+import os
 from typing import Callable, Optional, Tuple
 
 import numpy as np
 import torch
 import torch.optim
 from bitsandbytes.optim import AdamW8bit
+from came_pytorch import CAME
 from mmcv import Config
 from mmcv.runner import OPTIMIZER_BUILDERS, OPTIMIZERS, DefaultOptimizerConstructor
 from mmcv.runner import build_optimizer as mm_build_optimizer
@@ -74,6 +76,8 @@ class MyOptimizerConstructor(DefaultOptimizerConstructor):
         is_norm = isinstance(module, (_BatchNorm, _InstanceNorm, GroupNorm, LayerNorm))
 
         for name, param in module.named_parameters(recurse=False):
+            param_group_name = f"{prefix}.{name}" if prefix else name
+
             base_lr = self.base_lr
             if name == "bias" and not (is_norm or is_dcn_module):
                 base_lr *= bias_lr_mult
@@ -89,7 +93,8 @@ class MyOptimizerConstructor(DefaultOptimizerConstructor):
                     # TODO: current bias_decay_mult will have affect on DCN
                     base_wd *= bias_decay_mult
 
-            param_group = {"params": [param]}
+            param_group = {"params": [param], "name": param_group_name}  # Add parameter name
+
             if not param.requires_grad:
                 param_group["requires_grad"] = False
                 params.append(param_group)
@@ -101,18 +106,13 @@ class MyOptimizerConstructor(DefaultOptimizerConstructor):
             # if the parameter match one of the custom keys, ignore other rules
             is_custom = False
             for key in custom_keys:
-                if isinstance(key, tuple):
-                    scope, key_name = key
-                else:
-                    scope, key_name = None, key
+                scope = key.rsplit(".", 1)[0]  # Get module name
+                key_name = key.rsplit(".", 1)[1]
                 if scope is not None and scope not in f"{prefix}":
                     continue
                 if key_name in f"{prefix}.{name}":
                     is_custom = True
                     if "lr_mult" in custom_keys[key]:
-                        # if 'base_classes' in f'{prefix}.{name}' or 'attn_base' in f'{prefix}.{name}':
-                        #     param_group['lr'] = self.base_lr
-                        # else:
                         param_group["lr"] = self.base_lr * custom_keys[key]["lr_mult"]
                     elif "lr" not in param_group:
                         param_group["lr"] = base_lr
@@ -139,7 +139,7 @@ class MyOptimizerConstructor(DefaultOptimizerConstructor):
 def build_optimizer(model, optimizer_cfg):
     # default parameter-wise config
     logger = get_root_logger()
-
+    rank = int(os.environ["RANK"])
     if hasattr(model, "module"):
         model = model.module
     # set optimizer constructor
@@ -148,7 +148,11 @@ def build_optimizer(model, optimizer_cfg):
     custom_keys = dict()
     for name, module in model.named_modules():
         if hasattr(module, "zero_weight_decay"):
-            custom_keys.update({(name, key): dict(decay_mult=0) for key in module.zero_weight_decay})
+            custom_keys.update({f"{name}.{key}": dict(decay_mult=0) for key in module.zero_weight_decay})
+
+        if hasattr(module, "lr_scale") and module.lr_scale is not None:
+            for lr_mult, keys in module.lr_scale.items():
+                custom_keys.update({f"{name}.{key}": dict(lr_mult=float(lr_mult)) for key in keys})
 
     paramwise_cfg = Config(dict(cfg=dict(custom_keys=custom_keys)))
     given_cfg = optimizer_cfg.get("paramwise_cfg")
@@ -178,7 +182,8 @@ def build_optimizer(model, optimizer_cfg):
         [f"{len(group)} params with weight decay {wd}" for wd, group in weight_decay_groups.items()]
     )
     opt_info = f"{optimizer.__class__.__name__} Optimizer: total {len(optimizer.param_groups)} param groups, {fix_info}. {lr_info}; {wd_info}."
-    logger.info(opt_info)
+    if rank == 0:
+        logger.info(opt_info)
 
     return optimizer
 
@@ -300,7 +305,7 @@ class CAMEWrapper(torch.optim.Optimizer):
         return False
 
     def _get_options(self, param_shape):
-        if len(param_shape) == 4:  # Convolutional layer
+        if len(param_shape) == 4:  # Conv layer
             if param_shape[2] == 1 and param_shape[3] == 1:  # 1x1 conv
                 return True, "1x1_conv"
             else:  # 3x3 conv or others
@@ -349,7 +354,7 @@ class CAMEWrapper(torch.optim.Optimizer):
                     state["exp_avg"] = torch.zeros_like(grad)
                     if factored:
                         if layer_type == "1x1_conv" or layer_type == "linear":
-                            # 1x1 conv and linear layers can be handled in the same way
+                            # 1x1 conv and linear layers can be handled the same way
                             state["exp_avg_sq_row"] = torch.zeros(grad_shape[0]).type_as(grad)
                             state["exp_avg_sq_col"] = torch.zeros(grad_shape[1]).type_as(grad)
                             state["exp_avg_res_row"] = torch.zeros(grad_shape[0]).type_as(grad)
@@ -373,7 +378,7 @@ class CAMEWrapper(torch.optim.Optimizer):
                     if layer_type == "1x1_conv" or layer_type == "linear":
                         # Handle dimensions
                         if len(grad_shape) == 4:  # 1x1 conv
-                            update_reshaped = update.squeeze(-1).squeeze(-1)  # Remove the last two dimensions
+                            update_reshaped = update.squeeze(-1).squeeze(-1)  # Remove last two dimensions
                         else:
                             update_reshaped = update
 
@@ -391,7 +396,7 @@ class CAMEWrapper(torch.optim.Optimizer):
                         update = update.view(grad_shape[0], grad_shape[1], 1, 1)
                     update.mul_(grad)
                 else:
-                    # 3x3 conv or other cases: use standard AdamW method
+                    # 3x3 conv or other cases: use standard AdamW approach
                     exp_avg_sq = state["exp_avg_sq"]
                     exp_avg_sq.mul_(group["betas"][1]).add_(update, alpha=1.0 - group["betas"][1])
                     update = exp_avg_sq.rsqrt().mul_(grad)
@@ -427,7 +432,7 @@ class CAMEWrapper(torch.optim.Optimizer):
                     # Approximate calculation
                     res_approx = self._approx_sq_grad(exp_avg_res_row, exp_avg_res_col)
                     if layer_type == "1x1_conv":
-                        # Need to reshape back to 4D
+                        # 需要reshape回4D
                         res_approx = res_approx.view(grad_shape[0], grad_shape[1], 1, 1)
                     update = res_approx.mul_(exp_avg)
                 else:
@@ -444,22 +449,25 @@ class CAMEWrapper(torch.optim.Optimizer):
 
 @OPTIMIZERS.register_module()
 class CAME8BitWrapper(torch.optim.Optimizer):
-    """8-bit implementation of the CAME optimizer
+    """Implements 8bit-CAME algorithm.
 
     Args:
-        params (iterable): Parameters to optimize
-        lr (float): Learning rate
-        eps (tuple[float, float]): Numerical stability constants
-        clip_threshold (float): Gradient clipping threshold
-        betas (tuple[float, float, float]): Momentum coefficients
-        weight_decay (float): Weight decay
-        block_size (int): Quantization block size, larger blocks are more memory efficient but less precise
-        min_8bit_size (int): Minimum parameter size to use 8-bit, only layers larger than this will be quantized
+        params (iterable): parameters to optimize or dicts defining parameter groups
+        lr (float, optional): external learning rate (default: None)
+        eps (tuple[float, float]): regularization constants for square gradient
+            and instability respectively (default: (1e-30, 1e-16))
+        clip_threshold (float): threshold of root-mean-square of
+            final gradient update (default: 1.0)
+        betas (tuple[float, float, float]): coefficient used for computing running averages of
+            update, square gradient and instability (default: (0.9, 0.999, 0.9999)))
+        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+        block_size (int): quantization block size, larger memory efficiency, but may reduce accuracy
+        min_8bit_size (int): minimum parameter size for using 8bit quantization, only layers larger than this value will be quantized
 
     Note:
-        1. Only large Linear and 1x1 Conv layers are quantized to 8-bit
-        2. All statistics (e.g., exp_avg_sq_row) remain in 32-bit for stability
-        3. Uses a simple min-max quantization strategy, each block is quantized separately
+        1. Only use 8bit quantization for large Linear layers and 1x1 Conv layers
+        2. Keep all statistics (exp_avg_sq_row, etc.) in 32bit to ensure stability
+        3. Use simple min-max quantization strategy, quantize each block separately
     """
 
     def __init__(
@@ -470,8 +478,8 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         clip_threshold=1.0,
         betas=(0.9, 0.999, 0.9999),
         weight_decay=0.0,
-        block_size=2048,  # Quantization block size
-        min_8bit_size=16384,  # Minimum parameter size to use 8-bit
+        block_size=2048,
+        min_8bit_size=16384,
     ):
         assert lr > 0.0
         assert all([0.0 <= beta <= 1.0 for beta in betas])
@@ -491,13 +499,13 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         super().__init__(params, defaults)
 
     def print_layer_info(self, param_shape, use_8bit):
-        """Prints layer information, including parameter count and whether 8-bit quantization is used
+        """Print layer information, including parameter size and whether 8bit quantization is used
 
         Args:
-            param_shape (tuple): Shape of the parameters
-            use_8bit (bool): Whether 8-bit quantization is used
+            param_shape (tuple): parameter shape
+            use_8bit (bool): whether 8bit quantization is used
         """
-        size = np.prod(param_shape)  # Calculate parameter count
+        size = np.prod(param_shape)
         layer_type = "unknown"
         if len(param_shape) == 1:
             layer_type = "1D Layer"
@@ -513,31 +521,31 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         print(f"{layer_type} layer with shape {param_shape}: {size:,} params -> using {status}")
 
     def _should_use_8bit(self, param_shape):
-        """Determines whether parameters should be quantized to 8-bit
+        """Determine if a parameter should be quantized to 8bit
 
         Rules:
-        1. Linear layers: parameter count > min_8bit_size
-        2. 1x1 conv layers: parameter count > min_8bit_size
-        3. Other cases: use 32-bit
+        1. linear layers: parameter size > min_8bit_size
+        2. 1x1 conv layers: parameter size > min_8bit_size
+        3. other layers: use 32bit
         """
-        if len(param_shape) == 2:  # Linear layers
+        if len(param_shape) == 2:  # linear layer
             return param_shape[0] * param_shape[1] > self.defaults["min_8bit_size"]
-        elif len(param_shape) == 4 and param_shape[2] == 1 and param_shape[3] == 1:  # Only quantize 1x1 conv
+        elif len(param_shape) == 4 and param_shape[2] == 1 and param_shape[3] == 1:
             return param_shape[0] * param_shape[1] > self.defaults["min_8bit_size"]
-        return False  # Other layers are not quantized
+        return False  # other layers are not quantized
 
     def _quantize_state(self, state_tensor, block_size=2048):
-        """Quantizes the state tensor to 8-bit
+        """Quantize a state tensor to 8bit
 
         Args:
-            state_tensor: Tensor to be quantized
-            block_size: Block size for quantization
+            state_tensor: tensor to be quantized
+            block_size: quantization block size
 
         Returns:
-            List of quantized data blocks, each block contains:
+            list of quantized data blocks, each block contains:
             - data: uint8 data
-            - scale: Quantization scale
-            - min: Minimum value
+            - scale: quantization scale
+            - min: minimum value
         """
         if state_tensor.numel() <= 1:
             return state_tensor
@@ -555,13 +563,13 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         return quantized_chunks
 
     def _dequantize_state(self, quantized_chunks):
-        """Dequantizes 8-bit quantized data to 32-bit floats
+        """Dequantize 8bit quantized data to 32bit float
 
         Args:
-            quantized_chunks: List of quantized data blocks
+            quantized_chunks: list of quantized data blocks
 
         Returns:
-            Dequantized 32-bit float tensor
+            dequantized 32bit float tensor
         """
         if not isinstance(quantized_chunks, list):
             return quantized_chunks
@@ -574,35 +582,33 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         return torch.cat(chunks)
 
     def _dequantize_state_first_step(self, quantized_chunks):
-        """Efficient dequantization specifically for the first step"""
+        """Efficient dequantization for the first step"""
         if not isinstance(quantized_chunks, list):
             return quantized_chunks
 
-        # 1. Dequantize all chunks to CPU first
+        # 1. Dequantize all chunks to CPU
         dequantized_chunks = []
         for chunk_dict in quantized_chunks:
             chunk = chunk_dict["data"].float() * chunk_dict["scale"] + chunk_dict["min"]
             dequantized_chunks.append(chunk)
-            # Clear original data
             del chunk_dict["data"]
             torch.cuda.empty_cache()
 
         # 2. Concatenate all chunks
         result = torch.cat(dequantized_chunks)
 
-        # 3. Clear intermediate results
         del dequantized_chunks
         torch.cuda.empty_cache()
 
         return result
 
     def _get_options(self, param_shape):
-        if len(param_shape) == 4:  # Convolutional layer
-            if param_shape[2] == 1 and param_shape[3] == 1:  # 1x1 conv
+        if len(param_shape) == 4:
+            if param_shape[2] == 1 and param_shape[3] == 1:
                 return True, "1x1_conv"
-            else:  # 3x3 conv or others
+            else:
                 return False, "conv"
-        elif len(param_shape) == 2:  # Linear layer
+        elif len(param_shape) == 2:
             return True, "linear"
         return False, "other"
 
@@ -615,12 +621,12 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         return torch.mul(r_factor, c_factor)
 
     def step(self, closure=None):
-        """Performs a single optimization step
+        """Perform a single optimization step
 
         Main steps:
-        1. Determine whether 8-bit quantization is needed
+        1. Determine if 8bit quantization is needed
         2. Update first and second moment estimates
-        3. Calculate update step size
+        3. Compute update step
         4. Apply confidence-guided strategy
         """
         loss = None
@@ -642,7 +648,7 @@ class CAME8BitWrapper(torch.optim.Optimizer):
                 grad_shape = grad.shape
                 factored, layer_type = self._get_options(grad_shape)
 
-                # Determine whether to use 8-bit quantization
+                # Determine if 8bit quantization is used
                 use_8bit = self._should_use_8bit(grad_shape)
 
                 # State Initialization
@@ -650,7 +656,7 @@ class CAME8BitWrapper(torch.optim.Optimizer):
                     self.print_layer_info(grad_shape, use_8bit)
 
                     state["step"] = 0
-                    # Only use 8-bit quantization for large matrices
+                    # Only use 8bit quantization for large matrices
                     if use_8bit:
                         state["exp_avg"] = self._quantize_state(torch.zeros_like(grad), group["block_size"])
                     else:
@@ -658,7 +664,7 @@ class CAME8BitWrapper(torch.optim.Optimizer):
 
                     if factored:
                         if layer_type == "1x1_conv" or layer_type == "linear":
-                            # Row and column statistics remain in 32-bit
+                            # Keep row and column statistics in 32bit
                             state["exp_avg_sq_row"] = torch.zeros(grad_shape[0]).type_as(grad)
                             state["exp_avg_sq_col"] = torch.zeros(grad_shape[1]).type_as(grad)
                             state["exp_avg_res_row"] = torch.zeros(grad_shape[0]).type_as(grad)
@@ -682,9 +688,8 @@ class CAME8BitWrapper(torch.optim.Optimizer):
 
                 update = (grad**2) + group["eps"][0]
                 if factored:
-                    # Row and column decomposition case
-                    exp_avg_sq_row = state["exp_avg_sq_row"]  # 32-bit
-                    exp_avg_sq_col = state["exp_avg_sq_col"]  # 32-bit
+                    exp_avg_sq_row = state["exp_avg_sq_row"]  # 32bit
+                    exp_avg_sq_col = state["exp_avg_sq_col"]  # 32bit
 
                     if layer_type == "1x1_conv" or layer_type == "linear":
                         if len(grad_shape) == 4:
@@ -705,7 +710,6 @@ class CAME8BitWrapper(torch.optim.Optimizer):
                         update = update.view(grad_shape[0], grad_shape[1], 1, 1)
                     update.mul_(grad)
                 else:
-                    # Non-decomposition case
                     exp_avg_sq = self._dequantize_state(state["exp_avg_sq"]) if use_8bit else state["exp_avg_sq"]
                     exp_avg_sq.mul_(group["betas"][1]).add_(update, alpha=1.0 - group["betas"][1])
                     if use_8bit:
@@ -730,8 +734,8 @@ class CAME8BitWrapper(torch.optim.Optimizer):
                 res = (update - exp_avg) ** 2 + group["eps"][1]
 
                 if factored:
-                    exp_avg_res_row = state["exp_avg_res_row"]  # 32-bit
-                    exp_avg_res_col = state["exp_avg_res_col"]  # 32-bit
+                    exp_avg_res_row = state["exp_avg_res_row"]  # 32bit
+                    exp_avg_res_col = state["exp_avg_res_col"]  # 32bit
 
                     if layer_type == "1x1_conv" or layer_type == "linear":
                         if len(grad_shape) == 4:
@@ -765,8 +769,8 @@ class CAME8BitWrapper(torch.optim.Optimizer):
         return loss
 
     def load_state_dict(self, state_dict):
-        """Loads the state dictionary and converts the corresponding states to 8-bit"""
-        super().load_state_dict(state_dict)  # Call the parent class method
+        """Load state dict and convert relevant states to 8bit"""
+        super().load_state_dict(state_dict)
 
         for state in self.state.values():
             for key in [
@@ -781,15 +785,15 @@ class CAME8BitWrapper(torch.optim.Optimizer):
                     if isinstance(state[key], list):
                         state[key] = [
                             {
-                                "data": exp["data"].byte(),  # Directly convert data to 8-bit
+                                "data": exp["data"].byte(),  # Convert data to 8bit directly
                                 "scale": exp["scale"],  # Keep scale unchanged
                                 "min": exp["min"],  # Keep min unchanged
                             }
                             for exp in state[key]
                         ]
                     elif isinstance(state[key], torch.Tensor):
-                        # If it's a tensor, keep it as 32-bit
-                        state[key] = state[key].float()  # Ensure it's 32-bit
+                        # If tensor, keep as 32bit
+                        state[key] = state[key].float()  # Ensure 32bit
 
         del state_dict
         torch.cuda.empty_cache()

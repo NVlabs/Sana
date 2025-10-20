@@ -21,6 +21,7 @@ import re
 import sys
 from collections.abc import Iterable
 from itertools import repeat
+from typing import Any
 
 import torch
 import torch.distributed as dist
@@ -28,7 +29,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 from torch.utils.checkpoint import checkpoint, checkpoint_sequential
-from torchvision import transforms as T
 
 
 def _ntuple(n):
@@ -42,6 +42,7 @@ def _ntuple(n):
 
 to_1tuple = _ntuple(1)
 to_2tuple = _ntuple(2)
+to_3tuple = _ntuple(3)
 
 
 def set_grad_checkpoint(model, gc_step=1):
@@ -564,6 +565,10 @@ def mask_feature(emb, mask):
         return masked_feature, emb.shape[2]
 
 
+def list_sum(x: list) -> Any:
+    return x[0] if len(x) == 1 else x[0] + list_sum(x[1:])
+
+
 def val2list(x: list or tuple or any, repeat_time=1) -> list:  # type: ignore
     """Repeat `val` for `repeat_time` times and return the list or val if list/tuple."""
     if isinstance(x, (list, tuple)):
@@ -596,7 +601,7 @@ def get_weight_dtype(mixed_precision):
         return torch.float16
     elif mixed_precision in ["bf16", "bfloat16"]:
         return torch.bfloat16
-    elif mixed_precision in ["fp32", "float32"]:
+    elif mixed_precision in ["fp32", "float32", "float"]:
         return torch.float32
     else:
         raise ValueError(f"weigh precision {mixed_precision} is not defined")

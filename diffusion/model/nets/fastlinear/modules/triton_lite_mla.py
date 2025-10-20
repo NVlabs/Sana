@@ -16,7 +16,6 @@
 
 from typing import Optional
 
-import ipdb
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -74,7 +73,6 @@ class TritonLiteMLAFunction(torch.autograd.Function):
         B, N, H, C1 = vk_q.shape
         C = C1 - 1
 
-        # ipdb.set_trace()
         grad_proj_weight = (
             (grad_y.reshape(-1, H * C).T @ proj_input.view(-1, H * C)).to(ctx.proj_dtype)
             if ctx.needs_input_grad[2]

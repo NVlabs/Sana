@@ -14,12 +14,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import glob
+
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import os
 import random
+import traceback
 
 import numpy as np
 import torch
+from PIL import Image
 from torchvision import transforms as T
 from torchvision.transforms.functional import InterpolationMode
 from tqdm import tqdm
@@ -27,13 +31,8 @@ from tqdm import tqdm
 from diffusion.data.builder import DATASETS
 from diffusion.data.datasets.sana_data import SanaWebDataset
 from diffusion.data.datasets.utils import *
+from diffusion.data.transforms import get_closest_ratio
 from diffusion.data.wids import lru_json_load
-
-
-def get_closest_ratio(height: float, width: float, ratios: dict):
-    aspect_ratio = height / width
-    closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - aspect_ratio))
-    return ratios[closest_ratio], float(closest_ratio)
 
 
 @DATASETS.register_module()
@@ -46,6 +45,7 @@ class SanaWebDatasetMS(SanaWebDataset):
         max_shards_to_load=None,
         transform=None,
         resolution=256,
+        aspect_ratio_type=None,
         sample_subset=None,
         load_vae_feat=False,
         load_text_feat=False,
@@ -56,6 +56,7 @@ class SanaWebDatasetMS(SanaWebDataset):
         caption_proportion=None,
         sort_dataset=False,
         num_replicas=None,
+        caption_selection_type="clipscore",  # clipscore, proportion
         external_caption_suffixes=None,
         external_clipscore_suffixes=None,
         clip_thr=0.0,
@@ -78,6 +79,7 @@ class SanaWebDatasetMS(SanaWebDataset):
             max_length=max_length,
             config=config,
             caption_proportion=caption_proportion,
+            caption_selection_type=caption_selection_type,
             sort_dataset=sort_dataset,
             num_replicas=num_replicas,
             external_caption_suffixes=external_caption_suffixes,
@@ -87,8 +89,8 @@ class SanaWebDatasetMS(SanaWebDataset):
             vae_downsample_rate=32,
             **kwargs,
         )
-        self.base_size = int(kwargs["aspect_ratio_type"].split("_")[-1])
-        self.aspect_ratio = eval(kwargs.pop("aspect_ratio_type"))  # base aspect ratio
+        self.base_size = resolution
+        self.aspect_ratio = eval(aspect_ratio_type)  # base aspect ratio
         self.ratio_index = {}
         self.ratio_nums = {}
         self.interpolate_model = InterpolationMode.BICUBIC
@@ -110,7 +112,8 @@ class SanaWebDatasetMS(SanaWebDataset):
                 data = self.getdata(idx)
                 return data
             except Exception as e:
-                print(f"Error details: {str(e)}")
+                traceback_str = traceback.format_exc()
+                print(f"Error details: {str(e)}\n" f"Traceback:\n{traceback_str}")
                 idx = random.choice(self.ratio_index[self.closest_ratio])
         raise RuntimeError("Too many bad data.")
 
@@ -119,6 +122,7 @@ class SanaWebDatasetMS(SanaWebDataset):
         info = data[".json"]
         self.key = data["__key__"]
         dataindex_info = {
+            "key": data["__key__"],
             "index": data["__index__"],
             "shard": "/".join(data["__shard__"].rsplit("/", 2)[-2:]),
             "shardindex": data["__shardindex__"],
@@ -133,7 +137,10 @@ class SanaWebDatasetMS(SanaWebDataset):
                 except:
                     caption_json = {}
                 if self.key in caption_json:
-                    info.update(caption_json[self.key])
+                    if self.default_prompt in caption_json[self.key]:
+                        info.update({suffix.replace(".", "_"): caption_json[self.key][self.default_prompt]})
+                    else:
+                        info.update(caption_json[self.key])
 
         data_info = {}
         ori_h, ori_w = info["height"], info["width"]
@@ -146,9 +153,21 @@ class SanaWebDatasetMS(SanaWebDataset):
         data_info["img_hw"] = torch.tensor([ori_h, ori_w], dtype=torch.float32)
         data_info["aspect_ratio"] = closest_ratio
 
-        caption_type, caption_clipscore = self.weighted_sample_clipscore(data, info)
-        caption_type = caption_type if caption_type in info else self.default_prompt
-        txt_fea = "" if info[caption_type] is None else info[caption_type]
+        if self.caption_selection_type == "clipscore":
+            caption_type, caption_clipscore = self.weighted_sample_clipscore(data, info)
+        elif self.caption_selection_type == "proportion":
+            caption_type = self.weighted_sample_fix_prob()
+        else:
+            raise ValueError(f"Invalid caption selection type: {self.caption_selection_type}")
+
+        if caption_type not in info:
+            self.logger.warning(f"Caption [{caption_type}] is not in info, data path: {data['__shard__']}")
+            txt_fea = info[self.default_prompt]
+        elif info[caption_type] is None:
+            self.logger.warning(f"Caption type info[{caption_type}] is None, data path: {data['__shard__']}")
+            txt_fea = ""
+        else:
+            txt_fea = info[caption_type]
 
         if self.load_vae_feat:
             img = data[".npy"]
@@ -201,7 +220,6 @@ class SanaWebDatasetMS(SanaWebDataset):
             idx,
             caption_type,
             dataindex_info,
-            str(caption_clipscore),
         )
 
     def __len__(self):
@@ -211,7 +229,7 @@ class SanaWebDatasetMS(SanaWebDataset):
 @DATASETS.register_module()
 class DummyDatasetMS(SanaWebDatasetMS):
     def __init__(self, **kwargs):
-        self.base_size = int(kwargs["aspect_ratio_type"].split("_")[-1])
+        self.base_size = kwargs["resolution"]
         self.aspect_ratio = eval(kwargs.pop("aspect_ratio_type"))  # base aspect ratio
         self.ratio_index = {}
         self.ratio_nums = {}

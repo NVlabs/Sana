@@ -34,6 +34,9 @@ def DPMS(
     diffusion_steps=1000,
     schedule="VP",
     interval_guidance=None,
+    condition_as_list=False,  # for wan text encoder, set to true
+    apg=None,
+    **kwargs,
 ):
     if pag_applied_layers is None:
         pag_applied_layers = []
@@ -64,6 +67,9 @@ def DPMS(
         unconditional_condition=uncondition,
         guidance_scale=cfg_scale,
         interval_guidance=interval_guidance,
+        condition_as_list=condition_as_list,
+        apg=apg,
+        **kwargs,
     )
     ## 3. Define dpm-solver and sample by multistep DPM-Solver.
     return DPM_Solver(model_fn, noise_schedule, algorithm_type="dpmsolver++")

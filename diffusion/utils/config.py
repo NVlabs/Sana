@@ -1,6 +1,7 @@
 import json
+import os
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 @dataclass
@@ -22,23 +23,43 @@ class BaseConfig:
 
 @dataclass
 class DataConfig(BaseConfig):
-    data_dir: List[Optional[str]] = field(default_factory=list)
+    data_dir: List[str] = field(default_factory=list)
     caption_proportion: Dict[str, int] = field(default_factory=lambda: {"prompt": 1})
     external_caption_suffixes: List[str] = field(default_factory=list)
     external_clipscore_suffixes: List[str] = field(default_factory=list)
+    caption_selection_type: str = (
+        "clipscore"  # clipscore: use $external_clipscore_suffixes, proportion: use $caption_proportion
+    )
     clip_thr_temperature: float = 1.0
     clip_thr: float = 0.0
     del_img_clip_thr: float = 0.0
     sort_dataset: bool = False
     load_text_feat: bool = False
     load_vae_feat: bool = False
+    aspect_ratio_type: str = "ASPECT_RATIO_1024"
     transform: str = "default_train"
     type: str = "SanaWebDatasetMS"
     image_size: int = 512
     hq_only: bool = False
     valid_num: int = 0
     data: Any = None
+    num_frames: int = 81
     extra: Any = None
+
+
+@dataclass
+class VideoDataConfig(DataConfig):
+    data_dir: Dict[str, str] = field(default_factory=lambda: {"video_toy_data: data/video_toy_data2"})
+    aspect_ratio_type: str = "ASPECT_RATIO_VIDEO_256_MS"
+    external_data_filter: Dict[str, Dict[str, Dict[str, float]]] = field(default_factory=lambda: {})
+    motion_score_file_thres: Dict[str, Optional[float]] = field(default_factory=dict)
+    motion_score_cal_type: str = "average"  # average, max
+    target_fps: int = 16
+    resample_fps: bool = True
+    shuffle_dataset: bool = False
+    vae_cache_dir: Optional[str] = None
+    json_cache_dir: Optional[str] = None
+    load_first_frame: bool = False
 
 
 @dataclass
@@ -60,7 +81,7 @@ class ModelConfig(BaseConfig):
             "resume_optimizer": True,
         }
     )
-    aspect_ratio_type: str = "ASPECT_RATIO_1024"
+    aspect_ratio_type: Optional[str] = None
     multi_scale: bool = True
     pe_interpolation: float = 1.0
     micro_condition: bool = False
@@ -70,7 +91,7 @@ class ModelConfig(BaseConfig):
     mlp_acts: List[Optional[str]] = field(default_factory=lambda: ["silu", "silu", None])
     mlp_ratio: float = 2.5
     use_pe: bool = False
-    pos_embed_type: str = "sincos"
+    pos_embed_type: str = "sincos"  # "sincos", "flux_rope", "wan_rope"
     qk_norm: bool = False
     class_dropout_prob: float = 0.0
     linear_head_dim: int = 32
@@ -89,14 +110,99 @@ class ModelConfig(BaseConfig):
 
 
 @dataclass
+class ModelVideoConfig(ModelConfig):
+    # stage1
+    remove_state_dict_keys: Optional[List[str]] = None
+    # stage2
+    rope_fhw_dim: Optional[Tuple[int, int, int]] = None
+    t_kernel_size: int = 3
+    flash_attn_layer_idx: Optional[List[int]] = None
+    flash_attn_layer_type: Optional[str] = None
+    flash_attn_window_count: Optional[List[int]] = None
+    diagonal_mask: bool = False
+    diagonal_mask_type: str = "nlogn"  # nlogn, linear, truncated
+    diagonal_block_size: int = 1
+    diagonal_mask_root: str = "output/pretrained_models/diagonal_mask"
+    pack_latents: bool = False
+    addition_layers_num: int = 0
+    encode_image_prompt_embeds: bool = False
+    # stage3
+    cross_attn_image_embeds: bool = False
+    image_latent_mode: str = "video_zero"
+    # chunkcasual
+    chunk_index: Optional[List[int]] = None
+
+
+@dataclass
+class WanModelConfig(BaseConfig):
+    model: str = "Wan_T2V_1300M"
+    from_pretrained: Optional[str] = None
+    load_model_ckpt: Optional[str] = None
+    init_patch_embedding: bool = False
+    image_size: int = 256
+    video_width: int = 832
+    video_height: int = 480
+    num_frames: int = 81
+    patch_size: List[int] = field(default_factory=lambda: [1, 2, 2])
+    dim: int = 1536
+    ffn_dim: int = 8960
+    freq_dim: int = 256
+    num_heads: int = 12
+    num_layers: int = 30
+    window_size: Tuple[int, int] = field(default_factory=lambda: (-1, -1))
+    qk_norm: bool = True
+    cross_attn_norm: bool = True
+    eps: float = 1e-6
+    mixed_precision: str = "bf16"  # ['fp16', 'fp32', 'bf16']
+    fp32_attention: bool = True
+    load_from: Optional[str] = None
+    resume_from: Optional[Union[Dict[str, Any], str]] = field(
+        default_factory=lambda: {
+            "checkpoint": None,
+            "load_ema": False,
+            "resume_lr_scheduler": True,
+            "resume_optimizer": True,
+        }
+    )
+    aspect_ratio_type: str = "ASPECT_RATIO_1024"
+    multi_scale: bool = False
+    class_dropout_prob: float = 0.0
+    guidance_type: str = "classifier-free"
+    mask: Optional[str] = None  # first, full, last mask, or no mask
+    image_latent_mode: str = "video_zero"  # ["repeat", "zero", "video_zero"]
+    linear_attn_idx: Optional[List[int]] = None
+    self_attn_type: str = "flash"  # ["linear", "mllalinear", "flash"] this only used together with linear_attn_idx
+    rope_after: bool = False
+    power: float = 1.0
+    ffn_type: str = "mlp"
+
+    # flex attention, auro diagonal mask
+    attn_mask: Optional[str] = None  # ["diagonal", "full"]
+    diagonal_block_size: int = 1
+    diagonal_mask_root: str = "output/pretrained_models/diagonal_mask"
+    # TODO: remove flex attn
+
+
+@dataclass
+class DistillConfig(BaseConfig):
+    model: WanModelConfig
+    distill_logit_weight: float = 0.0
+    distill_attn_weight: float = 0.0
+
+
+@dataclass
 class AEConfig(BaseConfig):
     vae_type: str = "AutoencoderDC"
     vae_pretrained: str = "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers"
     weight_dtype: str = "float32"
     scale_factor: float = 0.41407
+    scaling_factor: Optional[Union[float, List[float]]] = None  # for st-dc-ae
     vae_latent_dim: int = 32
     vae_downsample_rate: int = 32
     sample_posterior: bool = True
+    vae_stride: Optional[List[int]] = None
+    if_cache: bool = False
+    cache_dir: Optional[str] = None
     extra: Any = None
 
 
@@ -112,6 +218,24 @@ class TextEncoderConfig(BaseConfig):
 
 
 @dataclass
+class WanTextEncoderConfig(BaseConfig):
+    t5_model: str = "umt5_xxl"
+    t5_dtype: str = "bfloat16"
+    text_len: int = 512
+    t5_checkpoint: str = "output/pretrained_models/Wan2.1-T2V-1.3B/models_t5_umt5-xxl-enc-bf16.pth"
+    t5_tokenizer: str = "google/umt5-xxl"
+    extra: Any = None
+    caption_channels: int = 4096
+
+
+@dataclass
+class ImageEncoderConfig(BaseConfig):
+    image_encoder_name: Optional[str] = None
+    image_encoder_path: Optional[str] = None
+    weight_dtype: Optional[str] = "bf16"
+
+
+@dataclass
 class SchedulerConfig(BaseConfig):
     train_sampling_steps: int = 1000
     predict_flow_v: bool = True
@@ -120,6 +244,7 @@ class SchedulerConfig(BaseConfig):
     learn_sigma: bool = True
     vis_sampler: str = "flow_dpm-solver"
     flow_shift: float = 1.0
+    inference_flow_shift: Optional[float] = None
     # logit-normal timestep
     weighting_scheme: Optional[str] = "logit_normal"
     weighting_scheme_discriminator: Optional[str] = "logit_normal_trigflow"
@@ -128,8 +253,13 @@ class SchedulerConfig(BaseConfig):
     logit_std: float = 1.0
     logit_mean_discriminator: float = 0.0
     logit_std_discriminator: float = 1.0
-    sigma_data: float = 0.5
+    mode_scale: float = 1.29
+    sigma_data: float = 1.0
+    p_low: Optional[float] = None
+    p_high: Optional[float] = None
     timestep_norm_scale_factor: float = 1.0
+    pretrain_timestep_norm_scale_factor: float = 1.0
+    discrete_norm_timestep: bool = False
     extra: Any = None
 
 
@@ -138,6 +268,8 @@ class TrainingConfig(BaseConfig):
     num_workers: int = 4
     seed: int = 42
     train_batch_size: int = 32
+    train_batch_size_image: int = 32
+    early_stop_hours: float = 100
     num_epochs: int = 100
     gradient_accumulation_steps: int = 1
     grad_checkpointing: bool = False
@@ -154,7 +286,8 @@ class TrainingConfig(BaseConfig):
     resume_lr_scheduler: bool = True
     lr_schedule: str = "constant"
     lr_schedule_args: Dict[str, int] = field(default_factory=lambda: {"num_warmup_steps": 500})
-    auto_lr: Dict[str, str] = field(default_factory=lambda: {"rule": "sqrt"})
+    auto_lr: Optional[Dict[str, str]] = field(default_factory=lambda: {"rule": "sqrt"})
+    ema_rate: float = 0.9999
     eval_batch_size: int = 16
     use_fsdp: bool = False
     use_flash_attn: bool = False
@@ -166,7 +299,6 @@ class TrainingConfig(BaseConfig):
     load_mask_index: bool = False
     snr_loss: bool = False
     real_prompt_ratio: float = 1.0
-    early_stop_hours: float = 10000.0
     save_image_epochs: int = 1
     save_model_epochs: int = 1
     save_model_steps: int = 1000000
@@ -192,12 +324,13 @@ class TrainingConfig(BaseConfig):
     loss_type: str = "huber"
     huber_c: float = 0.001
     num_ddim_timesteps: int = 50
+    w_max: float = 15.0
+    w_min: float = 3.0
     ema_decay: float = 0.95
     debug_nan: bool = False
     ema_update: bool = False
     ema_rate: float = 0.9999
-    ### SANA-Sprint related below
-    # for sCM
+    weight_loss: bool = True
     tangent_warmup_steps: int = 10000
     scm_cfg_scale: Union[float, List[float]] = field(default_factory=lambda: [1.0])
     cfg_interval: Optional[List[float]] = None
@@ -227,6 +360,23 @@ class TrainingConfig(BaseConfig):
 
 
 @dataclass
+class TrainVideoConfig(TrainingConfig):
+    validation_images: Optional[List[str]] = None
+    image_prior_type: Optional[str] = None  # [flux-siglip2
+    joint_training_interval: int = 50
+    timestep_weight: bool = False
+    noise_multiplier: Optional[float] = 0.0
+    ltx_image_condition_prob: float = 0.0  # for ltx, the image condition is used for the first frame
+    chunk_sampling_strategy: str = "uniform"  # uniform, incremental
+    same_timestep_prob: float = (
+        0.0  # for incremental sampling, the probability of using the same timestep for all chunks
+    )
+    # temporal coherence loss for video training
+    temporal_coherence_loss: bool = False
+    temporal_coherence_weight: float = 0.0
+
+
+@dataclass
 class ControlNetConfig(BaseConfig):
     control_signal_type: str = "scribble"
     validation_scribble_maps: List[str] = field(
@@ -253,7 +403,8 @@ class ModelGrowthConfig(BaseConfig):
         }
     )
     source_num_layers: int = 20
-    target_num_layers: int = 60
+    target_num_layers: int = 30
+    extra: Any = None
 
 
 @dataclass
@@ -272,9 +423,55 @@ class SanaConfig(BaseConfig):
     debug: bool = False
     caching: bool = False
     report_to: str = "wandb"
-    tracker_project_name: str = "sana-baseline"
+    tracker_project_name: str = "sana-video-baseline"
     name: str = "baseline"
     loss_report_name: str = "loss"
+
+
+@dataclass
+class SanaVideoConfig(BaseConfig):
+    data: VideoDataConfig
+    model: ModelVideoConfig
+    vae: AEConfig
+    text_encoder: TextEncoderConfig
+    scheduler: SchedulerConfig
+    train: TrainVideoConfig
+    image_data: Optional[DataConfig] = None
+    image_encoder: Optional[ImageEncoderConfig] = field(default_factory=lambda: {})
+    model_growth: Optional[ModelGrowthConfig] = None
+    text_encoder_wan: Optional[WanTextEncoderConfig] = None
+    work_dir: str = "output/"
+    resume_from: Optional[str] = None
+    load_from: Optional[str] = None
+    debug: bool = False
+    caching: bool = False
+    report_to: str = "wandb"
+    tracker_project_name: str = "sana-video"
+    name: str = "baseline"
+    loss_report_name: str = "loss"
+    task: str = "t2v"  # t2v or ti2v
+    distill: Optional[DistillConfig] = None
+
+
+@dataclass
+class SanaVideoStage1Config(BaseConfig):
+    data: DataConfig
+    model: ModelVideoConfig
+    vae: AEConfig
+    text_encoder: TextEncoderConfig
+    scheduler: SchedulerConfig
+    train: TrainVideoConfig
+    model_growth: Optional[ModelGrowthConfig] = None
+    work_dir: str = "output/"
+    resume_from: Optional[str] = None
+    load_from: Optional[str] = None
+    debug: bool = False
+    caching: bool = False
+    report_to: str = "wandb"
+    tracker_project_name: str = "sana-video"
+    name: str = "baseline"
+    loss_report_name: str = "loss"
+    task: str = "t2v"  # t2v or ti2v or df
 
 
 def model_init_config(config: SanaConfig, latent_size: int = 32):
@@ -305,4 +502,81 @@ def model_init_config(config: SanaConfig, latent_size: int = 32):
         "cross_norm": config.model.cross_norm,
         "cross_attn_type": config.model.cross_attn_type,
         "timestep_norm_scale_factor": config.scheduler.timestep_norm_scale_factor,
+        "discrete_norm_timestep": config.scheduler.discrete_norm_timestep,
     }
+
+
+def model_video_init_config(config: SanaVideoConfig, latent_size: int = 32):
+
+    pred_sigma = getattr(config.scheduler, "pred_sigma", True)
+    learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
+    return {
+        "input_size": latent_size,
+        "pe_interpolation": config.model.pe_interpolation,
+        "config": config,
+        "model_max_length": config.text_encoder.model_max_length,
+        "qk_norm": config.model.qk_norm,
+        "micro_condition": config.model.micro_condition,
+        "caption_channels": config.text_encoder.caption_channels,
+        "class_dropout_prob": config.model.class_dropout_prob,
+        "y_norm": config.text_encoder.y_norm,
+        "attn_type": config.model.attn_type,
+        "ffn_type": config.model.ffn_type,
+        "mlp_ratio": config.model.mlp_ratio,
+        "mlp_acts": list(config.model.mlp_acts),
+        "in_channels": config.vae.vae_latent_dim,
+        "use_pe": config.model.use_pe,
+        "pos_embed_type": config.model.pos_embed_type,
+        "rope_fhw_dim": config.model.rope_fhw_dim,
+        "linear_head_dim": config.model.linear_head_dim,
+        "pred_sigma": pred_sigma,
+        "learn_sigma": learn_sigma,
+        "cross_norm": config.model.cross_norm,
+        "cross_attn_type": config.model.cross_attn_type,
+        "cross_attn_image_embeds": config.model.cross_attn_image_embeds,
+        "t_kernel_size": config.model.t_kernel_size,
+        "flash_attn_layer_idx": config.model.flash_attn_layer_idx,
+        "flash_attn_layer_type": config.model.flash_attn_layer_type,
+        "flash_attn_window_count": config.model.flash_attn_window_count,
+        "diagonal_mask": config.model.diagonal_mask,
+        "pack_latents": config.model.pack_latents,
+        "addition_layers_num": config.model.addition_layers_num,
+    }
+
+
+def one_logger_callback_config(config):
+    global_batch_size = int(config.train.train_batch_size * config.global_world_size)
+    seq_length = 32_000
+
+    # Build app_tag according to the new format: <app_tag_run_name>_<global_batch_size>_<seq_length>
+    # or <app_tag_run_name>_<app_tag_run_version>_<global_batch_size>_<seq_length>
+    app_tag_run_version = "0.0.0"
+    app_tag = f"{config.name}_{app_tag_run_version}_{config.train.train_batch_size}_{config.global_world_size}"
+
+    one_logger_callback_config = {
+        "enable_for_current_rank": os.environ.get("RANK") == "0",
+        "one_logger_async": True,
+        "one_logger_project": f"{config.tracker_project_name}-onelogger",
+        "log_every_n_train_iterations": config.train.log_interval,
+        "app_tag_run_version": app_tag_run_version,
+        "summary_data_schema_version": "1.0.0",
+        "app_run_type": "training",
+        "app_tag": app_tag,
+        "app_tag_run_name": config.name,
+        "world_size": config.global_world_size,
+        "global_batch_size": global_batch_size,
+        "batch_size": global_batch_size,  # batch_size and global_batch_size should be same
+        "train_iterations_target": int(config.train_iterations_target),
+        "train_samples_target": int(config.train_iterations_target * global_batch_size),
+        "is_train_iterations_enabled": True,
+        "is_baseline_run": False,
+        "is_test_iterations_enabled": False,
+        "is_validation_iterations_enabled": True,
+        "is_save_checkpoint_enabled": True,
+        "is_log_throughput_enabled": False,
+        "micro_batch_size": config.train.train_batch_size,
+        "seq_length": seq_length,
+        "save_checkpoint_strategy": "sync",
+    }
+
+    return one_logger_callback_config

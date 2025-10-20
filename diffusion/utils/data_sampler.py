@@ -35,6 +35,7 @@ class AspectRatioBatchSampler(BatchSampler):
         hq_only=False,
         cache_file=None,
         caching=False,
+        clipscore_filter_thres=0.0,
         **kwargs,
     ) -> None:
         if not isinstance(sampler, Sampler):
@@ -52,6 +53,7 @@ class AspectRatioBatchSampler(BatchSampler):
         self.caching = caching
         self.cache_file = cache_file
         self.order_check_pass = False
+        self.clipscore_filter_thres = clipscore_filter_thres
 
         self.ratio_nums_gt = kwargs.get("ratio_nums", None)
         assert self.ratio_nums_gt, "ratio_nums_gt must be provided."
@@ -59,14 +61,16 @@ class AspectRatioBatchSampler(BatchSampler):
         self.current_available_bucket_keys = [str(k) for k, v in self.ratio_nums_gt.items() if v >= valid_num]
 
         logger = (
-            get_root_logger() if config is None else get_root_logger(os.path.join(config.work_dir, "train_log.log"))
+            get_root_logger()
+            if (config is None or config.work_dir is None)
+            else get_root_logger(os.path.join(config.work_dir, "train_log.log"))
         )
         logger.warning(
-            f"Using valid_num={valid_num} in config file. Available {len(self.current_available_bucket_keys)} aspect_ratios: {self.current_available_bucket_keys}"
+            f"Image sampler using valid_num={valid_num} in config file. Available {len(self.current_available_bucket_keys)} aspect_ratios: {self.current_available_bucket_keys}"
         )
 
         self.data_all = {} if caching else None
-        if os.path.exists(cache_file):
+        if cache_file is not None and os.path.exists(cache_file):
             logger.info(f"Loading cached file for multi-scale training: {cache_file}")
             try:
                 self.cached_idx = json.load(open(cache_file))
@@ -126,10 +130,13 @@ class AspectRatioBatchSampler(BatchSampler):
                     return self.cached_idx[str_idx], closest_ratio
 
             data_info = self.dataset.get_data_info(int(idx))
-            if data_info is None or (
-                self.hq_only and "version" in data_info and data_info["version"] not in ["high_quality"]
+            if (
+                data_info is None
+                or (self.hq_only and "version" in data_info and data_info["version"] not in ["high_quality"])
+                or (data_info.get("clipscore", False) and data_info["clipscore"] < self.clipscore_filter_thres)
             ):
                 return None, None
+
             closest_ratio = self._get_closest_ratio(data_info["height"], data_info["width"])
 
             return data_info, closest_ratio
@@ -152,6 +159,102 @@ class AspectRatioBatchSampler(BatchSampler):
                 if str(idx) in self.cached_idx:
                     continue
                 self.cached_idx[str(idx)] = self.data_all.pop(str(idx))
+
+
+class AspectRatioBatchSamplerVideo(BatchSampler):
+    """A sampler wrapper for grouping images with similar aspect ratio into a same batch.
+
+    Args:
+        sampler (Sampler): Base sampler.
+        dataset (Dataset): Dataset providing data information.
+        batch_size (int): Size of mini-batch.
+        drop_last (bool): If ``True``, the sampler will drop the last batch if
+            its size would be less than ``batch_size``.
+        aspect_ratios (dict): The predefined aspect ratios.
+    """
+
+    def __init__(
+        self,
+        sampler: Sampler,
+        dataset: Dataset,
+        batch_size: int,
+        aspect_ratios: dict,
+        drop_last: bool = False,
+        config=None,
+        valid_num=0,  # take as valid aspect-ratio when sample number >= valid_num
+        hq_only=False,
+        caching=False,
+        clipscore_filter_thres=0.0,
+        **kwargs,
+    ) -> None:
+        if not isinstance(sampler, Sampler):
+            raise TypeError(f"sampler should be an instance of ``Sampler``, but got {sampler}")
+        if not isinstance(batch_size, int) or batch_size <= 0:
+            raise ValueError(f"batch_size should be a positive integer value, but got batch_size={batch_size}")
+
+        self.sampler = sampler
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.aspect_ratios = aspect_ratios
+        self.drop_last = drop_last
+        self.hq_only = hq_only
+        self.config = config
+        self.caching = caching
+        self.order_check_pass = False
+        self.clipscore_filter_thres = clipscore_filter_thres
+
+        self.ratio_nums_gt = kwargs.get("ratio_nums", None)
+        assert self.ratio_nums_gt, "ratio_nums_gt must be provided."
+        self._aspect_ratio_buckets = {float(ratio): [] for ratio in aspect_ratios.keys()}
+        self.current_available_bucket_keys = [str(k) for k, v in self.ratio_nums_gt.items() if v >= valid_num]
+
+        logger = (
+            get_root_logger()
+            if (config is None or config.work_dir is None)
+            else get_root_logger(os.path.join(config.work_dir, "train_log.log"))
+        )
+        logger.warning(
+            f"Video sampler using valid_num={valid_num} in config file. Available {len(self.current_available_bucket_keys)} aspect_ratios: {self.current_available_bucket_keys}"
+        )
+
+    def __iter__(self) -> Sequence[int]:
+        for idx in self.sampler:
+            data_info, closest_ratio = self._get_data_info_and_ratio(idx)
+            if not data_info:
+                continue
+
+            bucket = self._aspect_ratio_buckets[closest_ratio]
+            bucket.append(idx)
+            # yield a batch of indices in the same aspect ratio group
+            if len(bucket) == self.batch_size:
+                yield bucket[:]
+                del bucket[:]
+
+        for bucket in self._aspect_ratio_buckets.values():
+            while bucket:
+                if not self.drop_last or len(bucket) == self.batch_size:
+                    yield bucket[:]
+                del bucket[:]
+
+    def _get_data_info_and_ratio(self, idx):
+        str_idx = str(idx)
+        data_info = self.dataset.get_data_info(int(idx))
+
+        if data_info is None:
+            return None, None
+
+        if "closest_ratio" in data_info:
+            closest_ratio = data_info["closest_ratio"]
+        else:
+            closest_ratio = self._get_closest_ratio(data_info["height"], data_info["width"])
+
+        closest_ratio = float(closest_ratio)
+
+        return data_info, closest_ratio
+
+    def _get_closest_ratio(self, height, width):
+        ratio = float(height) / float(width)
+        return min(self.aspect_ratios.keys(), key=lambda r: abs(float(r) - ratio))
 
 
 class BalancedAspectRatioBatchSampler(AspectRatioBatchSampler):

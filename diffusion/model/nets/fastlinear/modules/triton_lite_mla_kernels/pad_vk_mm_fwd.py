@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 import triton
 import triton.language as tl
@@ -193,5 +192,4 @@ def pad_vk_mm_fwd(a, b, compute_dtype: torch.dtype, output_dtype: torch.dtype):
         )
     else:
         raise NotImplementedError()
-    # ipdb.set_trace()
     return c

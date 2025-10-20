@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -36,7 +35,6 @@ class TritonLiteMLAFwdFunction(torch.autograd.Function):
         head_dim: int,
         eps: float,
     ) -> torch.Tensor:
-        # ipdb.set_trace()
         B, N, C = x.shape
         qkv, relu_mask = linear_relu_fwd(x, qkv_weight)  # .view(B, N, 3, C) # B, N, 3, C
         qkv, relu_mask = qkv.view(B, N, 3, C), relu_mask.view(B, N, 3, C)
@@ -80,8 +78,6 @@ class TritonLiteMLAFwdFunction(torch.autograd.Function):
         grad_qkv = torch.stack([grad_q, grad_k, grad_v], dim=2).view(B, N, 3 * H * C).to(x.dtype)
         grad_qkv_weight = grad_qkv.view(B * N, 3 * H * C).T @ x.view(B * N, H * C)
         grad_x = grad_qkv @ qkv_weight
-
-        # ipdb.set_trace()
 
         return grad_x, grad_qkv_weight, grad_proj_weight, grad_proj_bias, None, None, None
 

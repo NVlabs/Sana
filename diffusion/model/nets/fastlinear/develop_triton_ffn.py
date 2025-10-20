@@ -18,7 +18,6 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-import ipdb
 import torch
 from modules.mb_conv_pre_glu import MBConvPreGLU
 from modules.triton_mb_conv_pre_glu import TritonMBConvPreGLU
@@ -273,7 +272,6 @@ def main():
         )
         grad_y = 0.1 * torch.randn_like(x)
         for i in range(cfg.warmup_iterations):
-            # ipdb.set_trace()
             with torch.autocast(device_type="cuda", dtype=autocast_dtype, enabled=cfg.autocast):
                 y = block(x)
             if cfg.backward:
@@ -289,7 +287,6 @@ def main():
         torch.cuda.synchronize()
         end_time = time.time()
         print(f"each step takes {(end_time - start_time) * 1000 / cfg.iterations:.2f} ms")
-        # ipdb.set_trace()
         print(f"max memory allocated: {torch.cuda.max_memory_allocated() / 1024 ** 3:.4f} GB\n{'-' * 80}")
 
 

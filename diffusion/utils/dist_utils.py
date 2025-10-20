@@ -26,7 +26,6 @@ import shutil
 import mmcv
 import torch
 import torch.distributed as dist
-from accelerate import skip_first_batches
 from mmcv.runner import get_dist_info
 
 
@@ -326,26 +325,6 @@ def clip_grad_norm_(self, max_norm: Union[float, int], norm_type: Union[float, i
             assert p.grad is not None
             p.grad.detach().mul_(clip_coef.to(p.grad.device))
     return total_norm
-
-
-def global_synchronized_skip(dataloader, skip_signal: bool):
-    """
-    params:
-        dataloader: current DataLoader
-        skip_signal: if skip
-    """
-    if not dist.is_initialized():
-        if skip_signal:
-            skip_first_batches(dataloader, float("inf"))
-        return
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    signal_tensor = torch.tensor(int(skip_signal), device=device)
-    dist.all_reduce(signal_tensor, op=dist.ReduceOp.MAX)
-
-    if signal_tensor.item() == 1:
-        skip_first_batches(dataloader, float("inf"))
-        dist.barrier()
 
 
 def flush():

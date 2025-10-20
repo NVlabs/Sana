@@ -17,6 +17,7 @@
 import os
 import random
 import re
+from collections import OrderedDict
 
 import numpy as np
 import torch
@@ -37,6 +38,7 @@ def save_checkpoint(
     generator=torch.Generator(device="cpu").manual_seed(42),
     keep_last=False,
     step=None,
+    saved_info=None,
     add_symlink=False,
     add_suffix=None,
 ):
@@ -49,6 +51,7 @@ def save_checkpoint(
             generator=generator,
             keep_last=keep_last,
             step=step,
+            saved_info=saved_info,
             add_symlink=add_symlink,
             add_suffix=add_suffix,
         )
@@ -63,6 +66,7 @@ def save_checkpoint(
             generator=generator,
             keep_last=keep_last,
             step=step,
+            saved_info=saved_info,
             add_symlink=add_symlink,
             add_suffix=add_suffix,
         )
@@ -78,6 +82,7 @@ def save_checkpoint_ddp(
     generator=torch.Generator(device="cpu").manual_seed(42),
     keep_last=False,
     step=None,
+    saved_info=None,
     add_symlink=False,
     add_suffix=None,
 ):
@@ -93,7 +98,14 @@ def save_checkpoint_ddp(
         state_dict["epoch"] = epoch
         file_path = os.path.join(work_dir, f"epoch_{epoch}.pth")
         if step is not None:
+            state_dict["step"] = step
             file_path = file_path.split(".pth")[0] + f"_step_{step}.pth"
+
+    # Save additional information from saved_info dict
+    if saved_info is not None:
+        for key, value in saved_info.items():
+            if value is not None:
+                state_dict[key] = value
     if add_suffix is not None:
         file_path = file_path.replace(".pth", f"_{add_suffix}.pth")
     rng_state = {
@@ -130,6 +142,7 @@ def save_checkpoint_fsdp(
     generator=torch.Generator(device="cpu").manual_seed(42),
     keep_last=False,
     step=None,
+    saved_info=None,
     add_symlink=False,
     add_suffix=None,
 ):
@@ -162,6 +175,14 @@ def save_checkpoint_fsdp(
             metadata["scheduler"] = lr_scheduler.state_dict()
         if epoch is not None:
             metadata["epoch"] = epoch
+        if step is not None:
+            metadata["step"] = step
+
+        # Save additional information from saved_info dict
+        if saved_info is not None:
+            for key, value in saved_info.items():
+                if value is not None:
+                    metadata[key] = value
 
         torch.save(metadata, os.path.join(checkpoint_dir, "metadata.pth"))
 
@@ -204,11 +225,13 @@ def load_checkpoint(
     resume_lr_scheduler=True,
     null_embed_path=None,
     FSDP=False,
+    remove_state_dict_keys=None,
 ):
     if FSDP:
         return load_checkpoint_fsdp(
             checkpoint=checkpoint,
             model=model,
+            remove_state_dict_keys=remove_state_dict_keys,
         )
     else:
         return load_checkpoint_ddp(
@@ -221,6 +244,7 @@ def load_checkpoint(
             resume_optimizer=resume_optimizer,
             resume_lr_scheduler=resume_lr_scheduler,
             null_embed_path=null_embed_path,
+            remove_state_dict_keys=remove_state_dict_keys,
         )
 
 
@@ -234,19 +258,21 @@ def load_checkpoint_ddp(
     resume_optimizer=True,
     resume_lr_scheduler=True,
     null_embed_path=None,
+    remove_state_dict_keys=None,
 ):
     assert isinstance(checkpoint, str)
     logger = get_root_logger()
     ckpt_file = checkpoint
     checkpoint = find_model(ckpt_file)
 
-    state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
-    for key in state_dict_keys:
+    if remove_state_dict_keys is None:
+        remove_state_dict_keys = []
+    remove_state_dict_keys.extend(["pos_embed", "base_model.pos_embed", "model.pos_embed"])
+    for key in remove_state_dict_keys:
         if key in checkpoint["state_dict"]:
             del checkpoint["state_dict"][key]
             if "state_dict_ema" in checkpoint and key in checkpoint["state_dict_ema"]:
                 del checkpoint["state_dict_ema"][key]
-            break
 
     if load_ema:
         state_dict = checkpoint["state_dict_ema"]
@@ -257,7 +283,25 @@ def load_checkpoint_ddp(
     state_dict["y_embedder.y_embedding"] = null_embed["uncond_prompt_embeds"][0]
     rng_state = checkpoint.get("rng_state", None)
 
-    missing, unexpect = model.load_state_dict(state_dict, strict=False)
+    def load_ckpt_with_auto_reshape(model, state_dict, strict=False):
+        new_state_dict = OrderedDict()
+
+        for k, v in model.state_dict().items():
+            if k in state_dict:
+                # auto reshape missing dimensions (e.g. [dim,dim2,1,1] -> [dim,dim2,1,1,1])
+                if state_dict[k].dim() < v.dim():
+                    new_shape = state_dict[k].shape + (1,) * (v.dim() - state_dict[k].dim())
+                    new_state_dict[k] = state_dict[k].reshape(*new_shape)
+                else:
+                    new_state_dict[k] = state_dict[k]
+            else:
+                print(f"Warning: Missing key {k} in checkpoint")
+
+        missing, unexpect = model.load_state_dict(new_state_dict, strict=strict)
+        return missing, unexpect
+
+    missing, unexpect = load_ckpt_with_auto_reshape(model, state_dict, strict=False)
+
     if model_ema is not None:
         model_ema.load_state_dict(checkpoint["state_dict_ema"], strict=False)
     if optimizer is not None and resume_optimizer:
@@ -266,21 +310,31 @@ def load_checkpoint_ddp(
         lr_scheduler.load_state_dict(checkpoint["scheduler"])
 
     epoch = 0
+
+    # Load saved_info dictionary containing video_step, image_step, etc.
+    saved_info = {}
+    known_saved_keys = ["video_step", "image_step"]  # Add more keys as needed
+    for key in known_saved_keys:
+        value = checkpoint.get(key, None)
+        if value is not None:
+            saved_info[key] = value
+
     if optimizer is not None and resume_optimizer:
         epoch_match = re.search(r"epoch_(\d+)", ckpt_file)
         epoch = int(epoch_match.group(1)) if epoch_match else 0
         logger.info(
             f"Resume checkpoint of epoch {epoch} from {ckpt_file}. Load ema: {load_ema}, "
-            f"resume optimizer： {resume_optimizer}, resume lr scheduler: {resume_lr_scheduler}."
+            f"resume optimizer: {resume_optimizer}, resume lr scheduler: {resume_lr_scheduler}."
         )
-        return epoch, missing, unexpect, rng_state
+        return epoch, missing, unexpect, rng_state, saved_info
     logger.info(f"Load checkpoint from {ckpt_file}. Load ema: {load_ema}.")
-    return epoch, missing, unexpect, None
+    return epoch, missing, unexpect, None, saved_info
 
 
 def load_checkpoint_fsdp(
     checkpoint,
     model,
+    remove_state_dict_keys=None,
 ):
     assert isinstance(checkpoint, str)
     logger = get_root_logger()
@@ -289,6 +343,7 @@ def load_checkpoint_fsdp(
     if ".pth" in checkpoint:
         state_dict_model = find_model(checkpoint)
         state_dict_model = state_dict_model.get("state_dict", state_dict_model)
+        metadata = {}
     else:
         if os.path.isfile(checkpoint):
             checkpoint = os.path.dirname(checkpoint)
@@ -296,13 +351,46 @@ def load_checkpoint_fsdp(
 
         state_dict_model = find_model(os.path.join(checkpoint, "model", "pytorch_model_fsdp.bin"))
 
-    state_dict_keys = ["pos_embed", "base_model.pos_embed", "model.pos_embed"]
-    for key in state_dict_keys:
+        # Load metadata to get video_step and image_step
+        try:
+            metadata = torch.load(os.path.join(checkpoint, "metadata.pth"), map_location="cpu")
+        except:
+            metadata = {}
+
+    if remove_state_dict_keys is None:
+        remove_state_dict_keys = []
+    remove_state_dict_keys.extend(["pos_embed", "base_model.pos_embed", "model.pos_embed"])
+    for key in remove_state_dict_keys:
         if key in state_dict_model:
             del state_dict_model[key]
-            break
 
-    missing, unexpect = model.load_state_dict(state_dict_model, strict=False)
+    def load_ckpt_with_auto_reshape(model, state_dict, strict=False):
+        new_state_dict = OrderedDict()
+
+        for k, v in model.state_dict().items():
+            if k in state_dict:
+                # auto reshape missing dimensions (e.g. [dim,dim2,1,1] -> [dim,dim2,1,1,1])
+                if state_dict[k].dim() < v.dim():
+                    new_shape = state_dict[k].shape + (1,) * (v.dim() - state_dict[k].dim())
+                    new_state_dict[k] = state_dict[k].reshape(*new_shape)
+                else:
+                    new_state_dict[k] = state_dict[k]
+            else:
+                print(f"Warning: Missing key {k} in checkpoint")
+
+        missing, unexpect = model.load_state_dict(new_state_dict, strict=strict)
+        return missing, unexpect
+
+    missing, unexpect = load_ckpt_with_auto_reshape(model, state_dict_model, strict=False)
+    # missing, unexpect = model.load_state_dict(state_dict_model, strict=False)
     logger.info(f"Load checkpoint of {checkpoint}.")
 
-    return None, missing, unexpect, None
+    # Load saved_info dictionary containing video_step, image_step, etc.
+    saved_info = {}
+    known_saved_keys = ["video_step", "image_step"]  # Add more keys as needed
+    for key in known_saved_keys:
+        value = metadata.get(key, None)
+        if value is not None:
+            saved_info[key] = value
+
+    return None, missing, unexpect, None, saved_info

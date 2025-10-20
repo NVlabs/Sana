@@ -99,7 +99,7 @@ class SanaMSBlock(nn.Module):
             # vanilla self attention
             self.attn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True)
         else:
-            raise ValueError(f"{attn_type} type is not defined.")
+            self.attn = None
 
         if cross_attn_type in ["flash", "linear"]:
             self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
@@ -108,6 +108,7 @@ class SanaMSBlock(nn.Module):
         else:
             raise ValueError(f"{cross_attn_type} type is not defined.")
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+
         if ffn_type == "dwmlp":
             approx_gelu = lambda: nn.GELU(approximate="tanh")
             self.mlp = DWMlp(
@@ -127,7 +128,8 @@ class SanaMSBlock(nn.Module):
                 in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
             )
         else:
-            raise ValueError(f"{ffn_type} type is not defined.")
+            self.mlp = None
+
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
@@ -138,8 +140,7 @@ class SanaMSBlock(nn.Module):
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
         ).chunk(6, dim=1)
         x = x + self.drop_path(
-            gate_msa
-            * self.attn(t2i_modulate(self.norm1(x), shift_msa, scale_msa), HW=HW, image_rotary_emb=image_rotary_emb)
+            gate_msa * self.attn(t2i_modulate(self.norm1(x), shift_msa, scale_msa), HW=HW, rotary_emb=image_rotary_emb)
         )
         x = x + self.cross_attn(x, y, mask)
         x = x + self.drop_path(gate_mlp * self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), HW=HW))
@@ -269,6 +270,47 @@ class SanaMS(Sana):
 
         self.initialize()
 
+    def _apply_positional_embedding(self, x, bs):
+        """Apply positional embedding to input tensor.
+        
+        Args:
+            x: Input tensor (N, T, D)
+            bs: Batch size
+        
+        Returns:
+            x with positional embedding added
+            image_pos_embed for flux_rope type (or None)
+        """
+        image_pos_embed = None
+        
+        if self.pos_embed_type == "sincos":
+            if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
+                self.pos_embed_ms = (
+                    torch.from_numpy(
+                        get_2d_sincos_pos_embed(
+                            self.pos_embed.shape[-1],
+                            (self.h, self.w),
+                            pe_interpolation=self.pe_interpolation,
+                            base_size=self.base_size,
+                        )
+                    )
+                    .unsqueeze(0)
+                    .to(x.device)
+                    .to(self.dtype)
+                )
+            x = x + self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
+            
+        elif self.pos_embed_type == "flux_rope":
+            self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[0, 16, 16])
+            latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(bs, self.h, self.w, x.device, x.dtype)
+            image_pos_embed = self.pos_embed_ms(latent_image_ids)
+            x = x + image_pos_embed
+            
+        else:
+            raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
+        
+        return x, image_pos_embed
+
     def forward(self, x, timestep, y, mask=None, data_info=None, return_logvar=False, jvp=False, **kwargs):
         """
         Forward pass of Sana.
@@ -287,29 +329,7 @@ class SanaMS(Sana):
         x = self.x_embedder(x)
         image_pos_embed = None
         if self.use_pe:
-            if self.pos_embed_type == "sincos":
-                if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
-                    self.pos_embed_ms = (
-                        torch.from_numpy(
-                            get_2d_sincos_pos_embed(
-                                self.pos_embed.shape[-1],
-                                (self.h, self.w),
-                                pe_interpolation=self.pe_interpolation,
-                                base_size=self.base_size,
-                            )
-                        )
-                        .unsqueeze(0)
-                        .to(x.device)
-                        .to(self.dtype)
-                    )
-                x += self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
-            elif self.pos_embed_type == "3d_rope":
-                self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[0, 16, 16])
-                latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(bs, self.h, self.w, x.device, x.dtype)
-                image_pos_embed = self.pos_embed_ms(latent_image_ids)
-                x += image_pos_embed
-            else:
-                raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
+            x, image_pos_embed = self._apply_positional_embedding(x, bs)
 
         t = self.t_embedder(timestep)  # (N, D)
         if self.cfg_embedder:
@@ -414,6 +434,13 @@ class SanaMS(Sana):
         # Initialize caption embedding MLP:
         nn.init.normal_(self.y_embedder.y_proj.fc1.weight, std=0.02)
         nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
+
+        # Initialize cfg embedder
+        if self.cfg_embedder:
+            nn.init.normal_(self.cfg_embedder.mlp[0].weight, std=0.02)
+            nn.init.zeros_(self.cfg_embedder.mlp[2].weight)
+            if hasattr(self.cfg_embedder.mlp[2], "bias") and self.cfg_embedder.mlp[2].bias is not None:
+                nn.init.zeros_(self.cfg_embedder.mlp[2].bias)
 
 
 class SanaMSCM(SanaMS):

@@ -37,6 +37,13 @@ def mean_flat(tensor):
     return tensor.mean(dim=list(range(1, len(tensor.shape))))
 
 
+def sum_flat(tensor):
+    """
+    Take the sum over all non-batch dimensions.
+    """
+    return tensor.sum(dim=list(range(1, len(tensor.shape))))
+
+
 class ModelMeanType(enum.Enum):
     """
     Which type of output the model predicts.
@@ -730,7 +737,22 @@ class GaussianDiffusion:
         output = th.where((t == 0), decoder_nll, kl)
         return {"output": output, "pred_xstart": out["pred_xstart"]}
 
-    def training_losses(self, model, x_start, timestep, model_kwargs=None, noise=None, skip_noise=False):
+    def training_weight(self, timestep, target_shape):
+        sigma = _extract_into_tensor(self.sigmas, timestep, target_shape)
+        weight = (1 + sigma * sigma).sqrt() / sigma
+        return weight
+
+    def training_losses(
+        self,
+        model,
+        x_start,
+        timestep,
+        model_kwargs=None,
+        noise=None,
+        skip_noise=False,
+        timestep_weight=False,
+        loss_mask=None,
+    ):
         """
         Compute training losses for a single timestep.
         :param model: the model to evaluate loss on.
@@ -753,6 +775,8 @@ class GaussianDiffusion:
             x_t = self.q_sample(x_start, t, noise=noise)
 
         terms = {}
+        terms["noise"] = noise
+        terms["x_t"] = x_t
 
         if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
             terms["loss"] = self._vb_terms_bpd(
@@ -766,12 +790,12 @@ class GaussianDiffusion:
             if self.loss_type == LossType.RESCALED_KL:
                 terms["loss"] *= self.num_timesteps
         elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
+            # NOTE: SANA
             model_output = model(x_t, t, **model_kwargs)
             if isinstance(model_output, dict) and model_output.get("x", None) is not None:
                 output = model_output["x"]
             else:
                 output = model_output
-
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
                 B, C = x_t.shape[:2]
                 assert output.shape == (B, C * 2, *x_t.shape[2:])
@@ -807,6 +831,7 @@ class GaussianDiffusion:
             }[self.model_mean_type]
             assert output.shape == target.shape == x_start.shape
             if self.snr:
+                # NOTE: SANA NOT USE
                 if self.model_mean_type == ModelMeanType.START_X:
                     pred_noise = self._predict_eps_from_xstart(x_t=x_t, t=t, pred_xstart=output)
                     pred_startx = output
@@ -820,7 +845,21 @@ class GaussianDiffusion:
                 # best
                 target = th.where(t > 249, noise, x_start)
                 output = th.where(t > 249, pred_noise, pred_startx)
+
+            # return model output for distillation
+            terms["output"] = output
             loss = (target - output) ** 2
+            if timestep_weight:
+                weight = self.training_weight(timestep, loss.shape)
+                loss = loss * weight
+
+            if loss_mask is not None:
+                # expand loss_mask to the same shape as loss
+                loss_mask = loss_mask.expand(loss.shape)
+                loss = loss * loss_mask
+                loss = sum_flat(loss) / (sum_flat(loss_mask) + 1e-6)
+                loss = loss[..., None]  # add a dim to make it compatible with other losses
+
             if model_kwargs.get("mask_ratio", False) and model_kwargs["mask_ratio"] > 0:
                 assert "mask" in model_output
                 loss = F.avg_pool2d(loss.mean(dim=1), model.model.module.patch_size).flatten(1)
@@ -1019,7 +1058,9 @@ def _extract_into_tensor(arr, timesteps, broadcast_shape):
                             dimension equal to the length of timesteps.
     :return: a tensor of shape [batch_size, 1, ...] where the shape has K dims.
     """
-    res = th.from_numpy(arr).to(device=timesteps.device)[timesteps].float()
+    timesteps_size = timesteps.size()
+    res = th.from_numpy(arr).to(device=timesteps.device)[timesteps.reshape(-1)].float()
+    res = res.reshape(timesteps_size)
     while len(res.shape) < len(broadcast_shape):
         res = res[..., None]
     return res + th.zeros(broadcast_shape, device=timesteps.device)

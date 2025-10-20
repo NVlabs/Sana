@@ -14,6 +14,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import List
+
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import torch
 import torch.nn as nn
@@ -36,6 +38,7 @@ class ConvLayer(nn.Module):
         padding: int or None = None,
         use_bias=False,
         dropout=0.0,
+        conv_type="2d",
         norm="bn2d",
         act="relu",
     ):
@@ -54,16 +57,31 @@ class ConvLayer(nn.Module):
         self.use_bias = use_bias
 
         self.dropout = nn.Dropout2d(dropout, inplace=False) if dropout > 0 else None
-        self.conv = nn.Conv2d(
-            in_dim,
-            out_dim,
-            kernel_size=(kernel_size, kernel_size),
-            stride=(stride, stride),
-            padding=padding,
-            dilation=(dilation, dilation),
-            groups=groups,
-            bias=use_bias,
-        )
+        if conv_type == "2d":
+            self.conv = nn.Conv2d(
+                in_dim,
+                out_dim,
+                kernel_size=(kernel_size, kernel_size),
+                stride=(stride, stride),
+                padding=padding,
+                dilation=(dilation, dilation),
+                groups=groups,
+                bias=use_bias,
+            )
+        elif conv_type == "3d":
+            self.conv = nn.Conv3d(
+                in_dim,
+                out_dim,
+                kernel_size=(kernel_size, kernel_size, kernel_size),
+                stride=(stride, stride, stride),
+                padding=padding,
+                dilation=(dilation, dilation, dilation),
+                groups=groups,
+                bias=use_bias,
+            )
+        else:
+            self.conv = None
+
         self.norm = build_norm(norm, num_features=out_dim)
         self.act = build_act(act)
 
@@ -127,16 +145,18 @@ class GLUMBConv(nn.Module):
             norm=norm[2],
             act=act[2],
         )
-        # from IPython import embed; embed(header='debug dilate conv')
 
     def forward(self, x: torch.Tensor, HW=None) -> torch.Tensor:
         B, N, C = x.shape
         if HW is None:
             H = W = int(N**0.5)
-        else:
+        elif len(HW) == 2:
             H, W = HW
+            x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
+        elif len(HW) == 3:
+            T, H, W = HW
+            x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
 
-        x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
         x = self.inverted_conv(x)
         x = self.depth_conv(x)
 
@@ -145,9 +165,215 @@ class GLUMBConv(nn.Module):
         x = x * gate
 
         x = self.point_conv(x)
-        x = x.reshape(B, C, N).permute(0, 2, 1)
+        if len(HW) == 3:
+            x = x.reshape(B * T, C, H * W).permute(0, 2, 1)
+            x = x.reshape(B, N, C)
+        else:
+            x = x.reshape(B, C, N).permute(0, 2, 1)
 
         return x
+
+
+class GLUMBConvTemp(GLUMBConv):
+    def __init__(
+        self,
+        in_features: int,
+        hidden_features: int,
+        out_feature=None,
+        kernel_size=3,
+        stride=1,
+        padding: int or None = None,
+        use_bias=False,
+        norm=(None, None, None),
+        act=("silu", "silu", None),
+        t_kernel_size=3,
+    ):
+        super().__init__(
+            in_features=in_features,
+            hidden_features=hidden_features,
+            out_feature=out_feature,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            use_bias=use_bias,
+            norm=norm,
+            act=act,
+        )
+
+        out_feature = out_feature or in_features
+        t_padding = t_kernel_size // 2
+        self.t_conv = nn.Conv2d(
+            out_feature,
+            out_feature,
+            kernel_size=(t_kernel_size, 1),
+            stride=1,
+            padding=(t_padding, 0),
+            bias=False,
+        )
+
+        nn.init.zeros_(self.t_conv.weight)
+
+    def forward(self, x: torch.Tensor, HW=None, **kwargs) -> torch.Tensor:
+        B, N, C = x.shape
+
+        assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
+        T, H, W = HW
+        x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
+
+        x = self.inverted_conv(x)
+        x = self.depth_conv(x)
+
+        # Space aggregation
+        x, gate = torch.chunk(x, 2, dim=1)
+        gate = self.glu_act(gate)
+        x = x * gate
+        x = self.point_conv(x)
+
+        # Temporal aggregation
+        x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)
+        x_out = x_reshaped + self.t_conv(x_reshaped)
+
+        x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
+
+        return x_out
+
+
+class ChunkGLUMBConvTemp(GLUMBConvTemp):
+    def forward(self, x: torch.Tensor, HW=None, chunk_index: List[int] = [0]) -> torch.Tensor:
+        B, N, C = x.shape
+
+        assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
+        T, H, W = HW
+        x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
+
+        x = self.inverted_conv(x)
+        x = self.depth_conv(x)
+
+        # Space aggregation
+        x, gate = torch.chunk(x, 2, dim=1)
+        gate = self.glu_act(gate)
+        x = x * gate
+        x = self.point_conv(x)
+
+        # Temporal aggregation
+        x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)  # B, C, T, H*W
+        padding_size = self.t_conv.kernel_size[0] // 2
+        # add the last chunk index
+        chunk_index = chunk_index[:]
+        chunk_index.append(T)
+        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
+        x_reshaped_list = x_reshaped.split(chunk_sizes, dim=-2)
+        # for the first chunk, padding padding_size zero to the right
+        # for the other chunks, padding padding_size zero to the right, padding the padding_size items in the last chunk to the left
+        padded_x_reshaped_list = []
+        padded_x_reshaped_list.append(
+            torch.cat(
+                [x_reshaped_list[0], torch.zeros(B, C, padding_size, H * W).to(x_reshaped.device, x_reshaped.dtype)],
+                dim=-2,
+            )
+        )
+        for i in range(1, len(x_reshaped_list)):
+            prev_chunk = x_reshaped_list[i - 1][
+                :, :, -padding_size:, :
+            ]  # .detach() seems not necessary, since we will drop it
+            cur_chunk = x_reshaped_list[i]
+            padded_x_reshaped_list.append(
+                torch.cat(
+                    [
+                        prev_chunk,
+                        cur_chunk,
+                        torch.zeros(B, C, padding_size, H * W).to(x_reshaped.device, x_reshaped.dtype),
+                    ],
+                    dim=-2,
+                )
+            )
+        x_reshaped_t_conv = torch.cat(padded_x_reshaped_list, dim=-2)
+        t_conv_out = self.t_conv(x_reshaped_t_conv)
+
+        # Remove padding from the output
+        # Calculate the expected output size after convolution
+        padded_chunk_sizes = []
+        padded_chunk_sizes.append(chunk_sizes[0] + padding_size)  # First chunk: original + right padding
+        for i in range(1, len(chunk_sizes)):
+            padded_chunk_sizes.append(
+                padding_size + chunk_sizes[i] + padding_size
+            )  # Other chunks: left + original + right padding
+
+        # After convolution, the output size depends on the convolution parameters
+        # For typical temporal convolution with same padding, output size should match input size
+        # Split the convolved output back into chunks
+        t_conv_out_list = t_conv_out.split(padded_chunk_sizes, dim=-2)
+
+        # Remove padding from each chunk
+        unpadded_chunks = []
+        for i, chunk in enumerate(t_conv_out_list):
+            if i == 0:
+                # First chunk: remove right padding
+                unpadded_chunk = chunk[:, :, : chunk_sizes[i], :]
+            else:
+                # Other chunks: remove left and right padding
+                start_idx = padding_size
+                end_idx = start_idx + chunk_sizes[i]
+                unpadded_chunk = chunk[:, :, start_idx:end_idx, :]
+            unpadded_chunks.append(unpadded_chunk)
+
+        # Concatenate the unpadded chunks
+        t_conv_out_final = torch.cat(unpadded_chunks, dim=-2)
+
+        # Verify the output has the correct temporal dimension
+        assert t_conv_out_final.shape[-2] == T, f"Expected temporal dimension {T}, got {t_conv_out_final.shape[-2]}"
+
+        x_out = x_reshaped + t_conv_out_final
+
+        x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
+
+        return x_out
+
+
+class CachedGLUMBConvTemp(GLUMBConvTemp):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.kv_cache = None
+
+    def forward(self, x: torch.Tensor, HW=None, save_kv_cache=False, **kwargs) -> torch.Tensor:
+        B, N, C = x.shape
+
+        assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
+        T, H, W = HW
+        x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
+
+        x = self.inverted_conv(x)
+        x = self.depth_conv(x)
+
+        # Space aggregation
+        x, gate = torch.chunk(x, 2, dim=1)
+        gate = self.glu_act(gate)
+        x = x * gate
+        x = self.point_conv(x)
+
+        # Temporal aggregation
+        x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)  # B,C,T,HW
+        padding_size = self.t_conv.kernel_size[0] // 2
+        x_t_conv_in = x_reshaped
+        padded_size = 0
+        # Use internal cache with the same logic as before
+        if self.kv_cache is not None:
+
+            if self.kv_cache[2] is not None:
+                # Use previous chunk's temporal convolution cache
+                x_t_conv_in = torch.cat([self.kv_cache[2], x_reshaped], dim=2)  # B,C,P+T,HW
+                padded_size = self.kv_cache[2].shape[2]
+
+            if save_kv_cache:  # Save current chunk's cache for next chunk
+                self.kv_cache[2] = x_reshaped[:, :, -padding_size:, :].detach().clone()
+                # print(f"CachedGLUMBConvTemp: Saved internal tconv cache, shape: {self.kv_cache[2].shape}")
+
+        t_conv_out = self.t_conv(x_t_conv_in)[:, :, padded_size:]
+        x_out = x_reshaped + t_conv_out
+
+        x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
+
+        return x_out
 
 
 class SlimGLUMBConv(GLUMBConv):

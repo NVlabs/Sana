@@ -147,24 +147,51 @@ jobs:
       - name: Run SANA-Sprint training test
         run: |
           sana-run --pty -m ci -J test-training-sprint bash tests/bash/training/test_training_sprint.sh
+  test-training-video:
+    needs: pre-commit
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10.10
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+        run: |
+          bash environment_setup.sh
+      - name: Run video training test
+        run: |
+          sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
   remove-label:
-    needs: [test-inference, test-training-offline-vae, test-training-online-vae, test-training-fsdp, test-training-sprint]
+    needs: [test-inference, test-training-offline-vae, test-training-online-vae, test-training-fsdp, test-training-sprint, test-training-video]
     if: |
       always() &&
       github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Remove run-tests label
+      - name: Remove label
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.removeLabel({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'run-tests'
-            })
+            const labels = context.payload.pull_request.labels || [];
+            const hasRunTestsLabel = labels.some(label => label.name === 'run-tests');
+            if (hasRunTestsLabel) {
+              await github.rest.issues.removeLabel({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'run-tests'
+              });
+            }
 
 # tests-python:
 #     needs: pre-commit

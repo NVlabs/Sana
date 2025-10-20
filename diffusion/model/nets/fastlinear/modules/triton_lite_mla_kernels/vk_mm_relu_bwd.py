@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 import triton
 import triton.language as tl
@@ -160,11 +159,6 @@ def vk_mm_relu_bwd(
         grad_v: (B, N, H, C), fp16
     """
 
-    # ref_grad_v = (grad_vk@k.float().permute(0, 2, 3, 1)).permute(0, 3, 1, 2)[:, :, :, :-1]
-    # ref_grad_k = ((v.float().permute(0, 2, 1, 3)@grad_vk[:, :, :-1])+grad_vk[:, :, -1:]).permute(0, 2, 1, 3)
-    # ref_grad_k.mul_(k_relu_mask)
-    # return ref_grad_k, ref_grad_v
-
     assert grad_vk.dim() == 4 and k.dim() == 4 and v.dim() == 4 and k_relu_mask.dim() == 4
     assert k.shape == v.shape == k_relu_mask.shape
     assert grad_vk.shape[0] == k.shape[0]  # B
@@ -201,5 +195,3 @@ def vk_mm_relu_bwd(
         grad_k.stride(3),  #
         BLOCK_SIZE_C=triton.next_power_of_2(C),
     )
-
-    # ipdb.set_trace()

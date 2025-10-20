@@ -20,6 +20,7 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
+from termcolor import colored
 from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
@@ -99,7 +100,7 @@ class SanaBlock(nn.Module):
             # vanilla self attention
             self.attn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True)
         else:
-            raise ValueError(f"{attn_type} type is not defined.")
+            self.attn = None
 
         if cross_attn_type in ["flash", "linear"]:
             self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
@@ -137,7 +138,8 @@ class SanaBlock(nn.Module):
                 in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
             )
         else:
-            raise ValueError(f"{ffn_type} type is not defined.")
+            self.mlp = None
+
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
@@ -202,16 +204,19 @@ class Sana(nn.Module):
         self.in_channels = in_channels
         self.out_channels = in_channels * 2 if pred_sigma else in_channels
         self.hidden_size = hidden_size
-        self.patch_size = patch_size
+        self.patch_size = patch_size[0] if isinstance(patch_size, tuple) else patch_size
         self.num_heads = num_heads
+        self.linear_head_dim = linear_head_dim
         self.pe_interpolation = pe_interpolation
         self.depth = depth
         self.use_pe = use_pe
         self.pos_embed_type = pos_embed_type
         self.y_norm = y_norm
-        self.fp32_attention = kwargs.get("use_fp32_attention", False)
         self.config = config
+        self.fp32_attention = kwargs.get("use_fp32_attention", False)
+        self.null_embed_path = null_embed_path
         self.timestep_norm_scale_factor = timestep_norm_scale_factor
+
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbed(
             input_size, patch_size, in_channels, hidden_size, kernel_size=kernel_size, bias=True
@@ -237,6 +242,10 @@ class Sana(nn.Module):
         if self.y_norm:
             self.attention_y_norm = RMSNorm(hidden_size, scale_factor=y_norm_scale_factor, eps=norm_eps)
         drop_path = [x.item() for x in torch.linspace(0, drop_path, depth)]  # stochastic depth decay rule
+        if attn_type == "flash":
+            attention_head_dim = hidden_size // num_heads
+        else:
+            attention_head_dim = linear_head_dim
         self.blocks = nn.ModuleList(
             [
                 SanaBlock(
@@ -258,12 +267,13 @@ class Sana(nn.Module):
         self.final_layer = T2IFinalLayer(hidden_size, patch_size, self.out_channels)
 
         if config and config.work_dir:
-            logger = get_root_logger(os.path.join(config.work_dir, "train_log.log"))
-            logger = logger.info
+            self.logger = get_root_logger(os.path.join(config.work_dir, "train_log.log"))
+            self.logger = self.logger.info
         else:
-            logger = print
+            self.logger = print
 
-        if self.use_pe and self.pos_embed_type in ["sincos", "3d_rope"]:
+        # Fixed image size pos embed
+        if self.use_pe and self.pos_embed_type in ["sincos", "flux_rope"]:
             if self.pos_embed_type == "sincos":
                 # Initialize (and freeze) pos_embed by sin-cos embedding:
                 pos_embed = get_2d_sincos_pos_embed(
@@ -273,19 +283,19 @@ class Sana(nn.Module):
                     base_size=self.base_size,
                 )
                 self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
-            elif self.pos_embed_type == "3d_rope":
+            elif self.pos_embed_type == "flux_rope":
                 # Initialize (and freeze) pos_embed by 3D-Rope embedding:
                 self.pos_embed = RopePosEmbed(theta=10000, axes_dim=[0, 16, 16])
 
         self.initialize_weights()
 
         if get_rank() == 0:
-            logger(
+            self.logger(
                 f"use pe: {use_pe}, pos embed type: {pos_embed_type}, "
                 f"position embed interpolation: {self.pe_interpolation}, base size: {self.base_size}"
             )
-            logger(
-                f"attention type: {attn_type}; ffn type: {ffn_type}; self-attn qk norm: {qk_norm}; "
+            self.logger(
+                f"attention type: {attn_type}; ffn type: {ffn_type}; self-attn head dim: {attention_head_dim}; self-attn qk norm: {qk_norm}; "
                 f"cross-attn type: {cross_attn_type};  cross-attn qk norm: {cross_norm}; "
                 f"autocast linear attn: {os.environ.get('AUTOCAST_LINEAR_ATTN', False)}"
             )
@@ -307,7 +317,7 @@ class Sana(nn.Module):
         if self.use_pe:
             if self.pos_embed_type == "sincos":
                 x = x + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
-            elif self.pos_embed_type == "3d_rope":
+            elif self.pos_embed_type == "flux_rope":
                 image_pos_embed = pos_embed
                 x += image_pos_embed
         t = self.t_embedder(timestep.to(x.dtype))  # (N, D)
@@ -382,6 +392,21 @@ class Sana(nn.Module):
         # Initialize caption embedding MLP:
         nn.init.normal_(self.y_embedder.y_proj.fc1.weight, std=0.02)
         nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
+
+        # load null embed
+        try:
+            null_embed = torch.load(self.null_embed_path, map_location="cpu")
+            self.y_embedder.y_embedding.data = null_embed["uncond_prompt_embeds"][0]
+            if get_rank() == 0:
+                self.logger(colored(f"Load null embed from {self.null_embed_path}....", "green"))
+        except Exception as e:
+            if get_rank() == 0:
+                self.logger(
+                    colored(
+                        f"Failed to load null embed from {self.null_embed_path}....{e}. Ignore the error during inference",
+                        "red",
+                    )
+                )
 
     @property
     def dtype(self):

@@ -20,10 +20,12 @@ import os
 import torch
 from tqdm import tqdm
 
+from ..guiders.adaptive_projected_guidance import AdaptiveProjectedGuidance
 from .nets.sana_blocks import (
     PAGCFGIdentitySelfAttnProcessorLiteLA,
     PAGIdentitySelfAttnProcessorLiteLA,
     SelfAttnProcessorLiteLA,
+    SelfAttnProcessorLiteLAReLURope,
 )
 
 
@@ -275,6 +277,11 @@ def model_wrapper(
     interval_guidance=[0, 1.0],
     classifier_fn=None,
     classifier_kwargs={},
+    condition_as_list=False,
+    apg: AdaptiveProjectedGuidance = None,
+    stg_applied_layers=[],
+    stg_scale=0.0,
+    **kwargs,
 ):
     """Create a wrapper function for the noise prediction model.
 
@@ -361,6 +368,7 @@ def model_wrapper(
         guidance_scale: A `float`. The scale for the guided sampling.
         classifier_fn: A classifier function. Only used for the classifier guidance.
         classifier_kwargs: A `dict`. A dict for the other inputs of the classifier function.
+        condition_as_list: A `bool`. Whether the condition is a list or not.
     Returns:
         A noise prediction model that accepts the noised data and the continuous time as the inputs.
     """
@@ -398,10 +406,26 @@ def model_wrapper(
         elif model_type == "flow":
             _, sigma_t = noise_schedule.marginal_alpha(t_continuous), noise_schedule.marginal_std(t_continuous)
             try:
-                noise = (1 - expand_dims(sigma_t, x.dim()).to(x)) * output + x
+                noise = (1 - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x)) * output + x
             except:
-                noise = (1 - expand_dims(sigma_t, x.dim()).to(x)) * output[0] + x
+                noise = (1 - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x)) * output[0] + x
+
             return noise
+
+    def data_pred_fn(x, t_continuous, cond=None):
+        t_input = get_model_input_time(t_continuous)
+        if cond is None:
+            output = model(x, t_input, **model_kwargs)
+        else:
+            output = model(x, t_input, cond, **model_kwargs)
+        if model_type == "flow":
+            _, sigma_t = noise_schedule.marginal_alpha(t_continuous), noise_schedule.marginal_std(t_continuous)
+            try:
+                x0 = x - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x) * output
+            except:
+                x0 = x - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x) * output[0]
+
+            return {"x0": x0, "model_output": output}
 
     def cond_grad_fn(x, t_input):
         """
@@ -416,6 +440,7 @@ def model_wrapper(
         """
         The noise predicition model function that is used for DPM-Solver.
         """
+        nonlocal model_kwargs
         guidance_tp = guidance_type
         if guidance_tp == "uncond":
             return noise_pred_fn(x, t_continuous)
@@ -430,17 +455,33 @@ def model_wrapper(
             if (
                 guidance_scale == 1.0
                 or unconditional_condition is None
-                or not (interval_guidance[0] < t_continuous[0] < interval_guidance[1])
+                or not (interval_guidance[0] < t_continuous.flatten()[0] < interval_guidance[1])
             ):
                 return noise_pred_fn(x, t_continuous, cond=condition)
             else:
                 x_in = torch.cat([x] * 2)
                 t_in = torch.cat([t_continuous] * 2)
-                c_in = torch.cat([unconditional_condition, condition])
+                if condition_as_list:
+                    # for Wan, the context is list
+                    if isinstance(unconditional_condition, list):
+                        # NOTE support bs > 1 for Wan
+                        assert isinstance(condition, list) and len(unconditional_condition) == len(
+                            condition
+                        ), "unconditional_condition and condition must have the same length"
+                        c_in = [
+                            unconditional_condition[i].to(x_in.dtype) for i in range(len(unconditional_condition))
+                        ] + [condition[i].to(x_in.dtype) for i in range(len(condition))]
+                    else:
+                        c_in = [unconditional_condition.to(x_in.dtype), condition.to(x_in.dtype)]
+
+                else:
+                    # for SANA, the context is concated
+                    c_in = torch.cat([unconditional_condition, condition])
                 try:
                     noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in).chunk(2)
                 except:
                     noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(2)
+
                 return noise_uncond + guidance_scale * (noise - noise_uncond)
         elif guidance_tp == "classifier-free_PAG":
             for i in pag_applied_layers:
@@ -483,6 +524,7 @@ def model_wrapper(
                     model.__self__.blocks[i].attn.forward = SelfAttnProcessorLiteLA(model.__self__.blocks[i].attn)
 
             return noise_pred
+
         elif guidance_tp == "classifier-free_PAG_seq":
             num_inputs = 2
             if t_continuous[0] < 0.5:
@@ -535,6 +577,74 @@ def model_wrapper(
 
                 return noise_uncond + guidance_scale * (noise - noise_uncond) + pag_scale * (noise - noise_perturb)
 
+        elif guidance_tp == "adaptive_projected_guidance":
+            assert apg is not None
+            if guidance_scale == 1.0:
+                return noise_pred_fn(x, t_continuous, cond=condition)
+            else:
+                x_in = torch.cat([x] * 2)
+                t_in = torch.cat([t_continuous] * 2)
+                c_in = torch.cat([unconditional_condition, condition])
+
+                output = data_pred_fn(x_in, t_in, cond=c_in)
+                model_output = output["model_output"]
+                try:
+                    x0_uncond, x0 = output["x0"].chunk(2)
+                except:
+                    x0_uncond, x0 = output["x0"][0].chunk(2)
+
+                x0 = apg(x0, x0_uncond)[0]
+                noise = (x - (1 - t_continuous) * x0) / t_continuous
+
+                return noise
+
+        elif guidance_tp == "classifier-free_STG":
+            num_inputs = 1 if guidance_scale == 1.0 else 2
+            x_in = torch.cat([x] * num_inputs)
+            t_in = torch.cat([t_continuous] * num_inputs)
+            c_in = torch.cat([condition] * num_inputs)
+
+            try:
+                chunks = noise_pred_fn(x_in, t_in, cond=c_in).chunk(num_inputs)
+            except:
+                chunks = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(num_inputs)
+            for i in stg_applied_layers:
+                if isinstance(model, torch.nn.Module):
+                    model.blocks[i].attn.forward = ForwardWithSTG()
+                else:
+                    model.__self__.blocks[i].attn.forward = ForwardWithSTG()
+
+            model_kwargs_ori = model_kwargs.copy()
+            if model_kwargs.get("mask", None) is not None:
+                mask = model_kwargs["mask"]
+                if mask.shape[0] == x.shape[0] * 2:
+                    negative_mask = mask[: x.shape[0]]
+                    model_kwargs["mask"] = mask[x.shape[0] :]
+            try:
+                noise_perturb = noise_pred_fn(x, t_continuous, cond=condition[None])
+            except:
+                noise_perturb = noise_pred_fn(x, t_continuous, cond=condition[None])[0]
+
+            model_kwargs = model_kwargs_ori
+
+            if guidance_scale == 1.0:
+                noise = chunks[0]
+                noise_pred = noise + stg_scale * (noise - noise_perturb)
+            else:
+                noise_uncond, noise = chunks
+                noise_pred = (
+                    noise_uncond + guidance_scale * (noise - noise_uncond) + stg_scale * (noise - noise_perturb)
+                )
+            for i in stg_applied_layers:
+                if isinstance(model, torch.nn.Module):
+                    model.blocks[i].attn.forward = SelfAttnProcessorLiteLAReLURope(model.blocks[i].attn)
+                else:
+                    model.__self__.blocks[i].attn.forward = SelfAttnProcessorLiteLAReLURope(
+                        model.__self__.blocks[i].attn
+                    )
+
+            return noise_pred
+
     assert model_type in ["noise", "x_start", "v", "score", "flow"]
     assert guidance_type in [
         "uncond",
@@ -542,8 +652,19 @@ def model_wrapper(
         "classifier-free",
         "classifier-free_PAG",
         "classifier-free_PAG_seq",
+        "classifier-free_STG",
+        "adaptive_projected_guidance",
     ]
     return model_fn
+
+
+class ForwardWithSTG:
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+    def __call__(self, hidden_states: torch.Tensor, **kwargs) -> torch.Tensor:
+
+        return hidden_states
 
 
 class DPM_Solver:
@@ -613,7 +734,14 @@ class DPM_Solver:
             Burcu Karagol Ayan, S Sara Mahdavi, Rapha Gontijo Lopes, et al. Photorealistic text-to-image diffusion models
             with deep language understanding. arXiv preprint arXiv:2205.11487, 2022b.
         """
-        self.model = lambda x, t: model_fn(x, t.expand(x.shape[0]))
+
+        def _expand_time(x, t):
+            if t.ndim == 1:
+                return t.expand(x.shape[0])
+            else:
+                return t.expand(x.shape[0], *t.shape[1:])
+
+        self.model = lambda x, t: model_fn(x, _expand_time(x, t))
         self.noise_schedule = noise_schedule
         assert algorithm_type in ["dpmsolver", "dpmsolver++"]
         self.algorithm_type = algorithm_type
@@ -676,6 +804,9 @@ class DPM_Solver:
         """
         noise = self.noise_prediction_fn(x, t)
         alpha_t, sigma_t = self.noise_schedule.marginal_alpha(t), self.noise_schedule.marginal_std(t)
+        # expand sigma_t to x.ndim - sigma_t.ndim + 1
+        sigma_t = expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1)
+        alpha_t = expand_dims(alpha_t, x.ndim - alpha_t.ndim + 1)
         x0 = (x - sigma_t * noise) / alpha_t
         if self.correcting_x0_fn is not None:
             x0 = self.correcting_x0_fn(x0, t)
@@ -721,9 +852,40 @@ class DPM_Solver:
             sigmas = 1.0 - betas
             sigmas = (shift * sigmas / (1 + (shift - 1) * sigmas)).flip(dims=[0])
             return sigmas
+        elif skip_type == "linear_quadratic":
+            # Meta MovieGen style linear-quadratic scheduler
+            # First half: linear spacing, Second half: quadratic spacing
+            # Output range matches time_uniform_flow: from ~0.999 to 0
+            total_steps = 1000  # Can be made configurable if needed
+
+            # Create full linear schedule from 1 to 0 (for internal spacing)
+            linear_full = torch.linspace(1, 0, total_steps)
+
+            # First half: linear
+            first_half = linear_full[: (N + 1) // 2]
+
+            # Second half: quadratic
+            second_half_steps = (N + 1) - (N + 1) // 2
+            if second_half_steps > 0:
+                start = linear_full[(N + 1) // 2].item()  # Current position value
+                end = 0  # Target endpoint
+                quadratic_indices = torch.arange(1, second_half_steps + 1, dtype=torch.float32)
+                quadratic_spacing = (quadratic_indices**2) / (second_half_steps**2)
+                # Decrease from start to end using quadratic spacing
+                second_half = start - quadratic_spacing * start
+                schedule = torch.cat([first_half, second_half])
+            else:
+                schedule = first_half
+
+            # Map from [1,0] to [0.999, 0] to match time_uniform_flow range
+            # Approximate the range of time_uniform_flow
+            max_val = 1.0 - t_0  # ≈ 0.999 when t_0 = 0.001
+            min_val = 0.0
+            t = schedule * max_val + (1 - schedule) * min_val
+            return t.to(device)
         else:
             raise ValueError(
-                f"Unsupported skip_type {skip_type}, need to be 'logSNR' or 'time_uniform' or 'time_quadratic'"
+                f"Unsupported skip_type {skip_type}, need to be 'logSNR' or 'time_uniform' or 'time_quadratic' or 'time_uniform_flow' or 'linear_quadratic'"
             )
 
     def get_orders_and_timesteps_for_singlestep_solver(self, steps, order, skip_type, t_T, t_0, device):
@@ -828,6 +990,8 @@ class DPM_Solver:
             x_t: A pytorch tensor. The approximated solution at time `t`.
         """
         ns = self.noise_schedule
+        t = expand_dims(t, x.ndim - t.ndim + 1)
+        s = expand_dims(s, x.ndim - s.ndim + 1)
         dims = x.dim()
         lambda_s, lambda_t = ns.marginal_lambda(s), ns.marginal_lambda(t)
         h = lambda_t - lambda_s
@@ -1085,11 +1249,14 @@ class DPM_Solver:
         Returns:
             x_t: A pytorch tensor. The approximated solution at time `t`.
         """
+        t = expand_dims(t, x.ndim - t.ndim + 1)
         if solver_type not in ["dpmsolver", "taylor"]:
             raise ValueError(f"'solver_type' must be either 'dpmsolver' or 'taylor', got {solver_type}")
         ns = self.noise_schedule
         model_prev_1, model_prev_0 = model_prev_list[-2], model_prev_list[-1]
         t_prev_1, t_prev_0 = t_prev_list[-2], t_prev_list[-1]
+        t_prev_1 = expand_dims(t_prev_1, x.ndim - t_prev_1.ndim + 1)
+        t_prev_0 = expand_dims(t_prev_0, x.ndim - t_prev_0.ndim + 1)
         lambda_prev_1, lambda_prev_0, lambda_t = (
             ns.marginal_lambda(t_prev_1),
             ns.marginal_lambda(t_prev_0),
@@ -1611,11 +1778,9 @@ class DPM_Solver:
         else:
             return x
 
-    def sample_mask(
+    def sample_frame_aware(
         self,
         x,
-        img_latent,
-        latent_mask=None,
         steps=20,
         t_start=None,
         t_end=None,
@@ -1629,7 +1794,116 @@ class DPM_Solver:
         rtol=0.05,
         return_intermediate=False,
         flow_shift=1.0,
+        condition_frame_info=None,
     ):
+        """
+        Compute the sample at time `t_end` by DPM-Solver, given the initial `x` at time `t_start`.
+
+        =====================================================
+
+        We support the following algorithms for both noise prediction model and data prediction model:
+            - 'singlestep':
+                Singlestep DPM-Solver (i.e. "DPM-Solver-fast" in the paper), which combines different orders of singlestep DPM-Solver.
+                We combine all the singlestep solvers with order <= `order` to use up all the function evaluations (steps).
+                The total number of function evaluations (NFE) == `steps`.
+                Given a fixed NFE == `steps`, the sampling procedure is:
+                    - If `order` == 1:
+                        - Denote K = steps. We use K steps of DPM-Solver-1 (i.e. DDIM).
+                    - If `order` == 2:
+                        - Denote K = (steps // 2) + (steps % 2). We take K intermediate time steps for sampling.
+                        - If steps % 2 == 0, we use K steps of singlestep DPM-Solver-2.
+                        - If steps % 2 == 1, we use (K - 1) steps of singlestep DPM-Solver-2 and 1 step of DPM-Solver-1.
+                    - If `order` == 3:
+                        - Denote K = (steps // 3 + 1). We take K intermediate time steps for sampling.
+                        - If steps % 3 == 0, we use (K - 2) steps of singlestep DPM-Solver-3, and 1 step of singlestep DPM-Solver-2 and 1 step of DPM-Solver-1.
+                        - If steps % 3 == 1, we use (K - 1) steps of singlestep DPM-Solver-3 and 1 step of DPM-Solver-1.
+                        - If steps % 3 == 2, we use (K - 1) steps of singlestep DPM-Solver-3 and 1 step of singlestep DPM-Solver-2.
+            - 'multistep':
+                Multistep DPM-Solver with the order of `order`. The total number of function evaluations (NFE) == `steps`.
+                We initialize the first `order` values by lower order multistep solvers.
+                Given a fixed NFE == `steps`, the sampling procedure is:
+                    Denote K = steps.
+                    - If `order` == 1:
+                        - We use K steps of DPM-Solver-1 (i.e. DDIM).
+                    - If `order` == 2:
+                        - We firstly use 1 step of DPM-Solver-1, then use (K - 1) step of multistep DPM-Solver-2.
+                    - If `order` == 3:
+                        - We firstly use 1 step of DPM-Solver-1, then 1 step of multistep DPM-Solver-2, then (K - 2) step of multistep DPM-Solver-3.
+            - 'singlestep_fixed':
+                Fixed order singlestep DPM-Solver (i.e. DPM-Solver-1 or singlestep DPM-Solver-2 or singlestep DPM-Solver-3).
+                We use singlestep DPM-Solver-`order` for `order`=1 or 2 or 3, with total [`steps` // `order`] * `order` NFE.
+            - 'adaptive':
+                Adaptive step size DPM-Solver (i.e. "DPM-Solver-12" and "DPM-Solver-23" in the paper).
+                We ignore `steps` and use adaptive step size DPM-Solver with a higher order of `order`.
+                You can adjust the absolute tolerance `atol` and the relative tolerance `rtol` to balance the computatation costs
+                (NFE) and the sample quality.
+                    - If `order` == 2, we use DPM-Solver-12 which combines DPM-Solver-1 and singlestep DPM-Solver-2.
+                    - If `order` == 3, we use DPM-Solver-23 which combines singlestep DPM-Solver-2 and singlestep DPM-Solver-3.
+
+        =====================================================
+
+        Some advices for choosing the algorithm:
+            - For **unconditional sampling** or **guided sampling with small guidance scale** by DPMs:
+                Use singlestep DPM-Solver or DPM-Solver++ ("DPM-Solver-fast" in the paper) with `order = 3`.
+                e.g., DPM-Solver:
+                    >>> dpm_solver = DPM_Solver(model_fn, noise_schedule, algorithm_type="dpmsolver")
+                    >>> x_sample = dpm_solver.sample(x, steps=steps, t_start=t_start, t_end=t_end, order=3,
+                            skip_type='time_uniform', method='singlestep')
+                e.g., DPM-Solver++:
+                    >>> dpm_solver = DPM_Solver(model_fn, noise_schedule, algorithm_type="dpmsolver++")
+                    >>> x_sample = dpm_solver.sample(x, steps=steps, t_start=t_start, t_end=t_end, order=3,
+                            skip_type='time_uniform', method='singlestep')
+            - For **guided sampling with large guidance scale** by DPMs:
+                Use multistep DPM-Solver with `algorithm_type="dpmsolver++"` and `order = 2`.
+                e.g.
+                    >>> dpm_solver = DPM_Solver(model_fn, noise_schedule, algorithm_type="dpmsolver++")
+                    >>> x_sample = dpm_solver.sample(x, steps=steps, t_start=t_start, t_end=t_end, order=2,
+                            skip_type='time_uniform', method='multistep')
+
+        We support three types of `skip_type`:
+            - 'logSNR': uniform logSNR for the time steps. **Recommended for low-resolutional images**
+            - 'time_uniform': uniform time for the time steps. **Recommended for high-resolutional images**.
+            - 'time_quadratic': quadratic time for the time steps.
+
+        =====================================================
+        Args:
+            x: A pytorch tensor. The initial value at time `t_start`
+                e.g. if `t_start` == T, then `x` is a sample from the standard normal distribution.
+            steps: A `int`. The total number of function evaluations (NFE).
+            t_start: A `float`. The starting time of the sampling.
+                If `T` is None, we use self.noise_schedule.T (default is 1.0).
+            t_end: A `float`. The ending time of the sampling.
+                If `t_end` is None, we use 1. / self.noise_schedule.total_N.
+                e.g. if total_N == 1000, we have `t_end` == 1e-3.
+                For discrete-time DPMs:
+                    - We recommend `t_end` == 1. / self.noise_schedule.total_N.
+                For continuous-time DPMs:
+                    - We recommend `t_end` == 1e-3 when `steps` <= 15; and `t_end` == 1e-4 when `steps` > 15.
+            order: A `int`. The order of DPM-Solver.
+            skip_type: A `str`. The type for the spacing of the time steps. 'time_uniform' or 'logSNR' or 'time_quadratic'.
+            method: A `str`. The method for sampling. 'singlestep' or 'multistep' or 'singlestep_fixed' or 'adaptive'.
+            denoise_to_zero: A `bool`. Whether to denoise to time 0 at the final step.
+                Default is `False`. If `denoise_to_zero` is `True`, the total NFE is (`steps` + 1).
+
+                This trick is firstly proposed by DDPM (https://arxiv.org/abs/2006.11239) and
+                score_sde (https://arxiv.org/abs/2011.13456). Such trick can improve the FID
+                for diffusion models sampling by diffusion SDEs for low-resolutional images
+                (such as CIFAR-10). However, we observed that such trick does not matter for
+                high-resolutional images. As it needs an additional NFE, we do not recommend
+                it for high-resolutional images.
+            lower_order_final: A `bool`. Whether to use lower order solvers at the final steps.
+                Only valid for `method=multistep` and `steps < 15`. We empirically find that
+                this trick is a key to stabilizing the sampling by DPM-Solver with very few steps
+                (especially for steps <= 10). So we recommend to set it to be `True`.
+            solver_type: A `str`. The taylor expansion type for the solver. `dpmsolver` or `taylor`. We recommend `dpmsolver`.
+            atol: A `float`. The absolute tolerance of the adaptive step size solver. Valid when `method` == 'adaptive'.
+            rtol: A `float`. The relative tolerance of the adaptive step size solver. Valid when `method` == 'adaptive'.
+            return_intermediate: A `bool`. Whether to save the xt at each step.
+                When set to `True`, method returns a tuple (x0, intermediates); when set to False, method returns only x0.
+        Returns:
+            x_end: A pytorch tensor. The approximated solution at time `t_end`.
+
+        """
         t_0 = 1.0 / self.noise_schedule.total_N if t_end is None else t_end
         t_T = self.noise_schedule.T if t_start is None else t_start
         assert (
@@ -1638,14 +1912,10 @@ class DPM_Solver:
         if return_intermediate:
             assert method in [
                 "multistep",
-                "singlestep",
-                "singlestep_fixed",
             ], "Cannot use adaptive solver when saving intermediate values"
         if self.correcting_xt_fn is not None:
             assert method in [
                 "multistep",
-                "singlestep",
-                "singlestep_fixed",
             ], "Cannot use adaptive solver when correcting_xt_fn is not None"
         device = x.device
         intermediates = []
@@ -1659,7 +1929,11 @@ class DPM_Solver:
                 assert timesteps.shape[0] - 1 == steps
                 # Init the initial values.
                 step = 0
-                t = timesteps[step]
+                t = timesteps[step].reshape(1, 1, 1).repeat(1, 1, x.shape[2])  # b,1,f
+                if condition_frame_info is not None:
+                    for frame_idx, frame_weight in condition_frame_info.items():
+                        t[:, :, frame_idx] = timesteps[step] * frame_weight
+
                 t_prev_list = [t]
                 model_prev_list = [self.model_fn(x, t)]
                 if self.correcting_xt_fn is not None:
@@ -1668,26 +1942,16 @@ class DPM_Solver:
                     intermediates.append(x)
                 self.update_progress(step + 1, len(timesteps))
                 # Init the first `order` values by lower order multistep DPM-Solver.
-                t_start = 1.0 / steps
-
-                step = 1
-                t_end = t_start * (steps - step)
-                num_noise_steps = int(steps - step)
-                noise_source_latents, intermediates = self.inverse(
-                    img_latent, steps=num_noise_steps, t_end=t_end, return_intermediate=True
-                )
-
                 for step in range(1, order):
-                    t = timesteps[step]
-
-                    noise_source_latents = intermediates[-step]
+                    t = timesteps[step].reshape(1, 1, 1).repeat(1, 1, x.shape[2])  # b,1,f
+                    if condition_frame_info is not None:
+                        for frame_idx, frame_weight in condition_frame_info.items():
+                            t[:, :, frame_idx] = timesteps[step] * frame_weight
                     x = self.multistep_dpm_solver_update(
                         x, model_prev_list, t_prev_list, t, step, solver_type=solver_type
                     )
                     if self.correcting_xt_fn is not None:
                         x = self.correcting_xt_fn(x, t, step)
-
-                    x = x * latent_mask + noise_source_latents * (1 - latent_mask)
                     if return_intermediate:
                         intermediates.append(x)
                     t_prev_list.append(t)
@@ -1695,21 +1959,15 @@ class DPM_Solver:
                     # update progress bar
                     self.update_progress(step + 1, len(timesteps))
                 # Compute the remaining values by `order`-th order multistep DPM-Solver.
-
                 for step in tqdm(range(order, steps + 1), disable=os.getenv("DPM_TQDM", "False") == "True"):
-                    t = timesteps[step]
-                    t_end = t_start * (steps - step)
-                    num_noise_steps = int(steps - step)
-                    order = 2
-                    if num_noise_steps == 1:
-                        order = 1
-                    if num_noise_steps >= 1:
-                        noise_source_latents = intermediates[-step]
-                    else:
-                        noise_source_latents = img_latent
+                    t = timesteps[step].reshape(1, 1, 1).repeat(1, 1, x.shape[2])  # b,1,f
+                    if condition_frame_info is not None:
+                        for frame_idx, frame_weight in condition_frame_info.items():
+                            t[:, :, frame_idx] = timesteps[step] * frame_weight
+
                     # We only use lower order for steps < 10
                     # if lower_order_final and steps < 10:
-                    if lower_order_final:  # recommended by Shuchen Xue
+                    if lower_order_final:  # recommended by Shuchen Xue # NOTE: SANA
                         step_order = min(order, steps + 1 - step)
                     else:
                         step_order = order
@@ -1718,8 +1976,6 @@ class DPM_Solver:
                     )
                     if self.correcting_xt_fn is not None:
                         x = self.correcting_xt_fn(x, t, step)
-
-                    x = x * latent_mask + noise_source_latents * (1 - latent_mask)
                     if return_intermediate:
                         intermediates.append(x)
                     for i in range(order - 1):
@@ -1732,6 +1988,15 @@ class DPM_Solver:
                     # update progress bar
                     self.update_progress(step + 1, len(timesteps))
 
+            else:
+                raise ValueError(f"Got wrong method {method}")
+            if denoise_to_zero:  # NOTE: SANA NOT USE
+                t = torch.ones((1,)).to(device) * t_0
+                x = self.denoise_to_zero_fn(x, t)
+                if self.correcting_xt_fn is not None:
+                    x = self.correcting_xt_fn(x, t, step + 1)
+                if return_intermediate:
+                    intermediates.append(x)
         if return_intermediate:
             return x, intermediates
         else:
@@ -1800,3 +2065,50 @@ def expand_dims(v, dims):
         a PyTorch tensor with shape [N, 1, 1, ..., 1] and the total dimension is `dims`.
     """
     return v[(...,) + (None,) * (dims - 1)]
+
+
+def linear_quadratic_schedule(N, total_steps=1000, t_start=1.0, t_end=0.001, device=None):
+    """
+    Meta MovieGen style linear-quadratic scheduler.
+    Output range matches time_uniform_flow: from ~0.999 to 0
+
+    Args:
+        N: Number of sampling steps
+        total_steps: Total reference steps for the schedule (default: 1000)
+        t_start: Starting time (default: 1.0) - used to compute max_val
+        t_end: Ending time (default: 0.001) - used to compute max_val
+        device: Target device for the tensor
+
+    Returns:
+        A tensor of time steps with linear-quadratic spacing (from ~0.999 to 0)
+    """
+
+    # Create full linear schedule from 1 to 0 (for internal spacing)
+    linear_full = torch.linspace(1, 0, total_steps)
+
+    # First half: linear
+    first_half = linear_full[: (N + 1) // 2]
+
+    # Second half: quadratic
+    second_half_steps = (N + 1) - (N + 1) // 2
+    if second_half_steps > 0:
+        start = linear_full[(N + 1) // 2].item()  # Current position value
+        end = 0  # Target endpoint
+        quadratic_indices = torch.arange(1, second_half_steps + 1, dtype=torch.float32)
+        quadratic_spacing = (quadratic_indices**2) / (second_half_steps**2)
+        # Decrease from start to end using quadratic spacing
+        second_half = start - quadratic_spacing * start
+        schedule = torch.cat([first_half, second_half])
+    else:
+        schedule = first_half
+
+    # Map from [1,0] to [0.999, 0] to match time_uniform_flow range
+    # Approximate the range of time_uniform_flow
+    max_val = 1.0 - t_end  # ≈ 0.999 when t_end = 0.001
+    min_val = 0.0
+    t = schedule * max_val + (1 - schedule) * min_val
+
+    if device is not None:
+        t = t.to(device)
+
+    return t

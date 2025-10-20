@@ -21,7 +21,7 @@ fi
 pip install -U pip
 
 # for fast attn
-pip install -U xformers==0.0.27.post2 --index-url https://download.pytorch.org/whl/cu121
+pip install -U xformers==0.0.29 --index-url https://download.pytorch.org/whl/cu124
 
 # install sana
 pip install -e .

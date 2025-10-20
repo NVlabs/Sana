@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 import triton
 import triton.language as tl
@@ -210,7 +209,6 @@ def linear_glu_fwd(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) ->
     Output:
         y: (..., D)
     """
-    # ipdb.set_trace()
     assert x.dim() >= 1 and weight.dim() == 2 and bias.dim() == 1
     assert x.shape[-1] == weight.shape[-1]  # C
     assert weight.shape[0] == bias.shape[0]  # D

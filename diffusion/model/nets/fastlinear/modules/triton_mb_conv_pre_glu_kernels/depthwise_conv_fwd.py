@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 import triton
 import triton.language as tl
@@ -141,7 +140,6 @@ def depthwise_conv_fwd(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor
     Output:
         y: (B, H, W, C)
     """
-    # ipdb.set_trace()
     assert x.dim() == 4 and weight.dim() == 3 and bias.dim() == 1
     assert x.shape[-1] == weight.shape[0] == bias.shape[0]  # C
     assert weight.shape[1] == weight.shape[2]  # K
@@ -192,8 +190,6 @@ def debug():
     x = torch.randn(16, 512, 32, 32, device=device, dtype=dtype).to(memory_format=torch.channels_last)
     ref_y = conv(x)
     tri_y = depthwise_conv_fwd(x.permute(0, 2, 3, 1), conv.weight[:, 0], conv.bias).permute(0, 3, 1, 2)
-
-    ipdb.set_trace()
 
 
 if __name__ == "__main__":

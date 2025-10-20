@@ -36,8 +36,21 @@ class LayerNorm2d(nn.LayerNorm):
 
 
 class TritonRMSNorm2d(nn.LayerNorm):
+    def zero_out(self):
+        nn.init.constant_(self.weight, 0)
+        nn.init.constant_(self.bias, 0)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return TritonRMSNorm2dFunc.apply(x, self.weight, self.bias, self.eps)
+        input_numel = x.numel()
+        if input_numel >= 1 << 31:
+            num_chunks = (input_numel - 1) // (1 << 31) + 1
+            output = []
+            for x_chunk in x.chunk(num_chunks, dim=2):
+                output.append(TritonRMSNorm2dFunc.apply(x_chunk.contiguous(), self.weight, self.bias, self.eps))
+            output = torch.cat(output, dim=2)
+            return output
+        else:
+            return TritonRMSNorm2dFunc.apply(x.contiguous(), self.weight, self.bias, self.eps)
 
 
 class RMSNorm2d(nn.Module):
@@ -65,6 +78,14 @@ class RMSNorm2d(nn.Module):
         return x
 
 
+class RMSNorm3d(RMSNorm2d):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = (x / torch.sqrt(torch.square(x.float()).mean(dim=1, keepdim=True) + self.eps)).to(x.dtype)
+        if self.elementwise_affine:
+            x = x * self.weight.view(1, -1, 1, 1, 1) + self.bias.view(1, -1, 1, 1, 1)
+        return x
+
+
 # register normalization function here
 REGISTERED_NORM_DICT: dict[str, type] = {
     "bn2d": nn.BatchNorm2d,
@@ -72,6 +93,7 @@ REGISTERED_NORM_DICT: dict[str, type] = {
     "ln2d": LayerNorm2d,
     "trms2d": TritonRMSNorm2d,
     "rms2d": RMSNorm2d,
+    "rms3d": RMSNorm3d,
 }
 
 

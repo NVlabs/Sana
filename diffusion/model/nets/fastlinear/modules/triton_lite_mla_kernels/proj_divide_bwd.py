@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 import triton
 import triton.language as tl
@@ -296,11 +295,5 @@ def proj_divide_bwd(grad_y: torch.Tensor, proj_weight: torch.Tensor, vk_q: torch
         eps,
         BLOCK_SIZE_C_=C_,
     )
-
-    # ref_grad_proj_input = grad_y@proj_weight
-    # ref_grad_vk_q_numerator = ref_grad_proj_input.view(B_, N_, H_, C_)/(vk_q[:, :, :, -1:]+eps)
-    # ref_grad_vk_q_denominator = -(ref_grad_proj_input.view(B_, N_, H_, C_)*vk_q[:, :, :, :-1]).sum(-1, keepdim=True)/(vk_q[:, :, :, -1:]+eps)**2
-    # ref_grad_vk_q = torch.cat([ref_grad_vk_q_numerator, ref_grad_vk_q_denominator], dim=-1)
-    # ipdb.set_trace()
 
     return grad_vk_q

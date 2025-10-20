@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import ipdb
 import torch
 import triton
 import triton.language as tl
@@ -209,8 +208,4 @@ def vk_q_mm_relu_bwd(
         BLOCK_SIZE_C1=triton.next_power_of_2(C + 1),
     )
 
-    # ref_grad_q = (grad_vk_q.permute(0, 2, 1, 3)@vk).permute(0, 2, 1, 3)
-    # ref_grad_vk = (grad_vk_q.permute(0, 2, 3, 1)@q.float().permute(0, 2, 1, 3))
-    # ref_grad_q.mul_(q_relu_mask)
-    # ipdb.set_trace()
     return grad_vk

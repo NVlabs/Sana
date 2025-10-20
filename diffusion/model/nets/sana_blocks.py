@@ -29,7 +29,7 @@ from timm.models.vision_transformer import Mlp
 from transformers import AutoModelForCausalLM
 
 from diffusion.model.norms import RMSNorm
-from diffusion.model.utils import get_same_padding, to_2tuple
+from diffusion.model.utils import get_same_padding, to_2tuple, to_3tuple
 from diffusion.utils.import_utils import is_xformers_available
 
 _xformers_available = False if os.environ.get("DISABLE_XFORMERS", "0") == "1" else is_xformers_available()
@@ -90,6 +90,64 @@ class MultiHeadCrossAttention(nn.Module):
                 mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
             x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
             x = x.transpose(1, 2)
+
+        x = x.view(B, -1, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+
+        return x
+
+
+class MultiHeadCrossAttentionImageEmbed(nn.Module):
+    def __init__(self, d_model, num_heads, attn_drop=0.0, proj_drop=0.0, qk_norm=False, **block_kwargs):
+        super().__init__()
+        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+
+        self.q_linear = nn.Linear(d_model, d_model)
+        self.kv_linear = nn.Linear(d_model, d_model * 2)
+        self.image_kv_linear = nn.Linear(d_model, d_model * 2)
+
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Linear(d_model, d_model)
+        self.proj_drop = nn.Dropout(proj_drop)
+        if qk_norm:
+            self.q_norm = RMSNorm(d_model, scale_factor=1.0, eps=1e-6)
+            self.k_norm = RMSNorm(d_model, scale_factor=1.0, eps=1e-6)
+            self.image_k_norm = RMSNorm(d_model, scale_factor=1.0, eps=1e-6)
+        else:
+            self.q_norm = nn.Identity()
+            self.k_norm = nn.Identity()
+            self.image_k_norm = nn.Identity()
+
+    def forward(self, x, cond, mask=None, image_embeds=None):
+        # query: img tokens; key/value: condition; mask: if padding tokens
+        B, N, C = x.shape
+
+        q = self.q_linear(x)
+        text_kv = self.kv_linear(cond).view(B, -1, 2, C)
+        text_k, text_v = text_kv.unbind(2)
+
+        image_kv = self.image_kv_linear(image_embeds).view(B, -1, 2, C)
+        image_k, image_v = image_kv.unbind(2)
+
+        q = self.q_norm(q).view(B, -1, self.num_heads, self.head_dim)
+        text_k = self.k_norm(text_k).view(B, -1, self.num_heads, self.head_dim)
+        text_v = text_v.view(B, -1, self.num_heads, self.head_dim)
+        image_k = self.image_k_norm(image_k).view(B, -1, self.num_heads, self.head_dim)
+        image_v = image_v.view(B, -1, self.num_heads, self.head_dim)
+
+        q, text_k, text_v = q.transpose(1, 2), text_k.transpose(1, 2), text_v.transpose(1, 2)
+        image_k, image_v = image_k.transpose(1, 2), image_v.transpose(1, 2)
+        if mask is not None and mask.ndim == 2:
+            mask = (1 - mask.to(q.dtype)) * -10000.0
+            mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+        x = F.scaled_dot_product_attention(q, text_k, text_v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+        x = x + F.scaled_dot_product_attention(q, image_k, image_v, dropout_p=0.0, is_causal=False)
+        x = x.transpose(1, 2)
 
         x = x.view(B, -1, C)
         x = self.proj(x)
@@ -204,7 +262,9 @@ class LiteLA(Attention_):
 
         return out
 
-    def forward(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_id=None, block_mask=None
+    ) -> torch.Tensor:
         B, N, C = x.shape
 
         qkv = self.qkv(x).reshape(B, N, 3, C)
@@ -219,17 +279,14 @@ class LiteLA(Attention_):
         k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
         v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
 
-        if image_rotary_emb is not None:
-            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
-            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+        if rotary_emb is not None:
+            q = apply_rotary_emb(q, rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, rotary_emb, use_real_unbind_dim=-2)
 
         out = self.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.proj(out)
-
-        if torch.get_autocast_gpu_dtype() == torch.float16:
-            out = out.clip(-65504, 65504)
 
         return out
 
@@ -244,13 +301,377 @@ class LiteLA(Attention_):
         return f"EPS{self.eps}-" + super().__repr__()
 
 
+class LiteLAReLURope(Attention_):
+    r"""Lightweight linear attention with first relu kernel and then rope"""
+
+    PAD_VAL = 1
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        heads: Optional[int] = None,
+        heads_ratio: float = 1.0,
+        dim=32,
+        eps=1e-15,
+        use_bias=False,
+        qk_norm=False,
+        norm_eps=1e-5,
+    ):
+        heads = heads or int(out_dim // dim * heads_ratio)
+        super().__init__(in_dim, num_heads=heads, qkv_bias=use_bias)
+
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.heads = heads
+        self.dim = out_dim // heads  # TODO: need some change
+        self.eps = eps
+
+        self.kernel_func = nn.ReLU(inplace=False)
+        if qk_norm:
+            self.q_norm = RMSNorm(in_dim, scale_factor=1.0, eps=norm_eps)
+            self.k_norm = RMSNorm(in_dim, scale_factor=1.0, eps=norm_eps)
+        else:
+            self.q_norm = nn.Identity()
+            self.k_norm = nn.Identity()
+
+        self.qkv_store_buffer = None
+
+    def forward(self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, **kwargs) -> torch.Tensor:
+        B, N, C = x.shape
+
+        qkv = self.qkv(x).reshape(B, N, 3, C)
+        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
+        dtype = q.dtype
+
+        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        v = v.transpose(-1, -2)
+
+        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+
+        # lightweight linear attention
+        q = self.kernel_func(q)  # B, h, h_d, N
+        k = self.kernel_func(k)
+
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+            return x_out.type_as(hidden_states)
+
+        q_rotated = apply_rotary_emb(q, rotary_emb)
+        k_rotated = apply_rotary_emb(k, rotary_emb)
+
+        # Store qkv for visualization if buffer is provided
+        if self.qkv_store_buffer is not None:
+            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
+            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+
+        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
+        if use_fp32_attention:
+            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
+
+        z = 1 / (k.sum(dim=-1, keepdim=True).transpose(-2, -1) @ q + self.eps)
+
+        vk = torch.matmul(v, k_rotated.transpose(-1, -2))
+        out = torch.matmul(vk, q_rotated)
+
+        out = (out * z).to(dtype)
+
+        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
+        out = self.proj(out)
+
+        return out
+
+
+class ChunkCausalAttention(LiteLAReLURope):
+    r"""Chunk causal attention"""
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        heads: Optional[int] = None,
+        heads_ratio: float = 1.0,
+        dim=32,
+        eps=1e-15,
+        use_bias=False,
+        qk_norm=False,
+        norm_eps=1e-5,
+    ):
+        super().__init__(in_dim, out_dim, heads, heads_ratio, dim, eps, use_bias, qk_norm, norm_eps)
+
+    def forward(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, chunk_index: List[int] = [0]
+    ) -> torch.Tensor:
+        B, N, C = x.shape
+
+        qkv = self.qkv(x).reshape(B, N, 3, C)
+        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
+        dtype = q.dtype
+
+        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        v = v.transpose(-1, -2)
+
+        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+
+        # # lightweight linear attention
+        q = self.kernel_func(q)  # B, h, h_d, N
+        k = self.kernel_func(k)
+
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+            return x_out.type_as(hidden_states)
+
+        q_rotated = apply_rotary_emb(q, rotary_emb)  # B, h, h_d, N
+        k_rotated = apply_rotary_emb(k, rotary_emb)  # B, h, h_d, N
+
+        # Store qkv for visualization if buffer is provided
+        if self.qkv_store_buffer is not None:
+            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
+            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+
+        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
+        if use_fp32_attention:
+            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
+
+        # reshape q,k,v to the original shape
+        (f, h, w) = HW
+        # add the last chunk index
+        if chunk_index is not None:
+            chunk_index = chunk_index[:]
+            chunk_index.append(f)
+        else:
+            chunk_index = [0, f]
+        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
+
+        B, h, h_d, N = q_rotated.shape
+        q_rotated = q_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        k_rotated = k_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        q = q.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        k = k.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        v = v.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+
+        # split q,k,v into chunks in the frame dimension
+        q_rotated_list = q_rotated.split(chunk_sizes, dim=-3)
+        k_rotated_list = k_rotated.split(chunk_sizes, dim=-3)
+        v_list = v.split(chunk_sizes, dim=-3)
+        q_list = q.split(chunk_sizes, dim=-3)
+        k_list = k.split(chunk_sizes, dim=-3)
+
+        cumsum_vk = torch.zeros(B, h, h_d, h_d).to(k_rotated.device, k_rotated.dtype)
+        cumsum_k_sum = torch.zeros(B, h, 1, h_d).to(k_rotated.device, k_rotated.dtype)
+        # reshape q,k,v to the original shape
+        q_rotated_list = [_q_rotated.reshape(B, h, h_d, -1) for _q_rotated in q_rotated_list]
+        k_rotated_list = [_k_rotated.reshape(B, h, h_d, -1) for _k_rotated in k_rotated_list]
+        v_list = [_v.reshape(B, h, h_d, -1) for _v in v_list]
+        q_list = [_q.reshape(B, h, h_d, -1) for _q in q_list]
+        k_list = [_k.reshape(B, h, h_d, -1) for _k in k_list]
+        out_list = []
+        for _q_rotated, _k_rotated, _v, _q, _k in zip(q_rotated_list, k_rotated_list, v_list, q_list, k_list):
+            _vk = torch.matmul(_v, _k_rotated.transpose(-1, -2))
+            cumsum_vk += _vk
+            cumsum_k_sum += _k.sum(dim=-1, keepdim=True).transpose(-2, -1)
+            # shape: _k_rotated: B, h, h_d, 1 -> B, h, 1, h_d @ _q_rotated: B,h,h_d,N -> B, h, 1, N
+            z = 1 / (cumsum_k_sum @ _q + self.eps)
+            out = torch.matmul(cumsum_vk, _q_rotated)
+            out = (out * z).to(dtype)  # B, h, h_d, N
+            out_list.append(out)
+
+        out = torch.cat(out_list, dim=-1)  # B, h, h_d, N
+        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
+        out = self.proj(out)
+
+        return out
+
+
+class CachedCausalAttention(LiteLAReLURope):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.kv_cache = None
+
+    def forward(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, save_kv_cache=False, **kwargs
+    ) -> torch.Tensor:
+
+        B, N, C = x.shape
+
+        qkv = self.qkv(x).reshape(B, N, 3, C)
+        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
+        dtype = q.dtype
+
+        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        v = v.transpose(-1, -2)
+
+        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+
+        # lightweight linear attention
+        q = self.kernel_func(q)  # B, h, h_d, N
+        k = self.kernel_func(k)
+
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+            return x_out.type_as(hidden_states)
+
+        q_rotated = apply_rotary_emb(q, rotary_emb)
+        k_rotated = apply_rotary_emb(k, rotary_emb)
+
+        # Store qkv for visualization if buffer is provided
+        if self.qkv_store_buffer is not None:
+            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
+            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+
+        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
+        if use_fp32_attention:
+            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
+
+        k_sum = k.sum(dim=-1, keepdim=True).transpose(-2, -1)
+        vk = torch.matmul(v, k_rotated.transpose(-1, -2))
+
+        # Use internal cache with the same logic as before
+        if self.kv_cache is not None:
+
+            cusum_vk, cumsum_k_sum = self.kv_cache[0], self.kv_cache[1]
+
+            if save_kv_cache:  # Save current chunk's computation
+                self.kv_cache[0] = vk.detach().clone()
+                self.kv_cache[1] = k_sum.detach().clone()
+                # print(f"CachedCausalAttention: Saved internal cache, vk shape: {vk.shape}, k_sum shape: {k_sum.shape}")
+
+            if cusum_vk is not None and cumsum_k_sum is not None:
+                # Add accumulated cache from previous chunks
+                vk = vk + cusum_vk
+                k_sum = k_sum + cumsum_k_sum
+                # print(f"CachedCausalAttention: Applied accumulated cache, vk shape: {vk.shape}, k_sum shape: {k_sum.shape}")
+
+        z = 1 / (k_sum @ q + self.eps)
+        out = torch.matmul(vk, q_rotated)
+
+        out = (out * z).to(dtype)
+
+        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
+        out = self.proj(out)
+
+        return out
+
+
+class ChunkAttention(ChunkCausalAttention):
+    def forward(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, chunk_index: List[int] = [0]
+    ) -> torch.Tensor:
+        B, N, C = x.shape
+
+        qkv = self.qkv(x).reshape(B, N, 3, C)
+        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
+        dtype = q.dtype
+
+        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        v = v.transpose(-1, -2)
+
+        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+
+        # # lightweight linear attention
+        q = self.kernel_func(q)  # B, h, h_d, N
+        k = self.kernel_func(k)
+
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+            return x_out.type_as(hidden_states)
+
+        q_rotated = apply_rotary_emb(q, rotary_emb)  # B, h, h_d, N
+        k_rotated = apply_rotary_emb(k, rotary_emb)  # B, h, h_d, N
+
+        # Store qkv for visualization if buffer is provided
+        if self.qkv_store_buffer is not None:
+            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
+            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+
+        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
+        if use_fp32_attention:
+            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
+
+        # reshape q,k,v to the original shape
+        (f, h, w) = HW
+        # add the last chunk index
+        chunk_index = [0, 5, 9, 13, 17]
+        if chunk_index is not None:
+            chunk_index = chunk_index[:]
+            chunk_index.append(f)
+        else:
+            chunk_index = [0, f]
+        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
+
+        B, h, h_d, N = q_rotated.shape
+        q_rotated = q_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        k_rotated = k_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        q = q.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        k = k.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+        v = v.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
+
+        # split q,k,v into chunks in the frame dimension
+        q_rotated_list = q_rotated.split(chunk_sizes, dim=-3)
+        k_rotated_list = k_rotated.split(chunk_sizes, dim=-3)
+        v_list = v.split(chunk_sizes, dim=-3)
+        q_list = q.split(chunk_sizes, dim=-3)
+        k_list = k.split(chunk_sizes, dim=-3)
+
+        cumsum_vk = torch.zeros(B, h, h_d, h_d).to(k_rotated.device, k_rotated.dtype)
+        cumsum_k_sum = torch.zeros(B, h, 1, h_d).to(k_rotated.device, k_rotated.dtype)
+        # reshape q,k,v to the original shape
+        q_rotated_list = [_q_rotated.reshape(B, h, h_d, -1) for _q_rotated in q_rotated_list]
+        k_rotated_list = [_k_rotated.reshape(B, h, h_d, -1) for _k_rotated in k_rotated_list]
+        v_list = [_v.reshape(B, h, h_d, -1) for _v in v_list]
+        q_list = [_q.reshape(B, h, h_d, -1) for _q in q_list]
+        k_list = [_k.reshape(B, h, h_d, -1) for _k in k_list]
+        out_list = []
+        for _q_rotated, _k_rotated, _v, _q, _k in zip(q_rotated_list, k_rotated_list, v_list, q_list, k_list):
+            _vk = torch.matmul(_v, _k_rotated.transpose(-1, -2))
+            # cumsum_vk += _vk
+            # cumsum_k_sum += _k.sum(dim=-1, keepdim=True).transpose(-2, -1)
+            # shape: _k_rotated: B, h, h_d, 1 -> B, h, 1, h_d @ _q_rotated: B,h,h_d,N -> B, h, 1, N
+            z = 1 / (_k.sum(dim=-1, keepdim=True).transpose(-2, -1) @ _q + self.eps)
+            out = torch.matmul(_vk, _q_rotated)
+            out = (out * z).to(dtype)  # B, h, h_d, N
+            out_list.append(out)
+
+        out = torch.cat(out_list, dim=-1)  # B, h, h_d, N
+        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
+        out = self.proj(out)
+
+        return out
+
+
 class PAGCFGIdentitySelfAttnProcessorLiteLA:
     r"""Self Attention with Perturbed Attention & CFG Guidance"""
 
     def __init__(self, attn):
         self.attn = attn
 
-    def __call__(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
+    def __call__(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_id=None, block_mask=None, **kwargs
+    ) -> torch.Tensor:
         x_uncond, x_org, x_ptb = x.chunk(3)
         x_org = torch.cat([x_uncond, x_org])
         B, N, C = x_org.shape
@@ -267,9 +688,13 @@ class PAGCFGIdentitySelfAttnProcessorLiteLA:
         k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
         v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
 
-        if image_rotary_emb is not None:
-            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
-            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+        if rotary_emb is not None:
+            q = apply_rotary_emb(q, rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, rotary_emb, use_real_unbind_dim=-2)
+
+        # lightweight linear attention
+        q = self.attn.kernel_func(q)  # B, h, h_d, N
+        k = self.attn.kernel_func(k)
 
         out = self.attn.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
@@ -287,9 +712,6 @@ class PAGCFGIdentitySelfAttnProcessorLiteLA:
 
         out = torch.cat([out, x_ptb])
 
-        if torch.get_autocast_gpu_dtype() == torch.float16:
-            out = out.clip(-65504, 65504)
-
         return out
 
 
@@ -299,7 +721,9 @@ class PAGIdentitySelfAttnProcessorLiteLA:
     def __init__(self, attn):
         self.attn = attn
 
-    def __call__(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
+    def __call__(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_id=None, block_mask=None, **kwargs
+    ) -> torch.Tensor:
         x_org, x_ptb = x.chunk(2)
         B, N, C = x_org.shape
 
@@ -315,9 +739,13 @@ class PAGIdentitySelfAttnProcessorLiteLA:
         k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
         v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
 
-        if image_rotary_emb is not None:
-            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
-            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+        if rotary_emb is not None:
+            q = apply_rotary_emb(q, rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, rotary_emb, use_real_unbind_dim=-2)
+
+        # lightweight linear attention
+        q = self.attn.kernel_func(q)  # B, h, h_d, N
+        k = self.attn.kernel_func(k)
 
         out = self.attn.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
@@ -335,9 +763,6 @@ class PAGIdentitySelfAttnProcessorLiteLA:
 
         out = torch.cat([out, x_ptb])
 
-        if torch.get_autocast_gpu_dtype() == torch.float16:
-            out = out.clip(-65504, 65504)
-
         return out
 
 
@@ -347,7 +772,9 @@ class SelfAttnProcessorLiteLA:
     def __init__(self, attn):
         self.attn = attn
 
-    def __call__(self, x: torch.Tensor, mask=None, HW=None, image_rotary_emb=None, block_id=None) -> torch.Tensor:
+    def __call__(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_id=None, block_mask=None, **kwargs
+    ) -> torch.Tensor:
         B, N, C = x.shape
         if HW is None:
             H = W = int(N**0.5)
@@ -365,17 +792,66 @@ class SelfAttnProcessorLiteLA:
         k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
         v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
 
-        if image_rotary_emb is not None:
-            q = apply_rotary_emb(q, image_rotary_emb, use_real_unbind_dim=-2)
-            k = apply_rotary_emb(k, image_rotary_emb, use_real_unbind_dim=-2)
+        if rotary_emb is not None:
+            q = apply_rotary_emb(q, rotary_emb, use_real_unbind_dim=-2)
+            k = apply_rotary_emb(k, rotary_emb, use_real_unbind_dim=-2)
+
+        # lightweight linear attention
+        q = self.attn.kernel_func(q)  # B, h, h_d, N
+        k = self.attn.kernel_func(k)
 
         out = self.attn.attn_matmul(q, k.transpose(-1, -2), v).to(dtype)
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.attn.proj(out)
 
-        if torch.get_autocast_gpu_dtype() == torch.float16:
-            out = out.clip(-65504, 65504)
+        return out
+
+
+class SelfAttnProcessorLiteLAReLURope:
+    r"""Self Attention with Lite Linear Attention"""
+
+    def __init__(self, attn):
+        self.attn = attn
+
+    def __call__(
+        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_id=None, block_mask=None, **kwargs
+    ) -> torch.Tensor:
+        B, N, C = x.shape
+
+        qkv = self.attn.qkv(x).reshape(B, N, 3, C)
+        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
+        dtype = q.dtype
+
+        q = self.attn.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        k = self.attn.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        v = v.transpose(-1, -2)
+
+        q = q.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
+        k = k.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, N, h_d)
+        v = v.reshape(B, C // self.attn.dim, self.attn.dim, N)  # (B, h, h_d, N)
+
+        # lightweight linear attention
+        q = self.attn.kernel_func(q)  # B, h, h_d, N
+        k = self.attn.kernel_func(k)
+
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+            return x_out.type_as(hidden_states)
+
+        q_rotated = apply_rotary_emb(q, rotary_emb)
+        k_rotated = apply_rotary_emb(k, rotary_emb)
+
+        z = 1 / (k.sum(dim=-1, keepdim=True).transpose(-2, -1) @ q + self.attn.eps)
+
+        vk = torch.matmul(v, k_rotated.transpose(-1, -2))
+        out = torch.matmul(vk, q_rotated)
+
+        out = (out * z).to(dtype)
+
+        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
+        out = self.attn.proj(out)
 
         return out
 
@@ -406,7 +882,9 @@ class FlashAttention(Attention_):
             self.q_norm = nn.Identity()
             self.k_norm = nn.Identity()
 
-    def forward(self, x, mask=None, HW=None, block_id=None, **kwargs):
+        self.qkv_store_buffer = None
+
+    def forward(self, x, mask=None, HW=None, rotary_emb=None, block_id=None, block_mask=None, **kwargs):
         B, N, C = x.shape
 
         qkv = self.qkv(x).reshape(B, N, 3, C)
@@ -429,22 +907,34 @@ class FlashAttention(Attention_):
             attn_bias = torch.zeros([B * self.num_heads, q.shape[1], k.shape[1]], dtype=q.dtype, device=q.device)
             attn_bias.masked_fill_(mask.squeeze(1).repeat(self.num_heads, 1, 1) == 0, float("-inf"))
 
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.transpose(1, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).transpose(1, 2)
+            return x_out.type_as(hidden_states)
+
+        if rotary_emb is not None:
+            q = apply_rotary_emb(q, rotary_emb)
+            k = apply_rotary_emb(k, rotary_emb)
+
+        if self.qkv_store_buffer is not None:
+            self.qkv_store_buffer["q"] = q[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["k"] = k[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["v"] = v[0].cpu()  # b, n, h, h_d
+
         if _xformers_available:
             x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
         else:
             q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
             if mask is not None and mask.ndim == 2:
-                mask = (1 - mask.to(x.dtype)) * -10000.0
+                mask = (1 - mask.to(q.dtype)) * -10000.0
                 mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+
             x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
             x = x.transpose(1, 2)
 
-        x = x.view(B, N, C)
+        x = x.view(B, N, C).to(dtype)
         x = self.proj(x)
         x = self.proj_drop(x)
-
-        if torch.get_autocast_gpu_dtype() == torch.float16:
-            x = x.clip(-65504, 65504)
 
         return x
 
@@ -462,9 +952,8 @@ class Attention(Attention_):
         if use_fp32_attention:
             q, k = q.float(), k.float()
 
-        with torch.cuda.amp.autocast(enabled=not use_fp32_attention):
-            attn = (q @ k.transpose(-2, -1)) * self.scale
-            attn = attn.softmax(dim=-1)
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
 
         attn = self.attn_drop(attn)
 
@@ -499,12 +988,28 @@ class T2IFinalLayer(nn.Module):
 
     def __init__(self, hidden_size, patch_size, out_channels):
         super().__init__()
+        if isinstance(patch_size, int):
+            patch_size = [patch_size, patch_size]
         self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
+        self.linear = nn.Linear(hidden_size, math.prod(patch_size) * out_channels, bias=True)
         self.scale_shift_table = nn.Parameter(torch.randn(2, hidden_size) / hidden_size**0.5)
         self.out_channels = out_channels
 
+    def forward_frame_aware(self, x, t):
+        # t: B,1,F,D
+        B, N, C = x.shape
+        num_frames = t.shape[2]
+        # shift, scale: 2, hidden_size -> 1,1,2,hidden_size -> B,F,2,hidden_size
+        shift, scale = (self.scale_shift_table[None, None, :, :] + t.transpose(1, 2)).chunk(
+            2, dim=-2
+        )  # each chunk: B,F,1,D
+        x = t2i_modulate(self.norm_final(x).reshape(B, num_frames, -1, C), shift, scale).reshape(B, N, C)
+        x = self.linear(x)
+        return x
+
     def forward(self, x, t):
+        if len(t.shape) > 2:
+            return self.forward_frame_aware(x, t)
         shift, scale = (self.scale_shift_table[None] + t[:, None]).chunk(2, dim=1)
         x = t2i_modulate(self.norm_final(x), shift, scale)
         x = self.linear(x)
@@ -695,7 +1200,7 @@ class CaptionEmbedder(nn.Module):
             print(f"**** {info} ****")
         print(f"**** Initialized {num_layers} Gemma layers from pretrained model: {model_name} ****")
 
-    def token_drop(self, caption, force_drop_ids=None):
+    def token_drop(self, caption, force_drop_ids=None, y_embedding=None):
         """
         Drops labels to enable classifier-free guidance.
         """
@@ -703,15 +1208,21 @@ class CaptionEmbedder(nn.Module):
             drop_ids = torch.rand(caption.shape[0]).cuda() < self.uncond_prob
         else:
             drop_ids = force_drop_ids == 1
-        caption = torch.where(drop_ids[:, None, None, None], self.y_embedding, caption)
+        caption = torch.where(drop_ids[:, None, None, None], y_embedding, caption)
         return caption
 
     def forward(self, caption, train, force_drop_ids=None, mask=None):
+        y_embedding = self.y_embedding
         if train:
-            assert caption.shape[2:] == self.y_embedding.shape
+            if caption.shape[-2] < self.y_embedding.shape[-2]:
+                y_embedding = self.y_embedding[: caption.shape[-2], :]
+            else:
+                assert (
+                    caption.shape[2:] == self.y_embedding.shape
+                ), f"caption.shape: {caption.shape}, self.y_embedding.shape: {self.y_embedding.shape}"
         use_dropout = self.uncond_prob > 0
         if (train and use_dropout) or (force_drop_ids is not None):
-            caption = self.token_drop(caption, force_drop_ids)
+            caption = self.token_drop(caption, force_drop_ids, y_embedding)
 
         caption = self.y_proj(caption)
 
@@ -754,6 +1265,20 @@ class CaptionEmbedderDoubleBr(nn.Module):
         return y_embed, caption
 
 
+# copy from https://github.com/huggingface/diffusers/blob/01abfc873659e29a8d002f20782fa5b5e6d03f9c/src/diffusers/models/transformers/transformer_hunyuan_video_framepack.py#L72
+class ClipVisionProjection(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int):
+        super().__init__()
+        self.up = nn.Linear(in_channels, out_channels * 3)
+        self.down = nn.Linear(out_channels * 3, out_channels)
+
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        hidden_states = self.up(hidden_states)
+        hidden_states = F.silu(hidden_states)
+        hidden_states = self.down(hidden_states)
+        return hidden_states
+
+
 class PatchEmbed(nn.Module):
     """2D Image to Patch Embedding"""
 
@@ -771,6 +1296,8 @@ class PatchEmbed(nn.Module):
     ):
         super().__init__()
         kernel_size = kernel_size or patch_size
+        if isinstance(kernel_size, tuple) or isinstance(kernel_size, list):
+            kernel_size = kernel_size[0]
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
         self.img_size = img_size
@@ -812,6 +1339,8 @@ class PatchEmbedMS(nn.Module):
     ):
         super().__init__()
         kernel_size = kernel_size or patch_size
+        if isinstance(kernel_size, tuple) or isinstance(kernel_size, list):
+            kernel_size = kernel_size[0]
         patch_size = to_2tuple(patch_size)
         self.patch_size = patch_size
         self.flatten = flatten
@@ -826,6 +1355,42 @@ class PatchEmbedMS(nn.Module):
         x = self.proj(x)
         if self.flatten:
             x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
+        x = self.norm(x)
+        return x
+
+
+class PatchEmbedMS3D(nn.Module):
+    """3D Image to Patch Embedding"""
+
+    def __init__(
+        self,
+        patch_size=(1, 2, 2),
+        in_chans=3,
+        embed_dim=768,
+        kernel_size=None,
+        padding=0,
+        norm_layer=None,
+        flatten=True,
+        bias=True,
+    ):
+        super().__init__()
+        kernel_size = kernel_size or patch_size
+        patch_size = to_3tuple(patch_size)
+        self.kernel_size = kernel_size
+        self.patch_size = patch_size
+        self.flatten = flatten
+        assert patch_size[0] == 1, "Patch size for 3D embedding must be (1, *, *)"
+        if not padding and kernel_size[-1] % 2 > 0:
+            padding = get_same_padding(kernel_size)
+        self.proj = nn.Conv3d(
+            in_chans, embed_dim, kernel_size=kernel_size, stride=patch_size, padding=padding, bias=bias
+        )
+        self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
+
+    def forward(self, x):
+        x = self.proj(x)
+        if self.flatten:
+            x = x.flatten(2).transpose(1, 2)  # BCTHW -> BNC
         x = self.norm(x)
         return x
 
@@ -861,18 +1426,137 @@ class RopePosEmbed(nn.Module):
         return freqs_cos, freqs_sin
 
     @staticmethod
-    def _prepare_latent_image_ids(batch_size, height, width, device, dtype):
-        latent_image_ids = torch.zeros(height, width, 3)
-        latent_image_ids[..., 1] = latent_image_ids[..., 1] + torch.arange(height)[:, None]
+    def _prepare_latent_image_ids(batch_size, height, width, device, dtype, frame=None):
+        if frame is None:
+            frame = 1
+        latent_image_ids = torch.zeros(frame, height, width, 3)
+
+        latent_image_ids[..., 0] = latent_image_ids[..., 0] + torch.arange(frame)[:, None, None]
+        latent_image_ids[..., 1] = latent_image_ids[..., 1] + torch.arange(height)[None, :, None]
         latent_image_ids[..., 2] = latent_image_ids[..., 2] + torch.arange(width)[None, :]
 
-        latent_image_id_height, latent_image_id_width, latent_image_id_channels = latent_image_ids.shape
+        (
+            latent_image_id_frame,
+            latent_image_id_height,
+            latent_image_id_width,
+            latent_image_id_channels,
+        ) = latent_image_ids.shape
 
         latent_image_ids = latent_image_ids.reshape(
-            latent_image_id_height * latent_image_id_width, latent_image_id_channels
+            latent_image_id_frame * latent_image_id_height * latent_image_id_width, latent_image_id_channels
         )
 
         return latent_image_ids.to(device=device, dtype=dtype)
+
+
+class WanRotaryPosEmbed(nn.Module):
+    def __init__(
+        self,
+        attention_head_dim: int,
+        patch_size: Tuple[int, int, int],
+        max_seq_len: int,
+        theta: float = 10000.0,
+        fhw_dim: Optional[Tuple[int, int, int]] = None,
+    ):
+        super().__init__()
+
+        self.attention_head_dim = attention_head_dim
+        self.patch_size = patch_size
+        self.max_seq_len = max_seq_len
+
+        if fhw_dim is not None:
+            assert attention_head_dim == sum(
+                fhw_dim
+            ), f"attention_head_dim {attention_head_dim} must match sum(fhw_dim) {sum(fhw_dim)}"
+            t_dim, h_dim, w_dim = fhw_dim
+        else:
+            h_dim = w_dim = 2 * (attention_head_dim // 6)
+            t_dim = attention_head_dim - h_dim - w_dim
+
+        freqs = []
+        for dim in [t_dim, h_dim, w_dim]:
+            freq = get_1d_rotary_pos_embed(
+                dim, max_seq_len, theta, use_real=False, repeat_interleave_real=False, freqs_dtype=torch.float64
+            )
+            freqs.append(freq)
+        self.freqs = torch.cat(freqs, dim=1)
+
+    def forward(self, fhw: torch.Tensor, device: torch.device) -> torch.Tensor:
+        ppf, pph, ppw = fhw
+
+        self.freqs = self.freqs.to(device)
+        freqs = self.freqs.split_with_sizes(
+            [
+                self.attention_head_dim // 2 - 2 * (self.attention_head_dim // 6),
+                self.attention_head_dim // 6,
+                self.attention_head_dim // 6,
+            ],
+            dim=1,
+        )
+
+        freqs_f = freqs[0][:ppf].view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
+        freqs_h = freqs[1][:pph].view(1, pph, 1, -1).expand(ppf, pph, ppw, -1)
+        freqs_w = freqs[2][:ppw].view(1, 1, ppw, -1).expand(ppf, pph, ppw, -1)
+        freqs = torch.cat([freqs_f, freqs_h, freqs_w], dim=-1).reshape(1, 1, ppf * pph * ppw, -1)
+        return freqs
+
+
+class CausalWanRotaryPosEmbed(WanRotaryPosEmbed):
+    def forward(self, fhw: torch.Tensor, device: torch.device) -> torch.Tensor:
+        (f_start, f_end), pph, ppw = fhw
+
+        self.freqs = self.freqs.to(device)
+        freqs = self.freqs.split_with_sizes(
+            [
+                self.attention_head_dim // 2 - 2 * (self.attention_head_dim // 6),
+                self.attention_head_dim // 6,
+                self.attention_head_dim // 6,
+            ],
+            dim=1,
+        )
+
+        ppf = f_end - f_start
+        freqs_f = freqs[0][f_start:f_end].view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
+        freqs_h = freqs[1][:pph].view(1, pph, 1, -1).expand(ppf, pph, ppw, -1)
+        freqs_w = freqs[2][:ppw].view(1, 1, ppw, -1).expand(ppf, pph, ppw, -1)
+        freqs = torch.cat([freqs_f, freqs_h, freqs_w], dim=-1).reshape(1, 1, ppf * pph * ppw, -1)
+        return freqs
+
+
+class WanRotaryTemporalPosEmbed(nn.Module):
+    def __init__(
+        self, attention_head_dim: int, patch_size: Tuple[int, int, int], max_seq_len: int, theta: float = 10000.0
+    ):
+        super().__init__()
+
+        self.attention_head_dim = attention_head_dim
+        self.patch_size = patch_size
+        self.max_seq_len = max_seq_len
+
+        t_dim = attention_head_dim
+
+        freqs = []
+        for dim in [t_dim]:
+            freq = get_1d_rotary_pos_embed(
+                dim, max_seq_len, theta, use_real=False, repeat_interleave_real=False, freqs_dtype=torch.float64
+            )
+            freqs.append(freq)
+        self.freqs = torch.cat(freqs, dim=1)
+
+    def forward(self, fhw: torch.Tensor, device: torch.device) -> torch.Tensor:
+        ppf, pph, ppw = fhw
+
+        self.freqs = self.freqs.to(device)
+        freqs = self.freqs.split_with_sizes(
+            [
+                self.attention_head_dim // 2,
+            ],
+            dim=1,
+        )
+
+        freqs_f = freqs[0][:ppf].view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
+        freqs = torch.cat([freqs_f], dim=-1).reshape(1, 1, ppf * pph * ppw, -1)
+        return freqs
 
 
 def get_1d_rotary_pos_embed(
@@ -927,8 +1611,8 @@ def get_1d_rotary_pos_embed(
     freqs = torch.outer(pos, freqs)  # type: ignore   # [S, D/2]
     if use_real and repeat_interleave_real:
         # flux, hunyuan-dit, cogvideox
-        freqs_cos = freqs.cos().repeat_interleave(2, dim=1).float()  # [S, D]
-        freqs_sin = freqs.sin().repeat_interleave(2, dim=1).float()  # [S, D]
+        freqs_cos = freqs.cos().repeat_interleave(2, dim=1, output_size=freqs.shape[1] * 2).float()  # [S, D]
+        freqs_sin = freqs.sin().repeat_interleave(2, dim=1, output_size=freqs.shape[1] * 2).float()  # [S, D]
         return freqs_cos, freqs_sin
     elif use_real:
         # stable audio, allegro
@@ -990,3 +1674,320 @@ def apply_rotary_emb(
         x_out = torch.view_as_real(x_rotated * freqs_cis).flatten(3)
 
         return x_out.type_as(x)
+
+
+class WindowAttention(FlashAttention):
+    """Window Attention based on Flash Attention for temporal-spatial windows.
+
+    Computes attention within dynamic HWT windows. For window_count=(2, 2, 1), creates
+    2x2=4 spatial windows across 1 temporal group, with window sizes dynamically
+    calculated based on input dimensions.
+    """
+
+    def __init__(
+        self,
+        dim,
+        num_heads=8,
+        qkv_bias=True,
+        qk_norm=False,
+        window_count=(2, 2, 1),  # (spatial_h_count, spatial_w_count, temporal_count)
+        pad_if_needed=True,
+        **block_kwargs,
+    ):
+        """
+        Args:
+            dim (int): Number of input channels.
+            num_heads (int): Number of attention heads.
+            qkv_bias (bool): If True, add a learnable bias to query, key, value.
+            qk_norm (bool): If True, apply layer norm to query and key.
+            window_count (tuple): (spatial_h_count, spatial_w_count, temporal_count) number of windows.
+            pad_if_needed (bool): If True, pad input when dimensions don't divide evenly.
+        """
+        super().__init__(dim, num_heads, qkv_bias, qk_norm, **block_kwargs)
+        self.window_count = window_count
+        self.spatial_window_h_count, self.spatial_window_w_count, self.temporal_window_count = window_count
+        self.pad_if_needed = pad_if_needed
+
+    def forward(self, x, HW=None, rotary_emb=None, block_id=None, **kwargs):
+        """
+        Args:
+            x: Input tensor of shape [B, N, C] where N = T*H*W
+            HW: Tuple of (H, W) spatial dimensions
+            rotary_emb: Rotary positional embeddings
+            block_id: Block identifier
+        """
+        B, N, C = x.shape
+
+        assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
+        T, H, W = HW
+
+        original_T, original_H, original_W = T, H, W
+
+        # 1. calculate window size
+        temporal_window = T // self.temporal_window_count
+        spatial_window_h = H // self.spatial_window_h_count
+        spatial_window_w = W // self.spatial_window_w_count
+
+        remainder_t = T % self.temporal_window_count
+        remainder_h = H % self.spatial_window_h_count
+        remainder_w = W % self.spatial_window_w_count
+
+        if remainder_t > 0 or remainder_h > 0 or remainder_w > 0:
+            if self.pad_if_needed:
+                # 向上调整window尺寸以覆盖所有tokens
+                temporal_window = (T + self.temporal_window_count - 1) // self.temporal_window_count
+                spatial_window_h = (H + self.spatial_window_h_count - 1) // self.spatial_window_h_count
+                spatial_window_w = (W + self.spatial_window_w_count - 1) // self.spatial_window_w_count
+            else:
+                raise ValueError(
+                    f"Input dimensions ({T}, {H}, {W}) cannot be evenly divided by "
+                    f"window_count {self.window_count}. Set pad_if_needed=True to handle this."
+                )
+
+        qkv = self.qkv(x).reshape(B, N, 3, C)  # [B, N, 3, C]
+        q, k, v = qkv.unbind(2)  # Each: [B, N, C]
+        dtype = q.dtype
+
+        q = self.q_norm(q)
+        k = self.k_norm(k)
+
+        q = q.reshape(B, N, self.num_heads, C // self.num_heads).to(dtype)
+        k = k.reshape(B, N, self.num_heads, C // self.num_heads).to(dtype)
+        v = v.reshape(B, N, self.num_heads, C // self.num_heads).to(dtype)
+
+        # 3. apply RoPE
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.transpose(1, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).transpose(1, 2)
+            return x_out.type_as(hidden_states)
+
+        if rotary_emb is not None:
+            q = apply_rotary_emb(q, rotary_emb)
+            k = apply_rotary_emb(k, rotary_emb)
+
+        # 4. calculate padding
+        target_T = temporal_window * self.temporal_window_count
+        target_H = spatial_window_h * self.spatial_window_h_count
+        target_W = spatial_window_w * self.spatial_window_w_count
+
+        pad_t = target_T - T
+        pad_h = target_H - H
+        pad_w = target_W - W
+
+        if self.pad_if_needed and (pad_t > 0 or pad_h > 0 or pad_w > 0):
+            q = q.view(B, T, H, W, self.num_heads, C // self.num_heads)
+            k = k.view(B, T, H, W, self.num_heads, C // self.num_heads)
+            v = v.view(B, T, H, W, self.num_heads, C // self.num_heads)
+
+            # Pad: (left, right, top, bottom, front, back)
+            q = F.pad(q, (0, 0, 0, 0, 0, pad_w, 0, pad_h, 0, pad_t), mode="constant", value=0)
+            k = F.pad(k, (0, 0, 0, 0, 0, pad_w, 0, pad_h, 0, pad_t), mode="constant", value=0)
+            v = F.pad(v, (0, 0, 0, 0, 0, pad_w, 0, pad_h, 0, pad_t), mode="constant", value=0)
+
+            T_padded, H_padded, W_padded = target_T, target_H, target_W
+        else:
+            T_padded, H_padded, W_padded = T, H, W
+            q = q.view(B, T, H, W, self.num_heads, C // self.num_heads)
+            k = k.view(B, T, H, W, self.num_heads, C // self.num_heads)
+            v = v.view(B, T, H, W, self.num_heads, C // self.num_heads)
+
+        # 5. Window attention计算
+        num_windows_t = self.temporal_window_count
+        num_windows_h = self.spatial_window_h_count
+        num_windows_w = self.spatial_window_w_count
+        total_windows = num_windows_t * num_windows_h * num_windows_w
+
+        qkv_combined = torch.stack([q, k, v], dim=4)  # [B, T, H, W, 3, num_heads, C//num_heads]
+
+        # view to [B, num_windows_t, num_windows_h, num_windows_w, temporal_window, spatial_window_h, spatial_window_w, 3, num_heads, C//num_heads]
+        qkv_windowed = qkv_combined.view(
+            B,
+            num_windows_t,
+            temporal_window,
+            num_windows_h,
+            spatial_window_h,
+            num_windows_w,
+            spatial_window_w,
+            3,
+            self.num_heads,
+            C // self.num_heads,
+        )
+
+        # permute to [B, num_windows_t, num_windows_h, num_windows_w, temporal_window, spatial_window_h, spatial_window_w, 3, num_heads, C//num_heads]
+        qkv_windowed = qkv_windowed.permute(0, 1, 3, 5, 2, 4, 6, 7, 8, 9)
+
+        tokens_per_window = temporal_window * spatial_window_h * spatial_window_w
+        qkv_windowed = qkv_windowed.contiguous().view(
+            B * total_windows, tokens_per_window, 3, self.num_heads, C // self.num_heads
+        )
+
+        q_windowed, k_windowed, v_windowed = qkv_windowed.unbind(2)
+
+        q_windowed = q_windowed.transpose(1, 2)  # [B*windows, num_heads, tokens_per_window, C//num_heads]
+        k_windowed = k_windowed.transpose(1, 2)
+        v_windowed = v_windowed.transpose(1, 2)
+
+        # Apply attention within each window
+        use_fp32_attention = getattr(self, "fp32_attention", False)
+        if use_fp32_attention:
+            q_windowed, k_windowed, v_windowed = q_windowed.float(), k_windowed.float(), v_windowed.float()
+
+        # Attention is all you need
+        x_windowed = F.scaled_dot_product_attention(
+            q_windowed, k_windowed, v_windowed, attn_mask=None, dropout_p=0.0, is_causal=False
+        )
+        x_windowed = x_windowed.transpose(1, 2)  # [B*windows, tokens_per_window, num_heads, C//num_heads]
+
+        # Reshape back to feature dimension
+        x_windowed = x_windowed.contiguous().view(B * total_windows, tokens_per_window, C)
+
+        x = x_windowed.view(
+            B, num_windows_t, num_windows_h, num_windows_w, temporal_window, spatial_window_h, spatial_window_w, C
+        )
+
+        x = x.permute(
+            0, 1, 4, 2, 5, 3, 6, 7
+        )  # [B, num_windows_t, temporal_window, num_windows_h, spatial_h, num_windows_w, spatial_w, C]
+
+        x = x.contiguous().view(B, T_padded, H_padded, W_padded, C)
+
+        # 6. remove padding
+        if pad_t > 0 or pad_h > 0 or pad_w > 0:
+            x = x[:, :original_T, :original_H, :original_W, :]
+
+        x = x.contiguous().view(B, original_T * original_H * original_W, C)
+
+        x = self.proj(x)
+        x = self.proj_drop(x)
+
+        return x
+
+    def extra_repr(self) -> str:
+        return f"window_count={self.window_count}, pad_if_needed={self.pad_if_needed}"
+
+
+class ChunkedLiteLAReLURope(LiteLAReLURope):
+    r"""Lightweight linear attention with first relu kernel and then rope, with chunked computation for large token sequences"""
+
+    def __init__(self, *args, chunk_size=200_000, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.chunk_size = chunk_size
+
+    def forward(self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, **kwargs) -> torch.Tensor:
+        B, N, C = x.shape
+
+        # if token number is not large, use original method
+        if N <= self.chunk_size:
+            return super().forward(x, mask=mask, HW=HW, rotary_emb=rotary_emb, block_mask=block_mask, **kwargs)
+
+        # chunked computation
+        qkv = self.qkv(x).reshape(B, N, 3, C)
+        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
+        dtype = q.dtype
+
+        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
+        v = v.transpose(-1, -2)
+
+        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
+
+        # lightweight linear attention
+        q = self.kernel_func(q)  # B, h, h_d, N
+        k = self.kernel_func(k)
+
+        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
+            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
+            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+            return x_out.type_as(hidden_states)
+
+        q_rotated = apply_rotary_emb(q, rotary_emb)
+        k_rotated = apply_rotary_emb(k, rotary_emb)
+
+        # Store qkv for visualization if buffer is provided
+        if self.qkv_store_buffer is not None:
+            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
+            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
+
+        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
+        if use_fp32_attention:
+            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
+
+        # calculate total normalization factor
+        z = 1 / (k.sum(dim=-1, keepdim=True).transpose(-2, -1) @ q + self.eps)
+
+        # chunked computation of v @ k.T and subsequent vk @ q
+        num_chunks = (N + self.chunk_size - 1) // self.chunk_size  # 向上取整
+
+        # accumulate all chunks of v @ k.T results
+        vk_accumulated = None
+
+        # First pass: accumulate v @ k.T
+        for i in range(num_chunks):
+            start_idx = i * self.chunk_size
+            end_idx = min((i + 1) * self.chunk_size, N)
+
+            # get current chunk data
+            v_chunk = v[:, :, :, start_idx:end_idx]  # (B, h, h_d, chunk_len)
+            k_rotated_chunk = k_rotated[:, :, :, start_idx:end_idx]  # (B, h, h_d, chunk_len)
+
+            # calculate current chunk of v @ k.T
+            vk_chunk = torch.matmul(v_chunk, k_rotated_chunk.transpose(-1, -2))  # (B, h, h_d, h_d)
+
+            # accumulate results
+            if vk_accumulated is None:
+                vk_accumulated = vk_chunk
+            else:
+                vk_accumulated = vk_accumulated + vk_chunk
+
+            # explicitly delete chunk tensors to free memory
+            del v_chunk, k_rotated_chunk, vk_chunk
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        # Release large tensors that are no longer needed
+        del v, k_rotated
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        # Second pass: chunked computation of vk_accumulated @ q
+        chunk_outputs = []
+        for i in range(num_chunks):
+            start_idx = i * self.chunk_size
+            end_idx = min((i + 1) * self.chunk_size, N)
+
+            # get current chunk of query
+            q_rotated_chunk = q_rotated[:, :, :, start_idx:end_idx]  # (B, h, h_d, chunk_len)
+            z_chunk = z[:, :, :, start_idx:end_idx]  # (B, h, 1, chunk_len)
+
+            # calculate current chunk of output
+            out_chunk = torch.matmul(vk_accumulated, q_rotated_chunk)  # (B, h, h_d, chunk_len)
+            out_chunk = (out_chunk * z_chunk).to(dtype)
+
+            chunk_outputs.append(out_chunk.detach())  # detach to avoid keeping computation graph
+
+            # explicitly delete chunk tensors to free memory
+            del q_rotated_chunk, z_chunk, out_chunk
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        # Release remaining large tensors
+        del vk_accumulated, q_rotated, z
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        # merge all chunks of results
+        out = torch.cat(chunk_outputs, dim=-1)  # (B, h, h_d, N)
+
+        # Release chunk outputs list
+        del chunk_outputs
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
+        out = self.proj(out)
+
+        return out

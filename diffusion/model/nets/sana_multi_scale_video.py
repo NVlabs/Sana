@@ -376,10 +376,7 @@ class SanaMSVideo(Sana):
         pos_embed_type="wan_rope",
         rope_fhw_dim=None,
         t_kernel_size=3,
-        flash_attn_layer_idx=None,
-        flash_attn_layer_type=None,
         flash_attn_window_count=None,
-        addition_layers_num=0,
         pack_latents=False,
         **kwargs,
     ):
@@ -420,7 +417,6 @@ class SanaMSVideo(Sana):
         self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
         self.pos_embed_ms = None
         self.pack_latents = pack_latents
-        self.addition_layers_num = addition_layers_num
         self.pos_embed_type = pos_embed_type
 
         kernel_size = patch_embed_kernel or patch_size
@@ -428,8 +424,6 @@ class SanaMSVideo(Sana):
         if self.pack_latents:
             x_embedder_in_channels = x_embedder_in_channels * 2 * 2
             self.out_channels = in_channels * 2 * 2
-        elif self.addition_layers_num > 0:
-            self.out_channels = in_channels
 
         self.x_embedder = PatchEmbedMS3D(
             patch_size, x_embedder_in_channels, hidden_size, kernel_size=kernel_size, bias=True
@@ -457,10 +451,6 @@ class SanaMSVideo(Sana):
             self.rope = None
 
         drop_path = [x.item() for x in torch.linspace(0, drop_path, depth)]  # stochastic depth decay rule
-
-        # visualize qkv
-        self.save_qkv = False
-        self.qkv_store_buffer = {}
 
         attn_type_list = [attn_type] * depth
 
@@ -492,8 +482,6 @@ class SanaMSVideo(Sana):
                 self.logger(f"{ffn_type} Temporal kernal: {t_kernel_size}")
 
         self.initialize()
-        self.save_block_output = False
-        self.block_output_buffer = {}
 
     def get_rope(self, pos_embed_type, attention_head_dim, patch_size, rope_fhw_dim):
         if pos_embed_type == "wan_rope":
@@ -625,10 +613,6 @@ class SanaMSVideo(Sana):
             image_embeds = data_info["image_embeds"].to(self.dtype)
             image_embeds = self.image_embedder(image_embeds)
             kwargs["image_embeds"] = image_embeds
-        if self.save_qkv:
-            self.qkv_store_buffer[int(timestep[0].item())] = {}
-        if self.save_block_output:
-            self.inference_timestep = int(timestep[0].item())
 
         if self.pack_latents:
             x = self._pack_latents(x, bs, self.in_channels, self.h, self.w, self.f)
@@ -667,9 +651,6 @@ class SanaMSVideo(Sana):
 
 
         for i, block in enumerate(self.blocks):
-            if self.save_qkv:
-                block.attn.qkv_store_buffer = {}
-
             x = auto_grad_checkpoint(
                 block,
                 x,
@@ -682,18 +663,11 @@ class SanaMSVideo(Sana):
                 use_reentrant=False,
             )  # (N, T, D) #support grad checkpoint
 
-            if self.save_qkv:
-                self.qkv_store_buffer[int(timestep[0].item())][f"block_{i}"] = block.attn.qkv_store_buffer
-                block.attn.qkv_store_buffer = None
-
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         if self.pack_latents:
             x = self._unpack_latents(x, self.h * 2, self.w * 2, self.f)
 
-        if self.save_block_output:
-            block_output = self.get_block_output()
-            self.block_output_buffer[self.inference_timestep] = block_output
         return x
 
     def forward_long(self, x, timestep, y, mask=None, **kwargs):
@@ -731,10 +705,6 @@ class SanaMSVideo(Sana):
             image_embeds = data_info["image_embeds"].to(self.dtype)
             image_embeds = self.image_embedder(image_embeds)
             kwargs["image_embeds"] = image_embeds
-        if self.save_qkv:
-            self.qkv_store_buffer[int(timestep[0].item())] = {}
-        if self.save_block_output:
-            self.inference_timestep = int(timestep[0].item())
 
         if self.pack_latents:
             x = self._pack_latents(x, bs, self.in_channels, self.h, self.w, self.f)
@@ -772,9 +742,6 @@ class SanaMSVideo(Sana):
             raise ValueError(f"Attention type is not available due to _xformers_available={_xformers_available}.")
 
         for i, block in enumerate(self.blocks):
-            if self.save_qkv:
-                block.attn.qkv_store_buffer = {}
-
             x = auto_grad_checkpoint(
                 block,
                 x,
@@ -787,18 +754,11 @@ class SanaMSVideo(Sana):
                 use_reentrant=False,
             )  # (N, T, D) #support grad checkpoint
 
-            if self.save_qkv:
-                self.qkv_store_buffer[int(timestep[0].item())][f"block_{i}"] = block.attn.qkv_store_buffer
-                block.attn.qkv_store_buffer = None
-
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         if self.pack_latents:
             x = self._unpack_latents(x, self.h * 2, self.w * 2, self.f)
 
-        if self.save_block_output:
-            block_output = self.get_block_output()
-            self.block_output_buffer[self.inference_timestep] = block_output
         return x
 
     def __call__(self, *args, **kwargs):
@@ -824,14 +784,9 @@ class SanaMSVideo(Sana):
         imgs: (N, H, W, C)
         """
         c = self.out_channels
-        if self.addition_layers_num > 0:
-            p_f, p_h, p_w = 1, 1, 1
-            h, w = self.h * 2, self.w * 2
-            assert self.f * self.h * 2 * self.w * 2 == x.shape[1]
-        else:
-            p_f, p_h, p_w = self.x_embedder.patch_size
-            h, w = self.h, self.w
-            assert self.f * self.h * self.w == x.shape[1]
+        p_f, p_h, p_w = self.x_embedder.patch_size
+        h, w = self.h, self.w
+        assert self.f * self.h * self.w == x.shape[1]
 
         x = x.reshape(shape=(x.shape[0], self.f, h, w, p_f, p_h, p_w, c))
         x = torch.einsum("nfhwopqc->ncfohpwq", x)

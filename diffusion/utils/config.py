@@ -116,15 +116,8 @@ class ModelVideoConfig(ModelConfig):
     # stage2
     rope_fhw_dim: Optional[Tuple[int, int, int]] = None
     t_kernel_size: int = 3
-    flash_attn_layer_idx: Optional[List[int]] = None
-    flash_attn_layer_type: Optional[str] = None
     flash_attn_window_count: Optional[List[int]] = None
-    diagonal_mask: bool = False
-    diagonal_mask_type: str = "nlogn"  # nlogn, linear, truncated
-    diagonal_block_size: int = 1
-    diagonal_mask_root: str = "output/pretrained_models/diagonal_mask"
     pack_latents: bool = False
-    addition_layers_num: int = 0
     encode_image_prompt_embeds: bool = False
     # stage3
     cross_attn_image_embeds: bool = False
@@ -175,12 +168,6 @@ class WanModelConfig(BaseConfig):
     rope_after: bool = False
     power: float = 1.0
     ffn_type: str = "mlp"
-
-    # flex attention, auro diagonal mask
-    attn_mask: Optional[str] = None  # ["diagonal", "full"]
-    diagonal_block_size: int = 1
-    diagonal_mask_root: str = "output/pretrained_models/diagonal_mask"
-    # TODO: remove flex attn
 
 
 @dataclass
@@ -535,48 +522,6 @@ def model_video_init_config(config: SanaVideoConfig, latent_size: int = 32):
         "cross_attn_type": config.model.cross_attn_type,
         "cross_attn_image_embeds": config.model.cross_attn_image_embeds,
         "t_kernel_size": config.model.t_kernel_size,
-        "flash_attn_layer_idx": config.model.flash_attn_layer_idx,
-        "flash_attn_layer_type": config.model.flash_attn_layer_type,
         "flash_attn_window_count": config.model.flash_attn_window_count,
-        "diagonal_mask": config.model.diagonal_mask,
         "pack_latents": config.model.pack_latents,
-        "addition_layers_num": config.model.addition_layers_num,
     }
-
-
-def one_logger_callback_config(config):
-    global_batch_size = int(config.train.train_batch_size * config.global_world_size)
-    seq_length = 32_000
-
-    # Build app_tag according to the new format: <app_tag_run_name>_<global_batch_size>_<seq_length>
-    # or <app_tag_run_name>_<app_tag_run_version>_<global_batch_size>_<seq_length>
-    app_tag_run_version = "0.0.0"
-    app_tag = f"{config.name}_{app_tag_run_version}_{config.train.train_batch_size}_{config.global_world_size}"
-
-    one_logger_callback_config = {
-        "enable_for_current_rank": os.environ.get("RANK") == "0",
-        "one_logger_async": True,
-        "one_logger_project": f"{config.tracker_project_name}-onelogger",
-        "log_every_n_train_iterations": config.train.log_interval,
-        "app_tag_run_version": app_tag_run_version,
-        "summary_data_schema_version": "1.0.0",
-        "app_run_type": "training",
-        "app_tag": app_tag,
-        "app_tag_run_name": config.name,
-        "world_size": config.global_world_size,
-        "global_batch_size": global_batch_size,
-        "batch_size": global_batch_size,  # batch_size and global_batch_size should be same
-        "train_iterations_target": int(config.train_iterations_target),
-        "train_samples_target": int(config.train_iterations_target * global_batch_size),
-        "is_train_iterations_enabled": True,
-        "is_baseline_run": False,
-        "is_test_iterations_enabled": False,
-        "is_validation_iterations_enabled": True,
-        "is_save_checkpoint_enabled": True,
-        "is_log_throughput_enabled": False,
-        "micro_batch_size": config.train.train_batch_size,
-        "seq_length": seq_length,
-        "save_checkpoint_strategy": "sync",
-    }
-
-    return one_logger_callback_config

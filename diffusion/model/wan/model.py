@@ -913,10 +913,6 @@ class WanModel(ModelMixin, ConfigMixin):
         x = [_x.to(self.dtype) for _x in x]
         context = [_c.to(self.dtype) for _c in context]
         t = timestep
-        if self.save_qkv:
-            self.qkv_store_buffer[int(t[1].item())] = {}
-        if self.model_type == "i2v":
-            assert clip_fea is not None and y is not None
         # params
         device = self.patch_embedding.weight.device
         if self.freqs.device != device:
@@ -959,16 +955,10 @@ class WanModel(ModelMixin, ConfigMixin):
         )
 
         for i, block in enumerate(self.blocks):
-            if self.save_qkv:
-                # set the self_attn.qkv_store_buffer to dict
-                block.self_attn.qkv_store_buffer = {}
             if self.gradient_checkpointing:
                 x = torch.utils.checkpoint.checkpoint(block, x, **kwargs, use_reentrant=False)
             else:
                 x = block(x, **kwargs)
-            if self.save_qkv:
-                self.qkv_store_buffer[int(t[1].item())][f"block_{i}"] = block.self_attn.qkv_store_buffer
-                block.self_attn.qkv_store_buffer = None
 
         # head
         x = self.head(x, e)
@@ -1345,10 +1335,6 @@ class WanLinearAttentionModel(WanModel):
             eps=eps,
         )
 
-        self.save_qkv = False
-        self.qkv_store_buffer = {}
-        self.save_block_output = False
-        self.block_output_buffer = {}
         # blocks
         cross_attn_type = "t2v_cross_attn" if model_type == "t2v" else "i2v_cross_attn"
         self_attn_types = ["flash"] * num_layers
@@ -1413,9 +1399,6 @@ class WanLinearAttentionModel(WanModel):
             # NOTE: hard code now. Keep the first several steps using dense attention
             block_mask = None
 
-        if self.save_qkv:
-            self.qkv_store_buffer[self.inference_timestep] = {}
-
         if self.model_type == "i2v":
             assert clip_fea is not None and y is not None
         # params
@@ -1464,27 +1447,16 @@ class WanLinearAttentionModel(WanModel):
                 else None,
             )
 
-            if self.save_qkv:
-                # set the self_attn.qkv_store_buffer to dict
-                block.self_attn.qkv_store_buffer = {}
-
             if self.gradient_checkpointing:
                 x = torch.utils.checkpoint.checkpoint(block, x, **kwargs, use_reentrant=False)
             else:
                 x = block(x, **kwargs)
-
-            if self.save_qkv:
-                self.qkv_store_buffer[self.inference_timestep][f"block_{i}"] = block.self_attn.qkv_store_buffer
-                block.self_attn.qkv_store_buffer = None
 
         # head
         x = self.head(x, e)
 
         # unpatchify
         x = self.unpatchify(x, grid_sizes)
-        if self.save_block_output:
-            block_output = self.get_block_output()
-            self.block_output_buffer[self.inference_timestep] = block_output
 
         return torch.stack(x, dim=0)  # .float()
 

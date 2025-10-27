@@ -1,0 +1,107 @@
+data:
+  data_dir:
+    video_toy_data: data/video_toy_data2
+  image_size: 256
+  caption_proportion:
+    prompt: 1
+  external_caption_suffixes: []
+  external_clipscore_suffixes: []
+  clip_thr_temperature: 0.1
+  clip_thr: 25.0
+  del_img_clip_thr: 22.0
+  load_text_feat: false
+  load_vae_feat: false
+  transform: default_train_video
+  type: SanaZipDataset
+  sort_dataset: false
+# model config
+model:
+  model: Wan_T2V_14B
+  # from_pretrained: output/pretrained_models/Wan2.1-T2V-14B
+  from_pretrained: null
+  load_model_ckpt: output/pretrained_models/Wan2.1-T2V-14B/wan_14b_full_model.safetensors
+  video_width: 832 # 832 320 544
+  video_height: 480 # 480 192 320
+  num_frames: 81 # 81
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_480
+  mixed_precision: bf16
+  fp32_attention: true
+  multi_scale: false # make sure false here, not implement
+  qk_norm: true
+  cross_attn_norm: true
+  class_dropout_prob: 0.1
+  patch_size: # also should change the model_config.json # patch layer input dim is 36, including 16+4+16, 4 is the mask
+    - 1
+    - 2
+    - 2
+# VAE setting
+vae:
+  vae_type: WanVAE
+  cache_dir: null
+  vae_pretrained: output/pretrained_models/Wan2.1-T2V-1.3B/Wan2.1_VAE.pth
+  weight_dtype: bf16
+  vae_latent_dim: 16
+  vae_stride:
+    - 4
+    - 8
+    - 8
+# image encoder
+image_encoder:
+  image_encoder_type: null
+# text encoder
+text_encoder:
+  t5_model: "umt5_xxl"
+  t5_dtype: "bfloat16"
+  text_len: 512
+  t5_checkpoint: output/pretrained_models/Wan2.1-T2V-1.3B/models_t5_umt5-xxl-enc-bf16.pth
+  t5_tokenizer: "google/umt5-xxl"
+# Sana schedule Flow
+scheduler:
+  predict_flow_v: true
+  noise_schedule: linear_flow
+  pred_sigma: false
+  flow_shift: 3.0
+  # logit-normal timestep
+  weighting_scheme: logit_normal
+  logit_mean: 0.0
+  logit_std: 1.0
+  vis_sampler: flow_dpm-solver
+# training setting
+train:
+  use_fsdp: true
+  num_workers: 10
+  seed: 1
+  train_batch_size: 1
+  num_epochs: 100
+  gradient_accumulation_steps: 1
+  grad_checkpointing: true
+  gradient_clip: 0.1
+  optimizer:
+    betas:
+      - 0.9
+      - 0.999
+    eps: 1.0e-10
+    lr: 5.0e-5
+    type: AdamW
+    weight_decay: 0.0
+  lr_schedule: constant
+  auto_lr: null
+  lr_schedule_args:
+    num_warmup_steps: 1000
+  local_save_vis: true # if save log image locally
+  visualize: true
+  eval_sampling_steps: 500
+  log_interval: 20
+  save_model_epochs: 5
+  save_model_steps: 500
+  work_dir: output/debug
+  online_metric: false
+  eval_metric_step: 2000
+  online_metric_dir: metric_helper
+  validation_images: null
+  validation_prompts:
+    - soft lighting and warm colors infuse the image, creating a magical and serene effect. the view captures the serene guru man levitating above the golden sands, his long, flowing beard and simple robes gently swaying. his eyes are closed, and a peaceful smile graces his calm face. a gentle glow surrounds him, enhancing his aura of tranquility. behind him, the majestic pyramids of egypt loom, bathed in the warm light of the setting sun. the softly glowing sands and the pyramid silhouettes create a composition rich with spirituality and enlightenment, exuding an atmosphere of profound calmness.
+    - a soft-focus view captures a serene garden, filled with cherry blossom trees in bloom. at the center stands a beautiful japanese woman, portrayed in exquisite detail, wearing a traditional kimono with intricate floral patterns in soft pastel colors. her long, dark hair cascades elegantly down her back, enhancing her gentle, serene expression. pink petals drift down in a light breeze, adding to the garden's ethereal ambiance. sunlight filters through the leafy canopy, casting dappled shadows that dance around her, subtly highlighting her serene posture and the details of her kimono. the atmosphere is tranquil and picturesque, enveloped in a sense of timeless beauty.
+    - the angle is mid-range, focusing on the well-dressed asian male friend sitting comfortably in a modern and stylish cafe. the setting exudes warmth and elegance, with soft music playing in the background to create an inviting atmosphere. the man holds a small gift box in his hand, his face illuminated by a confident smile as he looks around, his expression full of anticipation. his attire, a blend of classic and contemporary style, complements the chic surroundings, enhancing his poised demeanor. the ambient lighting accentuates his features, making the scene lively and intimate.
+    - the setting is a training facility, brightly lit with mirrored walls and sprung wooden floors. the scene starts with the camera panning slowly over the room, capturing the boundless determination in action as a group of korean girls rigorously practice their moves. each one is focused, their expressions marked by the intensity of a long and arduous journey. they are seen rehearsing complex choreography, with synchronized steps and practiced precision. alongside the strenuous physical training, snippets of their vocal lessons are interwoven, illustrating the multifaceted preparation involved. the atmosphere is one of dedication and discipline, reflected in their commitment to rigorous exercise and strict dietary habits. these scenes provide a glimpse into the grueling yet passionate pursuit of their dreams.
+    - astronaut is riding a horse on the moon, wearing a space suit and helmet. the horse is galloping across the lunar surface, leaving behind a trail of moon dust. in the background, earth is visible in the black sky, a beautiful blue and green marble. the astronaut is holding a flag with a logo on it, waving it proudly as they ride. the scene is surreal and whimsical, capturing the imagination of space exploration and adventure.

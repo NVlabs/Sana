@@ -1002,27 +1002,6 @@ class WanModel(ModelMixin, ConfigMixin):
             out.append(u)
         return out
 
-    def create_diagonal_mask(self, N_pad, N, num_frames, block_size=1):
-        from tools.attn_mask.gen_nlogn_mask import gen_log_mask_shrinked
-
-        diagonal_mask = gen_log_mask_shrinked(N, N, num_frames, block_size)
-        padded_mask = torch.zeros((N_pad, N_pad), dtype=torch.bool)
-        padded_mask[:N, :N] = diagonal_mask
-        self.diagonal_mask = padded_mask
-        return self.diagonal_mask
-
-    def create_full_mask(self, N_pad, N, num_frames, block_size=1):
-        padded_mask = torch.ones((N_pad, N_pad), dtype=torch.bool)
-        self.diagonal_mask = padded_mask
-        return self.diagonal_mask
-
-    def load_diagonal_mask(self, *args, **kwargs):
-        path = kwargs.get("path", None)
-        if path is None:
-            raise ValueError("path is required")
-        else:
-            self.diagonal_mask = torch.load(path, map_location="cpu")
-
     def init_weights(self):
         r"""
         Initialize model parameters using Xavier initialization.
@@ -1380,7 +1359,6 @@ class WanLinearAttentionModel(WanModel):
                 ffn_types[la_idx] = ffn_type
 
         self.self_attn_types = self_attn_types
-        self.diagonal_mask = None
         self.repo_after = rope_after
         self.power = power
 

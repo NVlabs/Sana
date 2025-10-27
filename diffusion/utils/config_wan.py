@@ -48,11 +48,6 @@ class WanModelConfig(BaseConfig):
     power: float = 1.0
     ffn_type: str = "mlp"
 
-    # flex attention, auro diagonal mask
-    attn_mask: Optional[str] = None  # ["diagonal", "full"]
-    diagonal_block_size: int = 1
-    diagonal_mask_root: str = "output/pretrained_models/diagonal_mask"
-
 
 @dataclass
 class WanVAEConfig(BaseConfig):

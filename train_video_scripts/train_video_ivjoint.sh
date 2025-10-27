@@ -18,7 +18,7 @@ export DEBUG_MODE=1
 
 cmd="TRITON_PRINT_AUTOTUNING=1 \
     torchrun --nproc_per_node=$np --master_port=$((RANDOM % 10000 + 20000))  \
-        train_video_scripts/train_video_ivjoint_stage2.py \
+        train_video_scripts/train_video_ivjoint.py \
         --config_path=$config \
         --work_dir=$work_dir \
         --train.log_interval=1 \

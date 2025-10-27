@@ -91,6 +91,7 @@ class SanaWebDatasetMS(SanaWebDataset):
         )
         self.base_size = resolution
         self.aspect_ratio = eval(aspect_ratio_type)  # base aspect ratio
+        self.aspect_ratio_type = aspect_ratio_type
         self.ratio_index = {}
         self.ratio_nums = {}
         self.interpolate_model = InterpolationMode.BICUBIC

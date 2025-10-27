@@ -904,10 +904,11 @@ def main(cfg: SanaConfig) -> None:
     ]
     num_replicas = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["RANK"])
+    if config.model.aspect_ratio_type is not None:
+        config.data.aspect_ratio_type = config.model.aspect_ratio_type
     dataset = build_dataset(
         asdict(config.data),
         resolution=image_size,
-        aspect_ratio_type=config.model.aspect_ratio_type,
         real_prompt_ratio=config.train.real_prompt_ratio,
         max_length=max_length,
         config=config,

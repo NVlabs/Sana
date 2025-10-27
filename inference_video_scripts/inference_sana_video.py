@@ -199,7 +199,6 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
             negative_embs_mask = negative_caption_token.attention_mask.repeat(bs, 1)  # B, L
             negative_embs = negative_caption_embs.repeat(bs, 1, 1)[:, None]
 
-        # import ipdb; ipdb.set_trace()
         if cfg_scale > 1.0:
             emb_masks = torch.cat([negative_embs_mask, emb_masks], dim=0)  # 2B, L
         other_kwargs = dict(

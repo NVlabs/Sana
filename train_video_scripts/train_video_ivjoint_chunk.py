@@ -939,7 +939,7 @@ def main(cfg: SanaVideoConfig) -> None:
         config.train.train_batch_size = min(64, config.train.train_batch_size)
         if config.train.use_fsdp:
             os.environ["FSDP_SHARDING_STRATEGY"] = "FULL_SHARD"
-        config.data.data_dir = {"video_toy_data": "data/video_toy_data2"}
+        config.data.data_dir = {"video_toy_data": "data/video_toy_data"}
         config.train.validation_prompts = [
             "the opening scene begins with a dynamic view of a bustling cityscape captured in vibrant detail. towering skyscrapers dominate the skyline, while the streets below are alive with motion. people from diverse cultures fill the sidewalks, engaging in daily activities, their vibrant attire adding splashes of color to the scene. vehicles, including cars and buses, weave through the busy roads in a synchronized rhythm. bright billboards in various languages flash advertisements, reflecting the multicultural essence of the city. thecamera smoothly pans upward from the busy streets to focus on a sleek, modern office building. its reflective glass facade shimmers in the sunlight, hinting at its importance as a central location in the story. the atmosphere is energetic and cosmopolitan, setting the stage for an international narrative."
         ]

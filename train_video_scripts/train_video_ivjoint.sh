@@ -9,7 +9,7 @@ if [[ $1 == *.yaml ]]; then
     config=$1
     shift
 else
-    config="configs/sana_video_config/256ms/Sana_2000M_256px_AdamW_fsdp.yaml.yaml"
+    config="configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml"
     echo "Only support .yaml files, but get $1. Set to --config_path=$config"
 fi
 

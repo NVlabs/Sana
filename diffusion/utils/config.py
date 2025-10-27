@@ -49,7 +49,7 @@ class DataConfig(BaseConfig):
 
 @dataclass
 class VideoDataConfig(DataConfig):
-    data_dir: Dict[str, str] = field(default_factory=lambda: {"video_toy_data: data/video_toy_data2"})
+    data_dir: Dict[str, str] = field(default_factory=lambda: {"video_toy_data: data/video_toy_data"})
     aspect_ratio_type: str = "ASPECT_RATIO_VIDEO_256_MS"
     external_data_filter: Dict[str, Dict[str, Dict[str, float]]] = field(default_factory=lambda: {})
     motion_score_file_thres: Dict[str, Optional[float]] = field(default_factory=dict)

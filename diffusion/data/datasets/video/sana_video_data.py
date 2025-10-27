@@ -525,7 +525,7 @@ if __name__ == "__main__":
         ]
     )
     dataset = SanaZipDataset(
-        data_dir={"video_toy_data": "data/video_toy_data2"},
+        data_dir={"video_toy_data": "data/video_toy_data"},
         transform=transform,
         load_vae_feat=False,
         aspect_ratio_type="ASPECT_RATIO_VIDEO_480_MS",

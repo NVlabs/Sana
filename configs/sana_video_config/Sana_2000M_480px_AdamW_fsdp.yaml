@@ -1,13 +1,13 @@
 task: t2v
 data:
   data_dir:
-    video_toy_data: data/video_toy_data2
+    video_toy_data: data/video_toy_data
   external_caption_suffixes: [_Qwen2.5-VL]
   caption_proportion:
     prompt: 5
     _Qwen2_5-VL: 95
   external_data_filter:
-    video_toy_data2:
+    video_toy_data:
       _unimatch: {min: 1.0, max: 30}
   image_size: 480
   aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
@@ -42,11 +42,11 @@ image_data:
 # model config
 model:
   model: SanaMSVideo_2000M_P2_D20
-  image_size: 256
+  image_size: 480
   mixed_precision: bf16
   fp32_attention: true
-  load_from: hf://Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth
-  aspect_ratio_type: ASPECT_RATIO_VIDEO_256
+  load_from: hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
   multi_scale: true
   attn_type: LiteLAReLURope
   linear_head_dim: 112
@@ -62,16 +62,10 @@ model:
   qk_norm: true
   cross_norm: true
   class_dropout_prob: 0.1
-  remove_state_dict_keys:
-    - x_embedder.proj.weight
-    - x_embedder.proj.bias
-    - final_layer.linear.weight
-    - final_layer.linear.bias
 # VAE setting
 vae:
   vae_type: WanVAE
-  # vae_pretrained: hf://Efficient-Large-Model/SanaVideo_willquant_v2/vae/Wan2.1_VAE.pth
-  vae_pretrained: output/pretrained_models/SanaVideo_willquant_v2/vae/Wan2.1_VAE.pth
+  vae_pretrained: hf://Efficient-Large-Model/SANA-Video_2B_480p/vae/Wan2.1_VAE.pth
   weight_dtype: float32
   vae_latent_dim: 16
   vae_downsample_rate: 8

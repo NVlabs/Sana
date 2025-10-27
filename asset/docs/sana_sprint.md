@@ -95,7 +95,7 @@ save_image(image, 'sana_sprint.png', nrow=1, normalize=True, value_range=(-1, 1)
 
 ```bash
 bash train_scripts/train_scm_ladd.sh \
-      configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml
+      configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml \
       --data.data_dir="[data/toy_data]" \
       --data.type=SanaWebDatasetMS \
       --model.multi_scale=true \
@@ -106,7 +106,7 @@ bash train_scripts/train_scm_ladd.sh \
 ## Convert pth to diffusers safetensor
 
 ```bash
-python scripts/convert_sana_to_diffusers.py \
+python tools/convert_sana_to_diffusers.py \
       --orig_ckpt_path Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth \
       --model_type SanaSprint_1600M_P1_D20 \
       --scheduler_type scm \

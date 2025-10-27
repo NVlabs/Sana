@@ -74,20 +74,6 @@ def get_dict_chunks(data, bs):
         yield keys
 
 
-def create_tar(data_path):
-    tar_path = f"{data_path}.tar"
-    with tarfile.open(tar_path, "w") as tar:
-        tar.add(data_path, arcname=os.path.basename(data_path))
-    print(f"Created tar file: {tar_path}")
-    return tar_path
-
-
-def delete_directory(exp_name):
-    if os.path.exists(exp_name):
-        subprocess.run(["rm", "-r", exp_name], check=True)
-        print(f"Deleted directory: {exp_name}")
-
-
 class DistributePromptsDataset(torch.utils.data.Dataset):
     """Dataset for vbench inference.
 
@@ -659,65 +645,36 @@ if __name__ == "__main__":
         return save_root
 
     dataset = args.dataset
-    if args.ablation_selections and args.ablation_key:
-        for ablation_factor in args.ablation_selections:
-            setattr(args, args.ablation_key, eval(ablation_factor))
-            print(f"Setting {args.ablation_key}={eval(ablation_factor)}")
-            sample_steps = args.step if args.step != -1 else 50
 
-            save_root = create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames)
-            os.makedirs(save_root, exist_ok=True)
-            if args.if_save_dirname and args.gpu_id == 0:
-                os.makedirs(f"{work_dir}/metrics", exist_ok=True)
-                # save at work_dir/metrics/tmp_xxx.txt for metrics testing
-                with open(f"{work_dir}/metrics/tmp_{dataset}_{time.time()}.txt", "w") as f:
-                    print(f"save tmp file at {work_dir}/metrics/tmp_{dataset}_{time.time()}.txt")
-                    f.write(os.path.basename(save_root))
-            logger.info(f"Inference with {weight_dtype}, flow_shift: {flow_shift}")
+    logger.info(f"Inference with {weight_dtype}, flow_shift: {flow_shift}")
 
-            visualize(
-                config=config,
-                args=args,
-                model=model,
-                items=items,
-                bs=args.bs,
-                sample_steps=sample_steps,
-                cfg_scale=args.cfg_scale,
-            )
-    else:
-        logger.info(f"Inference with {weight_dtype}, flow_shift: {flow_shift}")
+    save_root = create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames)
+    os.makedirs(save_root, exist_ok=True)
+    if args.if_save_dirname and args.gpu_id == 0:
+        os.makedirs(f"{work_dir}/metrics", exist_ok=True)
+        # save at work_dir/metrics/tmp_xxx.txt for metrics testing
+        with open(f"{work_dir}/metrics/tmp_{dataset}_{time.time()}.txt", "w") as f:
+            print(f"save tmp file at {work_dir}/metrics/tmp_{dataset}_{time.time()}.txt")
+            f.write(os.path.basename(save_root))
 
-        save_root = create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames)
-        os.makedirs(save_root, exist_ok=True)
-        if args.if_save_dirname and args.gpu_id == 0:
-            os.makedirs(f"{work_dir}/metrics", exist_ok=True)
-            # save at work_dir/metrics/tmp_xxx.txt for metrics testing
-            with open(f"{work_dir}/metrics/tmp_{dataset}_{time.time()}.txt", "w") as f:
-                print(f"save tmp file at {work_dir}/metrics/tmp_{dataset}_{time.time()}.txt")
-                f.write(os.path.basename(save_root))
-
-        if args.debug:
-            items = [
-                "A fashionable woman in a black leather jacket, long red dress, and black boots confidently strolls down a wet, reflective Tokyo street. Neon lights and animated signs glow warmly around her. She carries a black purse and wears red lipstick and sunglasses. Pedestrians move about in the bustling background. Medium shot, dynamic camera movement.",
-                "Several giant woolly mammoths lumber through a snowy meadow, their long, fluffy fur gently swaying in the breeze. Snow-covered trees and snow-capped mountains loom in the background under mid-afternoon sunlight with wispy clouds, casting a warm glow. A low-angle camera captures the majestic creatures in stunning detail with a soft depth of field.",
-                "A cinematic movie trailer in vibrant 35mm film style, featuring a 30-year-old space adventurer wearing a red wool knitted motorcycle helmet, exploring a vast blue-sky salt desert. Wide shots and dynamic camera movements.",
-                "Drone view of waves crashing against rugged cliffs at Big Sur's Garrapata Point. Blue waves form white tips as the setting sun casts golden light on the rocky shore. A distant island with a lighthouse and green shrubs on the cliff edge add to the scene. Dramatic steep drops from the coastal road to the beach highlight the raw beauty of the Pacific Coast Highway. Medium shot, sweeping drone movement.",
-                "Close-up of a cute, fluffy monster kneeling beside a melting red candle in a realistic 3D style. The monster gazes curiously at the flickering flame with wide eyes and an open mouth, expressing innocence and playfulness. Warm colors and dramatic lighting create a cozy, wondrous atmosphere.",
-                "the opening scene begins with a dynamic view of a bustling cityscape captured in vibrant detail. towering skyscrapers dominate the skyline, while the streets below are alive with motion. people from diverse cultures fill the sidewalks, engaging in daily activities, their vibrant attire adding splashes of color to the scene. vehicles, including cars and buses, weave through the busy roads in a synchronized rhythm. bright billboards in various languages flash advertisements, reflecting the multicultural essence of the city. thecamera smoothly pans upward from the busy streets to focus on a sleek, modern office building. its reflective glass facade shimmers in the sunlight, hinting at its importance as a central location in the story. the atmosphere is energetic and cosmopolitan, setting the stage for an international narrative.",
-            ]
-        visualize(
-            config=config,
-            args=args,
-            model=model,
-            items=items,
-            bs=args.bs,
-            sample_steps=sample_steps,
-            cfg_scale=args.cfg_scale,
-        )
-
-        if args.tar_and_del:
-            create_tar(save_root)
-            delete_directory(save_root)
+    if args.debug:
+        items = [
+            "A fashionable woman in a black leather jacket, long red dress, and black boots confidently strolls down a wet, reflective Tokyo street. Neon lights and animated signs glow warmly around her. She carries a black purse and wears red lipstick and sunglasses. Pedestrians move about in the bustling background. Medium shot, dynamic camera movement.",
+            "Several giant woolly mammoths lumber through a snowy meadow, their long, fluffy fur gently swaying in the breeze. Snow-covered trees and snow-capped mountains loom in the background under mid-afternoon sunlight with wispy clouds, casting a warm glow. A low-angle camera captures the majestic creatures in stunning detail with a soft depth of field.",
+            "A cinematic movie trailer in vibrant 35mm film style, featuring a 30-year-old space adventurer wearing a red wool knitted motorcycle helmet, exploring a vast blue-sky salt desert. Wide shots and dynamic camera movements.",
+            "Drone view of waves crashing against rugged cliffs at Big Sur's Garrapata Point. Blue waves form white tips as the setting sun casts golden light on the rocky shore. A distant island with a lighthouse and green shrubs on the cliff edge add to the scene. Dramatic steep drops from the coastal road to the beach highlight the raw beauty of the Pacific Coast Highway. Medium shot, sweeping drone movement.",
+            "Close-up of a cute, fluffy monster kneeling beside a melting red candle in a realistic 3D style. The monster gazes curiously at the flickering flame with wide eyes and an open mouth, expressing innocence and playfulness. Warm colors and dramatic lighting create a cozy, wondrous atmosphere.",
+            "the opening scene begins with a dynamic view of a bustling cityscape captured in vibrant detail. towering skyscrapers dominate the skyline, while the streets below are alive with motion. people from diverse cultures fill the sidewalks, engaging in daily activities, their vibrant attire adding splashes of color to the scene. vehicles, including cars and buses, weave through the busy roads in a synchronized rhythm. bright billboards in various languages flash advertisements, reflecting the multicultural essence of the city. thecamera smoothly pans upward from the busy streets to focus on a sleek, modern office building. its reflective glass facade shimmers in the sunlight, hinting at its importance as a central location in the story. the atmosphere is energetic and cosmopolitan, setting the stage for an international narrative.",
+        ]
+    visualize(
+        config=config,
+        args=args,
+        model=model,
+        items=items,
+        bs=args.bs,
+        sample_steps=sample_steps,
+        cfg_scale=args.cfg_scale,
+    )
 
     print(
         colored(f"Sana inference has finished. Results stored at ", "green"),

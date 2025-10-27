@@ -26,13 +26,7 @@ import torch.nn.functional as F
 from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
-from diffusion.model.nets.basic_modules import (
-    CachedGLUMBConvTemp,
-    ChunkGLUMBConvTemp,
-    GLUMBConv,
-    GLUMBConvTemp,
-    Mlp,
-)
+from diffusion.model.nets.basic_modules import CachedGLUMBConvTemp, ChunkGLUMBConvTemp, GLUMBConv, GLUMBConvTemp, Mlp
 from diffusion.model.nets.sana_blocks import (
     CachedCausalAttention,
     CaptionEmbedder,
@@ -213,9 +207,7 @@ class SanaVideoMSBlock(nn.Module):
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
         self.block_hook: Optional[BlockHook] = None
 
-    def forward_frame_aware(
-        self, x, y, t, mask=None, THW=None, rotary_emb=None, chunk_index=None, **kwargs
-    ):
+    def forward_frame_aware(self, x, y, t, mask=None, THW=None, rotary_emb=None, chunk_index=None, **kwargs):
         B, N, C = x.shape
         num_frames = t.shape[2]
 
@@ -535,19 +527,19 @@ class SanaMSVideo(Sana):
 
     def _apply_positional_embedding(self, x, bs, start_f=None, end_f=None):
         """Apply positional embedding to input tensor.
-        
+
         Args:
             x: Input tensor (N, T, D)
             bs: Batch size
             start_f: Start frame index for casual_wan_rope (optional)
             end_f: End frame index for casual_wan_rope (optional)
-        
+
         Returns:
             x with positional embedding added (for sincos type)
             image_pos_embed for other types (or None)
         """
         image_pos_embed = None
-        
+
         if self.pos_embed_type == "sincos":
             if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
                 self.pos_embed_ms = (
@@ -564,26 +556,26 @@ class SanaMSVideo(Sana):
                     .to(self.dtype)
                 )
             x = x + self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
-            
+
         elif self.pos_embed_type == "flux_rope":
             self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[12, 10, 10])
             latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(
                 bs, self.h, self.w, x.device, x.dtype, frame=self.f
             )
             image_pos_embed = self.pos_embed_ms(latent_image_ids)
-            
+
         elif self.pos_embed_type == "wan_rope":
             image_pos_embed = self.rope((self.f, self.h, self.w), x.device)
-            
+
         elif self.pos_embed_type == "casual_wan_rope":
             image_pos_embed = self.rope(((start_f, end_f), self.h, self.w), x.device)
-            
+
         elif self.pos_embed_type == "wan_temporal_rope":
             image_pos_embed = self.rope((self.f, self.h, self.w), x.device)
-            
+
         else:
             raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
-        
+
         return x, image_pos_embed
 
     def forward(self, x, timestep, y, mask=None, **kwargs):
@@ -648,7 +640,6 @@ class SanaMSVideo(Sana):
             y = y.squeeze(1).view(1, -1, x.shape[-1])
         else:
             raise ValueError(f"Attention type is not available due to _xformers_available={_xformers_available}.")
-
 
         for i, block in enumerate(self.blocks):
             x = auto_grad_checkpoint(
@@ -1055,6 +1046,7 @@ def SanaMSVideo_2000M_P2S1_D20(**kwargs):
     return SanaMSVideo(
         depth=20, hidden_size=2240, patch_size=(1, 1, 1), num_heads=20, patch_embed_kernel=(1, 2, 2), **kwargs
     )
+
 
 @MODELS.register_module()
 def SanaMSVideo_4000M_P2_D28(**kwargs):

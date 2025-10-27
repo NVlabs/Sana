@@ -41,13 +41,7 @@ from termcolor import colored
 from diffusion import DPMS, FlowEuler, Scheduler
 from diffusion.data.builder import build_dataloader, build_dataset
 from diffusion.data.wids import DistributedRangedSampler
-from diffusion.model.builder import (
-    build_model,
-    get_tokenizer_and_text_encoder,
-    get_vae,
-    vae_decode,
-    vae_encode,
-)
+from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
 from diffusion.model.respace import compute_density_for_timestep_sampling
 from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
@@ -373,7 +367,7 @@ def train(
                         except Exception as e:
                             print(f"Error in vae_encode: {e}")
                             print(f"Data info: {data_info}")
-                        
+
                 else:
                     # Image data processing (similar to stage1)
                     if batch[0].dim() == 4:

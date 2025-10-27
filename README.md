@@ -517,7 +517,6 @@ Thanks goes to these wonderful contributors:
   <img src="https://contrib.rocks/image?repo=NVlabs/Sana" />
 </a>
 
-
 ## 🌟 Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=NVlabs/sana&type=Date)](https://www.star-history.com/#NVlabs/sana&Date)

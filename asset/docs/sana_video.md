@@ -32,14 +32,14 @@ bash inference_video_scripts/inference_sana_video.sh \
 ### 2. How to use `SanaVideoPipeline` with `🧨diffusers`
 
 > \[!IMPORTANT\]
-> It is now under construction [PR]()
+> It is now under construction [PR](<>)
 >
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers
 > ```
 
 ```python
-# test SANA-Video 
+# test SANA-Video
 import torch
 from diffusers import SanaVideoPipeline
 from diffusers.utils import export_to_video
@@ -73,7 +73,7 @@ from diffusers.utils import export_to_video
 # 5s Video Model Pre-Training
 bash train_video_scripts/train_video_ivjoint.sh \
       configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
-      --data.data_dir="[data/toy_data]" \ 
+      --data.data_dir="[data/toy_data]" \
       --train.train_batch_size=1 \
       --work_dir=output/sana_video \
       --train.num_workers=10 \

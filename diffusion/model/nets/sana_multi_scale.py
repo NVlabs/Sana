@@ -272,17 +272,17 @@ class SanaMS(Sana):
 
     def _apply_positional_embedding(self, x, bs):
         """Apply positional embedding to input tensor.
-        
+
         Args:
             x: Input tensor (N, T, D)
             bs: Batch size
-        
+
         Returns:
             x with positional embedding added
             image_pos_embed for flux_rope type (or None)
         """
         image_pos_embed = None
-        
+
         if self.pos_embed_type == "sincos":
             if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
                 self.pos_embed_ms = (
@@ -299,16 +299,16 @@ class SanaMS(Sana):
                     .to(self.dtype)
                 )
             x = x + self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
-            
+
         elif self.pos_embed_type == "flux_rope":
             self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[0, 16, 16])
             latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(bs, self.h, self.w, x.device, x.dtype)
             image_pos_embed = self.pos_embed_ms(latent_image_ids)
             x = x + image_pos_embed
-            
+
         else:
             raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
-        
+
         return x, image_pos_embed
 
     def forward(self, x, timestep, y, mask=None, data_info=None, return_logvar=False, jvp=False, **kwargs):

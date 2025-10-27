@@ -7,27 +7,23 @@ from contextlib import nullcontext
 
 import torch
 from accelerate import init_empty_weights
-from huggingface_hub import hf_hub_download, snapshot_download
-from termcolor import colored
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
 from diffusers import (
     AutoencoderDC,
     AutoencoderKLWan,
     DPMSolverMultistepScheduler,
     FlowMatchEulerDiscreteScheduler,
-    UniPCMultistepScheduler,
     SanaVideoPipeline,
     SanaVideoTransformer3DModel,
+    UniPCMultistepScheduler,
 )
 from diffusers.utils.import_utils import is_accelerate_available
-
+from huggingface_hub import hf_hub_download, snapshot_download
+from termcolor import colored
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 CTX = init_empty_weights if is_accelerate_available else nullcontext
 
-ckpt_ids = [
-    "Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth"
-]
+ckpt_ids = ["Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth"]
 # https://github.com/NVlabs/Sana/blob/main/inference_video_scripts/inference_sana_video.py
 
 
@@ -65,18 +61,10 @@ def main(args):
     converted_state_dict["caption_projection.linear_2.weight"] = state_dict.pop("y_embedder.y_proj.fc2.weight")
     converted_state_dict["caption_projection.linear_2.bias"] = state_dict.pop("y_embedder.y_proj.fc2.bias")
 
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop(
-        "t_embedder.mlp.0.weight"
-    )
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.bias"] = state_dict.pop(
-        "t_embedder.mlp.0.bias"
-    )
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop(
-        "t_embedder.mlp.2.weight"
-    )
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.bias"] = state_dict.pop(
-        "t_embedder.mlp.2.bias"
-    )
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop("t_embedder.mlp.0.weight")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.bias"] = state_dict.pop("t_embedder.mlp.0.bias")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop("t_embedder.mlp.2.weight")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.bias"] = state_dict.pop("t_embedder.mlp.2.bias")
 
     # Shared norm.
     converted_state_dict["time_embed.linear.weight"] = state_dict.pop("t_block.1.weight")
@@ -230,7 +218,9 @@ def main(args):
     else:
         print(colored(f"Saving the whole Pipeline containing {args.model_type}", "green", attrs=["bold"]))
         # VAE
-        vae = AutoencoderKLWan.from_pretrained("Wan-AI/Wan2.1-T2V-1.3B-Diffusers", subfolder="vae", torch_dtype=torch.float32)
+        vae = AutoencoderKLWan.from_pretrained(
+            "Wan-AI/Wan2.1-T2V-1.3B-Diffusers", subfolder="vae", torch_dtype=torch.float32
+        )
 
         # Text Encoder
         text_encoder_model_path = "Efficient-Large-Model/gemma-2-2b-it"

@@ -425,6 +425,7 @@ class MLLALinearAttention(WanLinearAttention):
 
         b, s, n, d = *x.shape[:2], self.num_heads, self.head_dim
         x_dtype = x.dtype
+
         def qkv_fn(x):
             q = self.norm_q(self.q(x)).view(b, s, n, d)
             k = self.norm_k(self.k(x)).view(b, s, n, d)

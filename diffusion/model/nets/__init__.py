@@ -31,7 +31,6 @@ from .sana_multi_scale_video import (
     SanaMSVideo_2000M_P1_D20,
     SanaMSVideo_2000M_P2_D20,
 )
-
 from .sana_U_shape import (
     SanaU,
     SanaU_600M_P1_D28,

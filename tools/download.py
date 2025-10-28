@@ -39,7 +39,25 @@ def find_model(model_name):
     model_name = hf_download_or_fpath(model_name)
     assert os.path.isfile(model_name), f"Could not find Sana checkpoint at {model_name}"
     print(colored(f"[Sana] Loading model from {model_name}", attrs=["bold"]))
-    return torch.load(model_name, map_location=lambda storage, loc: storage)
+    if model_name.endswith(".safetensors"):
+        import safetensors
+
+        return {"state_dict": safetensors.torch.load_file(model_name, device="cpu")}
+    elif model_name.endswith(".safetensors.index.json"):
+        import json
+
+        import safetensors
+
+        index = json.load(open(model_name))["weight_map"]
+        safetensors_list = set(index.values())
+        state_dict = {}
+        for safetensors_path in safetensors_list:
+            state_dict.update(
+                safetensors.torch.load_file(os.path.join(os.path.dirname(model_name), safetensors_path), device="cpu")
+            )
+        return {"state_dict": state_dict}
+    else:
+        return torch.load(model_name, map_location=lambda storage, loc: storage)
 
 
 def download_model(model_name):

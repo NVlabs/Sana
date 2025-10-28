@@ -93,7 +93,7 @@ def main() -> None:
     cmd += ["--time", args.time]
     cmd += ["--exclusive"]
     cmd += ["timeout", timeout]
-    
+
     # If CONDA_ENV_NAME is set, wrap the command to activate conda environment
     conda_env_name = os.environ.get("CONDA_ENV_NAME")
     if conda_env_name:
@@ -103,7 +103,7 @@ def main() -> None:
         cmd += [wrapped_cmd]
     else:
         cmd += args.cmd
-    
+
     full_cmd = " ".join(cmd)
     if os.environ.get("SLURM_JOB_ID"):
         print(colored("Running inside slurm nodes detected", "yellow"))

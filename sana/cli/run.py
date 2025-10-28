@@ -98,8 +98,11 @@ def main() -> None:
     conda_env_name = os.environ.get("CONDA_ENV_NAME")
     if conda_env_name:
         # Wrap the original command with conda activation
+        # Source bashrc to initialize conda in the Slurm node
         original_cmd = " ".join(args.cmd)
-        wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {original_cmd}"'
+        
+        # Simply source bashrc which should have conda init
+        wrapped_cmd = f'bash -c "source ~/.bashrc && conda activate {conda_env_name} && {original_cmd}"'
         cmd += [wrapped_cmd]
     else:
         cmd += args.cmd

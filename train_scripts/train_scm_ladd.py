@@ -32,7 +32,7 @@ import pyrallis
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from accelerate import Accelerator, InitProcessGroupKwargs
+from accelerate import Accelerator, InitProcessGroupKwargs, skip_first_batches
 from accelerate.utils import DistributedType
 from PIL import Image
 from termcolor import colored
@@ -916,8 +916,7 @@ def train(
                         (global_step + train_dataloader_len - 1) // train_dataloader_len
                     ) * train_dataloader_len + 1
                     logger.info("Early stop current iteration")
-                    if dist.is_initialized():
-                        dist.destroy_process_group()
+                    skip_first_batches(train_dataloader, True)
                     break
 
                 data_time_start = time.time()
@@ -1226,13 +1225,14 @@ def main(cfg: SanaConfig) -> None:
         config.model.load_from = args.load_from
     if config.model.load_from is not None and load_from:
         # load student model
-        _, missing, unexpected, _ = load_checkpoint(
+        load_result = load_checkpoint(
             config.model.load_from,
             model,
             model_ema=model_ema,
             load_ema=config.model.resume_from.get("load_ema", False),
             null_embed_path=null_embed_path,
         )
+        _, missing, unexpected, _, _ = load_result
         logger.warning(colored(f"Missing keys: {missing}", "red"))
         logger.warning(colored(f"Unexpected keys: {unexpected}", "red"))
 
@@ -1257,12 +1257,14 @@ def main(cfg: SanaConfig) -> None:
         data if data.startswith(("https://", "http://", "gs://", "/", "~")) else osp.abspath(osp.expanduser(data))
         for data in config.data.data_dir
     ]
+
     num_replicas = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["RANK"])
+    if config.model.aspect_ratio_type is not None:
+        config.data.aspect_ratio_type = config.model.aspect_ratio_type
     dataset = build_dataset(
         asdict(config.data),
         resolution=image_size,
-        aspect_ratio_type=config.model.aspect_ratio_type,
         real_prompt_ratio=config.train.real_prompt_ratio,
         max_length=max_length,
         config=config,
@@ -1391,7 +1393,7 @@ def main(cfg: SanaConfig) -> None:
                 config.model.resume_from["checkpoint"] = config.model.load_from
 
         if config.model.resume_from["checkpoint"] is not None:
-            _, missing, unexpected, _ = load_checkpoint(
+            load_result = load_checkpoint(
                 **config.model.resume_from,
                 model=model,
                 model_ema=model_ema,
@@ -1399,6 +1401,7 @@ def main(cfg: SanaConfig) -> None:
                 lr_scheduler=lr_scheduler,
                 null_embed_path=null_embed_path,
             )
+            _, missing, unexpected, _, _ = load_result
             logger.warning(colored(f"Generator Missing keys: {missing}", "red"))
             logger.warning(colored(f"Generator Unexpected keys: {unexpected}", "red"))
 

@@ -883,8 +883,8 @@ def main(cfg: SanaConfig) -> None:
             null_embed_path=null_embed_path,
         )
         _, missing, unexpected, _, _ = load_result
-        logger.warning(f"Missing keys: {missing}")
-        logger.warning(f"Unexpected keys: {unexpected}")
+        logger.warning(colored(f"Missing keys: {missing}", "red"))
+        logger.warning(colored(f"Unexpected keys: {unexpected}", "red"))
 
     # 4-2. model growth
     if config.model_growth is not None:
@@ -899,10 +899,12 @@ def main(cfg: SanaConfig) -> None:
 
     # 5. build dataloader
     config.data.data_dir = config.data.data_dir if isinstance(config.data.data_dir, list) else [config.data.data_dir]
+
     config.data.data_dir = [
         data if data.startswith(("https://", "http://", "gs://", "/", "~")) else osp.abspath(osp.expanduser(data))
         for data in config.data.data_dir
     ]
+
     num_replicas = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["RANK"])
     if config.model.aspect_ratio_type is not None:
@@ -1032,10 +1034,10 @@ def main(cfg: SanaConfig) -> None:
                 lr_scheduler=lr_scheduler,
                 null_embed_path=null_embed_path,
             )
-            _, missing, unexpected, _, saved_info = load_result
 
-            logger.warning(f"Missing keys: {missing}")
-            logger.warning(f"Unexpected keys: {unexpected}")
+            _, missing, unexpected, _, _ = load_result
+            logger.warning(colored(f"Missing keys: {missing}", "red"))
+            logger.warning(colored(f"Unexpected keys: {unexpected}", "red"))
 
             path = osp.basename(config.model.resume_from["checkpoint"])
         try:

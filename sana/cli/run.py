@@ -124,9 +124,7 @@ def main() -> None:
             print(colored("'conda' not found in PATH, falling back to 'conda shell.bash hook'", "yellow"))
 
         if not wrapped_cmd:
-            wrapped_cmd = (
-                f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
-            )
+            wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
 
         cmd += [wrapped_cmd]
     else:

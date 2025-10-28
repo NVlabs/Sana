@@ -96,7 +96,7 @@ def main() -> None:
     cmd += ["timeout", timeout]
 
     # If CONDA_ENV_NAME is set, wrap the command to activate conda environment
-    conda_env_name = os.environ.get("CONDA_ENV_NAME")
+    conda_env_name = os.environ.get("CONDA_ENV_NAME", "sana")
     if conda_env_name:
         original_cmd = " ".join(args.cmd)
 

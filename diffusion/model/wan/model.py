@@ -9,17 +9,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
-from torch.nn.attention.flex_attention import create_block_mask, flex_attention
 
 from diffusion.model.nets.basic_modules import GLUMBConvTemp, Mlp
-from diffusion.model.utils import auto_grad_checkpoint
-from diffusion.utils.logger import LogBuffer, get_logger, get_root_logger
+from diffusion.utils.logger import get_logger
 
-from .attention import block_sparse_attention, flash_attention
-
-flex_attention = torch.compile(flex_attention, dynamic=False, mode="max-autotune-no-cudagraphs")
-torch._dynamo.config.cache_size_limit = 192 * 3
-torch._dynamo.config.accumulated_cache_size_limit = 192 * 3
+from .attention import flash_attention
 
 __all__ = ["WanModel"]
 
@@ -246,30 +240,14 @@ class WanSelfAttention(nn.Module):
             self.qkv_store_buffer["q"] = q[1].cpu()  # b, n, h, h_d
             self.qkv_store_buffer["k"] = k[1].cpu()  # b, n, h, h_d
             self.qkv_store_buffer["v"] = v[1].cpu()  # b, n, h, h_d
-        if block_mask is None:
-            x = flash_attention(
-                q=q,
-                k=k,
-                v=v,
-                k_lens=seq_lens,
-                window_size=self.window_size,
-            )
-        else:
-            if isinstance(block_mask, torch.Tensor):
-                # should be bsa
-                x = block_sparse_attention(
-                    q=q,
-                    k=k,
-                    v=v,
-                    block_mask=block_mask,
-                )
-            else:
-                x = flex_attention(
-                    q.to(v.dtype).transpose(1, 2),
-                    k.to(v.dtype).transpose(1, 2),
-                    v.to(v.dtype).transpose(1, 2),
-                    block_mask=block_mask,
-                ).transpose(1, 2)
+
+        x = flash_attention(
+            q=q,
+            k=k,
+            v=v,
+            k_lens=seq_lens,
+            window_size=self.window_size,
+        )
 
         x = x.flatten(2).to(x_dtype)
         x = self.o(x)
@@ -582,7 +560,6 @@ WAN_SELFATTENTION_CLASSES = {
     "linear": WanLinearAttention,
     "mllalinear": MLLALinearAttention,
     "mllalepe": MLLALePEAttention,
-    "flex": WanSelfAttention,
     "bsa": WanSelfAttention,
 }
 
@@ -681,8 +658,6 @@ class WanAttentionBlock(nn.Module):
             grid_sizes=grid_sizes,
             freqs=freqs,
         )
-        if self.self_attn_type == "flex" or self.self_attn_type == "bsa":
-            self_attn_kwargs["block_mask"] = block_mask
 
         y = self.self_attn(**self_attn_kwargs)
 
@@ -1312,7 +1287,7 @@ class WanLinearAttentionModel(WanModel):
         cross_attn_norm=True,
         eps=1e-6,
         linear_attn_idx=None,
-        attn_type="flash",  # flash, linear, mllalinear, flex
+        attn_type="flash",  # flash, linear, mllalinear
         ffn_type="mlp",
         rope_after=False,
         power=1.0,
@@ -1443,9 +1418,7 @@ class WanLinearAttentionModel(WanModel):
                 freqs=self.freqs,
                 context=context.to(self.dtype),
                 context_lens=context_lens,
-                block_mask=block_mask
-                if (self.self_attn_types[i] == "flex" or self.self_attn_types[i] == "bsa")
-                else None,
+                block_mask=None,
             )
 
             if self.gradient_checkpointing:

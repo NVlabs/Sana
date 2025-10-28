@@ -874,7 +874,7 @@ def main(cfg: SanaConfig) -> None:
     if args.load_from is not None:
         config.model.load_from = args.load_from
     if config.model.load_from is not None and load_from:
-        _, missing, unexpected, _ = load_checkpoint(
+        load_result = load_checkpoint(
             checkpoint=config.model.load_from,
             model=model,
             model_ema=model_ema,
@@ -882,6 +882,7 @@ def main(cfg: SanaConfig) -> None:
             load_ema=config.model.resume_from.get("load_ema", False),
             null_embed_path=null_embed_path,
         )
+        _, missing, unexpected, _, _ = load_result
         logger.warning(f"Missing keys: {missing}")
         logger.warning(f"Unexpected keys: {unexpected}")
 
@@ -1022,7 +1023,7 @@ def main(cfg: SanaConfig) -> None:
                 config.model.resume_from["checkpoint"] = config.model.load_from
 
         if config.model.resume_from["checkpoint"] is not None:
-            _, missing, unexpected, _ = load_checkpoint(
+            load_result = load_checkpoint(
                 **config.model.resume_from,
                 model=model,
                 model_ema=model_ema if not config.train.use_fsdp else None,
@@ -1031,6 +1032,7 @@ def main(cfg: SanaConfig) -> None:
                 lr_scheduler=lr_scheduler,
                 null_embed_path=null_embed_path,
             )
+            _, missing, unexpected, _, saved_info = load_result
 
             logger.warning(f"Missing keys: {missing}")
             logger.warning(f"Unexpected keys: {unexpected}")

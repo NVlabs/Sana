@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+# Check if we should skip environment setup entirely
+if [ "${SKIP_ENV_SETUP}" = "true" ]; then
+    echo "SKIP_ENV_SETUP is set to true. Skipping all environment setup steps."
+    echo "Using default conda environment. Make sure it has all required packages installed."
+    exit 0
+fi
+
 CONDA_ENV=${1:-""}
 if [ -n "$CONDA_ENV" ]; then
     # This is required to activate conda environment

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-pip install --upgrade huggingface-hub
+pip install --upgrade "huggingface-hub<1.0"
 
 # download test data
 mkdir -p data/data_public

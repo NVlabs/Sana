@@ -10,7 +10,7 @@
 </div>
 
 <div align="center">
-  <img src="../cover.png" alt="SANA-Video Cover" style="width: 90%; margin: 0 auto; display: inline-block">
+  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/cover.png" alt="SANA-Video Cover" style="width: 90%; margin: 0 auto; display: inline-block">
 </div>
 
 ## 🏃 How to Inference
@@ -44,27 +44,27 @@ import torch
 from diffusers import SanaVideoPipeline
 from diffusers.utils import export_to_video
 
-    model_id = "Efficient-Large-Model/SANA-Video_2B_480p_diffusers"
-    pipe = SanaVideoPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
-    pipe.vae.to(torch.float32)
-    pipe.text_encoder.to(torch.bfloat16)
-    pipe.to("cuda")
+model_id = "Efficient-Large-Model/SANA-Video_2B_480p_diffusers"
+pipe = SanaVideoPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+pipe.vae.to(torch.float32)
+pipe.text_encoder.to(torch.bfloat16)
+pipe.to("cuda")
 
-    prompt = "Extreme close-up of a thoughtful, gray-haired professor in his 60s, sitting motionless in a Paris café, dressed in a wool coat and beret, pondering the universe. His subtle closed-mouth smile reveals an answer. Golden light, cinematic depth of field, Paris streets blurred in the background. Cinematic 35mm film."
-    negative_prompt = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+prompt = "Extreme close-up of a thoughtful, gray-haired professor in his 60s, sitting motionless in a Paris café, dressed in a wool coat and beret, pondering the universe. His subtle closed-mouth smile reveals an answer. Golden light, cinematic depth of field, Paris streets blurred in the background. Cinematic 35mm film."
+negative_prompt = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
 
-    video = pipe(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        height=480,
-        width=832,
-        frames=81,
-        guidance_scale=6,
-        num_inference_steps=50,
-        generator=torch.Generator(device="cuda").manual_seed(42),
-    ).frames[0]
+video = pipe(
+    prompt=prompt,
+    negative_prompt=negative_prompt,
+    height=480,
+    width=832,
+    frames=81,
+    guidance_scale=6,
+    num_inference_steps=50,
+    generator=torch.Generator(device="cuda").manual_seed(42),
+).frames[0]
 
-    export_to_video(video, "sana_video.mp4", fps=16)
+export_to_video(video, "sana_video.mp4", fps=16)
 ```
 
 ## 💻 How to Train
@@ -77,7 +77,7 @@ bash train_video_scripts/train_video_ivjoint.sh \
       --train.train_batch_size=1 \
       --work_dir=output/sana_video \
       --train.num_workers=10 \
-      --train.visualize=true \
+      --train.visualize=true
 ```
 
 ## Convert pth to diffusers safetensor

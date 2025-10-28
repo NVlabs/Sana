@@ -103,13 +103,17 @@ def main() -> None:
         conda_path = shutil.which("conda")
         wrapped_cmd = ""
 
+        # HuggingFace login command if HF_TOKEN is set
+        hf_token = os.environ.get("HF_TOKEN")
+        hf_login_cmd = f"huggingface-cli login --token {hf_token} && " if hf_token else ""
+
         if conda_path:
             conda_base_path = os.path.dirname(os.path.dirname(conda_path))
             conda_sh_path = os.path.join(conda_base_path, "etc", "profile.d", "conda.sh")
 
             if os.path.exists(conda_sh_path):
                 print(colored(f"Using Conda activation script: {conda_sh_path}", "cyan"))
-                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {original_cmd}"'
+                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
             else:
                 print(
                     colored(
@@ -121,7 +125,7 @@ def main() -> None:
 
         if not wrapped_cmd:
             wrapped_cmd = (
-                f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {original_cmd}"'
+                f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
             )
 
         cmd += [wrapped_cmd]

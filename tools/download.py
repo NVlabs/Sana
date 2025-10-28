@@ -36,9 +36,10 @@ def find_model(model_name):
         return download_model(model_name)
 
     # Load a custom Sana checkpoint:
+    print(colored(f"[Sana] Loading model from {model_name}", attrs=["bold"]))
     model_name = hf_download_or_fpath(model_name)
     assert os.path.isfile(model_name), f"Could not find Sana checkpoint at {model_name}"
-    print(colored(f"[Sana] Loading model from {model_name}", attrs=["bold"]))
+    print(colored(f"[Sana] Loaded model from {model_name}", attrs=["bold"]))
     if model_name.endswith(".safetensors"):
         import safetensors
 

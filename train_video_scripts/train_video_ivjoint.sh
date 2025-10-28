@@ -5,12 +5,26 @@ work_dir=output/debug_video
 np=1
 
 
-if [[ $1 == *.yaml ]]; then
-    config=$1
-    shift
-else
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --np=*)
+            np="${1#*=}"
+            shift
+            ;;
+        *.yaml)
+            config=$1
+            shift
+            ;;
+        *)
+            other_args+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$config" ]]; then
     config="configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml"
-    echo "Only support .yaml files, but get $1. Set to --config_path=$config"
+    echo "No yaml file specified. Set to --config_path=$config"
 fi
 
 export DISABLE_XFORMERS=1
@@ -28,7 +42,7 @@ cmd="TRITON_PRINT_AUTOTUNING=1 \
         --train.num_workers=0 \
         --train.visualize=False \
         --debug=true \
-        $@"
+        ${other_args[@]}"
 
 echo $cmd
 eval $cmd

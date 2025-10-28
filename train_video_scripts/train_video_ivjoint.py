@@ -342,6 +342,10 @@ def train(
                 is_video_data = True
                 video_step += 1  # Increment video step counter
 
+            # if epoch > config.train.num_epochs:
+            #     logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to num_epochs limit.")
+            #     return
+
             # image, json_info, key = batch
             accelerator.wait_for_everyone()
             data_time_all += time.time() - data_time_start
@@ -726,6 +730,10 @@ def train(
                 with open(f"{online_metric_monitor_dir}/{ckpt_saved_path.split('/')[-1]}.txt", "w") as f:
                     f.write(osp.join(config.work_dir, "config.py") + "\n")
                     f.write(ckpt_saved_path)
+
+        if epoch > config.train.num_epochs:
+            logger.info(f"Stopping training at epoch {epoch}, step {global_step} due to num_epochs limit.")
+            return
 
 
 @pyrallis.wrap()

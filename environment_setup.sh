@@ -26,5 +26,7 @@ pip install -U xformers==0.0.32.post2 --index-url https://download.pytorch.org/w
 # install sana
 pip install -e .
 
+pip install flash-attn==2.8.2 --no-build-isolation
+
 # install torchprofile
 # pip install git+https://github.com/zhijian-liu/torchprofile

@@ -100,7 +100,7 @@ def main() -> None:
         # Wrap the original command with conda activation
         # Source bashrc to initialize conda in the Slurm node
         original_cmd = " ".join(args.cmd)
-        
+
         # Simply source bashrc which should have conda init
         wrapped_cmd = f'bash -c "source ~/.bashrc && conda activate {conda_env_name} && {original_cmd}"'
         cmd += [wrapped_cmd]

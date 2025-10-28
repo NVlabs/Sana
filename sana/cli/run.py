@@ -19,6 +19,7 @@ import datetime
 import os
 import os.path as osp
 import subprocess
+import shutil
 
 from termcolor import colored
 
@@ -96,13 +97,27 @@ def main() -> None:
 
     # If CONDA_ENV_NAME is set, wrap the command to activate conda environment
     conda_env_name = os.environ.get("CONDA_ENV_NAME")
-    if conda_env_name:
-        # Wrap the original command with conda activation
-        # Source bashrc to initialize conda in the Slurm node
+    if conda_env_name: 
         original_cmd = " ".join(args.cmd)
+        
+        conda_path = shutil.which("conda")
+        wrapped_cmd = ""
 
-        # Simply source bashrc which should have conda init
-        wrapped_cmd = f'bash -c "source ~/.bashrc && conda activate {conda_env_name} && {original_cmd}"'
+        if conda_path:
+            conda_base_path = os.path.dirname(os.path.dirname(conda_path))
+            conda_sh_path = os.path.join(conda_base_path, "etc", "profile.d", "conda.sh")
+            
+            if os.path.exists(conda_sh_path):
+                print(colored(f"Using Conda activation script: {conda_sh_path}", "cyan")) 
+                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {original_cmd}"'
+            else:
+                print(colored(f"Conda script not found at {conda_sh_path}, falling back to 'conda shell.bash hook'", "yellow"))
+        else:
+            print(colored("'conda' not found in PATH, falling back to 'conda shell.bash hook'", "yellow"))
+        
+        if not wrapped_cmd:
+            wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {original_cmd}"'
+        
         cmd += [wrapped_cmd]
     else:
         cmd += args.cmd

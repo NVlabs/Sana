@@ -46,13 +46,13 @@ jobs:
         env:
           SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
           SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
       - name: Run inference tests
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-inference bash tests/bash/inference/test_inference.sh
   test-training-offline-vae:
@@ -74,13 +74,13 @@ jobs:
         env:
           SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
           SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
       - name: Run offline VAE training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-offline-vae bash tests/bash/training/test_training_offline_vae.sh
   test-training-online-vae:
@@ -102,13 +102,13 @@ jobs:
         env:
           SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
           SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
       - name: Run online VAE training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-online-vae bash tests/bash/training/test_training_online_vae.sh
   test-training-fsdp:
@@ -130,13 +130,13 @@ jobs:
         env:
           SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
           SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
       - name: Run FSDP training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-fsdp bash tests/bash/training/test_training_fsdp.sh
   test-training-sprint:
@@ -158,13 +158,13 @@ jobs:
         env:
           SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
           SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
       - name: Run SANA-Sprint training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-sprint bash tests/bash/training/test_training_sprint.sh
   test-training-video:
@@ -186,13 +186,13 @@ jobs:
         env:
           SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
           SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
       - name: Run video training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
   remove-label:

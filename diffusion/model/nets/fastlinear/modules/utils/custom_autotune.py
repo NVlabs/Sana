@@ -33,7 +33,7 @@ class CustomAutotuner(Autotuner):
             device_name = torch.cuda.get_device_name(0).replace(" ", "_")
         else:
             device_name = "cpu"
-        
+
         self.best_config_cache_path = os.path.expanduser(
             os.path.join(
                 "~",

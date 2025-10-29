@@ -87,6 +87,16 @@ jobs:
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
       - name: Run offline VAE training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
@@ -115,6 +125,16 @@ jobs:
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
       - name: Run online VAE training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
@@ -143,6 +163,16 @@ jobs:
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
       - name: Run FSDP training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
@@ -171,6 +201,16 @@ jobs:
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
       - name: Run SANA-Sprint training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
@@ -199,6 +239,16 @@ jobs:
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
       - name: Run video training test
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}

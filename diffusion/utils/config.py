@@ -127,57 +127,6 @@ class ModelVideoConfig(ModelConfig):
 
 
 @dataclass
-class WanModelConfig(BaseConfig):
-    model: str = "Wan_T2V_1300M"
-    from_pretrained: Optional[str] = None
-    load_model_ckpt: Optional[str] = None
-    init_patch_embedding: bool = False
-    image_size: int = 256
-    video_width: int = 832
-    video_height: int = 480
-    num_frames: int = 81
-    patch_size: List[int] = field(default_factory=lambda: [1, 2, 2])
-    dim: int = 1536
-    ffn_dim: int = 8960
-    freq_dim: int = 256
-    num_heads: int = 12
-    num_layers: int = 30
-    window_size: Tuple[int, int] = field(default_factory=lambda: (-1, -1))
-    qk_norm: bool = True
-    cross_attn_norm: bool = True
-    eps: float = 1e-6
-    mixed_precision: str = "bf16"  # ['fp16', 'fp32', 'bf16']
-    fp32_attention: bool = True
-    load_from: Optional[str] = None
-    resume_from: Optional[Union[Dict[str, Any], str]] = field(
-        default_factory=lambda: {
-            "checkpoint": None,
-            "load_ema": False,
-            "resume_lr_scheduler": True,
-            "resume_optimizer": True,
-        }
-    )
-    aspect_ratio_type: str = "ASPECT_RATIO_1024"
-    multi_scale: bool = False
-    class_dropout_prob: float = 0.0
-    guidance_type: str = "classifier-free"
-    mask: Optional[str] = None  # first, full, last mask, or no mask
-    image_latent_mode: str = "video_zero"  # ["repeat", "zero", "video_zero"]
-    linear_attn_idx: Optional[List[int]] = None
-    self_attn_type: str = "flash"  # ["linear", "mllalinear", "flash"] this only used together with linear_attn_idx
-    rope_after: bool = False
-    power: float = 1.0
-    ffn_type: str = "mlp"
-
-
-@dataclass
-class DistillConfig(BaseConfig):
-    model: WanModelConfig
-    distill_logit_weight: float = 0.0
-    distill_attn_weight: float = 0.0
-
-
-@dataclass
 class AEConfig(BaseConfig):
     vae_type: str = "AutoencoderDC"
     vae_pretrained: str = "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers"
@@ -203,16 +152,6 @@ class TextEncoderConfig(BaseConfig):
     chi_prompt: List[Optional[str]] = field(default_factory=lambda: [])
     extra: Any = None
 
-
-@dataclass
-class WanTextEncoderConfig(BaseConfig):
-    t5_model: str = "umt5_xxl"
-    t5_dtype: str = "bfloat16"
-    text_len: int = 512
-    t5_checkpoint: str = "output/pretrained_models/Wan2.1-T2V-1.3B/models_t5_umt5-xxl-enc-bf16.pth"
-    t5_tokenizer: str = "google/umt5-xxl"
-    extra: Any = None
-    caption_channels: int = 4096
 
 
 @dataclass

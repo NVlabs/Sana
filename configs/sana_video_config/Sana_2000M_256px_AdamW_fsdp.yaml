@@ -9,8 +9,8 @@ data:
   external_data_filter:
     video_toy_data:
       _unimatch: {min: 1.0, max: 30}
-  image_size: 480
-  aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
+  image_size: 256
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_256_MS
   motion_score_cal_type: average # average, max
   motion_score_file_thres:
     _unimatch: null
@@ -25,7 +25,7 @@ data:
 image_data:
   data_dir:
     - data/toy_data
-  image_size: 480
+  image_size: 256
   external_caption_suffixes: []
   caption_selection_type: proportion
   caption_proportion:
@@ -37,7 +37,7 @@ image_data:
   load_vae_feat: false
   transform: default_train
   type: SanaWebDatasetMS
-  aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_256_MS
   sort_dataset: false
 # model config
 model:
@@ -46,7 +46,7 @@ model:
   mixed_precision: bf16
   fp32_attention: true
   load_from: hf://Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth
-  aspect_ratio_type: ASPECT_RATIO_VIDEO_256
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_256_MS
   multi_scale: true
   attn_type: LiteLAReLURope
   linear_head_dim: 112
@@ -149,4 +149,4 @@ train:
     - the angle is mid-range, focusing on the well-dressed asian male friend sitting comfortably in a modern and stylish cafe. the setting exudes warmth and elegance, with soft music playing in the background to create an inviting atmosphere. the man holds a small gift box in his hand, his face illuminated by a confident smile as he looks around, his expression full of anticipation. his attire, a blend of classic and contemporary style, complements the chic surroundings, enhancing his poised demeanor. the ambient lighting accentuates his features, making the scene lively and intimate.
     - the setting is a training facility, brightly lit with mirrored walls and sprung wooden floors. the scene starts with the camera panning slowly over the room, capturing the boundless determination in action as a group of korean girls rigorously practice their moves. each one is focused, their expressions marked by the intensity of a long and arduous journey. they are seen rehearsing complex choreography, with synchronized steps and practiced precision. alongside the strenuous physical training, snippets of their vocal lessons are interwoven, illustrating the multifaceted preparation involved. the atmosphere is one of dedication and discipline, reflected in their commitment to rigorous exercise and strict dietary habits. these scenes provide a glimpse into the grueling yet passionate pursuit of their dreams.
     - astronaut is riding a horse on the moon, wearing a space suit and helmet. the horse is galloping across the lunar surface, leaving behind a trail of moon dust. in the background, earth is visible in the black sky, a beautiful blue and green marble. the astronaut is holding a flag with a logo on it, waving it proudly as they ride. the scene is surreal and whimsical, capturing the imagination of space exploration and adventure.
-  joint_training_interval: 0
+  joint_training_interval: 10

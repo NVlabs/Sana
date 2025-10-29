@@ -102,12 +102,7 @@ def get_tokenizer_and_text_encoder(name="T5", device="cuda"):
 
 def get_image_encoder(name, model_path, tokenizer_path=None, device="cuda", dtype=None, config=None):
     if name == "CLIP":
-        # NOTE: transformers model not support when FSDP is enabled in trainig
-        # image_encoder = CLIPVisionModel.from_pretrained(model_path).to(device).to(dtype)
         image_encoder = CLIPModel(dtype, device, model_path, tokenizer_path)
-    elif name == "Siglip":
-        image_encoder = SiglipModel(dtype, device, model_path)
-
     elif name == "flux-siglip":
         image_encoder = SiglipVisionModel.from_pretrained(model_path, subfolder="image_encoder", torch_dtype=dtype).to(
             device
@@ -127,10 +122,6 @@ def encode_image(name, image_encoder, images, device="cuda", image_processor=Non
     if name == "CLIP":
         image_embeds = image_encoder.visual(images.to(image_encoder.device))
         return image_embeds.to(device, images.dtype)
-    elif name == "Siglip":
-        image_embeds = image_encoder.visual(images.to(image_encoder.device))
-        return image_embeds.to(device, images.dtype)
-
     elif name == "flux-siglip":
         dtype = dtype or image_encoder.dtype
         images = (images + 1) / 2.0  # [-1, 1] -> [0, 1]
@@ -183,12 +174,6 @@ def get_vae(name, model_path, device="cuda", dtype=None, config=None):
             dtype=dtype,
             device=device,
         )
-        return vae
-    elif "HunyuanVAE" in name:
-        from diffusers import AutoencoderKLHunyuanVideo
-
-        vae = AutoencoderKLHunyuanVideo.from_pretrained(model_path, torch_dtype=dtype).to(device).eval()
-        vae.enable_slicing()
         return vae
     else:
         print("error load vae")
@@ -309,10 +294,6 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
         ae = vae
         z = ae.encode(images.to(device))
         z = torch.stack(z, dim=0)
-    elif "HunyuanVAE" in name:
-        scaling_factor = vae.config.scaling_factor
-        z = vae.encode(images.to(device=vae.device, dtype=vae.dtype)).latent_dist.sample()
-        z = z * scaling_factor
     else:
         print(f"{name} encode error")
         exit()
@@ -357,9 +338,6 @@ def vae_decode(name, vae, latent):
         samples = vae.decode(latent)
     elif "Wan2_2_VAE" in name:
         samples = vae.decode(latent)
-    elif "HunyuanVAE" in name:
-        latent = latent / vae.config.scaling_factor
-        samples = vae.decode(latent.to(device=vae.device, dtype=vae.dtype)).sample
     else:
         print(f"{name} decode error")
         exit()

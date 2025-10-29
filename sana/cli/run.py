@@ -43,10 +43,6 @@ def main() -> None:
     parser.add_argument("--max-retry", type=int, default=-1)
     # -1: indicates none, for train jobs, it will be set 3 and otherwise 1
     parser.add_argument("--pty", action="store_true")
-    parser.add_argument("--use-latest-code", action="store_true", help="Use the latest code by setting PYTHONPATH")
-    parser.add_argument(
-        "--pip-install-dev", action="store_true", help="Run pip install -e . before executing the command"
-    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -111,18 +107,9 @@ def main() -> None:
         current_file = os.path.abspath(__file__)
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
 
-        # Prepare code update command
-        code_update_cmd = ""
-        if args.pip_install_dev:
-            print(colored(f"Will run 'pip install -e .' in {project_root} before executing", "cyan"))
-            code_update_cmd = f"cd {project_root} && pip install -e . && "
-        elif args.use_latest_code:
-            print(colored(f"Will set PYTHONPATH={project_root} to use latest code", "cyan"))
-            code_update_cmd = f"export PYTHONPATH={project_root}:$PYTHONPATH && "
-
         # HuggingFace login command if HF_TOKEN is set
-        # hf_token = os.environ.get("HF_TOKEN", "")
-        # hf_login_cmd = f"huggingface-cli login --token {hf_token} && " if hf_token else ""
+        hf_token = os.environ.get("HF_TOKEN", "")
+        hf_login_cmd = f"hf auth login --token {hf_token} && " if hf_token else ""
 
         if conda_path:
             conda_base_path = os.path.dirname(os.path.dirname(conda_path))
@@ -130,8 +117,7 @@ def main() -> None:
 
             if os.path.exists(conda_sh_path):
                 print(colored(f"Using Conda activation script: {conda_sh_path}", "cyan"))
-                # wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
-                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {code_update_cmd}{original_cmd}"'
+                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
             else:
                 print(
                     colored(
@@ -142,28 +128,11 @@ def main() -> None:
             print(colored("'conda' not found in PATH, falling back to 'conda shell.bash hook'", "yellow"))
 
         if not wrapped_cmd:
-            # wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
-            wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {code_update_cmd}{original_cmd}"'
+            wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
 
         cmd += [wrapped_cmd]
     else:
-        # Support code update even when not using conda environment
-        if args.pip_install_dev or args.use_latest_code:
-            current_file = os.path.abspath(__file__)
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-
-            original_cmd = " ".join(args.cmd)
-
-            if args.pip_install_dev:
-                print(colored(f"Will run 'pip install -e .' in {project_root} before executing", "cyan"))
-                wrapped_cmd = f'bash -c "cd {project_root} && pip install -e . && {original_cmd}"'
-            else:  # use_latest_code
-                print(colored(f"Will set PYTHONPATH={project_root} to use latest code", "cyan"))
-                wrapped_cmd = f'bash -c "export PYTHONPATH={project_root}:$PYTHONPATH && {original_cmd}"'
-
-            cmd += [wrapped_cmd]
-        else:
-            cmd += args.cmd
+        cmd += args.cmd
 
     full_cmd = " ".join(cmd)
     if os.environ.get("SLURM_JOB_ID"):

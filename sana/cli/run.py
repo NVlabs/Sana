@@ -43,10 +43,10 @@ def main() -> None:
     parser.add_argument("--max-retry", type=int, default=-1)
     # -1: indicates none, for train jobs, it will be set 3 and otherwise 1
     parser.add_argument("--pty", action="store_true")
-    parser.add_argument("--use-latest-code", action="store_true", 
-                        help="Use the latest code by setting PYTHONPATH")
-    parser.add_argument("--pip-install-dev", action="store_true",
-                        help="Run pip install -e . before executing the command")
+    parser.add_argument("--use-latest-code", action="store_true", help="Use the latest code by setting PYTHONPATH")
+    parser.add_argument(
+        "--pip-install-dev", action="store_true", help="Run pip install -e . before executing the command"
+    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -110,7 +110,7 @@ def main() -> None:
         # Get project root directory
         current_file = os.path.abspath(__file__)
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-        
+
         # Prepare code update command
         code_update_cmd = ""
         if args.pip_install_dev:
@@ -143,9 +143,7 @@ def main() -> None:
 
         if not wrapped_cmd:
             # wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
-            wrapped_cmd = (
-                f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {code_update_cmd}{original_cmd}"'
-            )
+            wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {code_update_cmd}{original_cmd}"'
 
         cmd += [wrapped_cmd]
     else:
@@ -153,16 +151,16 @@ def main() -> None:
         if args.pip_install_dev or args.use_latest_code:
             current_file = os.path.abspath(__file__)
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-            
+
             original_cmd = " ".join(args.cmd)
-            
+
             if args.pip_install_dev:
                 print(colored(f"Will run 'pip install -e .' in {project_root} before executing", "cyan"))
                 wrapped_cmd = f'bash -c "cd {project_root} && pip install -e . && {original_cmd}"'
             else:  # use_latest_code
                 print(colored(f"Will set PYTHONPATH={project_root} to use latest code", "cyan"))
                 wrapped_cmd = f'bash -c "export PYTHONPATH={project_root}:$PYTHONPATH && {original_cmd}"'
-            
+
             cmd += [wrapped_cmd]
         else:
             cmd += args.cmd

@@ -180,7 +180,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
   remove-label:
-    needs: [test-inference, test-training-offline-vae, test-training-online-vae, test-training-fsdp, test-training-sprint, test-training-video]
+    needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video]
     if: |
       always() &&
       github.event_name == 'pull_request'

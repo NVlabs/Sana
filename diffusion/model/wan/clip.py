@@ -510,10 +510,6 @@ class CLIPModel:
     def visual(self, videos):
         # preprocess
         size = (self.model.image_size,) * 2
-        # videos = torch.cat(
-        #     [F.interpolate(u.transpose(0, 1), size=size, mode="bicubic", align_corners=False) for u in videos]
-        # )
-
         videos = F.interpolate(videos, size=size, mode="bicubic", align_corners=False)
         videos = self.transforms.transforms[-1](videos.mul_(0.5).add_(0.5))
 
@@ -522,21 +518,3 @@ class CLIPModel:
             out = self.model.visual(videos, use_31_block=True)
             return out
 
-
-class SiglipModel:
-    def __init__(self, dtype, device, checkpoint_path, tokenizer_path=None):
-        self.dtype = dtype
-        self.device = device
-        self.checkpoint_path = checkpoint_path
-
-        # init model
-        self.model = SiglipVisionModel.from_pretrained(checkpoint_path)  # .to(device)
-        self.model = self.model.eval().requires_grad_(False)
-        self.model.load_state_dict(st.load_file(os.path.join(checkpoint_path, "model.safetensors"), device="cpu"))
-        self.model.to(device)
-
-    def visual(self, videos, size=(384, 384)):
-        videos = F.interpolate(videos, size=size, mode="bicubic", align_corners=False).clamp(-1, 1)
-        with torch.cuda.amp.autocast(dtype=self.dtype):
-            out = self.model(videos, output_hidden_states=True)
-            return out.last_hidden_state

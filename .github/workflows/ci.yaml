@@ -49,6 +49,16 @@ jobs:
           SKIP_ENV_SETUP: true
         run: |
           bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
       - name: Run inference tests
         env:
           CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
@@ -56,7 +66,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-inference bash tests/bash/inference/test_inference.sh
   test-training-offline-vae:
-    needs: pre-commit
+    needs: test-inference
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
       github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
@@ -84,7 +94,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-training-offline-vae bash tests/bash/training/test_training_offline_vae.sh
   test-training-online-vae:
-    needs: pre-commit
+    needs: test-inference
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
       github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
@@ -112,7 +122,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-training-online-vae bash tests/bash/training/test_training_online_vae.sh
   test-training-fsdp:
-    needs: pre-commit
+    needs: test-inference
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
       github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
@@ -140,7 +150,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-training-fsdp bash tests/bash/training/test_training_fsdp.sh
   test-training-sprint:
-    needs: pre-commit
+    needs: test-inference
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
       github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
@@ -168,7 +178,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-training-sprint bash tests/bash/training/test_training_sprint.sh
   test-training-video:
-    needs: pre-commit
+    needs: test-inference
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
       github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')

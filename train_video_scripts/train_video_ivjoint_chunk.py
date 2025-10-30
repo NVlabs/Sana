@@ -203,25 +203,14 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                         model_kwargs=model_kwargs,
                         schedule="FLOW",
                     )
-                    if config.task == "df":
-                        denoised = dpm_solver.sample_frame_aware(
-                            z,
-                            steps=50,
-                            order=2,
-                            skip_type="time_uniform_flow",
-                            method="multistep",
-                            flow_shift=flow_shift,
-                            condition_frame_info=condition_frame_info,
-                        )
-                    else:
-                        denoised = dpm_solver.sample(
-                            z,
-                            steps=50,
-                            order=2,
-                            skip_type="time_uniform_flow",
-                            method="multistep",
-                            flow_shift=flow_shift,
-                        )
+                    denoised = dpm_solver.sample(
+                        z,
+                        steps=50,
+                        order=2,
+                        skip_type="time_uniform_flow",
+                        method="multistep",
+                        flow_shift=flow_shift,
+                    )
                 elif sampler == "flow_euler_ltx":
                     ltx_flow_euler = LTXFlowEuler(
                         model,
@@ -629,7 +618,7 @@ def train(
             timesteps = process_timesteps(
                 weighting_scheme=config.scheduler.weighting_scheme,
                 train_sampling_steps=config.scheduler.train_sampling_steps,
-                size=(bs, 1, clean_images.shape[2]) if config.task == "df" else (bs,),  # B,1,F
+                size=(bs,),  # B,1,F
                 device=clean_images.device,
                 logit_mean=config.scheduler.logit_mean,
                 logit_std=config.scheduler.logit_std,

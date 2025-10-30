@@ -998,7 +998,6 @@ class WanModel(ModelMixin, ConfigMixin):
                 nn.init.zeros_(block.cross_attn.v_img.weight)
                 nn.init.zeros_(block.cross_attn.v_img.bias)
 
-
     def load_model_ckpt(self, pretrained_model_path, init_patch_embedding=False, verbose=True, enable_lora=False):
         if enable_lora:
             return self.load_base_model_peft_ckpt(pretrained_model_path, init_patch_embedding, verbose)

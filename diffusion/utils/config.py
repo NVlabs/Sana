@@ -153,7 +153,6 @@ class TextEncoderConfig(BaseConfig):
     extra: Any = None
 
 
-
 @dataclass
 class ImageEncoderConfig(BaseConfig):
     image_encoder_name: Optional[str] = None

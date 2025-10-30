@@ -41,7 +41,7 @@ from diffusion.model.dc_ae.efficientvit.ae_model_zoo import DCAE_HF, DCAEWithTem
 from diffusion.model.qwen.qwen_vl import QwenVLEmbedder
 from diffusion.model.utils import set_fp32_attention, set_grad_checkpoint
 from diffusion.model.wan2_2.vae import Wan2_2_VAE
-from diffusion.model.wan.clip import CLIPModel, SiglipModel
+from diffusion.model.wan.clip import CLIPModel
 from diffusion.model.wan.vae import WanVAE
 
 MODELS = Registry("models")

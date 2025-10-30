@@ -36,7 +36,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, AutoregressiveChunkFlowEuler, ChunkFlowEuler, FlowEuler, LTXFlowEuler, SelfForcingFlowEuler
+from diffusion import DPMS, ChunkFlowEuler, FlowEuler, LTXFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance
@@ -281,53 +281,25 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     model_kwargs["data_info"].update({"image_embeds": image_embeds})  # B,C,F,H,W
 
             chunk_index = config.model.get("chunk_index", None)
-            if chunk_index is not None and args.sampling_algo in ["chunk_flow_euler", "autoregressive_flow_euler"]:
+            if chunk_index is not None and args.sampling_algo in ["chunk_flow_euler"]:
                 base_latent_size_t = int(base_model_frames - 1) // config.vae.vae_stride[0] + 1
-                if num_frames > base_model_frames:
-                    flow_solver = AutoregressiveChunkFlowEuler(
-                        model,
-                        condition=caption_embs,
-                        uncondition=negative_embs,
-                        cfg_scale=cfg_scale,
-                        flow_shift=flow_shift,
-                        model_kwargs=model_kwargs,
-                        base_model_frames=base_latent_size_t,
-                        base_chunk_index=chunk_index,
-                    )
-                else:
-                    if args.unified_noise:
-                        new_noise = z[:, :, : chunk_index[1]].repeat(1, 1, 2, 1, 1)
-                        z = new_noise[:, :, : z.shape[2]]
-                    flow_solver = ChunkFlowEuler(
-                        model,
-                        condition=caption_embs,
-                        uncondition=negative_embs,
-                        cfg_scale=cfg_scale,
-                        flow_shift=flow_shift,
-                        model_kwargs=model_kwargs,
-                    )
-                samples = flow_solver.sample(
-                    z,
-                    steps=sample_steps,
-                    generator=generator,
-                    chunk_index=chunk_index,
-                    interval_k=args.interval_k,
-                )
-            elif args.sampling_algo == "self_forcing_flow_euler":
-                base_chunk_frames = base_model_frames // config.vae.vae_stride[0]
-                flow_solver = SelfForcingFlowEuler(
+                if args.unified_noise:
+                    new_noise = z[:, :, : chunk_index[1]].repeat(1, 1, 2, 1, 1)
+                    z = new_noise[:, :, : z.shape[2]]
+                flow_solver = ChunkFlowEuler(
                     model,
                     condition=caption_embs,
                     uncondition=negative_embs,
                     cfg_scale=cfg_scale,
                     flow_shift=flow_shift,
                     model_kwargs=model_kwargs,
-                    base_chunk_frames=base_chunk_frames,
                 )
                 samples = flow_solver.sample(
                     z,
                     steps=sample_steps,
                     generator=generator,
+                    chunk_index=chunk_index,
+                    interval_k=args.interval_k,
                 )
             elif config.task == "ltx" or args.sampling_algo == "flow_euler_ltx":
                 flow_solver = LTXFlowEuler(
@@ -611,8 +583,6 @@ if __name__ == "__main__":
     prompts_dataloader = torch.utils.data.DataLoader(prompts_dataset, batch_size=args.bs, shuffle=False)
     # prepare dataloader, model, text encoder
     prompts_dataloader, model, text_encoder = accelerator.prepare(prompts_dataloader, model, text_encoder)
-    if num_frames > base_model_frames:
-        assert args.sampling_algo in ["autoregressive_flow_euler", "self_forcing_flow_euler"]
 
     def create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames):
         save_root = os.path.join(

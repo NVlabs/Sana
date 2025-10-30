@@ -363,7 +363,10 @@ class WanTextEncoderConfig(BaseConfig):
     extra: Any = None
     caption_channels: int = 4096
 
-
+@dataclass
+class DistillConfig(BaseConfig):
+    pass
+    
 @dataclass
 class SanaVideoConfig(BaseConfig):
     data: VideoDataConfig

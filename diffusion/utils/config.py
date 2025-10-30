@@ -352,6 +352,7 @@ class SanaConfig(BaseConfig):
     name: str = "baseline"
     loss_report_name: str = "loss"
 
+
 @dataclass
 class WanTextEncoderConfig(BaseConfig):
     t5_model: str = "umt5_xxl"
@@ -361,7 +362,8 @@ class WanTextEncoderConfig(BaseConfig):
     t5_tokenizer: str = "google/umt5-xxl"
     extra: Any = None
     caption_channels: int = 4096
-    
+
+
 @dataclass
 class SanaVideoConfig(BaseConfig):
     data: VideoDataConfig

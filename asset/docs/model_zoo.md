@@ -43,7 +43,7 @@ ______________________________________________________________________
 | Model            | Reso   | pth link                                                                                        | diffusers                                                                                                                                    | Precision | Description    |
 |------------------|--------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
 | Sana-Video-2B | 480p | [Sana-Video_2B_480p](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p) | [Efficient-Large-Model/Sana-Video_2B_480p_diffusers](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p_diffusers) | bf16      | 5s Pre-train model |
-| LongSANA-Video-2B | 480p | [coming](<>) | [coming](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers) | bf16      | 27FPS Minute-length model |
+| LongSANA-Video-2B | 480p | [coming](<>) | [coming](<>) | bf16      | 27FPS Minute-length model |
 
 ______________________________________________________________________
 

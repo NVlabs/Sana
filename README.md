@@ -56,6 +56,7 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/10/27\] 📺**SANA-Video** diffusers is under [PR](https://github.com/huggingface/diffusers/pull/12584).
 - (🔥 New) \[2025/10/27\] 📺**SANA-Video** is released. [\[README\]](asset/docs/sana_video.md) | [\[Weights\]](asset/docs/model_zoo.md#sana-video)
 - (🔥 New) \[2025/10/13\] 📺**SANA-Video** is coming, 1). a 5s Linear DiT Video model, and 2). real-time minute-length video generation (with [LongLive](https://github.com/NVlabs/LongLive)). [\[paper\]](https://www.arxiv.org/pdf/2509.24695) | [\[Page\]](https://nvlabs.github.io/Sana/Video/)
 - (🔥 New) \[2025/8/20\] We release a new DC-AE-Lite for faster inference and smaller memory. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd_dc_ae_lite.yaml#L52) | [\[diffusers PR\]](https://github.com/huggingface/diffusers/pull/12169) | [Weight](https://huggingface.co/mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers)

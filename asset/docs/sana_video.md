@@ -15,24 +15,10 @@
 
 ## 🏃 How to Inference
 
-### 1. Inference with TXT file
-
-```bash
-bash inference_video_scripts/inference_sana_video.sh \
-      --np 1 \
-      --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
-      --model_path hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth \
-      --txt_file=asset/samples/video_prompts_samples.txt \
-      --cfg_scale 6 \
-      --motion_score 10 \
-      --flow_shift 8 \
-      --work_dir output/sana_video_results
-```
-
-### 2. How to use `SanaVideoPipeline` with `🧨diffusers`
+### 1. How to use `SanaVideoPipeline` with `🧨diffusers`
 
 > \[!IMPORTANT\]
-> It is now under construction [PR](<>)
+> It is now under construction [PR](https://github.com/huggingface/diffusers/pull/12584)
 >
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers
@@ -41,17 +27,22 @@ bash inference_video_scripts/inference_sana_video.sh \
 ```python
 # test SANA-Video
 import torch
-from diffusers import SanaVideoPipeline
+from diffusers import SanaPipeline, SanaVideoPipeline, DPMSolverMultistepScheduler
+from diffusers import AutoencoderKLWan
 from diffusers.utils import export_to_video
 
 model_id = "Efficient-Large-Model/SANA-Video_2B_480p_diffusers"
 pipe = SanaVideoPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+# pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=8.0)
 pipe.vae.to(torch.float32)
 pipe.text_encoder.to(torch.bfloat16)
 pipe.to("cuda")
+model_score = 30
 
-prompt = "Extreme close-up of a thoughtful, gray-haired professor in his 60s, sitting motionless in a Paris café, dressed in a wool coat and beret, pondering the universe. His subtle closed-mouth smile reveals an answer. Golden light, cinematic depth of field, Paris streets blurred in the background. Cinematic 35mm film."
+prompt = "Evening, backlight, side lighting, soft light, high contrast, mid-shot, centered composition, clean solo shot, warm color. A young Caucasian man stands in a forest, golden light glimmers on his hair as sunlight filters through the leaves. He wears a light shirt, wind gently blowing his hair and collar, light dances across his face with his movements. The background is blurred, with dappled light and soft tree shadows in the distance. The camera focuses on his lifted gaze, clear and emotional."
 negative_prompt = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+motion_prompt = f" motion score: {model_score}."
+prompt = prompt + motion_prompt
 
 video = pipe(
     prompt=prompt,
@@ -65,6 +56,20 @@ video = pipe(
 ).frames[0]
 
 export_to_video(video, "sana_video.mp4", fps=16)
+```
+
+### 2. Inference with TXT file
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+      --np 1 \
+      --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
+      --model_path hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth \
+      --txt_file=asset/samples/video_prompts_samples.txt \
+      --cfg_scale 6 \
+      --motion_score 30 \
+      --flow_shift 8 \
+      --work_dir output/sana_video_results
 ```
 
 ## 💻 How to Train

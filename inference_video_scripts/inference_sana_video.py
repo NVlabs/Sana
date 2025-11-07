@@ -36,7 +36,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, ChunkFlowEuler, FlowEuler, LTXFlowEuler
+from diffusion import DPMS, FlowEuler, LTXFlowEuler, LongLiveFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance
@@ -179,7 +179,7 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                 num_chi_prompt_tokens + config.text_encoder.model_max_length - 2
             )  # magic number 2: [bos], [_]
 
-        if config.text_encoder.text_encoder_name in ["Qwen2-5-VL-3B-Instruct", "Qwen2-5-VL-7B-Instruct"]:
+        if "Qwen" in config.text_encoder.text_encoder_name:
             with torch.no_grad():
                 caption_embs, emb_masks = text_handler.get_prompt_embeds(prompts_all, max_length=max_length_all)
                 caption_embs = caption_embs[:, None]
@@ -219,7 +219,7 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
             )
             model_kwargs = dict(data_info={"img_hw": hw}, mask=emb_masks)
 
-            if config.task == "ti2v" or config.task == "ltx":
+            if config.task == "ltx":
                 images = [
                     read_image_from_path(
                         imgp,
@@ -231,40 +231,17 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     for imgp in images
                 ]  # C,H,W
 
-                if config.task == "ltx":
-                    image_vae_embeds = vae_encode(
-                        config.vae.vae_type, vae, torch.stack(images, dim=0)[:, :, None].to(vae_dtype), device=device
-                    )  # 1,C,1,H,W
-                    condition_frame_info = {
-                        0: config.train.noise_multiplier
-                        if config.train.noise_multiplier is not None
-                        else 0.0,  # frame_idx: frame_weight, weight is used for timestep
-                    }
-                    for frame_idx in list(condition_frame_info.keys()):
-                        z[:, :, frame_idx : frame_idx + 1] = image_vae_embeds  # 1,C,F,H,W, first frame is the image
-                    model_kwargs["data_info"].update({"condition_frame_info": condition_frame_info})  # B,C,F,H,W
-                else:
-                    if config.model.image_latent_mode == "repeat":
-                        image_vae_embeds = vae_encode(
-                            config.vae.vae_type,
-                            vae,
-                            torch.stack(images, dim=0)[:, :, None].to(vae_dtype),
-                            device=device,
-                        )  # 1,C,1,H,W
-                        image_vae_embeds = image_vae_embeds.repeat(1, 1, latent_size_t, 1, 1)  # B,C,F,H,W
-                        z = 0.99 * z + 0.01 * image_vae_embeds  # inversion trick for better consistency
-                    elif config.model.image_latent_mode == "video_zero":
-                        batch_images = torch.stack(images, dim=0)[:, :, None]  # B,C,H,W -> B,C,1,H,W
-                        pad_video = torch.zeros_like(batch_images).repeat(
-                            1, 1, num_frames, 1, 1
-                        )  # B,C,1,H,W -> B,C,F,H,W
-                        pad_video[:, :, :1] = batch_images
-                        image_vae_embeds = vae_encode(config.vae.vae_type, vae, pad_video.to(vae_dtype), device=device)
-
-                    if cfg_scale > 1.0:
-                        image_vae_embeds = torch.cat([image_vae_embeds, image_vae_embeds], dim=0)  # 2,C,1,H,W
-
-                    model_kwargs["data_info"].update({"image_vae_embeds": image_vae_embeds})  # B,C,F,H,W
+                image_vae_embeds = vae_encode(
+                    config.vae.vae_type, vae, torch.stack(images, dim=0)[:, :, None].to(vae_dtype), device=device
+                )  # 1,C,1,H,W
+                condition_frame_info = {
+                    0: config.train.noise_multiplier
+                    if config.train.noise_multiplier is not None
+                    else 0.0,  # frame_idx: frame_weight, weight is used for timestep
+                }
+                for frame_idx in list(condition_frame_info.keys()):
+                    z[:, :, frame_idx : frame_idx + 1] = image_vae_embeds  # 1,C,F,H,W, first frame is the image
+                model_kwargs["data_info"].update({"condition_frame_info": condition_frame_info})  # B,C,F,H,W
 
                 if image_encoder is not None:
                     image_embeds = encode_image(
@@ -280,13 +257,8 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
 
                     model_kwargs["data_info"].update({"image_embeds": image_embeds})  # B,C,F,H,W
 
-            chunk_index = config.model.get("chunk_index", None)
-            if chunk_index is not None and args.sampling_algo in ["chunk_flow_euler"]:
-                base_latent_size_t = int(base_model_frames - 1) // config.vae.vae_stride[0] + 1
-                if args.unified_noise:
-                    new_noise = z[:, :, : chunk_index[1]].repeat(1, 1, 2, 1, 1)
-                    z = new_noise[:, :, : z.shape[2]]
-                flow_solver = ChunkFlowEuler(
+            if args.sampling_algo == "flow_euler_ltx":
+                flow_solver = LTXFlowEuler(
                     model,
                     condition=caption_embs,
                     uncondition=negative_embs,
@@ -298,17 +270,16 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     z,
                     steps=sample_steps,
                     generator=generator,
-                    chunk_index=chunk_index,
-                    interval_k=args.interval_k,
                 )
-            elif config.task == "ltx" or args.sampling_algo == "flow_euler_ltx":
-                flow_solver = LTXFlowEuler(
+            elif args.sampling_algo == "longlive_flow_euler":
+                base_chunk_frames = base_model_frames // config.vae.vae_stride[0]
+                flow_solver = LongLiveFlowEuler(
                     model,
                     condition=caption_embs,
-                    uncondition=negative_embs,
-                    cfg_scale=cfg_scale,
                     flow_shift=flow_shift,
                     model_kwargs=model_kwargs,
+                    base_chunk_frames=base_chunk_frames,
+                    num_cached_blocks=args.num_cached_blocks,
                 )
                 samples = flow_solver.sample(
                     z,
@@ -498,14 +469,21 @@ if __name__ == "__main__":
     vae_dtype = get_weight_dtype(config.vae.weight_dtype)
     vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, device=device, dtype=vae_dtype, config=config.vae)
     tokenizer, text_encoder = get_tokenizer_and_text_encoder(name=config.text_encoder.text_encoder_name, device=device)
-    negative_caption_token = tokenizer(
-        config.negative_prompt,
-        max_length=max_sequence_length,
-        padding="max_length",
-        truncation=True,
-        return_tensors="pt",
-    ).to(device)
-    negative_caption_embs = text_encoder(negative_caption_token.input_ids, negative_caption_token.attention_mask)[0]
+    if "Qwen" in config.text_encoder.text_encoder_name:
+        text_handler = text_encoder
+        text_encoder = text_handler.text_encoder
+        negative_caption_embs, negative_caption_embs_mask = text_handler.get_prompt_embeds(
+            config.negative_prompt, max_length=max_sequence_length
+        )
+    else:
+        negative_caption_token = tokenizer(
+            config.negative_prompt,
+            max_length=max_sequence_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        ).to(device)
+        negative_caption_embs = text_encoder(negative_caption_token.input_ids, negative_caption_token.attention_mask)[0]
 
     image_encoder, image_processor = None, None
 
@@ -538,6 +516,8 @@ if __name__ == "__main__":
     model.eval().to(weight_dtype)
 
     args.sampling_algo = config.scheduler.vis_sampler if args.sampling_algo is None else args.sampling_algo
+    if config.task == "ltx" or config.task == "ti2v":
+        args.sampling_algo = "flow_euler_ltx"
 
     if args.work_dir is None:
         work_dir = (

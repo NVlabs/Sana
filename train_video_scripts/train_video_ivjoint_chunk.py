@@ -38,7 +38,7 @@ from accelerate import Accelerator, InitProcessGroupKwargs, skip_first_batches
 from PIL import Image
 from termcolor import colored
 
-from diffusion import DPMS, ChunkFlowEuler, LTXFlowEuler, Scheduler
+from diffusion import DPMS, LTXFlowEuler, Scheduler
 from diffusion.data.builder import build_dataloader, build_dataset
 from diffusion.data.transforms import read_image_from_path
 from diffusion.data.wids import DistributedRangedSampler
@@ -140,24 +140,7 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                 chunk_index=config.model.get("chunk_index", None),
             )
 
-            if config.task == "ti2v":
-                image_vae_embeds = embed["image_vae_embeds"].to(device)  # 1,C,1,H,W
-                if config.model.image_latent_mode == "repeat":
-                    image_vae_embeds = image_vae_embeds.repeat(1, 1, latent_temp, 1, 1)  # B,C,F,H,W
-                    z = (
-                        0.99 * z + 0.01 * image_vae_embeds
-                    )  # inversion trick for better consistency, this should not be used for video zero, since the later frames of video zero are grey
-                if cfg_scale > 1.0:
-                    image_vae_embeds = torch.cat([image_vae_embeds, image_vae_embeds], dim=0)  # 2,C,1,H,W
-
-                model_kwargs["data_info"].update({"image_vae_embeds": image_vae_embeds})  # B,C,F,H,W
-
-                if config.get("image_encoder", {}).get("image_encoder_name") == "flux-siglip":
-                    image_embeds = embed["image_embeds"].to(device)
-                    if cfg_scale > 1.0:
-                        image_embeds = torch.cat([image_embeds, image_embeds], dim=0)  # 2,C,1,H,W
-                    model_kwargs["data_info"].update({"image_embeds": image_embeds})  # B,C,F,H,W
-            elif config.task == "df" or config.task == "ltx":
+            if config.task == "ltx":
                 # NOTE during inference, we do not use noise for the first frame, hard-coded here
                 condition_frame_info = {
                     0: 0.0,  # frame_idx: frame_weight, weight is used for timestep
@@ -173,27 +156,7 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                     if config.scheduler.inference_flow_shift is not None
                     else config.scheduler.flow_shift
                 )
-                if sampler == "chunk_flow_euler":
-                    chunk_index = model_kwargs.get("chunk_index", None)
-                    logger.info(f"chunk_index: {chunk_index}, interval_k: {1/len(chunk_index):.2f}")
-                    assert chunk_index is not None
-
-                    flow_solver = ChunkFlowEuler(
-                        model,
-                        condition=caption_embs,
-                        uncondition=null_y,
-                        cfg_scale=cfg_scale,
-                        flow_shift=flow_shift,
-                        model_kwargs=model_kwargs,
-                    )
-                    denoised = flow_solver.sample(
-                        z,
-                        steps=50,
-                        generator=None,
-                        chunk_index=chunk_index,
-                        interval_k=1 / len(chunk_index),
-                    )
-                elif sampler == "flow_dpm-solver":
+                if sampler == "flow_dpm-solver":
                     dpm_solver = DPMS(
                         model.forward_with_dpmsolver,
                         condition=caption_embs,

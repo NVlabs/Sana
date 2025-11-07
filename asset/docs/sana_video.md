@@ -18,8 +18,6 @@
 ### 1. How to use `SanaVideoPipeline` with `🧨diffusers`
 
 > \[!IMPORTANT\]
-> It is now under construction [PR](https://github.com/huggingface/diffusers/pull/12584)
->
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers
 > ```
@@ -61,6 +59,7 @@ export_to_video(video, "sana_video.mp4", fps=16)
 ### 2. Inference with TXT file
 
 ```bash
+# Text to Video
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
@@ -69,7 +68,19 @@ bash inference_video_scripts/inference_sana_video.sh \
       --cfg_scale 6 \
       --motion_score 30 \
       --flow_shift 8 \
-      --work_dir output/sana_video_results
+      --work_dir output/sana_t2v_video_results
+
+# Text-Image to Video
+bash inference_video_scripts/inference_sana_video.sh \
+      --np 1 \
+      --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
+      --model_path hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth \
+      --txt_file=asset/samples/sample_i2v.txt \
+      --task=ltx \
+      --cfg_scale 6 \
+      --motion_score 30 \
+      --flow_shift 8 \
+      --work_dir output/sana_ti2v_video_results
 ```
 
 ## 💻 How to Train

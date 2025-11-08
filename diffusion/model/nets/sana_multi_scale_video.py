@@ -31,8 +31,6 @@ from diffusion.model.nets.sana_blocks import (
     CachedCausalAttention,
     CaptionEmbedder,
     CausalWanRotaryPosEmbed,
-    ChunkAttention,
-    ChunkCausalAttention,
     ChunkedLiteLAReLURope,
     ClipVisionProjection,
     FlashAttention,
@@ -100,19 +98,11 @@ class SanaVideoMSBlock(nn.Module):
                 qk_norm=qk_norm,
                 **block_kwargs,
             )
-        elif attn_type == "chunkcausal":
-            self_num_heads = hidden_size // linear_head_dim
-            self.attn = ChunkCausalAttention(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "cachedcausal":
             self_num_heads = hidden_size // linear_head_dim
             self.attn = CachedCausalAttention(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
-        elif attn_type == "chunkattn":
-            self.attn = ChunkAttention(
-                hidden_size, hidden_size, heads=hidden_size // linear_head_dim, eps=1e-8, qk_norm=qk_norm
-            )
         elif attn_type == "linear":
             # linear self attention
-            # TODO: Here the num_heads set to 36 for tmp used
             self_num_heads = hidden_size // linear_head_dim
             self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
         elif attn_type == "LiteLAReLURope":
@@ -292,7 +282,12 @@ class SanaVideoMSBlock(nn.Module):
         save_kv_cache = kwargs.get("save_kv_cache", None)
         if save_kv_cache is not None:
             self_attn_kwargs["save_kv_cache"] = save_kv_cache
+        kv_cache = kwargs.get("kv_cache", None)
+        if kv_cache is not None:
+            self_attn_kwargs["kv_cache"] = kv_cache
         x_sa = self.attn(x_sa_in, **self_attn_kwargs)
+        if kv_cache is not None:
+            x_sa, kv_cache = x_sa
 
         intermediate_feats["x_self_attn"] = x_sa
 
@@ -315,12 +310,20 @@ class SanaVideoMSBlock(nn.Module):
             mlp_kwargs["chunk_index"] = chunk_index[:]  # NOTE: important, copy the list
         if save_kv_cache is not None:
             mlp_kwargs["save_kv_cache"] = save_kv_cache
-        x = x + self.drop_path(gate_mlp * self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), **mlp_kwargs))
+        if kv_cache is not None:
+            mlp_kwargs["kv_cache"] = kv_cache
+        mlp_out = self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), **mlp_kwargs)
+        if kv_cache is not None:
+            mlp_out, kv_cache = mlp_out
+        x = x + self.drop_path(gate_mlp * mlp_out)
 
         intermediate_feats["x_ffn"] = x
 
         if self.block_hook is not None:
             self.block_hook(**intermediate_feats)
+
+        if kv_cache is not None:
+            return x, kv_cache
 
         return x
 
@@ -678,6 +681,7 @@ class SanaMSVideo(Sana):
         y = y.to(self.dtype)
         start_f = kwargs.get("start_f", None)
         end_f = kwargs.get("end_f", None)
+        kv_cache = kwargs.pop("kv_cache", None)
         if start_f is not None and end_f is not None:
             assert self.pos_embed_type == "casual_wan_rope"
             start_f = start_f // self.patch_size[0]
@@ -732,8 +736,11 @@ class SanaMSVideo(Sana):
         else:
             raise ValueError(f"Attention type is not available due to _xformers_available={_xformers_available}.")
 
+        assert kv_cache is not None and len(kv_cache) == len(
+            self.blocks
+        ), "kv_cache must be a list of the same length as the number of blocks"
         for i, block in enumerate(self.blocks):
-            x = auto_grad_checkpoint(
+            x, kv_cache_i = auto_grad_checkpoint(
                 block,
                 x,
                 y,
@@ -741,16 +748,18 @@ class SanaMSVideo(Sana):
                 y_lens,
                 (self.f, self.h, self.w),
                 image_pos_embed,
+                kv_cache=kv_cache[i],
                 **kwargs,
                 use_reentrant=False,
             )  # (N, T, D) #support grad checkpoint
 
+            kv_cache[i] = kv_cache_i
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         if self.pack_latents:
             x = self._unpack_latents(x, self.h * 2, self.w * 2, self.f)
 
-        return x
+        return x, kv_cache
 
     def __call__(self, *args, **kwargs):
         """

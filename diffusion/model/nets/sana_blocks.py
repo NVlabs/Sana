@@ -388,120 +388,20 @@ class LiteLAReLURope(Attention_):
         return out
 
 
-class ChunkCausalAttention(LiteLAReLURope):
-    r"""Chunk causal attention"""
-
-    def __init__(
-        self,
-        in_dim: int,
-        out_dim: int,
-        heads: Optional[int] = None,
-        heads_ratio: float = 1.0,
-        dim=32,
-        eps=1e-15,
-        use_bias=False,
-        qk_norm=False,
-        norm_eps=1e-5,
-    ):
-        super().__init__(in_dim, out_dim, heads, heads_ratio, dim, eps, use_bias, qk_norm, norm_eps)
-
-    def forward(
-        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, chunk_index: List[int] = [0]
-    ) -> torch.Tensor:
-        B, N, C = x.shape
-
-        qkv = self.qkv(x).reshape(B, N, 3, C)
-        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
-        dtype = q.dtype
-
-        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
-        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
-        v = v.transpose(-1, -2)
-
-        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-
-        # # lightweight linear attention
-        q = self.kernel_func(q)  # B, h, h_d, N
-        k = self.kernel_func(k)
-
-        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
-            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
-            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
-            return x_out.type_as(hidden_states)
-
-        q_rotated = apply_rotary_emb(q, rotary_emb)  # B, h, h_d, N
-        k_rotated = apply_rotary_emb(k, rotary_emb)  # B, h, h_d, N
-
-        # Store qkv for visualization if buffer is provided
-        if self.qkv_store_buffer is not None:
-            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
-            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-
-        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
-        if use_fp32_attention:
-            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
-
-        # reshape q,k,v to the original shape
-        (f, h, w) = HW
-        # add the last chunk index
-        if chunk_index is not None:
-            chunk_index = chunk_index[:]
-            chunk_index.append(f)
-        else:
-            chunk_index = [0, f]
-        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
-
-        B, h, h_d, N = q_rotated.shape
-        q_rotated = q_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        k_rotated = k_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        q = q.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        k = k.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        v = v.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-
-        # split q,k,v into chunks in the frame dimension
-        q_rotated_list = q_rotated.split(chunk_sizes, dim=-3)
-        k_rotated_list = k_rotated.split(chunk_sizes, dim=-3)
-        v_list = v.split(chunk_sizes, dim=-3)
-        q_list = q.split(chunk_sizes, dim=-3)
-        k_list = k.split(chunk_sizes, dim=-3)
-
-        cumsum_vk = torch.zeros(B, h, h_d, h_d).to(k_rotated.device, k_rotated.dtype)
-        cumsum_k_sum = torch.zeros(B, h, 1, h_d).to(k_rotated.device, k_rotated.dtype)
-        # reshape q,k,v to the original shape
-        q_rotated_list = [_q_rotated.reshape(B, h, h_d, -1) for _q_rotated in q_rotated_list]
-        k_rotated_list = [_k_rotated.reshape(B, h, h_d, -1) for _k_rotated in k_rotated_list]
-        v_list = [_v.reshape(B, h, h_d, -1) for _v in v_list]
-        q_list = [_q.reshape(B, h, h_d, -1) for _q in q_list]
-        k_list = [_k.reshape(B, h, h_d, -1) for _k in k_list]
-        out_list = []
-        for _q_rotated, _k_rotated, _v, _q, _k in zip(q_rotated_list, k_rotated_list, v_list, q_list, k_list):
-            _vk = torch.matmul(_v, _k_rotated.transpose(-1, -2))
-            cumsum_vk += _vk
-            cumsum_k_sum += _k.sum(dim=-1, keepdim=True).transpose(-2, -1)
-            # shape: _k_rotated: B, h, h_d, 1 -> B, h, 1, h_d @ _q_rotated: B,h,h_d,N -> B, h, 1, N
-            z = 1 / (cumsum_k_sum @ _q + self.eps)
-            out = torch.matmul(cumsum_vk, _q_rotated)
-            out = (out * z).to(dtype)  # B, h, h_d, N
-            out_list.append(out)
-
-        out = torch.cat(out_list, dim=-1)  # B, h, h_d, N
-        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
-        out = self.proj(out)
-
-        return out
-
-
 class CachedCausalAttention(LiteLAReLURope):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.kv_cache = None
 
     def forward(
-        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, save_kv_cache=False, **kwargs
+        self,
+        x: torch.Tensor,
+        mask=None,
+        HW=None,
+        rotary_emb=None,
+        block_mask=None,
+        save_kv_cache=False,
+        kv_cache=None,
+        **kwargs,
     ) -> torch.Tensor:
 
         B, N, C = x.shape
@@ -530,13 +430,6 @@ class CachedCausalAttention(LiteLAReLURope):
         q_rotated = apply_rotary_emb(q, rotary_emb)
         k_rotated = apply_rotary_emb(k, rotary_emb)
 
-        # Store qkv for visualization if buffer is provided
-        if self.qkv_store_buffer is not None:
-            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
-            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-
         use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
         if use_fp32_attention:
             q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
@@ -544,21 +437,16 @@ class CachedCausalAttention(LiteLAReLURope):
         k_sum = k.sum(dim=-1, keepdim=True).transpose(-2, -1)
         vk = torch.matmul(v, k_rotated.transpose(-1, -2))
 
-        # Use internal cache with the same logic as before
-        if self.kv_cache is not None:
+        if kv_cache is not None:
+            cusum_vk, cumsum_k_sum = kv_cache[0], kv_cache[1]
 
-            cusum_vk, cumsum_k_sum = self.kv_cache[0], self.kv_cache[1]
-
-            if save_kv_cache:  # Save current chunk's computation
-                self.kv_cache[0] = vk.detach().clone()
-                self.kv_cache[1] = k_sum.detach().clone()
-                # print(f"CachedCausalAttention: Saved internal cache, vk shape: {vk.shape}, k_sum shape: {k_sum.shape}")
+            if save_kv_cache:
+                kv_cache[0] = vk.detach().clone()
+                kv_cache[1] = k_sum.detach().clone()
 
             if cusum_vk is not None and cumsum_k_sum is not None:
-                # Add accumulated cache from previous chunks
                 vk = vk + cusum_vk
                 k_sum = k_sum + cumsum_k_sum
-                # print(f"CachedCausalAttention: Applied accumulated cache, vk shape: {vk.shape}, k_sum shape: {k_sum.shape}")
 
         z = 1 / (k_sum @ q + self.eps)
         out = torch.matmul(vk, q_rotated)
@@ -568,97 +456,8 @@ class CachedCausalAttention(LiteLAReLURope):
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.proj(out)
 
-        return out
-
-
-class ChunkAttention(ChunkCausalAttention):
-    def forward(
-        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, chunk_index: List[int] = [0]
-    ) -> torch.Tensor:
-        B, N, C = x.shape
-
-        qkv = self.qkv(x).reshape(B, N, 3, C)
-        q, k, v = qkv.unbind(2)  # B, N, 3, C --> B, N, C
-        dtype = q.dtype
-
-        q = self.q_norm(q).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
-        k = self.k_norm(k).transpose(-1, -2)  # (B, N, C) -> (B, C, N)
-        v = v.transpose(-1, -2)
-
-        q = q.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-        k = k.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-        v = v.reshape(B, C // self.dim, self.dim, N)  # (B, h, h_d, N)
-
-        # # lightweight linear attention
-        q = self.kernel_func(q)  # B, h, h_d, N
-        k = self.kernel_func(k)
-
-        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
-            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
-            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
-            return x_out.type_as(hidden_states)
-
-        q_rotated = apply_rotary_emb(q, rotary_emb)  # B, h, h_d, N
-        k_rotated = apply_rotary_emb(k, rotary_emb)  # B, h, h_d, N
-
-        # Store qkv for visualization if buffer is provided
-        if self.qkv_store_buffer is not None:
-            # Convert from (B, h, h_d, N) to (b, n, h, h_d) format
-            self.qkv_store_buffer["q"] = q_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-            self.qkv_store_buffer["k"] = k_rotated.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-            self.qkv_store_buffer["v"] = v.permute(0, 3, 1, 2)[0].cpu()  # b, n, h, h_d
-
-        use_fp32_attention = getattr(self, "fp32_attention", False)  # necessary for NAN loss
-        if use_fp32_attention:
-            q_rotated, k_rotated, v = q_rotated.float(), k_rotated.float(), v.float()
-
-        # reshape q,k,v to the original shape
-        (f, h, w) = HW
-        # add the last chunk index
-        chunk_index = [0, 5, 9, 13, 17]
-        if chunk_index is not None:
-            chunk_index = chunk_index[:]
-            chunk_index.append(f)
-        else:
-            chunk_index = [0, f]
-        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
-
-        B, h, h_d, N = q_rotated.shape
-        q_rotated = q_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        k_rotated = k_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        q = q.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        k = k.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-        v = v.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w
-
-        # split q,k,v into chunks in the frame dimension
-        q_rotated_list = q_rotated.split(chunk_sizes, dim=-3)
-        k_rotated_list = k_rotated.split(chunk_sizes, dim=-3)
-        v_list = v.split(chunk_sizes, dim=-3)
-        q_list = q.split(chunk_sizes, dim=-3)
-        k_list = k.split(chunk_sizes, dim=-3)
-
-        cumsum_vk = torch.zeros(B, h, h_d, h_d).to(k_rotated.device, k_rotated.dtype)
-        cumsum_k_sum = torch.zeros(B, h, 1, h_d).to(k_rotated.device, k_rotated.dtype)
-        # reshape q,k,v to the original shape
-        q_rotated_list = [_q_rotated.reshape(B, h, h_d, -1) for _q_rotated in q_rotated_list]
-        k_rotated_list = [_k_rotated.reshape(B, h, h_d, -1) for _k_rotated in k_rotated_list]
-        v_list = [_v.reshape(B, h, h_d, -1) for _v in v_list]
-        q_list = [_q.reshape(B, h, h_d, -1) for _q in q_list]
-        k_list = [_k.reshape(B, h, h_d, -1) for _k in k_list]
-        out_list = []
-        for _q_rotated, _k_rotated, _v, _q, _k in zip(q_rotated_list, k_rotated_list, v_list, q_list, k_list):
-            _vk = torch.matmul(_v, _k_rotated.transpose(-1, -2))
-            # cumsum_vk += _vk
-            # cumsum_k_sum += _k.sum(dim=-1, keepdim=True).transpose(-2, -1)
-            # shape: _k_rotated: B, h, h_d, 1 -> B, h, 1, h_d @ _q_rotated: B,h,h_d,N -> B, h, 1, N
-            z = 1 / (_k.sum(dim=-1, keepdim=True).transpose(-2, -1) @ _q + self.eps)
-            out = torch.matmul(_vk, _q_rotated)
-            out = (out * z).to(dtype)  # B, h, h_d, N
-            out_list.append(out)
-
-        out = torch.cat(out_list, dim=-1)  # B, h, h_d, N
-        out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
-        out = self.proj(out)
+        if kv_cache is not None:
+            return out, kv_cache
 
         return out
 

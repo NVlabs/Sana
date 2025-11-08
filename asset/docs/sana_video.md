@@ -70,7 +70,9 @@ bash inference_video_scripts/inference_sana_video.sh \
       --motion_score 30 \
       --flow_shift 8 \
       --work_dir output/sana_t2v_video_results
+```
 
+```bash
 # Text-Image to Video
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
@@ -82,6 +84,19 @@ bash inference_video_scripts/inference_sana_video.sh \
       --motion_score 30 \
       --flow_shift 8 \
       --work_dir output/sana_ti2v_video_results
+```
+
+```bash
+# LongSANA Text to Video (LongLive: https://github.com/NVlabs/LongLive)
+bash inference_video_scripts/inference_sana_video.sh \
+      --np 1 \
+      --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp_longlive.yaml \
+      # --model_path hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth \
+      --model_path output/open_source/Sana_video/pth/longsana-ckpt/LongSANA_480p.pth \
+      --txt_file=asset/samples/video_prompts_samples.txt \
+      --motion_score 30 \
+      --flow_shift 8 \
+      --work_dir output/longsana_t2v_video_results
 ```
 
 ## 💻 How to Train

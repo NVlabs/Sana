@@ -190,7 +190,7 @@ class SanaModelWrapper(torch.nn.Module):
         super().__init__()
         self.model = sana_model
         self.flow_shift = float(flow_shift)
-        self.uniform_timestep = False   # SANA-Video supports 
+        self.uniform_timestep = False  # SANA-Video supports
         self.scheduler = FlowMatchScheduler(shift=self.flow_shift, sigma_min=0.0, extra_one_step=True)
         self.scheduler.set_timesteps(1000, training=True)
 

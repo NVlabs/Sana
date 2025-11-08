@@ -18,6 +18,7 @@
 ### 1. How to use `SanaVideoPipeline` with `🧨diffusers`
 
 > \[!IMPORTANT\]
+>
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers
 > ```

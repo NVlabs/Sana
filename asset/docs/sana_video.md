@@ -26,14 +26,14 @@
 
 ## 📽️ About SANA-Video
 
-**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to $720 \times 1280$) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
+**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to $720 \\times 1280$) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
 
 SANA-Video's Core Contributions:
 
 - **Efficient Architecture (Linear DiT)**: Leverages **linear attention** as the core operation, which is significantly more efficient than vanilla attention for video generation due to the large number of tokens processed.
 - **Long-Sequence Capability (Constant-Memory KV Cache)**: Introduces a **Constant-Memory KV cache for Block Linear Attention**. This block-wise autoregressive approach uses a fixed-memory state derived from the cumulative properties of linear attention, which eliminates the need for a traditional KV cache, enabling **efficient minute-long video generation**.
 - **Low Training Cost**: Achieved effective data filters and model training strategies, narrowing the training cost to only **12 days on 64 H100 GPUs**, which is just **1%** of the cost of MovieGen.
-- **State-of-the-Art Speed and Performance**: Achieves competitive performance compared to modern SOTA small diffusion models (e.g., Wan 2.1-1.3B) while being **$16\times$ faster** in measured latency。Deployment Acceleration: Can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (**$2.4\times$ speedup**).
+- **State-of-the-Art Speed and Performance**: Achieves competitive performance compared to modern SOTA small diffusion models (e.g., Wan 2.1-1.3B) while being **$16\\times$ faster** in measured latency。Deployment Acceleration: Can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (**$2.4\\times$ speedup**).
 
 In summary, SANA-Video enables high-quality video synthesis at an unmatched speed and low operational cost.
 

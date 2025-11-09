@@ -471,7 +471,7 @@ Our SANA-Sprint models focus on timestep distillation, achieving high-quality ge
 
 # 🎬 7. SANA-Video
 
-**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to $720 \times 1280$) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
+**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to $720 \\times 1280$) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
 Refer to [SANA-Video Manual](asset/docs/sana_video.md) for more details.
 
 <div align="center">

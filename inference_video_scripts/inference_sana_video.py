@@ -387,6 +387,7 @@ class SanaInference(SanaVideoConfig):
     stg_applied_layers: List[int] = field(default_factory=list)
     stg_scale: float = 0.0
     apg_mode: str = "hw"
+    num_cached_blocks: int = -1
 
 
 if __name__ == "__main__":
@@ -447,6 +448,9 @@ if __name__ == "__main__":
             negative_parts.append(f"{key}: {value}")
         config.negative_prompt = " ".join(negative_parts)
     logger.info(f"negative_prompt: {config.negative_prompt}")
+
+    if args.sampling_algo == "longlive_flow_euler":
+        assert args.cfg_scale == 1.0, "cfg_scale must be 1.0 for longlive_flow_euler"
 
     guidance_type = args.guidance_type
     if guidance_type == "adaptive_projected_guidance":
@@ -567,7 +571,7 @@ if __name__ == "__main__":
     def create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames):
         save_root = os.path.join(
             img_save_dir,
-            f"{dataset}_epoch{epoch_name}_step{step_name}_scale{args.cfg_scale}"
+            f"{dataset}_step{step_name}_scale{args.cfg_scale}"
             f"_step{sample_steps}_size{args.image_size}_numframes{num_frames}_bs{args.bs}_samp{args.sampling_algo}"
             f"_seed{args.seed}_{str(weight_dtype).split('.')[-1]}",
         )
@@ -578,6 +582,8 @@ if __name__ == "__main__":
             save_root += f"_flowshift{flow_shift}"
         if args.interval_k > 0:
             save_root += f"_interval_k{int(args.interval_k*1000)}"
+        if args.num_cached_blocks > 0:
+            save_root += f"_numcb{args.num_cached_blocks}"
         if args.high_motion:
             save_root += f"_highmotion"
         if args.motion_score > 0:
@@ -609,11 +615,11 @@ if __name__ == "__main__":
     if args.debug:
         items = [
             "A fashionable woman in a black leather jacket, long red dress, and black boots confidently strolls down a wet, reflective Tokyo street. Neon lights and animated signs glow warmly around her. She carries a black purse and wears red lipstick and sunglasses. Pedestrians move about in the bustling background. Medium shot, dynamic camera movement.",
-            "Several giant woolly mammoths lumber through a snowy meadow, their long, fluffy fur gently swaying in the breeze. Snow-covered trees and snow-capped mountains loom in the background under mid-afternoon sunlight with wispy clouds, casting a warm glow. A low-angle camera captures the majestic creatures in stunning detail with a soft depth of field.",
-            "A cinematic movie trailer in vibrant 35mm film style, featuring a 30-year-old space adventurer wearing a red wool knitted motorcycle helmet, exploring a vast blue-sky salt desert. Wide shots and dynamic camera movements.",
-            "Drone view of waves crashing against rugged cliffs at Big Sur's Garrapata Point. Blue waves form white tips as the setting sun casts golden light on the rocky shore. A distant island with a lighthouse and green shrubs on the cliff edge add to the scene. Dramatic steep drops from the coastal road to the beach highlight the raw beauty of the Pacific Coast Highway. Medium shot, sweeping drone movement.",
-            "Close-up of a cute, fluffy monster kneeling beside a melting red candle in a realistic 3D style. The monster gazes curiously at the flickering flame with wide eyes and an open mouth, expressing innocence and playfulness. Warm colors and dramatic lighting create a cozy, wondrous atmosphere.",
-            "the opening scene begins with a dynamic view of a bustling cityscape captured in vibrant detail. towering skyscrapers dominate the skyline, while the streets below are alive with motion. people from diverse cultures fill the sidewalks, engaging in daily activities, their vibrant attire adding splashes of color to the scene. vehicles, including cars and buses, weave through the busy roads in a synchronized rhythm. bright billboards in various languages flash advertisements, reflecting the multicultural essence of the city. thecamera smoothly pans upward from the busy streets to focus on a sleek, modern office building. its reflective glass facade shimmers in the sunlight, hinting at its importance as a central location in the story. the atmosphere is energetic and cosmopolitan, setting the stage for an international narrative.",
+            # "Several giant woolly mammoths lumber through a snowy meadow, their long, fluffy fur gently swaying in the breeze. Snow-covered trees and snow-capped mountains loom in the background under mid-afternoon sunlight with wispy clouds, casting a warm glow. A low-angle camera captures the majestic creatures in stunning detail with a soft depth of field.",
+            # "A cinematic movie trailer in vibrant 35mm film style, featuring a 30-year-old space adventurer wearing a red wool knitted motorcycle helmet, exploring a vast blue-sky salt desert. Wide shots and dynamic camera movements.",
+            # "Drone view of waves crashing against rugged cliffs at Big Sur's Garrapata Point. Blue waves form white tips as the setting sun casts golden light on the rocky shore. A distant island with a lighthouse and green shrubs on the cliff edge add to the scene. Dramatic steep drops from the coastal road to the beach highlight the raw beauty of the Pacific Coast Highway. Medium shot, sweeping drone movement.",
+            # "Close-up of a cute, fluffy monster kneeling beside a melting red candle in a realistic 3D style. The monster gazes curiously at the flickering flame with wide eyes and an open mouth, expressing innocence and playfulness. Warm colors and dramatic lighting create a cozy, wondrous atmosphere.",
+            # "the opening scene begins with a dynamic view of a bustling cityscape captured in vibrant detail. towering skyscrapers dominate the skyline, while the streets below are alive with motion. people from diverse cultures fill the sidewalks, engaging in daily activities, their vibrant attire adding splashes of color to the scene. vehicles, including cars and buses, weave through the busy roads in a synchronized rhythm. bright billboards in various languages flash advertisements, reflecting the multicultural essence of the city. thecamera smoothly pans upward from the busy streets to focus on a sleek, modern office building. its reflective glass facade shimmers in the sunlight, hinting at its importance as a central location in the story. the atmosphere is energetic and cosmopolitan, setting the stage for an international narrative.",
         ]
     visualize(
         config=config,

@@ -7,10 +7,45 @@
 <div align="center">
   <a href="https://nvlabs.github.io/Sana/Video"><img src="https://img.shields.io/static/v1?label=Project&message=Github&color=blue&logo=github-pages"></a> &ensp;
   <a href="https://arxiv.org/abs/2509.24695"><img src="https://img.shields.io/static/v1?label=Arxiv&message=Sana&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://huggingface.co/docs/diffusers/main/en/api/pipelines/sana_video"><img src="https://img.shields.io/static/v1?label=diffusers&message=SANAVideoPipeline&color=yellow"></a> &ensp;
 </div>
 
+## 🎬 Demos of SANA-Video
+
 <div align="center">
-  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/cover.png" alt="SANA-Video Cover" style="width: 90%; margin: 0 auto; display: inline-block">
+  <a href="https://www.youtube.com/watch?v=ztdkfIMkdJ4" target="_blank">
+    <img src="https://img.youtube.com/vi/ztdkfIMkdJ4/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 32.5%; margin: 0 auto; display: inline-block">
+  </a>
+  <a href="https://www.youtube.com/watch?v=7eNfDzA4yBs" target="_blank">
+    <img src="https://img.youtube.com/vi/7eNfDzA4yBs/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 32.5%; margin: 0 auto; display: inline-block">
+  </a>
+  <a href="https://www.youtube.com/watch?v=A9PnJ0y1DHY" target="_blank">
+    <img src="https://img.youtube.com/vi/A9PnJ0y1DHY/0.jpg" alt="Demo Video of SANA-Video speed" style="width: 32.5%; margin: 0 auto; display: inline-block">
+  </a>
+</div>
+
+## 📽️ About SANA-Video
+
+**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to $720 \times 1280$) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
+
+SANA-Video's Core Contributions:
+
+- **Efficient Architecture (Linear DiT)**: Leverages **linear attention** as the core operation, which is significantly more efficient than vanilla attention for video generation due to the large number of tokens processed.
+- **Long-Sequence Capability (Constant-Memory KV Cache)**: Introduces a **Constant-Memory KV cache for Block Linear Attention**. This block-wise autoregressive approach uses a fixed-memory state derived from the cumulative properties of linear attention, which eliminates the need for a traditional KV cache, enabling **efficient minute-long video generation**.
+- **Low Training Cost**: Achieved effective data filters and model training strategies, narrowing the training cost to only **12 days on 64 H100 GPUs**, which is just **1%** of the cost of MovieGen.
+- **State-of-the-Art Speed and Performance**: Achieves competitive performance compared to modern SOTA small diffusion models (e.g., Wan 2.1-1.3B) while being **$16\times$ faster** in measured latency。Deployment Acceleration: Can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (**$2.4\times$ speedup**).
+
+In summary, SANA-Video enables high-quality video synthesis at an unmatched speed and low operational cost.
+
+## 💻 Block Causal Linear Attention && Causal Mix-FFN Mechanism
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=-vuCn_d9Qjk" target="_blank">
+    <img src="https://img.youtube.com/vi/-vuCn_d9Qjk/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; margin: 0 auto; display: inline-block">
+  </a>
+  <a href="https://www.youtube.com/watch?v=r347mG1rKqk" target="_blank">
+    <img src="https://img.youtube.com/vi/r347mG1rKqk/0.jpg" alt="Demo Video of SANA-Sprint" style="width: 49%; margin: 0 auto; display: inline-block">
+  </a>
 </div>
 
 ## 🏃 How to Inference

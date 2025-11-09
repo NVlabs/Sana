@@ -1090,6 +1090,90 @@
                 max-width: 95vw;
             }
         }
+
+        /* YouTube Video Section Styles */
+        .youtube-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 1200px) {
+            .youtube-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .youtube-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* YouTube Grid for 2 videos - centered layout */
+        .youtube-grid-two {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (max-width: 1200px) {
+            .youtube-grid-two {
+                max-width: 1200px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .youtube-grid-two {
+                grid-template-columns: 1fr;
+                max-width: 100%;
+            }
+        }
+        
+        .youtube-item {
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 1px solid #444;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        @media (prefers-color-scheme: light) {
+            .youtube-item {
+                background: linear-gradient(145deg, #ffffff, #f8f9fa);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                border: 1px solid #e9ecef;
+            }
+        }
+        
+        .youtube-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(100, 181, 246, 0.2);
+            border-color: #64b5f6;
+        }
+        
+        .youtube-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+        }
+        
+        .youtube-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -1182,6 +1266,71 @@
                 <div class="stat-item">
                     <div class="stat-number">60s</div>
                     <div class="stat-label">Latency generating 5-second video</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Demo Videos Section -->
+        <section class="section">
+            <h2 class="section-title">Demo Videos</h2>
+            <p class="section-description">
+                Quality and Efficiency of SANA-Video.
+            </p>
+            <div class="youtube-grid">
+                <div class="youtube-item">
+                    <div class="youtube-container">
+                        <iframe 
+                            src="https://www.youtube.com/ztdkfIMkdJ4?autoplay=1&mute=1&loop=1&playlist=ztdkfIMkdJ4&controls=1&modestbranding=1&rel=0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+                <div class="youtube-item">
+                    <div class="youtube-container">
+                        <iframe 
+                            src="https://www.youtube.com/7eNfDzA4yBs?autoplay=1&mute=1&loop=1&playlist=7eNfDzA4yBs&controls=1&modestbranding=1&rel=0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+                <div class="youtube-item">
+                    <div class="youtube-container">
+                        <iframe 
+                            src="https://www.youtube.com/A9PnJ0y1DHY?autoplay=1&mute=1&loop=1&playlist=A9PnJ0y1DHY&controls=1&modestbranding=1&rel=0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Videos Section -->
+        <section class="section">
+            <h2 class="section-title">Technical Videos</h2>
+            <p class="section-description">
+                Mechanical demonstration of Block Causal Linear Attention and Causal Mix-FFN.
+            </p>
+            <div class="youtube-grid-two">
+                <div class="youtube-item">
+                    <div class="youtube-container">
+                        <iframe 
+                            src="https://www.youtube.com/embed/-vuCn_d9Qjk?autoplay=1&mute=1&loop=1&playlist=-vuCn_d9Qjk&controls=1&modestbranding=1&rel=0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+                <div class="youtube-item">
+                    <div class="youtube-container">
+                        <iframe 
+                            src="https://www.youtube.com/embed/r347mG1rKqk?autoplay=1&mute=1&loop=1&playlist=r347mG1rKqk&controls=1&modestbranding=1&rel=0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
                 </div>
             </div>
         </section>

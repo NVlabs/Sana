@@ -59,6 +59,7 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 > ```
 
 ### Text-to-Video: SanaVideoPipeline
+
 ```python
 import torch
 from diffusers import SanaVideoPipeline

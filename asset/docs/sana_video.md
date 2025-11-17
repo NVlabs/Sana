@@ -50,7 +50,7 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 
 ## 🏃 How to Inference
 
-### 1. How to use `SanaVideoPipeline` with `🧨diffusers`
+### 1. How to use Sana-Video Pipelines in `🧨diffusers`
 
 > \[!IMPORTANT\]
 >
@@ -58,16 +58,15 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 > pip install git+https://github.com/huggingface/diffusers
 > ```
 
+### Text-to-Video: SanaVideoPipeline
 ```python
-# test SANA-Video
 import torch
-from diffusers import SanaPipeline, SanaVideoPipeline, DPMSolverMultistepScheduler
+from diffusers import SanaVideoPipeline
 from diffusers import AutoencoderKLWan
 from diffusers.utils import export_to_video
 
 model_id = "Efficient-Large-Model/SANA-Video_2B_480p_diffusers"
 pipe = SanaVideoPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
-# pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=8.0)
 pipe.vae.to(torch.float32)
 pipe.text_encoder.to(torch.bfloat16)
 pipe.to("cuda")
@@ -90,6 +89,44 @@ video = pipe(
 ).frames[0]
 
 export_to_video(video, "sana_video.mp4", fps=16)
+```
+
+### Text-to-Video: SanaImageToVideoPipeline
+
+```python
+import torch
+from diffusers import SanaImageToVideoPipeline, FlowMatchEulerDiscreteScheduler
+from diffusers.utils import export_to_video, load_image
+
+pipe = SanaImageToVideoPipeline.from_pretrained("Efficient-Large-Model/SANA-Video_2B_480p_diffusers")
+# pipe.scheduler = FlowMatchEulerDiscreteScheduler(shift=pipe.scheduler.config.flow_shift)
+pipe.transformer.to(torch.bfloat16)
+pipe.text_encoder.to(torch.bfloat16)
+pipe.vae.to(torch.float32)
+pipe.to("cuda")
+
+motion_score = 30
+prompt = "A woman stands against a stunning sunset backdrop, her , wavy brown hair gently blowing in the breeze. She wears a veless, light-colored blouse with a deep V-neckline, which ntuates her graceful posture. The warm hues of the setting sun cast a en glow across her face and hair, creating a serene and ethereal sphere. The background features a blurred landscape with soft, ing hills and scattered clouds, adding depth to the scene. The camera ins steady, capturing the tranquil moment from a medium close-up e."
+negative_prompt = "A chaotic sequence with misshapen, deformed limbs eavy motion blur, sudden disappearance, jump cuts, jerky movements, d shot changes, frames out of sync, inconsistent character shapes, oral artifacts, jitter, and ghosting effects, creating a disorienting al experience."
+motion_prompt = f" motion score: {motion_score}."
+prompt = prompt + motion_prompt
+
+image = load_image("https://raw.githubusercontent.com/NVlabs/Sana//heads/main/asset/samples/i2v-1.png")
+
+output = pipe(
+    image=image,
+    prompt=prompt,
+    negative_prompt=negative_prompt,
+    height=480,
+    width=832,
+    frames=81,
+    guidance_scale=6,
+    num_inference_steps=50,
+    generator=torch.Generator(device="cuda").manual_seed(42),
+).frames[0]
+
+export_to_video(output, "sana-ti2v-output.mp4", fps=16)
+
 ```
 
 ### 2. Inference with TXT file
@@ -149,7 +186,7 @@ python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_
 | Open-Sora-2.0 | 465 | 1.0× | 14 | 84.34 | 85.4 | 80.72 |
 | Wan2.1-14B | 484 | 1.0× | 14 | 83.69 | 85.59 | 76.11 |
 | Wan2.1-1.3B | 103 | 4.7× | 1.3 | 83.31 | 85.23 | 75.65 |
-| **SANA-Video** | **60** | **8.0×** | **2** | **83.71** | **84.35** | **81.35** |
+| **SANA-Video** | **60** | **8.0×** | **2** | **84.17** | **84.85** | **81.46** |
 
 <details>
 <summary>Click to expand full comparison table</summary>
@@ -163,7 +200,7 @@ python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_
 | Open-Sora-2.0 | 465 | 1.0× | 14 | 84.34 | 85.4 | 80.72 |
 | Wan2.1-14B | 484 | 1.0× | 14 | 83.69 | 85.59 | 76.11 |
 | Wan2.1-1.3B | 103 | 4.7× | 1.3 | 83.31 | 85.23 | 75.65 |
-| **SANA-Video** | **60** | **8.0×** | **2** | **83.71** | **84.35** | **81.35** |
+| **SANA-Video** | **60** | **8.0×** | **2** | **84.17** | **84.85** | **81.46** |
 
 </details>
 

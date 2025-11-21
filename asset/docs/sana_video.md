@@ -92,7 +92,7 @@ video = pipe(
 export_to_video(video, "sana_video.mp4", fps=16)
 ```
 
-### Text-to-Video: SanaImageToVideoPipeline
+### Image-to-Video: SanaImageToVideoPipeline
 
 ```python
 import torch

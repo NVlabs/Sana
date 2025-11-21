@@ -56,11 +56,12 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/11/21\] 🎬 [LongSANA](asset/docs/sana_video.md#longsana-text-to-video-27fps-real-time-minute-length-model): 27FPS real-time minute-length video generation model is released. Thanks to [LongLive](https://github.com/NVlabs/LongLive). [\[Weight\]](asset/docs/model_zoo.md#sana-video)
 - (🔥 New) \[2025/11/9\] 🎬 [Introduction video](https://www.youtube.com/watch?v=ztdkfIMkdJ4) shows how Block Causal Linear Attention and Causal Mix-FFN work?
 - (🔥 New) \[2025/11/6\] 📺**SANA-Video** is merged into [diffusers](https://huggingface.co/docs/diffusers/main/en/api/pipelines/sana_video). [How to use](asset/docs/sana_video.md#1-how-to-use-sanavideopipeline-with-diffusers).
 - (🔥 New) \[2025/10/27\] 📺**SANA-Video** is released. [\[README\]](asset/docs/sana_video.md) | [\[Weights\]](asset/docs/model_zoo.md#sana-video) support Text-to-Video, TextImage-to-Video.
 - (🔥 New) \[2025/10/13\] 📺**SANA-Video** is coming, 1). a 5s Linear DiT Video model, and 2). real-time minute-length video generation (with [LongLive](https://github.com/NVlabs/LongLive)). [\[paper\]](https://www.arxiv.org/pdf/2509.24695) | [\[Page\]](https://nvlabs.github.io/Sana/Video/)
-- (🔥 New) \[2025/8/20\] We release a new DC-AE-Lite for faster inference and smaller memory. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd_dc_ae_lite.yaml#L52) | [\[diffusers PR\]](https://github.com/huggingface/diffusers/pull/12169) | [Weight](https://huggingface.co/mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers)
+- (🔥 New) \[2025/8/20\] We release a new DC-AE-Lite for faster inference and smaller memory. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd_dc_ae_lite.yaml#L52) | [\[diffusers PR\]](https://github.com/huggingface/diffusers/pull/12169) | [\[Weight\]](https://huggingface.co/mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers)
 - (🔥 New) \[2025/6/25\] [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/) was accepted to ICCV'25 🏖️
 - (🔥 New) \[2025/6/4\] SANA-Sprint [ComfyUI Node](https://github.com/lawrence-cj/ComfyUI_ExtraModels) is released [\[Example\]](asset/docs/ComfyUI/SANA-Sprint.json).
 - (🔥 New) \[2025/5/8\] SANA-Sprint (One-step diffusion) diffusers training code is released [\[Guidance\]](https://github.com/huggingface/diffusers/blob/main/examples/research_projects/sana/README.md).

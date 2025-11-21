@@ -132,8 +132,9 @@ export_to_video(output, "sana-ti2v-output.mp4", fps=16)
 
 ### 2. Inference with TXT file
 
+#### Text-to-Video
+
 ```bash
-# Text to Video
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
@@ -145,8 +146,9 @@ bash inference_video_scripts/inference_sana_video.sh \
       --work_dir output/sana_t2v_video_results
 ```
 
+#### Image-to-Video
+
 ```bash
-# Text-Image to Video
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
@@ -159,8 +161,10 @@ bash inference_video_scripts/inference_sana_video.sh \
       --work_dir output/sana_ti2v_video_results
 ```
 
+#### LongSANA Text to Video: 27FPS Real-time minute-length model
+
 ```bash
-# LongSANA Text to Video (LongLive: https://github.com/NVlabs/LongLive)
+ # Thanks to LongLive: https://github.com/NVlabs/LongLive
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp_longlive.yaml \

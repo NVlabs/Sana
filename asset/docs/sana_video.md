@@ -164,7 +164,7 @@ bash inference_video_scripts/inference_sana_video.sh \
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp_longlive.yaml \
-      # --model_path coming soon
+      --model_path hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth \
       --txt_file=asset/samples/video_prompts_samples.txt \
       --motion_score 30 \
       --flow_shift 8 \
@@ -243,3 +243,14 @@ python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_
 | **SANA-Video-2B** | **36** | **84.05** | **84.63** | **81.73** |
 
 **Summary**: Compared with the current SOTA small video models, SANA's performance is very competitive and speed is much faster. SANA provides 83.71 VBench overall performance with only 2B model parameters, **16× acceleration** at 480p, and achieves 84.05 total score with only **36s latency** at 720p resolution.
+
+### VBench Results - 30s Long Video Vbench
+
+| Models | FPS | Total ↑ | Quality ↑ | Semantic ↑ |
+|--------|-------------|---------|-----------|------------|
+| SkyReels-V2       | 0.49      |  75.29    | 80.77     | 53.37     |
+| FramePack         | 0.92      |  81.95    | 83.61     | 75.32     |
+| Self-Forcing      | 17.0      |  81.59    | 83.82     | 72.70     |
+| **LongSANA-2B**   | **27.5**  | **82.29** | **83.10** | **79.04** |
+
+**Summary**: Compared with the current SOTA long video generation models, LongSANA (SANA-Video + [LongLive](https://github.com/NVlabs/LongLive))'s speed and performance is very competitive. LongSANA's 27FPS generatin speed on H100 makes real-time generation possible.

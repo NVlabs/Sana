@@ -36,7 +36,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, FlowEuler, LTXFlowEuler
+from diffusion import DPMS, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance
@@ -302,6 +302,21 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     skip_type=args.skip_type,
                     method="multistep",
                     flow_shift=flow_shift,
+                )
+            elif args.sampling_algo == "longlive_flow_euler":
+                base_chunk_frames = base_model_frames // config.vae.vae_stride[0]
+                flow_solver = LongLiveFlowEuler(
+                    model,
+                    condition=caption_embs,
+                    flow_shift=flow_shift,
+                    model_kwargs=model_kwargs,
+                    base_chunk_frames=base_chunk_frames,
+                    num_cached_blocks=args.num_cached_blocks,
+                )
+                samples = flow_solver.sample(
+                    z,
+                    steps=sample_steps,
+                    generator=generator,
                 )
             else:
                 raise ValueError(f"{args.sampling_algo} is not defined")

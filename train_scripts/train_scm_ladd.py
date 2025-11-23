@@ -946,7 +946,7 @@ def train(
                 save_checkpoint(
                     osp.join(config.work_dir, "checkpoints"),
                     epoch=epoch,
-                    model=DiscHeadModel(disc),
+                    model=DiscHeadModel(accelerator.unwrap_model(disc)),
                     optimizer=optimizer_D,
                     step=global_step,
                     add_suffix=config.train.suffix_checkpoints,
@@ -1382,7 +1382,14 @@ def main(cfg: SanaConfig) -> None:
                 if "latest.pth" in checkpoints and osp.exists(osp.join(ckpt_path, "latest.pth")):
                     config.model.resume_from["checkpoint"] = osp.realpath(osp.join(ckpt_path, "latest.pth"))
                 else:
-                    checkpoints = [i for i in checkpoints if i.startswith("epoch_")]
+                    # Filter out discriminator checkpoints (those with suffix_checkpoints suffix)
+                    # The discriminator is loaded separately later
+                    suffix = config.train.suffix_checkpoints
+                    checkpoints = [
+                        i for i in checkpoints 
+                        if i.startswith("epoch_") 
+                        and not (suffix and i.endswith(f"_{suffix}.pth"))
+                    ]
                     checkpoints = sorted(checkpoints, key=lambda x: int(x.replace(".pth", "").split("_")[3]))
                     config.model.resume_from["checkpoint"] = osp.join(ckpt_path, checkpoints[-1])
             else:

@@ -1388,9 +1388,9 @@ def main(cfg: SanaConfig) -> None:
                     # The discriminator is loaded separately later
                     suffix = config.train.suffix_checkpoints
                     checkpoints = [
-                        i for i in checkpoints 
-                        if i.startswith("epoch_") 
-                        and not (suffix and i.endswith(f"_{suffix}.pth"))
+                        i
+                        for i in checkpoints
+                        if i.startswith("epoch_") and not (suffix and i.endswith(f"_{suffix}.pth"))
                     ]
                     checkpoints = sorted(checkpoints, key=lambda x: int(x.replace(".pth", "").split("_")[3]))
                     config.model.resume_from["checkpoint"] = osp.join(ckpt_path, checkpoints[-1])

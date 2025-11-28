@@ -10,6 +10,7 @@
   <a href="https://nvlabs.github.io/Sana/"><img src="https://img.shields.io/static/v1?label=Project&message=Github&color=blue&logo=github-pages"></a> &ensp;
   <a href="https://hanlab.mit.edu/projects/sana/"><img src="https://img.shields.io/static/v1?label=Page&message=MIT&color=darkred&logo=github-pages"></a> &ensp;
   <a href="https://arxiv.org/abs/2410.10629"><img src="https://img.shields.io/static/v1?label=Arxiv&message=Sana&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory"><img src="https://img.shields.io/static/v1?label=Blog&message=MIT&color=darkred&logo=github-pages"></a> &ensp;
   <a href="https://nv-sana.mit.edu/"><img src="https://img.shields.io/static/v1?label=Demo:6x3090&message=SANA&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/4bit/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=4bit&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=yellow"></a> &ensp;
@@ -31,6 +32,8 @@
 **ComfyUI**: [ComfyUI Guidance](asset/docs/ComfyUI/comfyui.md) <br>
 **Model Zoo:** [Model Card Collects All Models](asset/docs/model_zoo.md) <br>
 **Env Preparation:** [One-Click Env Install](#-1-dependencies-and-installation) <br>
+**Blog**: [Infinite Context for LLM and Video Generation](https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory)
+<br>
 **Inference:** <br>      1) [diffusers:SanaPipeline](#1-how-to-use-sanapipeline-with-diffusers) <br>      2) [diffusers:SanaPAGPipeline](#2-how-to-use-sanapagpipeline-with-diffusers) <br>      3) [Ours:SanaPipeline](#3-how-to-use-sana-in-this-repo) <br>      4) [Inference with Docker](#4-run-sana-inference-with-docker) <br>      5) [Inference with TXT or JSON Files](#5-run-inference-with-txt-or-json-files) <br>      6) [Inference SANA-Video](asset/docs/sana_video.md#-how-to-inference) <br>
 **Training and Data:** <br>      1) [Image-Text Pairs](#1-train-with-image-text-pairs-in-directory) <br>      2) [Multi-Scale Webdataset](#2-train-with-multi-scale-webdataset) <br>      3) [TAR File Multi-Scale Webdataset](#3-train-with-tar-file) <br>      4) [FSDP Launch](#3-train-with-tar-file) <br>      5) [LoRA Training](asset/docs/sana_lora_dreambooth.md) <br>      6) [SANA-Sprint Diffusers Training](https://github.com/huggingface/diffusers/blob/main/examples/research_projects/sana/README.md) <br>      7) [SANA-Video Training](asset/docs/sana_video.md#-how-to-train) <br>
 
@@ -56,6 +59,7 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/11/24\] 🪶 [Blog](https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory): how Causal Linear Attention unlocks infinite context for LLMs and long video generation.
 - (🔥 New) \[2025/11/9\] 🎬 [Introduction video](https://www.youtube.com/watch?v=ztdkfIMkdJ4) shows how Block Causal Linear Attention and Causal Mix-FFN work?
 - (🔥 New) \[2025/11/6\] 📺**SANA-Video** is merged into [diffusers](https://huggingface.co/docs/diffusers/main/en/api/pipelines/sana_video). [How to use](asset/docs/sana_video.md#1-how-to-use-sanavideopipeline-with-diffusers).
 - (🔥 New) \[2025/10/27\] 📺**SANA-Video** is released. [\[README\]](asset/docs/sana_video.md) | [\[Weights\]](asset/docs/model_zoo.md#sana-video) support Text-to-Video, TextImage-to-Video.

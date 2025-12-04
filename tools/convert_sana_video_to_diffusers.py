@@ -7,22 +7,28 @@ from contextlib import nullcontext
 
 import torch
 from accelerate import init_empty_weights
+from huggingface_hub import hf_hub_download, snapshot_download
+from termcolor import colored
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from diffusers import (
     AutoencoderKLWan,
     DPMSolverMultistepScheduler,
     FlowMatchEulerDiscreteScheduler,
+    SanaVideoCausalTransformer3DModel,
     SanaVideoPipeline,
     SanaVideoTransformer3DModel,
     UniPCMultistepScheduler,
 )
 from diffusers.utils.import_utils import is_accelerate_available
-from huggingface_hub import hf_hub_download, snapshot_download
-from termcolor import colored
-from transformers import AutoModelForCausalLM, AutoTokenizer
+
 
 CTX = init_empty_weights if is_accelerate_available else nullcontext
 
-ckpt_ids = ["Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth"]
+ckpt_ids = [
+    "Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth",
+    "Efficient-Large-Model/Sana-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth",
+]
 # https://github.com/NVlabs/Sana/blob/main/inference_video_scripts/inference_sana_video.py
 
 
@@ -60,9 +66,13 @@ def main(args):
     converted_state_dict["caption_projection.linear_2.weight"] = state_dict.pop("y_embedder.y_proj.fc2.weight")
     converted_state_dict["caption_projection.linear_2.bias"] = state_dict.pop("y_embedder.y_proj.fc2.bias")
 
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop("t_embedder.mlp.0.weight")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop(
+        "t_embedder.mlp.0.weight"
+    )
     converted_state_dict["time_embed.emb.timestep_embedder.linear_1.bias"] = state_dict.pop("t_embedder.mlp.0.bias")
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop("t_embedder.mlp.2.weight")
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop(
+        "t_embedder.mlp.2.weight"
+    )
     converted_state_dict["time_embed.emb.timestep_embedder.linear_2.bias"] = state_dict.pop("t_embedder.mlp.2.bias")
 
     # Shared norm.
@@ -74,6 +84,8 @@ def main(args):
 
     # scheduler
     flow_shift = 8.0
+    if args.task == "i2v":
+        assert args.scheduler_type == "flow-euler", "Scheduler type must be flow-euler for i2v task."
 
     # model config
     layer_num = 20
@@ -89,6 +101,10 @@ def main(args):
         patch_size = (1, 1, 1)
     else:
         raise ValueError(f"Video size {args.video_size} is not supported.")
+
+    use_causal_linear_attn = False
+    if "Sana-Video_2B_480p_LongLive" in file_path:
+        use_causal_linear_attn = True
 
     for depth in range(layer_num):
         # Transformer blocks.
@@ -193,7 +209,10 @@ def main(args):
             "rope_max_seq_len": 1024,
         }
 
-        transformer = SanaVideoTransformer3DModel(**transformer_kwargs)
+        if use_causal_linear_attn:
+            transformer = SanaVideoCausalTransformer3DModel(**transformer_kwargs)
+        else:
+            transformer = SanaVideoTransformer3DModel(**transformer_kwargs)
 
     transformer.load_state_dict(converted_state_dict, strict=True, assign=True)
 
@@ -251,7 +270,10 @@ def main(args):
             scheduler = FlowMatchEulerDiscreteScheduler(shift=flow_shift)
         elif args.scheduler_type == "uni-pc":
             scheduler = UniPCMultistepScheduler(
-                prediction_type="flow_prediction", use_flow_sigmas=True, num_train_timesteps=1000, flow_shift=flow_shift
+                prediction_type="flow_prediction",
+                use_flow_sigmas=True,
+                num_train_timesteps=1000,
+                flow_shift=flow_shift,
             )
         else:
             raise ValueError(f"Scheduler type {args.scheduler_type} is not supported")
@@ -303,6 +325,7 @@ if __name__ == "__main__":
         choices=["flow-dpm_solver", "flow-euler", "uni-pc"],
         help="Scheduler type to use.",
     )
+    parser.add_argument("--task", default="t2v", type=str, required=True, choices=["t2v", "i2v"], help="Task to convert, t2v or i2v.")
     parser.add_argument("--dump_path", default=None, type=str, required=True, help="Path to the output pipeline.")
     parser.add_argument("--save_full_pipeline", action="store_true", help="save all the pipeline elements in one.")
     parser.add_argument("--dtype", default="fp32", type=str, choices=["fp32", "fp16", "bf16"], help="Weight dtype.")

@@ -333,9 +333,9 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
 class CachedGLUMBConvTemp(GLUMBConvTemp):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.kv_cache = None
+        # self.kv_cache = None
 
-    def forward(self, x: torch.Tensor, HW=None, save_kv_cache=False, **kwargs) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, HW=None, save_kv_cache=False, kv_cache=None, **kwargs) -> torch.Tensor:
         B, N, C = x.shape
 
         assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
@@ -357,15 +357,18 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
         x_t_conv_in = x_reshaped
         padded_size = 0
         # Use internal cache with the same logic as before
-        if self.kv_cache is not None:
+        if kv_cache is not None:
 
-            if self.kv_cache[2] is not None:
+            if kv_cache[2] is not None:
+                # import ipdb; ipdb.set_trace()
+                # import ipdb; ipdb.set_trace()
                 # Use previous chunk's temporal convolution cache
-                x_t_conv_in = torch.cat([self.kv_cache[2], x_reshaped], dim=2)  # B,C,P+T,HW
-                padded_size = self.kv_cache[2].shape[2]
+                x_t_conv_in = torch.cat([kv_cache[2], x_reshaped], dim=2)  # B,C,P+T,HW
+                padded_size = kv_cache[2].shape[2]
 
             if save_kv_cache:  # Save current chunk's cache for next chunk
-                self.kv_cache[2] = x_reshaped[:, :, -padding_size:, :].detach().clone()
+                # import ipdb; ipdb.set_trace()
+                kv_cache[2] = x_reshaped[:, :, -padding_size:, :].detach().clone()
                 # print(f"CachedGLUMBConvTemp: Saved internal tconv cache, shape: {self.kv_cache[2].shape}")
 
         t_conv_out = self.t_conv(x_t_conv_in)[:, :, padded_size:]
@@ -373,7 +376,11 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
 
         x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
 
+        if kv_cache is not None:
+            return x_out, kv_cache
+
         return x_out
+
 
 
 class SlimGLUMBConv(GLUMBConv):

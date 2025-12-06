@@ -1,0 +1,3 @@
+DEBUG = False
+DEBUG_GRADIENT = False
+LOG_GPU_MEMORY = False

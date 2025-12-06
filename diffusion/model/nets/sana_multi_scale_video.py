@@ -292,8 +292,13 @@ class SanaVideoMSBlock(nn.Module):
         save_kv_cache = kwargs.get("save_kv_cache", None)
         if save_kv_cache is not None:
             self_attn_kwargs["save_kv_cache"] = save_kv_cache
+        kv_cache = kwargs.get("kv_cache", None)
+        if kv_cache is not None:
+            self_attn_kwargs["kv_cache"] = kv_cache
         x_sa = self.attn(x_sa_in, **self_attn_kwargs)
-
+        if kv_cache is not None:
+            x_sa, kv_cache = x_sa
+            
         intermediate_feats["x_self_attn"] = x_sa
 
         if self.flash_attn_additional:
@@ -315,13 +320,23 @@ class SanaVideoMSBlock(nn.Module):
             mlp_kwargs["chunk_index"] = chunk_index[:]  # NOTE: important, copy the list
         if save_kv_cache is not None:
             mlp_kwargs["save_kv_cache"] = save_kv_cache
-        x = x + self.drop_path(gate_mlp * self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), **mlp_kwargs))
+        if kv_cache is not None:
+            mlp_kwargs["kv_cache"] = kv_cache
+            
+        mlp_out = self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), **mlp_kwargs)
+        if kv_cache is not None:
+            mlp_out, kv_cache = mlp_out
+        x = x + self.drop_path(gate_mlp * mlp_out)
 
+            
         intermediate_feats["x_ffn"] = x
 
         if self.block_hook is not None:
             self.block_hook(**intermediate_feats)
 
+        if kv_cache is not None:
+            return x, kv_cache
+        
         return x
 
 
@@ -482,7 +497,8 @@ class SanaMSVideo(Sana):
             )
         elif pos_embed_type == "casual_wan_rope":
             rope = CausalWanRotaryPosEmbed(
-                attention_head_dim=attention_head_dim, patch_size=patch_size, max_seq_len=1024
+                attention_head_dim=attention_head_dim, patch_size=patch_size, max_seq_len=1024,
+                fhw_dim=rope_fhw_dim
             )
         elif pos_embed_type == "wan_temporal_rope":
             rope = WanRotaryTemporalPosEmbed(
@@ -568,6 +584,7 @@ class SanaMSVideo(Sana):
             image_pos_embed = self.rope((self.f, self.h, self.w), x.device)
 
         elif self.pos_embed_type == "casual_wan_rope":
+            assert start_f is not None and end_f is not None
             image_pos_embed = self.rope(((start_f, end_f), self.h, self.w), x.device)
 
         elif self.pos_embed_type == "wan_temporal_rope":
@@ -678,6 +695,7 @@ class SanaMSVideo(Sana):
         y = y.to(self.dtype)
         start_f = kwargs.get("start_f", None)
         end_f = kwargs.get("end_f", None)
+        kv_cache = kwargs.pop("kv_cache", None)
         if start_f is not None and end_f is not None:
             assert self.pos_embed_type == "casual_wan_rope"
             start_f = start_f // self.patch_size[0]
@@ -732,8 +750,11 @@ class SanaMSVideo(Sana):
         else:
             raise ValueError(f"Attention type is not available due to _xformers_available={_xformers_available}.")
 
+        assert kv_cache is not None and len(kv_cache) == len(
+            self.blocks
+        ), "kv_cache must be a list of the same length as the number of blocks"
         for i, block in enumerate(self.blocks):
-            x = auto_grad_checkpoint(
+            x, kv_cache_i = torch.utils.checkpoint.checkpoint(
                 block,
                 x,
                 y,
@@ -741,23 +762,25 @@ class SanaMSVideo(Sana):
                 y_lens,
                 (self.f, self.h, self.w),
                 image_pos_embed,
+                kv_cache=kv_cache[i],
                 **kwargs,
                 use_reentrant=False,
-            )  # (N, T, D) #support grad checkpoint
+            )
+            kv_cache[i] = kv_cache_i
 
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         if self.pack_latents:
             x = self._unpack_latents(x, self.h * 2, self.w * 2, self.f)
 
-        return x
+        return x, kv_cache
 
     def __call__(self, *args, **kwargs):
         """
         This method allows the object to be called like a function.
         It simply calls the forward method.
         """
-        if "start_f" in kwargs:
+        if "start_f" in kwargs and kwargs["start_f"] is not None:
             return self.forward_long(*args, **kwargs)
         return self.forward(*args, **kwargs)
 

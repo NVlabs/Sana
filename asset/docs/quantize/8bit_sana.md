@@ -95,18 +95,18 @@ image.save("sana.png")
 
 ## SanaPipeline
 
-\[\[autodoc\]\] SanaPipeline
+\[[autodoc]\] SanaPipeline
 
 - all
 - __call__
 
 ## SanaPAGPipeline
 
-\[\[autodoc\]\] SanaPAGPipeline
+\[[autodoc]\] SanaPAGPipeline
 
 - all
 - __call__
 
 ## SanaPipelineOutput
 
-\[\[autodoc\]\] pipelines.sana.pipeline_output.SanaPipelineOutput
+\[[autodoc]\] pipelines.sana.pipeline_output.SanaPipelineOutput

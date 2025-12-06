@@ -44,7 +44,7 @@ def edm_sampler(
     S_min=0,
     S_max=float("inf"),
     S_noise=1,
-    **kwargs
+    **kwargs,
 ):
     # Adjust noise levels based on what's supported by the network.
     sigma_min = max(sigma_min, net.sigma_min)

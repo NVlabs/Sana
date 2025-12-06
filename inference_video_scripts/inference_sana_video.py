@@ -36,7 +36,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, FlowEuler, LTXFlowEuler
+from diffusion import DPMS, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance
@@ -235,9 +235,9 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     config.vae.vae_type, vae, torch.stack(images, dim=0)[:, :, None].to(vae_dtype), device=device
                 )  # 1,C,1,H,W
                 condition_frame_info = {
-                    0: config.train.noise_multiplier
-                    if config.train.noise_multiplier is not None
-                    else 0.0,  # frame_idx: frame_weight, weight is used for timestep
+                    0: (
+                        config.train.noise_multiplier if config.train.noise_multiplier is not None else 0.0
+                    ),  # frame_idx: frame_weight, weight is used for timestep
                 }
                 for frame_idx in list(condition_frame_info.keys()):
                     z[:, :, frame_idx : frame_idx + 1] = image_vae_embeds  # 1,C,F,H,W, first frame is the image
@@ -265,6 +265,21 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     cfg_scale=cfg_scale,
                     flow_shift=flow_shift,
                     model_kwargs=model_kwargs,
+                )
+                samples = flow_solver.sample(
+                    z,
+                    steps=sample_steps,
+                    generator=generator,
+                )
+            elif args.sampling_algo == "longlive_flow_euler":
+                base_chunk_frames = base_model_frames // config.vae.vae_stride[0]
+                flow_solver = LongLiveFlowEuler(
+                    model,
+                    condition=caption_embs,
+                    flow_shift=flow_shift,
+                    model_kwargs=model_kwargs,
+                    base_chunk_frames=base_chunk_frames,
+                    num_cached_blocks=args.num_cached_blocks,
                 )
                 samples = flow_solver.sample(
                     z,
@@ -366,12 +381,15 @@ class SanaInference(SanaVideoConfig):
     high_motion: bool = False
     prompt_split_token: str = "<split>"
     motion_score: int = 10
-    negative_prompt: str = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+    negative_prompt: str = (
+        "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+    )
     interval_k: float = 0.0
     unified_noise: bool = False
     stg_applied_layers: List[int] = field(default_factory=list)
     stg_scale: float = 0.0
     apg_mode: str = "hw"
+    num_cached_blocks: int = -1
 
 
 if __name__ == "__main__":
@@ -485,6 +503,15 @@ if __name__ == "__main__":
 
     logger.info(f"Generating sample from ckpt: {args.model_path}")
     state_dict = find_model(args.model_path)
+    if "generator" in state_dict:  # used for loading LongSANA checkpoints
+        state_dict = state_dict["generator"]
+    if not "state_dict" in state_dict:
+        new_state_dict = dict()
+        for k, v in state_dict.items():
+            if k.startswith("model."):
+                k = k[len("model.") :]
+            new_state_dict[k] = v
+        state_dict = {"state_dict": new_state_dict}
 
     if args.model_path.endswith(".bin"):
         logger.info("Loading fsdp bin checkpoint....")
@@ -548,6 +575,8 @@ if __name__ == "__main__":
     prompts_dataloader = torch.utils.data.DataLoader(prompts_dataset, batch_size=args.bs, shuffle=False)
     # prepare dataloader, model, text encoder
     prompts_dataloader, model, text_encoder = accelerator.prepare(prompts_dataloader, model, text_encoder)
+    if num_frames > base_model_frames:
+        assert args.sampling_algo == "longlive_flow_euler"
 
     def create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames):
         save_root = os.path.join(
@@ -563,6 +592,8 @@ if __name__ == "__main__":
             save_root += f"_flowshift{flow_shift}"
         if args.interval_k > 0:
             save_root += f"_interval_k{int(args.interval_k*1000)}"
+        if args.num_cached_blocks > 0:
+            save_root += f"_numcachedblocks{args.num_cached_blocks}"
         if args.high_motion:
             save_root += f"_highmotion"
         if args.motion_score > 0:

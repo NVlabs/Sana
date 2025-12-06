@@ -413,6 +413,7 @@ class SanaMS(Sana):
 
     def initialize(self):
         super().initialize_weights()
+
         # Initialize transformer layers:
         def _basic_init(module):
             if isinstance(module, nn.Linear):
@@ -464,9 +465,7 @@ class SanaMSCM(SanaMS):
             model_out = super().forward(x, pretrain_timestep, y, data_info=data_info, **kwargs)
 
         # Flow --> TrigFlow Transformation
-        trigflow_model_out = ((1 - 2 * t) * x + (1 - 2 * t + 2 * t**2) * model_out) / torch.sqrt(
-            t**2 + (1 - t) ** 2
-        )
+        trigflow_model_out = ((1 - 2 * t) * x + (1 - 2 * t + 2 * t**2) * model_out) / torch.sqrt(t**2 + (1 - t) ** 2)
 
         if return_logvar:
             return trigflow_model_out, logvar

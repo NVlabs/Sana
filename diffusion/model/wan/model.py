@@ -225,6 +225,7 @@ class WanSelfAttention(nn.Module):
         b, s, n, d = *x.shape[:2], self.num_heads, self.head_dim
         # print(f"In Attention, x dtype {x.dtype}")
         x_dtype = x.dtype
+
         # query, key, value function
         def qkv_fn(x):
             q = self.norm_q(self.q(x)).view(b, s, n, d)

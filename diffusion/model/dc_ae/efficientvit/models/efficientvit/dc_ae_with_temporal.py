@@ -49,7 +49,9 @@ class DCAEWithTemporalEncoderConfig:
     block_type: Any = "ResBlock3d@3@1"  # spatial kernel size 3, temporal kernel size 1
     norm: Any = "trms2d"
     act: str = "silu"
-    downsample_block_type: Any = "ConvPixelUnshuffle@2@1@3@1"  # spatial factor 2, temporal factor 1, spatial kernel size 3, temporal kernel size 1
+    downsample_block_type: Any = (
+        "ConvPixelUnshuffle@2@1@3@1"  # spatial factor 2, temporal factor 1, spatial kernel size 3, temporal kernel size 1
+    )
     downsample_shortcut: Optional[str] = "averaging"
     project_out_block_type: str = "ConvLayer3d@3@1"  # spatial kernel size 3, temporal kernel size 1
 

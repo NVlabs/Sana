@@ -498,10 +498,18 @@ class ChunkCausalAttention(LiteLAReLURope):
 class CachedCausalAttention(LiteLAReLURope):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.kv_cache = None
+        # self.kv_cache = None
 
     def forward(
-        self, x: torch.Tensor, mask=None, HW=None, rotary_emb=None, block_mask=None, save_kv_cache=False, **kwargs
+        self,
+        x: torch.Tensor,
+        mask=None,
+        HW=None,
+        rotary_emb=None,
+        block_mask=None,
+        save_kv_cache=False,
+        kv_cache=None,
+        **kwargs,
     ) -> torch.Tensor:
 
         B, N, C = x.shape
@@ -545,16 +553,18 @@ class CachedCausalAttention(LiteLAReLURope):
         vk = torch.matmul(v, k_rotated.transpose(-1, -2))
 
         # Use internal cache with the same logic as before
-        if self.kv_cache is not None:
+        if kv_cache is not None:
 
-            cusum_vk, cumsum_k_sum = self.kv_cache[0], self.kv_cache[1]
+            cusum_vk, cumsum_k_sum = kv_cache[0], kv_cache[1]
 
             if save_kv_cache:  # Save current chunk's computation
-                self.kv_cache[0] = vk.detach().clone()
-                self.kv_cache[1] = k_sum.detach().clone()
+                # import ipdb; ipdb.set_trace()
+                kv_cache[0] = vk.detach().clone()
+                kv_cache[1] = k_sum.detach().clone()
                 # print(f"CachedCausalAttention: Saved internal cache, vk shape: {vk.shape}, k_sum shape: {k_sum.shape}")
 
             if cusum_vk is not None and cumsum_k_sum is not None:
+                # import ipdb; ipdb.set_trace()
                 # Add accumulated cache from previous chunks
                 vk = vk + cusum_vk
                 k_sum = k_sum + cumsum_k_sum
@@ -567,6 +577,9 @@ class CachedCausalAttention(LiteLAReLURope):
 
         out = out.view(B, C, N).permute(0, 2, 1)  # B, N, C
         out = self.proj(out)
+
+        if kv_cache is not None:
+            return out, kv_cache
 
         return out
 
@@ -1514,7 +1527,7 @@ class CausalWanRotaryPosEmbed(WanRotaryPosEmbed):
             ],
             dim=1,
         )
-
+        # import ipdb; ipdb.set_trace()
         ppf = f_end - f_start
         freqs_f = freqs[0][f_start:f_end].view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
         freqs_h = freqs[1][:pph].view(1, pph, 1, -1).expand(ppf, pph, ppw, -1)

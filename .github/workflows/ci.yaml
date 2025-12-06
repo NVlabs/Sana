@@ -185,6 +185,7 @@ jobs:
       always() &&
       github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Remove label
         uses: actions/github-script@v6

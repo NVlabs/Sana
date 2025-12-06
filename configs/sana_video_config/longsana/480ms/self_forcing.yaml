@@ -7,9 +7,9 @@ generator_fsdp_wrap_strategy: size #size
 real_score_fsdp_wrap_strategy: size #size
 fake_score_fsdp_wrap_strategy: size #size
 text_encoder_fsdp_wrap_strategy: size #size
-# 使用 WAN 1.3B 作为真实教师
+# Use SANA as real teacher
 real_name: SANA
-# 使用 SANA 作为 fake 与 generator（在 DMDSana 内部生效）
+# Use SANA as fake and generator (in DMDSana internally)
 fake_name: SANA
 denoising_step_list:
   - 1000
@@ -25,9 +25,8 @@ guidance_scale: 3.0
 denoising_loss_type: flow
 mixed_precision: true
 seed: 0
-# wandb_host: WANDB_HOST
-wandb_key: 363a4295292327bc749edac5061d9b590f6e6417
-wandb_entity: hwinf_dcm
+wandb_key: null
+wandb_entity: null
 wandb_project: self-forcing-sana
 sharding_strategy: full
 lr: 1.0e-05

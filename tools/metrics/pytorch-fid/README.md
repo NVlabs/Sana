@@ -52,9 +52,9 @@ The resulting scores might also no longer correlate with visual quality.
 You can select the dimensionality of features to use with the flag `--dims N`, where N is the dimensionality of features.
 The choices are:
 
-- 64:   first max pooling features
-- 192:  second max pooling features
-- 768:  pre-aux classifier features
+- 64: first max pooling features
+- 192: second max pooling features
+- 768: pre-aux classifier features
 - 2048: final average pooling features (this is the default)
 
 ## Generating a compatible `.npz` archive from a dataset

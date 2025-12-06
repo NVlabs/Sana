@@ -14,7 +14,7 @@ class DenoisingLoss(ABC):
         alphas_cumprod: torch.Tensor,
         timestep: torch.Tensor,
         gradient_mask: torch.Tensor = None,
-        **kwargs
+        **kwargs,
     ) -> torch.Tensor:
         """
         Base class for denoising loss.
@@ -39,7 +39,7 @@ class X0PredLoss(DenoisingLoss):
         alphas_cumprod: torch.Tensor,
         timestep: torch.Tensor,
         gradient_mask: torch.Tensor = None,
-        **kwargs
+        **kwargs,
     ) -> torch.Tensor:
         err = (x - x_pred) ** 2
         if gradient_mask is not None:
@@ -57,7 +57,7 @@ class VPredLoss(DenoisingLoss):
         alphas_cumprod: torch.Tensor,
         timestep: torch.Tensor,
         gradient_mask: torch.Tensor = None,
-        **kwargs
+        **kwargs,
     ) -> torch.Tensor:
         weights = 1 / (1 - alphas_cumprod[timestep].reshape(*timestep.shape, 1, 1, 1))
         err = weights * (x - x_pred) ** 2
@@ -76,7 +76,7 @@ class NoisePredLoss(DenoisingLoss):
         alphas_cumprod: torch.Tensor,
         timestep: torch.Tensor,
         gradient_mask: torch.Tensor = None,
-        **kwargs
+        **kwargs,
     ) -> torch.Tensor:
         err = (noise - noise_pred) ** 2
         if gradient_mask is not None:
@@ -94,7 +94,7 @@ class FlowPredLoss(DenoisingLoss):
         alphas_cumprod: torch.Tensor,
         timestep: torch.Tensor,
         gradient_mask: torch.Tensor = None,
-        **kwargs
+        **kwargs,
     ) -> torch.Tensor:
         err = (kwargs["flow_pred"] - (noise - x)) ** 2
         if gradient_mask is not None:

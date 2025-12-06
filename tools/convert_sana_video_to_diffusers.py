@@ -7,10 +7,6 @@ from contextlib import nullcontext
 
 import torch
 from accelerate import init_empty_weights
-from huggingface_hub import hf_hub_download, snapshot_download
-from termcolor import colored
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
 from diffusers import (
     AutoencoderKLWan,
     DPMSolverMultistepScheduler,
@@ -21,7 +17,9 @@ from diffusers import (
     UniPCMultistepScheduler,
 )
 from diffusers.utils.import_utils import is_accelerate_available
-
+from huggingface_hub import hf_hub_download, snapshot_download
+from termcolor import colored
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 CTX = init_empty_weights if is_accelerate_available else nullcontext
 
@@ -66,13 +64,9 @@ def main(args):
     converted_state_dict["caption_projection.linear_2.weight"] = state_dict.pop("y_embedder.y_proj.fc2.weight")
     converted_state_dict["caption_projection.linear_2.bias"] = state_dict.pop("y_embedder.y_proj.fc2.bias")
 
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop(
-        "t_embedder.mlp.0.weight"
-    )
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_1.weight"] = state_dict.pop("t_embedder.mlp.0.weight")
     converted_state_dict["time_embed.emb.timestep_embedder.linear_1.bias"] = state_dict.pop("t_embedder.mlp.0.bias")
-    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop(
-        "t_embedder.mlp.2.weight"
-    )
+    converted_state_dict["time_embed.emb.timestep_embedder.linear_2.weight"] = state_dict.pop("t_embedder.mlp.2.weight")
     converted_state_dict["time_embed.emb.timestep_embedder.linear_2.bias"] = state_dict.pop("t_embedder.mlp.2.bias")
 
     # Shared norm.
@@ -325,7 +319,9 @@ if __name__ == "__main__":
         choices=["flow-dpm_solver", "flow-euler", "uni-pc"],
         help="Scheduler type to use.",
     )
-    parser.add_argument("--task", default="t2v", type=str, required=True, choices=["t2v", "i2v"], help="Task to convert, t2v or i2v.")
+    parser.add_argument(
+        "--task", default="t2v", type=str, required=True, choices=["t2v", "i2v"], help="Task to convert, t2v or i2v."
+    )
     parser.add_argument("--dump_path", default=None, type=str, required=True, help="Path to the output pipeline.")
     parser.add_argument("--save_full_pipeline", action="store_true", help="save all the pipeline elements in one.")
     parser.add_argument("--dtype", default="fp32", type=str, choices=["fp32", "fp16", "bf16"], help="Weight dtype.")

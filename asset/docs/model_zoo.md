@@ -2,48 +2,48 @@
 
 ### [SANA](https://arxiv.org/abs/2410.10629)
 
-| Model                | Reso   | pth link                                                                                                                    | diffusers                                                                                                                                         | Precision     | Description    |
+| Model | Reso | pth link | diffusers | Precision | Description |
 |----------------------|--------|-----------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|---------------|----------------|
-| Sana-0.6B            | 512px  | [Sana_600M_512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px)                                             | [Efficient-Large-Model/Sana_600M_512px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px_diffusers)                         | fp16/fp32     | Multi-Language |
-| Sana-0.6B            | 1024px | [Sana_600M_1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px)                                           | [Efficient-Large-Model/Sana_600M_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers)                       | fp16/fp32     | Multi-Language |
-| Sana-1.6B            | 512px  | [Sana_1600M_512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px)                                           | [Efficient-Large-Model/Sana_1600M_512px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_diffusers)                       | fp16/fp32     | -              |
-| Sana-1.6B            | 512px  | [Sana_1600M_512px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing)                       | [Efficient-Large-Model/Sana_1600M_512px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing_diffusers)   | fp16/fp32     | Multi-Language |
-| Sana-1.6B            | 1024px | [Sana_1600M_1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px)                                         | [Efficient-Large-Model/Sana_1600M_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers)                     | fp16/fp32     | -              |
-| Sana-1.6B            | 1024px | [Sana_1600M_1024px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing)                     | [Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers) | fp16/fp32     | Multi-Language |
-| Sana-1.6B            | 1024px | [Sana_1600M_1024px_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16)                               | [Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers)           | **bf16**/fp32 | Multi-Language |
-| Sana-1.6B-int4       | 1024px | -                                                                                                                           | [mit-han-lab/svdq-int4-sana-1600m](https://huggingface.co/mit-han-lab/svdq-int4-sana-1600m)                                                       | **int4**      | Multi-Language |
-| Sana-1.6B            | 2Kpx   | [Sana_1600M_2Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16)                                   | [Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
-| Sana-1.6B            | 4Kpx   | [Sana_1600M_4Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16)                                   | [Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers)               | **bf16**/fp32 | Multi-Language |
-| ControlNet           |        |                                                                                                                             |                                                                                                                                                   |               |                |
-| Sana-1.6B-ControlNet | 1Kpx   | [Sana_1600M_1024px_BF16_ControlNet_HED](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_ControlNet_HED) | Coming soon                                                                                                                                       | **bf16**/fp32 | Multi-Language |
-| Sana-0.6B-ControlNet | 1Kpx   | [Sana_600M_1024px_ControlNet_HED](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_ControlNet_HED)             | - soon                                                                                                                                       | fp16/fp32     | -              |
+| Sana-0.6B | 512px | [Sana_600M_512px](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px) | [Efficient-Large-Model/Sana_600M_512px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_600M_512px_diffusers) | fp16/fp32 | Multi-Language |
+| Sana-0.6B | 1024px | [Sana_600M_1024px](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px) | [Efficient-Large-Model/Sana_600M_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers) | fp16/fp32 | Multi-Language |
+| Sana-1.6B | 512px | [Sana_1600M_512px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px) | [Efficient-Large-Model/Sana_1600M_512px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_diffusers) | fp16/fp32 | - |
+| Sana-1.6B | 512px | [Sana_1600M_512px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing) | [Efficient-Large-Model/Sana_1600M_512px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_512px_MultiLing_diffusers) | fp16/fp32 | Multi-Language |
+| Sana-1.6B | 1024px | [Sana_1600M_1024px](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px) | [Efficient-Large-Model/Sana_1600M_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers) | fp16/fp32 | - |
+| Sana-1.6B | 1024px | [Sana_1600M_1024px_MultiLing](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing) | [Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers) | fp16/fp32 | Multi-Language |
+| Sana-1.6B | 1024px | [Sana_1600M_1024px_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16) | [Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers) | **bf16**/fp32 | Multi-Language |
+| Sana-1.6B-int4 | 1024px | - | [mit-han-lab/svdq-int4-sana-1600m](https://huggingface.co/mit-han-lab/svdq-int4-sana-1600m) | **int4** | Multi-Language |
+| Sana-1.6B | 2Kpx | [Sana_1600M_2Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16) | [Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers) | **bf16**/fp32 | Multi-Language |
+| Sana-1.6B | 4Kpx | [Sana_1600M_4Kpx_BF16](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16) | [Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers) | **bf16**/fp32 | Multi-Language |
+| ControlNet | | | | | |
+| Sana-1.6B-ControlNet | 1Kpx | [Sana_1600M_1024px_BF16_ControlNet_HED](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_BF16_ControlNet_HED) | Coming soon | **bf16**/fp32 | Multi-Language |
+| Sana-0.6B-ControlNet | 1Kpx | [Sana_600M_1024px_ControlNet_HED](https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_ControlNet_HED) | - soon | fp16/fp32 | - |
 
 ______________________________________________________________________
 
 ### [SANA-1.5](https://arxiv.org/abs/2501.18427)
 
-| Model        | Reso   | pth link                                                                                | diffusers                                                                                                                         | Precision | Description    |
+| Model | Reso | pth link | diffusers | Precision | Description |
 |--------------|--------|-----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
-| SANA1.5-4.8B | 1024px | [SANA1.5_4.8B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px) | [Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers) | bf16      | Multi-Language |
-| SANA1.5-1.6B | 1024px | [SANA1.5_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px) | [Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers) | bf16      | Multi-Language |
+| SANA1.5-4.8B | 1024px | [SANA1.5_4.8B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px) | [Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers) | bf16 | Multi-Language |
+| SANA1.5-1.6B | 1024px | [SANA1.5_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px) | [Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers) | bf16 | Multi-Language |
 
 ______________________________________________________________________
 
 ### [SANA-Sprint](https://arxiv.org/pdf/2503.09641)
 
-| Model            | Reso   | pth link                                                                                        | diffusers                                                                                                                                    | Precision | Description    |
+| Model | Reso | pth link | diffusers | Precision | Description |
 |------------------|--------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
-| Sana-Sprint-0.6B | 1024px | [Sana-Sprint_0.6B_1024px](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px) | [Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers) | bf16      | Multi-Language |
-| Sana-Sprint-1.6B | 1024px | [Sana-Sprint_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px) | [Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers) | bf16      | Multi-Language |
+| Sana-Sprint-0.6B | 1024px | [Sana-Sprint_0.6B_1024px](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px) | [Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers) | bf16 | Multi-Language |
+| Sana-Sprint-1.6B | 1024px | [Sana-Sprint_1.6B_1024px](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px) | [Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers) | bf16 | Multi-Language |
 
 ______________________________________________________________________
 
 ### [SANA-Video](https://arxiv.org/pdf/2509.24695)
 
-| Model            | Reso   | pth link                                                                                        | diffusers                                                                                                                                    | Precision | Description    |
+| Model | Reso | pth link | diffusers | Precision | Description |
 |------------------|--------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
-| Sana-Video-2B | 480p | [Sana-Video_2B_480p](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p) | [Efficient-Large-Model/Sana-Video_2B_480p_diffusers](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p_diffusers) | bf16      | 5s Pre-train model |
-| LongSANA-Video-2B | 480p | [coming](<>) | [coming](<>) | bf16      | 27FPS Minute-length model |
+| Sana-Video-2B | 480p | [Sana-Video_2B_480p](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p) | [Efficient-Large-Model/Sana-Video_2B_480p_diffusers](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p_diffusers) | bf16 | 5s Pre-train model |
+| LongSANA-Video-2B | 480p | [coming](<>) | [coming](<>) | bf16 | 27FPS Minute-length model |
 
 ______________________________________________________________________
 

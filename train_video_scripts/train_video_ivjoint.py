@@ -144,9 +144,11 @@ def log_validation(accelerator, config, model, logger, step, device, vae=None, i
                         order=2,
                         skip_type="time_uniform_flow",
                         method="multistep",
-                        flow_shift=config.scheduler.inference_flow_shift
-                        if config.scheduler.inference_flow_shift is not None
-                        else config.scheduler.flow_shift,
+                        flow_shift=(
+                            config.scheduler.inference_flow_shift
+                            if config.scheduler.inference_flow_shift is not None
+                            else config.scheduler.flow_shift
+                        ),
                     )
                 else:
                     raise ValueError(f"{sampler} not implemented")

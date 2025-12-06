@@ -808,6 +808,7 @@ class SanaMSVideo(Sana):
 
     def initialize(self):
         super().initialize_weights()
+
         # Initialize transformer layers:
         def _basic_init(module):
             if isinstance(module, nn.Linear):

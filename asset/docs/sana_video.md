@@ -52,7 +52,7 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 
 ### 1. How to use Sana-Video Pipelines in `🧨diffusers`
 
-> \[!IMPORTANT\]
+> [!IMPORTANT]
 >
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers

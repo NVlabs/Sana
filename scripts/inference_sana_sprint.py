@@ -207,12 +207,12 @@ def get_args():
 
 @dataclass
 class SanaInference(SanaConfig):
-    config: Optional[
-        str
-    ] = "configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml"  # config
-    model_path: Optional[
-        str
-    ] = "hf://Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth"
+    config: Optional[str] = (
+        "configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml"  # config
+    )
+    model_path: Optional[str] = (
+        "hf://Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth"
+    )
     work_dir: Optional[str] = None
     txt_file: str = "asset/samples/samples_mini.txt"
     json_file: Optional[str] = None

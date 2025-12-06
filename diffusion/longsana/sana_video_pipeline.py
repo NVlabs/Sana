@@ -55,7 +55,9 @@ class SanaVideoInference(SanaVideoConfig):
     custom_image_size: Optional[int] = None
     high_motion: bool = False
     motion_score: int = 10
-    negative_prompt: str = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+    negative_prompt: str = (
+        "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+    )
     save_path: Optional[str] = None
     # chunkcausal setting
     unified_noise: bool = False

@@ -23,7 +23,7 @@
 
 ### 1. How to use `SanaSprintPipeline` with `🧨diffusers`
 
-> \[!IMPORTANT\]
+> [!IMPORTANT]
 > It is now under construction [PR](https://github.com/huggingface/diffusers/pull/11074)
 >
 > ```bash
@@ -65,7 +65,7 @@ vae = AutoencoderDC.from_pretrained("mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diff
 vae.decode = torch.compile(vae.decode, dynamic=True)
 ```
 
-### 2. How to use `SanaSprintPipeline`  in this repo
+### 2. How to use `SanaSprintPipeline` in this repo
 
 ```python
 import torch
@@ -117,7 +117,7 @@ python tools/convert_sana_to_diffusers.py \
 
 ## performance
 
-| Methods (1024x1024)                                                                           | Inference Steps | Throughput (samples/s) | Latency (s) | Params (B) | FID 👇   | CLIP 👆   | GenEval 👆 |
+| Methods (1024x1024) | Inference Steps | Throughput (samples/s) | Latency (s) | Params (B) | FID 👇 | CLIP 👆 | GenEval 👆 |
 |-----------------------------------------------------------------------------------------------|-----------------|------------------------|-------------|------------|----------|-----------|------------|
-| **[Sana-Sprint_0.6B](<>)**                                                                      | 2               | 6.46                   | 0.25        | 0.6        | 6.54     | 28.40     | 0.76       |
-| **[Sana-Sprint-1.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px)**  | 2               | 5.68                   | 0.24        | 1.6        | **6.50** | **28.45** | **0.77**   |
+| **[Sana-Sprint_0.6B](<>)** | 2 | 6.46 | 0.25 | 0.6 | 6.54 | 28.40 | 0.76 |
+| **[Sana-Sprint-1.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_1.6B_1024px)** | 2 | 5.68 | 0.24 | 1.6 | **6.50** | **28.45** | **0.77** |

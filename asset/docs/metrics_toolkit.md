@@ -2,10 +2,10 @@
 
 This ToolKit will automatically inference your model and log the metrics results onto wandb as chart for better illustration. We curerntly support:
 
-- \[x\] [FID](https://github.com/mseitzer/pytorch-fid) & [CLIP-Score](https://github.com/openai/CLIP)
-- \[x\] [GenEval](https://github.com/djghosh13/geneval)
-- \[x\] [DPG-Bench](https://github.com/TencentQQGYLab/ELLA)
-- \[x\] [ImageReward](https://github.com/THUDM/ImageReward/tree/main)
+- [x] [FID](https://github.com/mseitzer/pytorch-fid) & [CLIP-Score](https://github.com/openai/CLIP)
+- [x] [GenEval](https://github.com/djghosh13/geneval)
+- [x] [DPG-Bench](https://github.com/TencentQQGYLab/ELLA)
+- [x] [ImageReward](https://github.com/THUDM/ImageReward/tree/main)
 
 ### 0. Install corresponding env for GenEval and DPG-Bench
 
@@ -51,7 +51,7 @@ data/test/PG-eval-data/MJHQ-30K/imgs/
 huggingface-cli download  Efficient-Large-Model/Sana_1600M_1024px --repo-type model --local-dir ./output/Sana_1600M_1024px --local-dir-use-symlinks False
 ```
 
-### 1. directly \[Inference and Metric\] a .pth file
+### 1. directly [Inference and Metric] a .pth file
 
 ```bash
 # We provide four scripts for evaluating metrics:
@@ -69,7 +69,7 @@ bash $geneval_launch \
     output/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth
 ```
 
-### 2. \[Inference and Metric\] a list of .pth files using a txt file
+### 2. [Inference and Metric] a list of .pth files using a txt file
 
 You can also write all your pth files of a job in one txt file, eg. [model_paths.txt](../model_paths.txt)
 

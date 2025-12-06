@@ -25,30 +25,28 @@ import pyrallis
 import torch
 import torch.nn as nn
 
-# sys.path.append(str(pathlib.Path(__file__).parent.parent))
-
-
 warnings.filterwarnings("ignore")  # ignore warning
 
 from diffusion.utils.config import SanaVideoConfig
 
 
 @dataclass
-class SanaVideoInference(SanaVideoConfig):
+class LongSANAVideoInference(SanaVideoConfig):
+    # TODO: Default path not exist, the same for mdoel_path
     config: Optional[str] = "sana/configs/Sana_2B_480p_self_forcing.yaml"  # config
     model_path: str = field(
         default="SanaVideo_chunk/checkpoints/model.pth", metadata={"help": "Path to the model file (positional)"}
     )
     prompt: Optional[str] = None
     output: str = "./output"
-    task: str = "t2v"  # [t2v, ti2v, ltx]
+    task: str = "t2v"
     bs: int = 1
     num_inference_steps: int = 50
     image_size: int = 480
     sampling_algo: str = "self_forcing_flow_euler"  # "flow_dpm-solver"
     skip_type: str = "time_uniform_flow"  # time_uniform_flow, linear_quadratic
     cfg_scale: float = 1.0
-    guidance_type: str = "classifier-free"  # [classifier-free, adaptive_projected_guidance, classifier-free_STG]
+    guidance_type: str = "classifier-free"
     flow_shift: Optional[float] = None
     seed: int = 42
     step: int = -1

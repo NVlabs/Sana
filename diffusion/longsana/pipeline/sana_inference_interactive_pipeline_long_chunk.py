@@ -20,7 +20,7 @@ class SanaInferenceInteractivePipelineLongChunk:
         )
         if len(self.denoising_step_list) > 0 and self.denoising_step_list[-1] == 0:
             self.denoising_step_list = self.denoising_step_list[:-1]
-        # model meta
+
         inner = generator.model if hasattr(generator, "model") else generator
         try:
             p = next(inner.parameters())
@@ -41,15 +41,15 @@ class SanaInferenceInteractivePipelineLongChunk:
         self._initialize_cached_modules()
 
     def _normalize_prompts(self, prompts_in):
-        """将可能嵌套(list/tuple)、或含单元素元组的prompts规范化为List[str]。
-        规则：
-        - 若为字符串，直接返回 [str]
-        - 若为list/tuple，则逐元素：
-            - 元素为字符串，直接保留
-            - 元素为list/tuple，若长度为1取第0个；否则以空格连接其字符串化元素
-        其余类型走 str()。
+        """normalize the prompts that may be nested (list/tuple) or contain single element tuples to List[str].
+        rules:
+        - if it is a string, return [str]
+        - if it is a list/tuple, then for each element:
+            - if it is a string, keep it
+            - if it is a list/tuple, if the length is 1, take the first element; otherwise, concatenate the stringified elements with spaces
+        - for other types, convert to string.
         """
-        # 顶层转为可迭代列表
+        # convert the top level to an iterable list
         if isinstance(prompts_in, str):
             seq = [prompts_in]
         elif isinstance(prompts_in, (list, tuple)):
@@ -160,7 +160,7 @@ class SanaInferenceInteractivePipelineLongChunk:
 
         b, c, total_t, h, w = latents_bcthw.shape
 
-        # 先规范化，确保后续拼接与编码时均为 List[str]
+        # normalize the prompts, ensure that the subsequent concatenation and encoding are both List[str]
         prompts = self._normalize_prompts(prompts)
 
         motion_score = getattr(self.args, "motion_score", 0)
@@ -171,13 +171,12 @@ class SanaInferenceInteractivePipelineLongChunk:
         if num_segments <= 0:
             raise ValueError("prompts must be a non-empty list")
 
-        # debug: 打印 prompts 数量与总帧数
         try:
             print(f"[SanaInferenceInteractivePipeline] num_segments={num_segments}, total_t={total_t}")
         except Exception:
             pass
 
-        # 按提示词段均分总帧，余数前置均摊
+        # divide the total frames by the number of prompts, and the remainder is distributed upfront
         base = total_t // num_segments
         rem = total_t % num_segments
         lengths = [(base + 1) if i < rem else base for i in range(num_segments)]
@@ -194,7 +193,6 @@ class SanaInferenceInteractivePipelineLongChunk:
         kv_cache = self._initialize_kv_cache(num_chunks)
         steps = max(1, len(self.denoising_step_list))
 
-        # debug: 打印段落映射摘要（每段对应一个prompt）
         try:
             mapping = [f"[{chunk_indices[i]}:{chunk_indices[i+1]}) -> prompt[{i}]" for i in range(num_chunks)]
             print("[SanaInferenceInteractivePipeline] segment mapping:", "; ".join(mapping))
@@ -206,7 +204,6 @@ class SanaInferenceInteractivePipelineLongChunk:
             end_f = chunk_indices[chunk_idx + 1]
             local_latent = latents_bcthw[:, :, start_f:end_f]
 
-            # debug: 切换 prompt 时打印
             try:
                 cur_prompt = prompts[chunk_idx] if isinstance(prompts, (list, tuple)) else str(prompts)
                 print(
@@ -220,15 +217,15 @@ class SanaInferenceInteractivePipelineLongChunk:
             if full_condition is not None:
                 chunk_condition = full_condition[chunk_idx : chunk_idx + 1]
                 if full_mask is not None:
-                    # 维持 batch 维度 (1, L)，避免下游注意力 mask 维度不匹配
+                    # maintain batch dimension (1, L) to avoid downstream attention mask dimension mismatch
                     chunk_mask = full_mask[chunk_idx : chunk_idx + 1]
 
-            # 在切换到新 prompt 前，使用“新 prompt 的 embeddings + 上一段视频”在 t=0 重新计算上一段的 KV cache
+            # before switching to a new prompt, recompute the KV cache of the previous segment using the "new prompt embeddings + previous segment video" at t=0
             if self.recache_on_prompt_switch and chunk_idx > 0:
                 prev_start_f = chunk_indices[chunk_idx - 1]
                 prev_end_f = chunk_indices[chunk_idx]
                 prev_latent_for_cache = output[:, :, prev_start_f:prev_end_f]
-                # 先对到上一段为止的缓存做累加，确保第三项(history句柄)继承
+                # first accumulate the cache up to the previous segment, ensuring the third item (history handle) inherits
                 prev_accumulated_kv = self._accumulate_kv_cache(kv_cache, chunk_idx - 1)
                 timestep_zero_prev = torch.zeros(
                     prev_latent_for_cache.shape[0], device=self.model_device, dtype=self.model_dtype

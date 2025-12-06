@@ -596,7 +596,6 @@ class SanaTrainingPipeline:
         for _ in range(num_chunks):
             self.kv_cache.append([[None, None, None] for _ in range(self.num_model_blocks)])
 
-        # import ipdb; ipdb.set_trace()
         print(f"[SanaTrainingPipeline] clear_kv_cache for {num_chunks} chunks")
 
     def _clear_cache_gradients(self):

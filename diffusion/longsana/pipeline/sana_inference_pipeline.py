@@ -14,9 +14,9 @@ from diffusion.model.nets.sana_blocks import CachedCausalAttention
 class SanaInferencePipeline:
     def __init__(self, args, device, generator, text_encoder, vae, **kwargs):
         """
-        仅推理用的 SANA 管线：无梯度地生成整段视频。
+        SANA inference pipeline: generate a full video without gradients.
 
-        初始化签名与 Trainer 中的使用保持一致：
+        The initialization signature is consistent with the use in Trainer:
             SanaInferencePipeline(args, device, generator, text_encoder, vae)
         """
         self.args = args
@@ -35,7 +35,7 @@ class SanaInferencePipeline:
             self.denoising_step_list = self.denoising_step_list[:-1]
         self.flow_shift = float(getattr(args, "timestep_shift", kwargs.get("timestep_shift", 3.0)))
         print(f"[SanaInferencePipeline] denoising_step_list={self.denoising_step_list}")
-        # model meta
+
         inner = generator.model if hasattr(generator, "model") else generator
         try:
             p = next(inner.parameters())
@@ -145,29 +145,27 @@ class SanaInferencePipeline:
         **kwargs,
     ):
         """
-        生成完整视频。
+        Generate a full video.
 
         Args:
-            noise: [B, T, C, H, W] 或 [B, C, T, H, W] 的高斯噪声 latent。
-            text_prompts: 文本提示（长度=B）。
-            return_latents: 为 True 返回 latent（B,T,C,H,W）；否则返回像素（B,T,C,H,W，范围0..1的-1..1归一化由上游处理）。
-            initial_latent: 可选的首帧 latent，形状 [B, T0, C, H, W]（常用 T0=1）。
+            noise: Gaussian noise latent of shape [B, T, C, H, W] or [B, C, T, H, W].
+            text_prompts: Text prompts (length=B).
+            return_latents: If True, return latent (B,T,C,H,W); otherwise, return pixel (B,T,C,H,W, normalized to 0..1 by upstream).
+            initial_latent: Optional initial latent of shape [B, T0, C, H, W] (commonly T0=1).
         Returns:
-            video: 若 return_latents=True，返回 [B, T, C, H, W]；否则返回像素 [B, T, C, H, W]
+            video: If return_latents=True, return [B, T, C, H, W]; otherwise, return pixel [B, T, C, H, W]
             info: dict
         """
-        # 标准化 latent 形状到 B,C,T,H,W
+        # normalize the latent shape to B,C,T,H,W
         if noise.dim() != 5:
             raise ValueError("noise should be a 5D tensor")
 
         latents_bcthw = noise
-        # print(f"[SanaInferencePipeline] latents_bcthw.shape={latents_bcthw.shape}")
         if initial_latent is not None:
             if initial_latent.dim() != 5:
                 raise ValueError("initial_latent must be 5D [B, T0, C, H, W]")
             # initial: BTCHW -> BCTHW
             init_bcthw = initial_latent.permute(0, 2, 1, 3, 4).contiguous()
-            # 拼接到时间维（T）
             latents_bcthw = torch.cat([init_bcthw, latents_bcthw], dim=2)
 
         b, c, total_t, h, w = latents_bcthw.shape

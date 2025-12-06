@@ -109,11 +109,9 @@ class StreamingSANATrainingModel:
             # Decode the frames to be processed into pixels
             frames_to_decode = frames[:, : -(process_frames - 1), ...]  # B,F-20,C,H,W
             pixels = self.base_model.vae.decode_to_pixel(rearrange(frames_to_decode, "b f c h w -> b c f h w"))
-            # pixels = torch.stack(pixels, dim=0)
 
             # Take the last frame's pixel representation
             last_frame_pixel = pixels[:, :, -1:, ...].to(self.dtype)  # b,c,1,h,w
-            # last_frame_pixel = rearrange(last_frame_pixel, "b t c h w -> b c t h w")
 
             # Re-encode as image latent
             image_latent = self.base_model.vae.encode_to_latent(last_frame_pixel).to(self.dtype)
@@ -157,7 +155,7 @@ class StreamingSANATrainingModel:
         if switch_frame_index is None:
             raise ValueError("switch_frame_index is None")
 
-        # 如果切换点落在当前 chunk 范围内（[start, end)），则在本 chunk 中执行切换
+        # if the switch point is within the current chunk ([start, end)), switch in the current chunk
         chunk_end_frame = chunk_start_frame + chunk_size
         should_switch = chunk_start_frame <= switch_frame_index < chunk_end_frame
 
@@ -239,9 +237,9 @@ class StreamingSANATrainingModel:
         if isinstance(self.inference_pipeline, SanaSwitchTrainingPipeline):
             switch_info = self.state.get("conditional_info", {}).get("switch_info", {})
             if switch_info:
-                # 传入绝对切换帧索引，与 SanaSwitchTrainingPipeline 的判断逻辑一致
+                # pass the absolute switch frame index, same as the logic in SanaSwitchTrainingPipeline
                 kwargs["switch_frame_index"] = int(switch_info["switch_frame_index"])  # absolute
-                # 传入第二段的 prompt_embeds，键名为 switch_prompt_embeds
+                # pass the second segment's prompt_embeds, named switch_prompt_embeds
                 if (
                     "switch_conditional_dict" in switch_info
                     and "prompt_embeds" in switch_info["switch_conditional_dict"]
@@ -359,7 +357,6 @@ class StreamingSANATrainingModel:
         if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
             print(f"[StreamingTrain-Model] generate_next_chunk called: requires_grad={requires_grad}")
 
-        # DEBUG: inspect the generator model gradient state
         if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
             gen_training_mode = self.generator.training
             gen_params_requiring_grad = sum(1 for p in self.generator.parameters() if p.requires_grad)
@@ -441,7 +438,6 @@ class StreamingSANATrainingModel:
 
         # Build the full chunk for loss computation
         if previous_frames is not None and overlap_frames_to_use > 0:
-            # import ipdb; ipdb.set_trace()
             # Concatenate specified overlap frames and newly generated frames
             full_chunk = torch.cat([previous_frames, generated_new_frames], dim=1)
         else:
@@ -461,7 +457,7 @@ class StreamingSANATrainingModel:
             # Create gradient_mask: only newly generated frames require gradients
             gradient_mask = torch.zeros_like(full_chunk, dtype=torch.bool)
             # Overlap frames do not compute gradients; new frames do
-            # TODO only one overlap, either 1 or 11
+            # TODO: only one overlap, either 1 or 11
             gradient_mask[:, overlap_frames_to_use : overlap_frames_to_use + new_frames_to_generate, ...] = True
             if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
                 print(f"[StreamingTrain-Model] Built chunk with auto overlap: shape={full_chunk.shape}")

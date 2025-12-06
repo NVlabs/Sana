@@ -3,7 +3,6 @@ from typing import Tuple
 
 import imageio
 
-# Sana相关导入
 import pyrallis
 import torch
 import torch.distributed as dist
@@ -12,7 +11,7 @@ from einops import rearrange
 from termcolor import colored
 
 from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipeline
-from diffusion.longsana.sana_video_pipeline import SanaVideoInference
+from diffusion.longsana.sana_video_pipeline import LongSANAVideoInference
 from diffusion.longsana.utils.model_wrapper import SanaModelWrapper, SanaTextEncoder, SanaVAEWrapper
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
 from diffusion.model.utils import get_weight_dtype
@@ -134,21 +133,16 @@ class ODERegressionSana(torch.nn.Module):
     def build_inference_model(self, args, device):
 
         self.is_main_process = (dist.get_rank() == 0) if dist.is_initialized() else True
-        # sana config（generator 专用）
+        # sana config(generator)
+        # TODO: Default path not exist.
         sana_config_path = getattr(args, "sana_inference_config", "sana/configs/Sana_2B_480p_self_forcing.yaml")
         print(f"init sana config (self forcing): {sana_config_path}")
-        # 仅构建底层 SANA 模型，避免初始化完整 pipeline 引发 OOM
-        # 重要：使用 load 而非 parse，避免解析全局 CLI/主训练 YAML
-        sana_cfg = pyrallis.load(SanaVideoInference, open(sana_config_path))
-        # 确保 SANA 使用的 work_dir 存在（其内部 logger 会写入 train_log.log）
+        sana_cfg = pyrallis.load(LongSANAVideoInference, open(sana_config_path))
         work_dir = "output/sana_logs"
-        ## NOTE! this is the bug, the chunk_index should not overwrite by the sana_cfg.model.chunk_index
-        # self.chunk_index = sana_cfg.model.chunk_index
         try:
             os.makedirs(work_dir, exist_ok=True)
         except Exception:
             pass
-        # 推断 latent_size（480p: image_size // vae_downsample_rate）
         latent_size = sana_cfg.model.image_size // sana_cfg.vae.vae_downsample_rate
         model_kwargs = model_video_init_config(sana_cfg, latent_size=latent_size)
         if self.is_main_process:
@@ -159,7 +153,6 @@ class ODERegressionSana(torch.nn.Module):
             use_fp32_attention=sana_cfg.model.get("fp32_attention", False) and sana_cfg.model.mixed_precision != "bf16",
             **model_kwargs,
         )
-        # print(f"use_fp32_attention: {sana_model_gen.fp32_attention}")
         if self.is_main_process:
             print(
                 colored(
@@ -179,24 +172,25 @@ class ODERegressionSana(torch.nn.Module):
             )
 
         # generator
-        self.inference_model = SanaModelWrapper(sana_model_gen, flow_shift=flow_shift)  # 设置梯度要求
+        self.inference_model = SanaModelWrapper(sana_model_gen, flow_shift=flow_shift)
         self.inference_model.model.requires_grad_(False)
         self.inference_model = self.inference_model.to(device=device, dtype=self.dtype)
 
     def _initialize_models(self, args, device):
-        """初始化Sana模型"""
+        """initialize Sana models"""
         self.is_main_process = (dist.get_rank() == 0) if dist.is_initialized() else True
-        # sana config（generator 专用）
+        # sana config(generator)
+        # TODO: Default path not exist.
         sana_config_path = getattr(args, "sana_config", "sana/configs/Sana_2B_480p_chunk.yaml")
         print(f"init sana config (generator): {sana_config_path}")
-        sana_cfg = pyrallis.load(SanaVideoInference, open(sana_config_path))
+        sana_cfg = pyrallis.load(LongSANAVideoInference, open(sana_config_path))
         work_dir = "output/sana_logs"
         self.chunk_index = sana_cfg.model.chunk_index
         try:
             os.makedirs(work_dir, exist_ok=True)
         except Exception:
             pass
-        # 推断 latent_size（480p: image_size // vae_downsample_rate）
+        # infer latent_size (480p: image_size // vae_downsample_rate)
         latent_size = sana_cfg.model.image_size // sana_cfg.vae.vae_downsample_rate
         model_kwargs = model_video_init_config(sana_cfg, latent_size=latent_size)
         if self.is_main_process:
@@ -207,7 +201,6 @@ class ODERegressionSana(torch.nn.Module):
             use_fp32_attention=sana_cfg.model.get("fp32_attention", False) and sana_cfg.model.mixed_precision != "bf16",
             **model_kwargs,
         )
-        # print(f"use_fp32_attention: {sana_model_gen.fp32_attention}")
         if self.is_main_process:
             print(
                 colored(
@@ -226,7 +219,7 @@ class ODERegressionSana(torch.nn.Module):
             )
 
         # generator
-        self.generator = SanaModelChunkWrapper(sana_model_gen, flow_shift=flow_shift)  # 设置梯度要求
+        self.generator = SanaModelChunkWrapper(sana_model_gen, flow_shift=flow_shift)
         self.generator.model.requires_grad_(True)
         self.generator = self.generator.to(device=device, dtype=self.dtype)
 

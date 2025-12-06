@@ -4,7 +4,6 @@ from typing import List, Optional, Tuple
 
 import imageio
 
-# Sana相关导入
 import pyrallis
 import torch
 import torch.distributed as dist
@@ -13,7 +12,7 @@ from einops import rearrange
 from termcolor import colored
 
 from diffusion.longsana.pipeline.sana_inference_pipeline import SanaInferencePipeline
-from diffusion.longsana.sana_video_pipeline import SanaVideoInference
+from diffusion.longsana.sana_video_pipeline import LongSANAVideoInference
 from diffusion.longsana.utils.debug_option import DEBUG, LOG_GPU_MEMORY
 from diffusion.longsana.utils.loss import get_denoising_loss
 from diffusion.longsana.utils.model_wrapper import SanaModelWrapper, SanaTextEncoder, SanaVAEWrapper
@@ -31,15 +30,12 @@ class DMDSana(torch.nn.Module):
         """
         super().__init__()
 
-        # 先设置基本属性（供初始化流程使用）
         self.device = device
         self.args = args
         self.dtype = torch.bfloat16 if args.mixed_precision else torch.float32
 
-        # 使用Sana模型初始化
         self._initialize_sana_models(args, device)
 
-        # 从基类复制必要的初始化逻辑
         if hasattr(args, "denoising_step_list"):
             self.denoising_step_list = torch.tensor(args.denoising_step_list, dtype=torch.long)
             if args.warp_denoising_step:
@@ -47,7 +43,6 @@ class DMDSana(torch.nn.Module):
                 self.denoising_step_list = timesteps[1000 - self.denoising_step_list]
 
         # initialize denoising loss function
-
         self.denoising_loss_func = get_denoising_loss(args.denoising_loss_type)()
 
         self.num_frame_per_block = getattr(args, "num_frame_per_block", 10)
@@ -65,13 +60,11 @@ class DMDSana(torch.nn.Module):
             if hasattr(self.fake_score, "enable_gradient_checkpointing"):
                 self.fake_score.enable_gradient_checkpointing()
 
-        # this will be init later with fsdp-wrapped modules
         self.inference_pipeline: SanaInferencePipeline = None
 
         self.image_or_video_shape = args.image_or_video_shape
         self.batch_size = args.image_or_video_shape[0]
 
-        # Step 2: Initialize all dmd hyperparameters
         self.num_train_timestep = args.num_train_timestep
         self.min_step = int(0.02 * self.num_train_timestep)
         self.max_step = int(0.98 * self.num_train_timestep)
@@ -128,7 +121,6 @@ class DMDSana(torch.nn.Module):
             print(f"[StreamingDMDSana] Generator missing={len(missing_g)}, unexpected={len(unexpected_g)}")
 
         fake_load_info = None
-        # import ipdb; ipdb.set_trace()
         if fake_ckpt is not None:
             fake_state = find_model(fake_ckpt)
             fake_state = fake_state.get("critic", fake_state)
@@ -146,7 +138,6 @@ class DMDSana(torch.nn.Module):
 
         if self.real_name == "SANA":
             real_state = find_model(real_ckpt)
-            # real_state = real_state.get("critic", real_state)
             real_state = real_state.get("state_dict", real_state)
             try:
                 missing_f_real, unexpected_f_real = self.real_score.load_state_dict(real_state, strict=strict)
@@ -184,7 +175,7 @@ class DMDSana(torch.nn.Module):
             sana_fake_config_path = getattr(args, "sana_fake_config", None)
             if self.is_main_process:
                 print(f"init sana config (fake) for real model: {sana_fake_config_path}")
-            sana_cfg_fake = pyrallis.load(SanaVideoInference, open(sana_fake_config_path))
+            sana_cfg_fake = pyrallis.load(LongSANAVideoInference, open(sana_fake_config_path))
             latent_size_fake = sana_cfg_fake.model.image_size // sana_cfg_fake.vae.vae_downsample_rate
             model_kwargs_fake = model_video_init_config(sana_cfg_fake, latent_size=latent_size_fake)
             if self.is_main_process:
@@ -196,7 +187,6 @@ class DMDSana(torch.nn.Module):
                 and sana_cfg_fake.model.mixed_precision != "bf16",
                 **model_kwargs_fake,
             )
-            # print(f"use_fp32_attention: {sana_model_fake.fp32_attention}")
             if self.is_main_process:
                 print(
                     colored(
@@ -224,13 +214,11 @@ class DMDSana(torch.nn.Module):
 
         self.real_score.model.requires_grad_(False)
 
-        # sana config（generator 专用）
+        # sana config(generator)
+        # TODO: Need to make the path more robust.
         sana_config_path = getattr(args, "sana_config", "sana/configs/Sana_2B_480p_self_forcing.yaml")
         print(f"init sana config (generator): {sana_config_path}")
-        # build underlying SANA model, avoid initializing full pipeline causing OOM
-        # important: use load instead of parse, avoid parsing global CLI/main training YAML
-        sana_cfg = pyrallis.load(SanaVideoInference, open(sana_config_path))
-        # ensure SANA work_dir exists (its internal logger will write to train_log.log)
+        sana_cfg = pyrallis.load(LongSANAVideoInference, open(sana_config_path))
         work_dir = "output/sana_logs"
         try:
             os.makedirs(work_dir, exist_ok=True)
@@ -272,9 +260,8 @@ class DMDSana(torch.nn.Module):
             # use independent sana config (if not provided, fallback to generator's config)
             sana_fake_config_path = getattr(args, "sana_fake_config", None)
             print(f"init sana config (fake): {sana_fake_config_path}")
-            sana_cfg_fake = pyrallis.load(SanaVideoInference, open(sana_fake_config_path))
+            sana_cfg_fake = pyrallis.load(LongSANAVideoInference, open(sana_fake_config_path))
             latent_size_fake = sana_cfg_fake.model.image_size // sana_cfg_fake.vae.vae_downsample_rate
-            # simple compatibility check: latent grid size must be consistent
             if latent_size_fake != latent_size:
                 raise ValueError(
                     f"Generator and fake SANA latent_size mismatch: gen={latent_size}, fake={latent_size_fake}. "
@@ -290,7 +277,6 @@ class DMDSana(torch.nn.Module):
                 and sana_cfg_fake.model.mixed_precision != "bf16",
                 **model_kwargs_fake,
             )
-            # print(f"use_fp32_attention: {sana_model_fake.fp32_attention}")
             if self.is_main_process:
                 print(
                     colored(
@@ -447,12 +433,6 @@ class DMDSana(torch.nn.Module):
             )
         if getattr(self, "fake_guidance_scale", 0.0) != 0.0:
             raise NotImplementedError("Fake guidance scale is not supported for SANA")
-            _, pred_fake_image_uncond = self.fake_score(
-                noisy_image_or_video=noisy_image_or_video, conditional_dict=unconditional_dict, timestep=timestep
-            )
-            pred_fake_image = (
-                pred_fake_image_cond + (pred_fake_image_cond - pred_fake_image_uncond) * self.fake_guidance_scale
-            )
         else:
             pred_fake_image = pred_fake_image_cond
 
@@ -489,7 +469,7 @@ class DMDSana(torch.nn.Module):
             pred_real_image_cond + (pred_real_image_cond - pred_real_image_uncond) * self.real_guidance_scale
         )
 
-        # DMD 梯度
+        # DMD gradient
         grad = pred_fake_image - pred_real_image
 
         self.decode_and_save_clip(
@@ -526,7 +506,7 @@ class DMDSana(torch.nn.Module):
         batch_size, num_frame = image_or_video.shape[:2]
 
         with torch.no_grad():
-            # 采样 timestep 与加噪
+            # sample timestep and add noise
             min_timestep = (
                 denoised_timestep_to
                 if self.ts_schedule and denoised_timestep_to is not None
@@ -553,7 +533,7 @@ class DMDSana(torch.nn.Module):
                 .unflatten(0, (batch_size, num_frame))
             )
 
-            # KL 梯度
+            # KL gradient
             grad, dmd_log_dict = self._compute_kl_grad(
                 noisy_image_or_video=noisy_latent,
                 estimated_clean_image_or_video=original_latent,
@@ -636,17 +616,14 @@ class DMDSana(torch.nn.Module):
         )  # B,F,C,H,W
         # Slice last 21 frames
         if pred_image_or_video.shape[1] > 21:
-            # raise NotImplementedError("VAE encode has a bug, still working on it")
             with torch.no_grad():
                 # Reencode to get image latent
                 latent_to_decode = pred_image_or_video[:, :-20, ...]  # B,F-20,C,H,W
-                # Deccode to video
 
+                # Deccode to video
                 pixels = self.vae.decode_to_pixel(rearrange(latent_to_decode, "b f c h w -> b c f h w"))  # b,c,f,h,w
                 pixels = torch.stack(pixels, dim=0)
-                # import ipdb; ipdb.set_trace()
                 frame = pixels[:, :, -1:, ...].to(self.dtype)  # b,c,1,h,w
-                # frame = rearrange(frame, "b t c h w -> b c t h w")
                 # Encode frame to get image latent
                 image_latent = self.vae.encode_to_latent(frame).to(self.dtype)
                 image_latent = rearrange(image_latent, "b c f h w -> b f c h w")
@@ -705,7 +682,6 @@ class DMDSana(torch.nn.Module):
             mask=conditional_dict.get("mask", None),
             initial_latent=initial_latent,
         )  # B,F,C,H,W
-        # gradient_mask = None
         if dist.get_rank() == 0 and DEBUG:
             print(f"pred_image: {pred_image.shape}")
         gen_time = time.time() - _t_gen_start

@@ -8,7 +8,9 @@ from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipel
 
 
 class SanaSwitchTrainingPipeline(SanaTrainingPipeline):
-    """Support switch prompt SANA training pipeline."""
+    """
+    This pipeline is used to train the SANA model with switch prompt.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -255,7 +257,6 @@ class SanaSwitchTrainingPipeline(SanaTrainingPipeline):
         switch_prompt_embeds: Optional[torch.Tensor] = None,
         return_sim_step: bool = False,
     ) -> Tuple[torch.Tensor, Optional[int], Optional[int]]:
-        # 无切换信息：回退到父类
         if switch_frame_index is None or switch_prompt_embeds is None:
             return super().inference_with_trajectory(
                 noise,
@@ -274,11 +275,11 @@ class SanaSwitchTrainingPipeline(SanaTrainingPipeline):
         device = latents.device
         self._initialize_kv_cache(batch_size, self.dtype, device)
 
-        # 分块
+        # chunk split
         chunk_indices = self.create_autoregressive_segments(video_frames)
         num_chunks = len(chunk_indices) - 1
 
-        # 条件/掩码复制
+        # condition/mask copy
         cond1 = prompt_embeds.clone()
         cond2 = switch_prompt_embeds.clone()
         if cond1.shape[0] == batch_size:
@@ -296,11 +297,11 @@ class SanaSwitchTrainingPipeline(SanaTrainingPipeline):
             start_f = chunk_indices[chunk_idx]
             end_f = chunk_indices[chunk_idx + 1]
 
-            # 在块开始前切换
+            # switch before the chunk starts
             if (not using_second_prompt) and ((start_f + current_start_frame) >= switch_frame_index):
                 using_second_prompt = True
 
-            # 按需累计历史
+            # accumulate history if needed
             chunk_kv_cache = self._accumulate_kv_cache(self.kv_cache, chunk_idx)
 
             chunk_condition = (cond2 if using_second_prompt else cond1)[chunk_idx].unsqueeze(0)

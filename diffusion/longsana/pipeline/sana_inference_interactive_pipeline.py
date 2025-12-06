@@ -23,7 +23,7 @@ class SanaInferenceInteractivePipeline:
             self.denoising_step_list = self.denoising_step_list[:-1]
         self.flow_shift = float(getattr(args, "timestep_shift", kwargs.get("timestep_shift", 3.0)))
         print(f"[SanaInferencePipeline] denoising_step_list={self.denoising_step_list}")
-        # model meta
+
         inner = generator.model if hasattr(generator, "model") else generator
         try:
             p = next(inner.parameters())
@@ -44,15 +44,15 @@ class SanaInferenceInteractivePipeline:
         self._initialize_cached_modules()
 
     def _normalize_prompts(self, prompts_in):
-        """将可能嵌套(list/tuple)、或含单元素元组的prompts规范化为List[str]。
-        规则：
-        - 若为字符串，直接返回 [str]
-        - 若为list/tuple，则逐元素：
-            - 元素为字符串，直接保留
-            - 元素为list/tuple，若长度为1取第0个；否则以空格连接其字符串化元素
-        其余类型走 str()。
+        """normalize the prompts that may be nested (list/tuple) or contain single element tuples to List[str].
+        rules:
+        - if it is a string, return [str]
+        - if it is a list/tuple, then for each element:
+            - if it is a string, keep it
+            - if it is a list/tuple, if the length is 1, take the first element; otherwise, concatenate the stringified elements with spaces
+        - for other types, convert to string.
         """
-        # 顶层转为可迭代列表
+        # convert the top level to an iterable list
         if isinstance(prompts_in, str):
             seq = [prompts_in]
         elif isinstance(prompts_in, (list, tuple)):
@@ -176,7 +176,7 @@ class SanaInferenceInteractivePipeline:
 
         b, c, total_t, h, w = latents_bcthw.shape
 
-        # 先规范化，确保后续拼接与编码时均为 List[str]
+        # normalize the prompts, ensure that the subsequent concatenation and encoding are both List[str]
         prompts = self._normalize_prompts(prompts)
 
         motion_score = getattr(self.args, "motion_score", 0)
@@ -187,13 +187,12 @@ class SanaInferenceInteractivePipeline:
         if num_segments <= 0:
             raise ValueError("prompts must be a non-empty list")
 
-        # debug: 打印 prompts 数量与总帧数
         try:
             print(f"[SanaInferenceInteractivePipeline] num_segments={num_segments}, total_t={total_t}")
         except Exception:
             pass
 
-        # 以固定块大小（默认10帧）切分：首块吞余数
+        # split into fixed block size (default 10 frames) chunks: the first chunk absorbs the remainder
         chunk_indices = self._create_autoregressive_segments(total_t, self.num_frame_per_block)
         num_chunks = len(chunk_indices) - 1
 
@@ -205,17 +204,16 @@ class SanaInferenceInteractivePipeline:
         kv_cache = self._initialize_kv_cache(num_chunks)
         steps = max(1, len(self.denoising_step_list))
 
-        # 为每个chunk确定对应的prompt索引
-        # 优先使用显式配置：prompt_blocks（每个prompt占用的块数，单位=10帧块）或 prompt_frame_lengths（单位=帧，需为10的倍数）
+        # determine the corresponding prompt index for each chunk
         prompt_blocks = getattr(self.args, "prompt_blocks", kwargs.get("prompt_blocks", None))
         if prompt_blocks is None:
             prompt_frame_lengths = getattr(self.args, "prompt_frame_lengths", kwargs.get("prompt_frame_lengths", None))
             if prompt_frame_lengths is not None:
-                # 将帧长度转换为块数（保证为10的倍数）
+                # convert the frame lengths to blocks (guaranteed to be a multiple of 10)
                 blocks = []
                 for L in prompt_frame_lengths:
                     if L % self.num_frame_per_block != 0:
-                        raise ValueError("prompt_frame_lengths 中存在非块对齐长度（需为10的倍数）")
+                        raise ValueError("prompt_frame_lengths contains non-block-aligned lengths (must be a multiple of 10)")
                     blocks.append(L // self.num_frame_per_block)
                 prompt_blocks = blocks
 
@@ -226,22 +224,21 @@ class SanaInferenceInteractivePipeline:
             for p_idx, cnt in enumerate(prompt_blocks):
                 chunk_prompt_indices.extend([p_idx] * int(cnt))
         elif num_segments == num_chunks:
-            # 一一对应：每个chunk一个prompt（若希望更长时长，重复传入相同prompt）
+            # one-to-one: each chunk has one prompt (if longer duration is desired, repeat the same prompt)
             chunk_prompt_indices = list(range(num_chunks))
         else:
-            # 回退策略：按块数尽量平均分配给各prompt（满足切换点10的倍数）
+            # fallback strategy: evenly distribute the blocks to each prompt (ensuring 10-frame multiples for switch points)
             base_blocks = num_chunks // num_segments
             rem_blocks = num_chunks % num_segments
             counts = [(base_blocks + 1) if i < rem_blocks else base_blocks for i in range(num_segments)]
             for p_idx, cnt in enumerate(counts):
                 chunk_prompt_indices.extend([p_idx] * int(cnt))
-            # 若由于整除导致长度略差异，进行裁剪或填充（理论上不会出现越界）
+            # if the division results in slight length differences, clip or pad (theoretically should not exceed bounds)
             if len(chunk_prompt_indices) > num_chunks:
                 chunk_prompt_indices = chunk_prompt_indices[:num_chunks]
             elif len(chunk_prompt_indices) < num_chunks:
                 chunk_prompt_indices.extend([num_segments - 1] * (num_chunks - len(chunk_prompt_indices)))
 
-        # debug: 打印chunk到prompt的映射摘要
         try:
             mapping = [
                 f"[{chunk_indices[i]}:{chunk_indices[i+1]}) -> prompt[{chunk_prompt_indices[i]}]"
@@ -256,7 +253,6 @@ class SanaInferenceInteractivePipeline:
             end_f = chunk_indices[chunk_idx + 1]
             local_latent = latents_bcthw[:, :, start_f:end_f]
 
-            # debug: 切换 prompt 时打印
             try:
                 p_idx = chunk_prompt_indices[chunk_idx]
                 cur_prompt = prompts[p_idx] if isinstance(prompts, (list, tuple)) else str(prompts)
@@ -272,19 +268,19 @@ class SanaInferenceInteractivePipeline:
                 p_idx = chunk_prompt_indices[chunk_idx]
                 chunk_condition = full_condition[p_idx : p_idx + 1]
                 if full_mask is not None:
-                    # 维持 batch 维度 (1, L)，避免下游注意力 mask 维度不匹配
+                    # maintain batch dimension (1, L) to avoid downstream attention mask dimension mismatch
                     chunk_mask = full_mask[p_idx : p_idx + 1]
 
-            # 在切换到新 prompt 前，使用“新 prompt 的 embeddings + 上一段视频”在 t=0 重新计算上一段的 KV cache
+            # before switching to a new prompt, recompute the KV cache of the previous segment using the "new prompt embeddings + previous segment video" at t=0
             if self.recache_on_prompt_switch and chunk_idx > 0:
-                # 仅在提示词发生变化时才重缓存
+                # only re-cache when the prompt changes
                 prev_p_idx = chunk_prompt_indices[chunk_idx - 1]
                 cur_p_idx = chunk_prompt_indices[chunk_idx]
                 if prev_p_idx != cur_p_idx:
                     prev_start_f = chunk_indices[chunk_idx - 1]
                     prev_end_f = chunk_indices[chunk_idx]
                     prev_latent_for_cache = output[:, :, prev_start_f:prev_end_f]
-                    # 先对到上一段为止的缓存做累加，确保第三项(history句柄)继承
+                    # first accumulate the cache up to the previous segment, ensuring the third item (history handle) inherits
                     prev_accumulated_kv = self._accumulate_kv_cache(kv_cache, chunk_idx - 1)
                     timestep_zero_prev = torch.zeros(
                         prev_latent_for_cache.shape[0], device=self.model_device, dtype=self.model_dtype

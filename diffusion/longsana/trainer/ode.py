@@ -53,9 +53,7 @@ class ODESANATrainer:
         set_seed(config.seed + global_rank)
         if self.is_main_process and not self.disable_wandb:
             if not wandb.api.api_key:
-                wandb.login(
-                    key=config.wandb_key
-                )
+                wandb.login(key=config.wandb_key)
             wandb.init(
                 config=OmegaConf.to_container(config, resolve=True),
                 name=config.config_name,

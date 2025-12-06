@@ -33,7 +33,6 @@ warnings.filterwarnings("ignore")  # ignore warning
 from diffusion.utils.config import SanaVideoConfig
 
 
-
 @dataclass
 class SanaVideoInference(SanaVideoConfig):
     config: Optional[str] = "sana/configs/Sana_2B_480p_self_forcing.yaml"  # config
@@ -63,4 +62,3 @@ class SanaVideoInference(SanaVideoConfig):
     interval_k: float = 1.0
     base_model_frames: int = 40
     num_frames: int = 81
-

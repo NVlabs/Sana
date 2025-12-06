@@ -399,7 +399,6 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
                     # Increment the step since we finished gradient update
                     self.step += 1
 
-
                 # Create EMA params (if not already created)
                 if (
                     (self.step >= self.config.ema_start_step)
@@ -488,7 +487,6 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
                 import traceback
 
                 traceback.print_exc()
-
 
     def _get_switch_frame_index(self, max_length=None):
         if getattr(self.config, "switch_mode", "fixed") == "random":

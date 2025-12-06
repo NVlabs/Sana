@@ -36,7 +36,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, FlowEuler, LTXFlowEuler, LongLiveFlowEuler
+from diffusion import DPMS, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance

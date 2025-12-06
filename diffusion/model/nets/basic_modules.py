@@ -382,7 +382,6 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
         return x_out
 
 
-
 class SlimGLUMBConv(GLUMBConv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

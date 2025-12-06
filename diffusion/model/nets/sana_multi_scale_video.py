@@ -298,7 +298,7 @@ class SanaVideoMSBlock(nn.Module):
         x_sa = self.attn(x_sa_in, **self_attn_kwargs)
         if kv_cache is not None:
             x_sa, kv_cache = x_sa
-            
+
         intermediate_feats["x_self_attn"] = x_sa
 
         if self.flash_attn_additional:
@@ -322,13 +322,12 @@ class SanaVideoMSBlock(nn.Module):
             mlp_kwargs["save_kv_cache"] = save_kv_cache
         if kv_cache is not None:
             mlp_kwargs["kv_cache"] = kv_cache
-            
+
         mlp_out = self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp), **mlp_kwargs)
         if kv_cache is not None:
             mlp_out, kv_cache = mlp_out
         x = x + self.drop_path(gate_mlp * mlp_out)
 
-            
         intermediate_feats["x_ffn"] = x
 
         if self.block_hook is not None:
@@ -336,7 +335,7 @@ class SanaVideoMSBlock(nn.Module):
 
         if kv_cache is not None:
             return x, kv_cache
-        
+
         return x
 
 
@@ -497,8 +496,7 @@ class SanaMSVideo(Sana):
             )
         elif pos_embed_type == "casual_wan_rope":
             rope = CausalWanRotaryPosEmbed(
-                attention_head_dim=attention_head_dim, patch_size=patch_size, max_seq_len=1024,
-                fhw_dim=rope_fhw_dim
+                attention_head_dim=attention_head_dim, patch_size=patch_size, max_seq_len=1024, fhw_dim=rope_fhw_dim
             )
         elif pos_embed_type == "wan_temporal_rope":
             rope = WanRotaryTemporalPosEmbed(

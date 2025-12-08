@@ -11,10 +11,6 @@ torchrun --nproc_per_node=8 train_video_scripts/train_longsana.py \
     --config_path configs/sana_video_config/longsana/480ms/longsana.yaml \
     --wandb_name debug_480p_longsana --logdir output/debug_480p_longsana
 
-torchrun --nproc_per_node=8 train_video_scripts/train_longsana.py \
-    --config_path configs/sana_video_config/longsana/480ms/longsana_interactive.yaml \
-    --wandb_name debug_480p_longsana_interactive --logdir output/debug_480p_longsana_interactive
-
 # inference longsana
 accelerate launch --mixed_precision=bf16 \
     inference_video_scripts/inference_sana_video.py \

@@ -179,7 +179,6 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
         self.kv_cache_after_critic_backward = None
 
         if train_generator:
-            # import ipdb; ipdb.set_trace()
             if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
                 print(f"[SeqTrain-Trainer] Training generator: generating next chunk")
 
@@ -290,12 +289,10 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
                     print(f"[Debug] Step {self.step}: switch_mode={getattr(self.config,'switch_mode','fixed')}")
 
                 if self.streaming_training:
-                    # Zero-out all optimizer gradients
                     if TRAIN_GENERATOR:
                         self.generator_optimizer.zero_grad(set_to_none=True)
                     self.critic_optimizer.zero_grad(set_to_none=True)
 
-                    # Whole-cycle gradient accumulation loop
                     accumulated_generator_logs = []
                     accumulated_critic_logs = []
 
@@ -467,12 +464,8 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
                         )
 
                 # ---------------------------------------- Visualization ---------------------------------------------------
-
                 if self.vis_interval > 0 and ((self.step % self.vis_interval == 0) or (self.step - start_step) == 1):
-                    # import ipdb; ipdb.set_trace()
-
                     try:
-                        # print(f"[SeqTrain-Trainer] Visualization at step {self.step}")
                         self._visualize()
                     except Exception as e:
                         print(f"[Warning] Visualization failed at step {self.step}: {e}")
@@ -510,7 +503,7 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
                         if dist.get_rank() == 0:
                             switch_idx = random.choice(choices)
                         else:
-                            switch_idx = 0  # placeholder; will be overwritten by broadcast
+                            switch_idx = 0
                         switch_idx_tensor = torch.tensor(switch_idx, device=self.device)
                         dist.broadcast(switch_idx_tensor, src=0)
                         switch_idx = switch_idx_tensor.item()

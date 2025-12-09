@@ -22,7 +22,7 @@ def main():
     parser.add_argument(
         "--no-auto-resume", action="store_true", help="Disable auto resume from latest checkpoint in logdir"
     )
-    parser.add_argument("--no-one-logger", action="store_true", help="Disable One Logger (enabled by default)")
+    parser.add_argument("--max_iters", type=int, default=10000, help="Maximum number of iterations")
     parser.add_argument("--wandb_name", type=str, default=None, help="Wandb name")
 
     args = parser.parse_args()
@@ -34,14 +34,13 @@ def main():
     config.no_visualize = args.no_visualize
 
     # get the filename of config_path
-    # config_name = os.path.basename(args.config_path).split(".")[0]
     config_name = os.path.dirname(args.config_path).split("/")[-1] if args.wandb_name is None else args.wandb_name
     config.config_name = config_name
     config.logdir = args.logdir
     config.wandb_save_dir = args.wandb_save_dir
     config.disable_wandb = args.disable_wandb
-    config.auto_resume = not args.no_auto_resume  # Default to True unless --no-auto-resume is specified
-    config.use_one_logger = not args.no_one_logger
+    config.auto_resume = not args.no_auto_resume
+    config.max_iters = args.max_iters
 
     if config.trainer == "self_forcing":
         trainer = SelfForcingScoreDistillationTrainer(config)

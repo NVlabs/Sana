@@ -11,7 +11,6 @@ import torch
 import torch.distributed as dist
 import wandb
 from omegaconf import OmegaConf
-from termcolor import colored
 from torch.distributed.fsdp import FullOptimStateDictConfig, FullStateDictConfig
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import StateDictType
@@ -20,7 +19,7 @@ from torchvision.io import write_video
 from diffusion.longsana.model import ODERegressionSana
 from diffusion.longsana.pipeline.sana_inference_pipeline import SanaInferencePipeline
 from diffusion.longsana.utils.dataset import ODERegressionLMDBDataset, TextDataset, cycle
-from diffusion.longsana.utils.distributed import barrier, fsdp_state_dict, fsdp_wrap, launch_distributed_job
+from diffusion.longsana.utils.distributed import barrier, fsdp_wrap, launch_distributed_job
 from diffusion.longsana.utils.misc import set_seed
 from tools.download import find_model
 
@@ -69,7 +68,6 @@ class ODESANATrainer:
         app_start_time = time.time_ns() / 1_000_000
 
         # Step 2: Initialize the model and optimizer
-
         assert config.distribution_loss == "ode", "Only ODE loss is supported for ODE training"
         self.model = ODERegressionSana(config, device=self.device)
 
@@ -92,8 +90,6 @@ class ODESANATrainer:
                 device=self.device, dtype=torch.bfloat16 if config.mixed_precision else torch.float32
             )
 
-        # self.model._initialize_inference_pipeline()
-
         # Step 4: Initialize the optimizer
         self.generator_optimizer = torch.optim.AdamW(
             [param for param in self.model.generator.parameters() if param.requires_grad],
@@ -103,7 +99,6 @@ class ODESANATrainer:
         )
 
         # Step 5: Initialize the dataloader
-        # Step 3: Initialize the dataloader
         dataset = ODERegressionLMDBDataset(config.data_path, max_pair=getattr(config, "max_pair", int(1e8)))
         sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True, drop_last=True)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size, sampler=sampler, num_workers=8)
@@ -143,7 +138,6 @@ class ODESANATrainer:
             # ----------------------------------------------------------------------------------------------------------
             # Visualization settings
             # ----------------------------------------------------------------------------------------------------------
-            # List of video lengths to visualize, e.g. [8, 16, 32]
             self.vis_video_lengths = getattr(config, "vis_video_lengths", [])
 
             if self.vis_interval > 0 and len(self.vis_video_lengths) > 0:
@@ -152,8 +146,6 @@ class ODESANATrainer:
         self.step = 0
 
         ##############################################################################################################
-        # Step 4: (If resuming) Load the model and optimizer state_dicts with auto_resume support
-
         # Auto resume configuration
         auto_resume = getattr(config, "auto_resume", True)  # Default to True
 
@@ -178,7 +170,6 @@ class ODESANATrainer:
 
         if checkpoint_path is None:
             if getattr(config, "generator_ckpt", False):
-                # Explicit checkpoint path provided
                 checkpoint_path = config.generator_ckpt
                 if self.is_main_process:
                     print(f"Using explicit checkpoint: {checkpoint_path}")
@@ -206,9 +197,9 @@ class ODESANATrainer:
                 if self.is_main_process:
                     print("Resuming generator optimizer...")
                 gen_osd = FSDP.optim_state_dict_to_load(
-                    self.model.generator,  # FSDP root module
-                    self.generator_optimizer,  # 刚刚创建好的 Optimizer
-                    checkpoint["generator_optimizer"],  # 保存时的 OSD
+                    self.model.generator,
+                    self.generator_optimizer,
+                    checkpoint["generator_optimizer"],
                 )
                 self.generator_optimizer.load_state_dict(gen_osd)
             else:
@@ -365,14 +356,12 @@ class ODESANATrainer:
     def get_text_embeddings(self, text_prompts, use_chi_prompt=True):
         if use_chi_prompt and self.motion_score > 0:
             text_prompts = [f"{prompt} motion score: {self.motion_score}." for prompt in text_prompts]
-        # print(colored(f"use_chi_prompt {use_chi_prompt} and motion_score {self.motion_score}", "red"))
-        # print(text_prompts)
         return self.model.text_encoder.forward_chi(text_prompts=text_prompts, use_chi_prompt=use_chi_prompt)
 
     def _setup_visualizer(self):
         """Initialize the inference pipeline for visualization on CPU, to be moved to GPU only when needed."""
 
-        # 使用 SANA 推理管线进行可视化
+        # Use SANA inference pipeline for visualization
         self.vis_pipeline = SanaInferencePipeline(
             args=self.config,
             device=self.device,
@@ -382,7 +371,6 @@ class ODESANATrainer:
             num_cached_blocks=self.config.get("num_cached_blocks", -1),
         )
 
-        # Visualization output directory (default: <logdir>/vis)
         self.vis_output_dir = os.path.join(self.output_path, "vis")
         os.makedirs(self.vis_output_dir, exist_ok=True)
 
@@ -405,14 +393,14 @@ class ODESANATrainer:
                 [batch_size, channel, num_frames, h, w], device=self.device, dtype=self.dtype, generator=generator
             )
         with torch.no_grad():
-            # 生成 latent（B,T,C,H,W）
+            # B,T,C,H,W
             video_latent_btchw, _ = pipeline.inference(
                 noise=sampled_noise,
                 text_prompts=prompts,
                 return_latents=True,
                 initial_latent=initial_latent,
             )
-            # 解码到像素（B,T,C,H,W）
+            # B,T,C,H,W
             video_latent_bcthw = video_latent_btchw.permute(0, 2, 1, 3, 4)
             pixel_bcthw = pipeline.vae.decode_to_pixel(video_latent_bcthw)
             if isinstance(pixel_bcthw, list):
@@ -421,7 +409,6 @@ class ODESANATrainer:
                 torch.clamp(127.5 * pixel_bcthw + 127.5, 0, 255).permute(0, 2, 3, 4, 1).to(torch.uint8).cpu().numpy()
             )
         current_video = pixel_btchw
-        # 安全清理 VAE 缓存（不同实现 clear_cache 所在位置不同）
         try:
             if hasattr(pipeline, "vae"):
                 if hasattr(pipeline.vae, "model") and hasattr(pipeline.vae.model, "clear_cache"):
@@ -446,15 +433,12 @@ class ODESANATrainer:
             return
 
         self._setup_visualizer()
-        # import ipdb; ipdb.set_trace()
         step_vis_dir = os.path.join(self.vis_output_dir, f"step_{self.step:07d}")
         if self.is_main_process:
             os.makedirs(step_vis_dir, exist_ok=True)
         batch = self.fixed_vis_batch
         prompts = batch["prompts"]
-        # Prepare model mode info for filename
         mode_info = ""
-        # import ipdb; ipdb.set_trace()
 
         for vid_len in self.vis_video_lengths:
             print(f"Generating video of length {vid_len}")
@@ -469,15 +453,11 @@ class ODESANATrainer:
                 )
                 video_tensor = torch.from_numpy(video_np.astype("uint8"))
                 write_video(out_path, video_tensor, fps=16)
-                # print(f"Saved video to {out_path}")
 
-            # After saving current length videos, release related tensors to reduce peak memory
-            del videos, video_np, video_tensor  # type: ignore
+            del videos, video_np, video_tensor
             torch.cuda.empty_cache()
 
         torch.cuda.empty_cache()
-        import gc
-
         gc.collect()
 
     def train_one_step(self):
@@ -531,9 +511,7 @@ class ODESANATrainer:
         self.generator_optimizer.step()
 
         # Step 4: Visualization
-        # print(f"[Trainer] VISUALIZE={VISUALIZE}")
         if VISUALIZE and not self.config.no_visualize:
-            # import ipdb; ipdb.set_trace()
             # Gather full state dict with optimizer support
             with FSDP.state_dict_type(
                 self.model.generator,
@@ -552,7 +530,6 @@ class ODESANATrainer:
             output = log_dict["output"]  # B, T, C, H, W
             timestep_list = log_dict["timestep_list"]  # B, T
             ground_truth = ode_latent[:, -1]  # B, T, C, H, W
-            # import ipdb; ipdb.set_trace()
             with torch.no_grad():
                 input_video = self.model.vae.decode_to_pixel(input.permute(0, 2, 1, 3, 4))
                 output_video = self.model.vae.decode_to_pixel(output.permute(0, 2, 1, 3, 4))
@@ -567,8 +544,6 @@ class ODESANATrainer:
             ground_truth_video = (255.0 * (ground_truth_video[0].permute(1, 2, 3, 0).cpu().numpy() * 0.5 + 0.5)).astype(
                 np.uint8
             )  # T, H, W, C
-            # assert len(timestep_list.unique()) <= 2, "timestep_list should be same as the number of chunks, either all chunks are the same or there are two chunks"
-            # import ipdb; ipdb.set_trace()
             rank = dist.get_rank()
             if rank < 8:
                 iio.imwrite(

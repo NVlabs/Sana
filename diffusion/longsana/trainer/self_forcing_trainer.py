@@ -108,11 +108,10 @@ class Trainer:
             self.model.vae = self.model.vae.to(
                 device=self.device, dtype=torch.bfloat16 if config.mixed_precision else torch.float32
             )
-        # 初始化inference pipeline after fsdp wrap
         self.model._initialize_inference_pipeline()
 
         ##############################################################################################################
-        # 6. Set up EMA parameter containers
+        # Set up EMA parameter containers
         rename_param = (
             lambda name: name.replace("_fsdp_wrapped_module.", "")
             .replace("_checkpoint_wrapped_module.", "")
@@ -132,7 +131,7 @@ class Trainer:
             self.generator_ema = EMA_FSDP(self.model.generator, decay=ema_weight)
 
         ##############################################################################################################
-        # 7. (If resuming) Load the model and optimizer, lr_scheduler, ema's statedicts
+        # (If resuming) Load the model and optimizer, lr_scheduler, ema's statedicts
         if getattr(config, "generator_ckpt", False):
             print(f"Loading pretrained generator from {config.generator_ckpt}")
             state_dict = find_model(config.generator_ckpt)
@@ -175,7 +174,6 @@ class Trainer:
         self.fixed_vis_batch = None
         self.vis_interval = getattr(config, "vis_interval", -1)
         if self.vis_interval > 0 and len(getattr(config, "vis_video_lengths", [])) > 0:
-            # Determine validation data path
             val_data_path = getattr(config, "val_data_path", None) or config.data_path
             val_dataset = TextDataset(val_data_path)
 
@@ -200,18 +198,15 @@ class Trainer:
             # ----------------------------------------------------------------------------------------------------------
             # Visualization settings
             # ----------------------------------------------------------------------------------------------------------
-            # List of video lengths to visualize, e.g. [8, 16, 32]
             self.vis_video_lengths = getattr(config, "vis_video_lengths", [])
 
             if self.vis_interval > 0 and len(self.vis_video_lengths) > 0:
                 self._setup_visualizer()
         auto_resume = True
-        # if not self.is_lora_enabled:
-        # ================================= 普通模型逻辑 =================================
+        # ================================= Model logic =================================
         checkpoint_path = None
 
         if auto_resume and self.output_path:
-            # Auto resume: find latest checkpoint in logdir
             latest_checkpoint = self.find_latest_checkpoint(self.output_path)
             if latest_checkpoint:
                 checkpoint_path = latest_checkpoint
@@ -229,7 +224,6 @@ class Trainer:
 
         if checkpoint_path is None:
             if getattr(config, "generator_ckpt", False):
-                # Explicit checkpoint path provided
                 checkpoint_path = config.generator_ckpt
                 if self.is_main_process:
                     print(f"Using explicit checkpoint: {checkpoint_path}")
@@ -277,8 +271,8 @@ class Trainer:
                     print("Resuming generator optimizer...")
                 gen_osd = FSDP.optim_state_dict_to_load(
                     self.model.generator,  # FSDP root module
-                    self.generator_optimizer,  # 刚刚创建好的 Optimizer
-                    checkpoint["generator_optimizer"],  # 保存时的 OSD
+                    self.generator_optimizer,  # newly created optimizer
+                    checkpoint["generator_optimizer"],  # OSD at the time of saving
                 )
                 self.generator_optimizer.load_state_dict(gen_osd)
             else:
@@ -442,8 +436,6 @@ class Trainer:
     def get_text_embeddings(self, text_prompts, use_chi_prompt=True):
         if use_chi_prompt and self.motion_score > 0:
             text_prompts = [f"{prompt} motion score: {self.motion_score}." for prompt in text_prompts]
-        # print(colored(f"use_chi_prompt {use_chi_prompt} and motion_score {self.motion_score}", "red"))
-        # print(text_prompts)
         return self.model.text_encoder.forward_chi(text_prompts=text_prompts, use_chi_prompt=use_chi_prompt)
 
     def fwdbwd_one_step(self, batch, train_generator):
@@ -536,7 +528,6 @@ class Trainer:
 
     def train(self):
         start_step = self.step
-
         while True:
             TRAIN_GENERATOR = self.step % self.config.dfake_gen_update_ratio == 0
             self.model.set_step(self.step)
@@ -599,6 +590,7 @@ class Trainer:
 
                 if not self.disable_wandb:
                     wandb.log(wandb_loss_dict, step=self.step)
+                wandb_loss_dict["step"] = self.step
                 print(wandb_loss_dict)
 
             if self.step % self.config.gc_interval == 0:
@@ -617,10 +609,12 @@ class Trainer:
                     self.previous_time = current_time
 
             if self.vis_interval > 0 and (self.step % self.vis_interval == 0 or (self.step - start_step) == 1):
-                # try:
                 self._visualize()
-                # except Exception as e:
-                #     print(f"[Warning] Visualization failed at step {self.step}: {e}")
+
+            # Check if we've reached max iterations
+            if self.step > self.config.max_iters:
+                print(f"Reached max iterations: {self.step} > {self.config.max_iters}, stopping training")
+                break
 
     def generate_video(self, pipeline, num_frames, prompts, image=None):
         batch_size = len(prompts)
@@ -641,14 +635,13 @@ class Trainer:
                 [batch_size, channel, num_frames, h, w], device=self.device, dtype=self.dtype, generator=generator
             )
         with torch.no_grad():
-            # 生成 latent（B,T,C,H,W）
             video_latent_btchw, _ = pipeline.inference(
                 noise=sampled_noise,
                 text_prompts=prompts,
                 return_latents=True,
                 initial_latent=initial_latent,
             )
-            # 解码到像素（B,T,C,H,W）
+            # B,T,C,H,W
             video_latent_bcthw = video_latent_btchw.permute(0, 2, 1, 3, 4)
             pixel_bcthw = pipeline.vae.decode_to_pixel(video_latent_bcthw)
             if isinstance(pixel_bcthw, list):
@@ -657,7 +650,7 @@ class Trainer:
                 torch.clamp(127.5 * pixel_bcthw + 127.5, 0, 255).permute(0, 2, 3, 4, 1).to(torch.uint8).cpu().numpy()
             )
         current_video = pixel_btchw
-        # 安全清理 VAE 缓存（不同实现 clear_cache 所在位置不同）
+        # clear VAE cache
         try:
             if hasattr(pipeline, "vae"):
                 if hasattr(pipeline.vae, "model") and hasattr(pipeline.vae.model, "clear_cache"):
@@ -674,7 +667,7 @@ class Trainer:
     def _setup_visualizer(self):
         """Initialize the inference pipeline for visualization on CPU, to be moved to GPU only when needed."""
 
-        # 使用 SANA 推理管线进行可视化
+        # use SANA inference pipeline for visualization
         self.vis_pipeline = SanaInferencePipeline(
             args=self.config,
             device=self.device,
@@ -683,7 +676,6 @@ class Trainer:
             vae=self.model.vae,
         )
 
-        # Visualization output directory (default: <logdir>/vis)
         self.vis_output_dir = os.path.join(self.output_path, "vis")
         os.makedirs(self.vis_output_dir, exist_ok=True)
         if self.config.vis_ema:
@@ -703,7 +695,6 @@ class Trainer:
         os.makedirs(step_vis_dir, exist_ok=True)
         batch = self.fixed_vis_batch
         prompts = batch["prompts"]
-        # Prepare model mode info for filename
         mode_info = ""
 
         for vid_len in self.vis_video_lengths:
@@ -721,7 +712,7 @@ class Trainer:
                 write_video(out_path, video_tensor, fps=16)
 
             # After saving current length videos, release related tensors to reduce peak memory
-            del videos, video_np, video_tensor  # type: ignore
+            del videos, video_np, video_tensor
             torch.cuda.empty_cache()
 
         torch.cuda.empty_cache()

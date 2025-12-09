@@ -179,8 +179,42 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
+  test-training-longsana:
+    needs: pre-commit
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run longsana training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-longsana bash tests/bash/training/test_training_longsana.sh
   remove-label:
-    needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video]
+    needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video, test-training-longsana]
     if: |
       always() &&
       github.event_name == 'pull_request'

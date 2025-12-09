@@ -54,6 +54,7 @@ hf download gdhe17/Self-Forcing vidprom_filtered_extended.txt --local-dir data/l
 ### Launch Training
 LongSANA is trained in three stages: ODE Initialization, Self-Forcing Training and LongSANA Training. For ODE initialization, we directly provide the [ODE initialization checkpoint](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_ode). If you are interested in training this stage by yourself, you may follow the process described in the [CausVid](https://github.com/tianweiy/CausVid) repo to generate trajectories and train the model with: 
 ```bash
+# `data_path: generated_ode_data_pair_path` in the config file need to be update. This is the data discussed above.
 torchrun --nnodes=8 --nproc_per_node=8 --rdzv_id=5235 \
   --rdzv_backend=c10d \
   --rdzv_endpoint $MASTER_ADDR \

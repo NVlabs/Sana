@@ -26,5 +26,5 @@ python inference_video_scripts/inference_sana_video.py \
 
 python inference_video_scripts/inference_sana_video.py \
     --config=configs/sana_video_config/Sana_2000M_480px_adamW_fsdp_longsana.yaml \
-    --model_path=hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth \
-    --debug=true
+    --model_path=hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth \
+    --cfg_scale=1.0 --debug=true

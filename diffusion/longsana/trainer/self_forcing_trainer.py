@@ -575,16 +575,16 @@ class Trainer:
                 if TRAIN_GENERATOR:
                     wandb_loss_dict.update(
                         {
-                            "generator_loss": generator_log_dict["generator_loss"].mean().item(),
-                            "generator_grad_norm": generator_log_dict["generator_grad_norm"].mean().item(),
-                            "dmdtrain_gradient_norm": generator_log_dict["dmdtrain_gradient_norm"].mean().item(),
+                            "generator_loss": f"{generator_log_dict['generator_loss'].mean().item():.4f}",
+                            "generator_grad_norm": f"{generator_log_dict['generator_grad_norm'].mean().item():.4f}",
+                            "dmdtrain_gradient_norm": f"{generator_log_dict['dmdtrain_gradient_norm'].mean().item():.4f}",
                         }
                     )
 
                 wandb_loss_dict.update(
                     {
-                        "critic_loss": critic_log_dict["critic_loss"].mean().item(),
-                        "critic_grad_norm": critic_log_dict["critic_grad_norm"].mean().item(),
+                        "critic_loss": f"{critic_log_dict['critic_loss'].mean().item():.4f}",
+                        "critic_grad_norm": f"{critic_log_dict['critic_grad_norm'].mean().item():.4f}",
                     }
                 )
 

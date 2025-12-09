@@ -133,7 +133,9 @@ class ODERegressionSana(torch.nn.Module):
 
         self.is_main_process = (dist.get_rank() == 0) if dist.is_initialized() else True
         # sana config(generator)
-        sana_config_path = getattr(args, "sana_inference_config", "configs/sana_video_config/longsana/480ms/self_forcing.yaml")
+        sana_config_path = getattr(
+            args, "sana_inference_config", "configs/sana_video_config/longsana/480ms/self_forcing.yaml"
+        )
         print(f"init sana config (self forcing): {sana_config_path}")
         sana_cfg = pyrallis.load(LongSANAVideoInference, open(sana_config_path))
         work_dir = "output/sana_logs"

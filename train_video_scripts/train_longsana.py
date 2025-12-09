@@ -1,9 +1,9 @@
 import argparse
 import os
 
-import wandb
 from omegaconf import OmegaConf
 
+import wandb
 from diffusion.longsana.trainer.longsana_trainer import LongSANATrainer
 from diffusion.longsana.trainer.ode import ODESANATrainer
 from diffusion.longsana.trainer.self_forcing_trainer import Trainer as SelfForcingScoreDistillationTrainer

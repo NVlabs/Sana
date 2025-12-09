@@ -6,7 +6,6 @@ import time
 import numpy as np
 import torch
 import torch.distributed as dist
-import wandb
 from einops import rearrange
 from omegaconf import OmegaConf
 from termcolor import colored
@@ -15,6 +14,7 @@ from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import StateDictType
 from torchvision.io import write_video
 
+import wandb
 from diffusion.longsana.model import StreamingSANATrainingModel
 from diffusion.longsana.utils.debug_option import DEBUG, DEBUG_GRADIENT, LOG_GPU_MEMORY
 from diffusion.longsana.utils.distributed import EMA_FSDP, fsdp_state_dict, fsdp_wrap, launch_distributed_job

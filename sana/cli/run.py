@@ -102,9 +102,6 @@ def main() -> None:
         conda_path = shutil.which("conda")
         wrapped_cmd = ""
 
-        # Get project root directory
-        current_file = os.path.abspath(__file__)
-
         # HuggingFace login command if HF_TOKEN is set
         hf_token = os.environ.get("HF_TOKEN", "")
         hf_login_cmd = f"hf auth login --token {hf_token} && " if hf_token else ""

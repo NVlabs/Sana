@@ -52,7 +52,7 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 
 ### 1. How to use Sana-Video Pipelines in `🧨diffusers`
 
-> \[!IMPORTANT\]
+> [!IMPORTANT]
 >
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers
@@ -235,9 +235,9 @@ python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_
 
 | Models | FPS | Total ↑ | Quality ↑ | Semantic ↑ |
 |--------|-------------|---------|-----------|------------|
-| SkyReels-V2       | 0.49      |  75.29    | 80.77     | 53.37     |
-| FramePack         | 0.92      |  81.95    | 83.61     | 75.32     |
-| Self-Forcing      | 17.0      |  81.59    | 83.82     | 72.70     |
-| **LongSANA-2B**   | **27.5**  | **82.29** | **83.10** | **79.04** |
+| SkyReels-V2 | 0.49 | 75.29 | 80.77 | 53.37 |
+| FramePack | 0.92 | 81.95 | 83.61 | 75.32 |
+| Self-Forcing | 17.0 | 81.59 | 83.82 | 72.70 |
+| **LongSANA-2B** | **27.5** | **82.29** | **83.10** | **79.04** |
 
 **Summary**: Compared with the current SOTA long video generation models, LongSANA (SANA-Video + [LongLive](https://github.com/NVlabs/LongLive))'s speed and performance is very competitive. LongSANA's 27FPS generatin speed on H100 makes real-time generation possible.

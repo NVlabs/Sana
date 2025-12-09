@@ -9,13 +9,13 @@ import imageio.v3 as iio
 import numpy as np
 import torch
 import torch.distributed as dist
-import wandb
 from omegaconf import OmegaConf
 from torch.distributed.fsdp import FullOptimStateDictConfig, FullStateDictConfig
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import StateDictType
 from torchvision.io import write_video
 
+import wandb
 from diffusion.longsana.model import ODERegressionSana
 from diffusion.longsana.pipeline.sana_inference_pipeline import SanaInferencePipeline
 from diffusion.longsana.utils.dataset import ODERegressionLMDBDataset, TextDataset, cycle

@@ -1031,7 +1031,6 @@ def main(cfg: SanaConfig) -> None:
         config.train.early_stop_hours = 1.9
     image_size = config.model.image_size
     latent_size = int(image_size) // config.vae.vae_downsample_rate
-    pred_sigma = getattr(config.scheduler, "pred_sigma", True)
     max_length = config.text_encoder.model_max_length
     model_weight_dtype = get_weight_dtype(config.model.mixed_precision)
     vae = None

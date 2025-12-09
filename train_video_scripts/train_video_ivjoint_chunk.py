@@ -863,7 +863,6 @@ def main(cfg: SanaVideoConfig) -> None:
     config = cfg
     args = cfg
 
-
     # 1.Initialize training mode
     if config.train.use_fsdp:
         set_fsdp_env()

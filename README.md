@@ -28,14 +28,14 @@
 
 ### 🚶 Basic:
 
-**Demo**: [SANA-1.5](https://nv-sana.mit.edu/) | [SANA-ControlNet](https://nv-sana.mit.edu/ctrlnet/) | [SANA-4bit](https://nv-sana.mit.edu/4bit/) | [SANA-Sprint](https://nv-sana.mit.edu/sprint/) | [SANA-Sprint (HF)](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint) <br>
+**Demo**: [SANA-1.5](https://nv-sana.mit.edu/) | [SANA-ControlNet](https://nv-sana.mit.edu/ctrlnet/) | [SANA-4bit](https://nv-sana.mit.edu/4bit/) | [SANA-Sprint](https://nv-sana.mit.edu/sprint/) | [SANA-Sprint (HF)](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint) | [SANA-Video](https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint)<br>
 **ComfyUI**: [ComfyUI Guidance](asset/docs/ComfyUI/comfyui.md) <br>
 **Model Zoo:** [Model Card Collects All Models](asset/docs/model_zoo.md) <br>
 **Env Preparation:** [One-Click Env Install](#-1-dependencies-and-installation) <br>
 **Blog**: [Infinite Context for LLM and Video Generation](https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory)
 <br>
-**Inference:** <br>      1) [diffusers:SanaPipeline](#1-how-to-use-sanapipeline-with-diffusers) <br>      2) [diffusers:SanaPAGPipeline](#2-how-to-use-sanapagpipeline-with-diffusers) <br>      3) [Ours:SanaPipeline](#3-how-to-use-sana-in-this-repo) <br>      4) [Inference with Docker](#4-run-sana-inference-with-docker) <br>      5) [Inference with TXT or JSON Files](#5-run-inference-with-txt-or-json-files) <br>      6) [Inference SANA-Video](asset/docs/sana_video.md#-how-to-inference) <br>
-**Training and Data:** <br>      1) [Image-Text Pairs](#1-train-with-image-text-pairs-in-directory) <br>      2) [Multi-Scale Webdataset](#2-train-with-multi-scale-webdataset) <br>      3) [TAR File Multi-Scale Webdataset](#3-train-with-tar-file) <br>      4) [FSDP Launch](#3-train-with-tar-file) <br>      5) [LoRA Training](asset/docs/sana_lora_dreambooth.md) <br>      6) [SANA-Sprint Diffusers Training](https://github.com/huggingface/diffusers/blob/main/examples/research_projects/sana/README.md) <br>      7) [SANA-Video Training](asset/docs/sana_video.md#-how-to-train) <br>
+**Inference:** <br>      1) [diffusers:SanaPipeline](#1-how-to-use-sanapipeline-with-diffusers) <br>      2) [diffusers:SanaPAGPipeline](#2-how-to-use-sanapagpipeline-with-diffusers) <br>      3) [Ours:SanaPipeline](#3-how-to-use-sana-in-this-repo) <br>      4) [Inference with Docker](#4-run-sana-inference-with-docker) <br>      5) [Inference with TXT or JSON Files](#5-run-inference-with-txt-or-json-files) <br>      6) [Inference SANA-Video](asset/docs/sana_video.md#-how-to-inference) <br>      6) [Inference LongSANA](asset/docs/longsana.md#-how-to-inference) <br>
+**Training and Data:** <br>      1) [Image-Text Pairs](#1-train-with-image-text-pairs-in-directory) <br>      2) [Multi-Scale Webdataset](#2-train-with-multi-scale-webdataset) <br>      3) [TAR File Multi-Scale Webdataset](#3-train-with-tar-file) <br>      4) [FSDP Launch](#3-train-with-tar-file) <br>      5) [LoRA Training](asset/docs/sana_lora_dreambooth.md) <br>      6) [SANA-Sprint Diffusers Training](https://github.com/huggingface/diffusers/blob/main/examples/research_projects/sana/README.md) <br>      7) [SANA-Video Training](asset/docs/sana_video.md#-how-to-train) <br>      8) [LongSANA Training](asset/docs/longsana.md#-how-to-train) <br>
 
 ### 🏃 Applications:
 
@@ -52,6 +52,7 @@
 **SANA-Sprint: One-Step Diffusion**: [Arxiv](https://arxiv.org/pdf/2503.09641) | [Train&Inference Guidance](asset/docs/sana_sprint.md) | [Model Zoo](asset/docs/model_zoo.md#sana-sprint) | [HF Weights](https://hf.co/collections/Efficient-Large-Model/sana-sprint) <br>
 **SANA-1.5: Efficient Model Scaling:** [Arxiv](https://arxiv.org/abs/2501.18427) | [Model Zoo](asset/docs/model_zoo.md#sana-15) | [HF Weights](https://hf.co/collections/Efficient-Large-Model/sana-15) <br>
 **SANA-Video: Efficient Video Gen**: [Arxiv](https://arxiv.org/pdf/2509.24695) | [Train&Inference Guidance](asset/docs/sana_video.md) | [Model Zoo](asset/docs/model_zoo.md#sana-video) | [HF Weights](https://hf.co/collections/Efficient-Large-Model/sana-video) <br>
+**LongSANA: SANA-Video + LongLive**: [Train&Inference Guidance](asset/docs/longsana.md) | [Model Zoo](asset/docs/model_zoo.md#sana-video) | [HF Weights](https://hf.co/collections/Efficient-Large-Model/sana-video) <br>
 
 ### 🚀 Future:
 
@@ -59,12 +60,14 @@
 
 ## 🔥🔥 News
 
+- (🔥 New) \[2025/12/09\] 🎬 [LongSANA](asset/docs/longsana.md) training and inference code are all released. Thanks to [LongLive Team](https://github.com/NVlabs/LongLive). Refer to: [\[Train\]](asset/docs/longsana.md#-how-to-train) | [\[Test\]](asset/docs/longsana.md#-how-to-inference) | [\[Weight\]](asset/docs/model_zoo.md#sana-video)
+- (🔥 New) \[2025/11/21\] 🎬 [LongSANA](asset/docs/longsana.md): 27FPS real-time minute-length video generation model is released. Thanks to [LongLive](https://github.com/NVlabs/LongLive). [\[Weight\]](asset/docs/model_zoo.md#sana-video)
 - (🔥 New) [2025/11/24] 🪶 [Blog](https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory): how Causal Linear Attention unlocks infinite context for LLMs and long video generation.
 - (🔥 New) [2025/11/9] 🎬 [Introduction video](https://www.youtube.com/watch?v=ztdkfIMkdJ4) shows how Block Causal Linear Attention and Causal Mix-FFN work?
 - (🔥 New) [2025/11/6] 📺**SANA-Video** is merged into [diffusers](https://huggingface.co/docs/diffusers/main/en/api/pipelines/sana_video). [How to use](asset/docs/sana_video.md#1-how-to-use-sanavideopipeline-with-diffusers).
 - (🔥 New) [2025/10/27] 📺**SANA-Video** is released. [[README]](asset/docs/sana_video.md) | [[Weights]](asset/docs/model_zoo.md#sana-video) support Text-to-Video, TextImage-to-Video.
 - (🔥 New) [2025/10/13] 📺**SANA-Video** is coming, 1). a 5s Linear DiT Video model, and 2). real-time minute-length video generation (with [LongLive](https://github.com/NVlabs/LongLive)). [[paper]](https://www.arxiv.org/pdf/2509.24695) | [[Page]](https://nvlabs.github.io/Sana/Video/)
-- (🔥 New) [2025/8/20] We release a new DC-AE-Lite for faster inference and smaller memory. [[How to config]](https://github.com/NVlabs/Sana/blob/main/configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd_dc_ae_lite.yaml#L52) | [[diffusers PR]](https://github.com/huggingface/diffusers/pull/12169) | [Weight](https://huggingface.co/mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers)
+- (🔥 New) [2025/8/20] We release a new DC-AE-Lite for faster inference and smaller memory. [\[How to config\]](https://github.com/NVlabs/Sana/blob/main/configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd_dc_ae_lite.yaml#L52) | [\[diffusers PR\]](https://github.com/huggingface/diffusers/pull/12169) | [\[Weight\]](https://huggingface.co/mit-han-lab/dc-ae-lite-f32c32-sana-1.1-diffusers)
 - (🔥 New) [2025/6/25] [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/) was accepted to ICCV'25 🏖️
 - (🔥 New) [2025/6/4] SANA-Sprint [ComfyUI Node](https://github.com/lawrence-cj/ComfyUI_ExtraModels) is released [[Example]](asset/docs/ComfyUI/SANA-Sprint.json).
 - (🔥 New) [2025/5/8] SANA-Sprint (One-step diffusion) diffusers training code is released [[Guidance]](https://github.com/huggingface/diffusers/blob/main/examples/research_projects/sana/README.md).
@@ -503,7 +506,8 @@ We will try our best to achieve
 - [✅] SANA-Sprint: Few-step generator
 - [✅] Faster DCAE-Lite [weight](https://huggingface.co/dc-ai/dc-ae-lite-f32c32-diffusers)
 - [✅] Better re-construction F32/F64 [VAEs](https://github.com/dc-ai-projects/DC-Gen).
-- [🚀] SANA-Video: 5s Linear DiT Video model, and real-time minute-length video generation (See you in ICCV 2025)
+- [✅] SANA-Video: Linear DiT Video model, and real-time minute-length video generation
+- [🚀] See you in the future
 
 # 🤗Acknowledgements
 

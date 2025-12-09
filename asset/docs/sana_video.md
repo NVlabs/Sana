@@ -52,7 +52,7 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 
 ### 1. How to use Sana-Video Pipelines in `🧨diffusers`
 
-> [!IMPORTANT]
+> \[!IMPORTANT\]
 >
 > ```bash
 > pip install git+https://github.com/huggingface/diffusers
@@ -92,7 +92,7 @@ video = pipe(
 export_to_video(video, "sana_video.mp4", fps=16)
 ```
 
-### Text-to-Video: SanaImageToVideoPipeline
+### Image-to-Video: SanaImageToVideoPipeline
 
 ```python
 import torch
@@ -132,8 +132,9 @@ export_to_video(output, "sana-ti2v-output.mp4", fps=16)
 
 ### 2. Inference with TXT file
 
+#### Text-to-Video
+
 ```bash
-# Text to Video
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
@@ -143,8 +144,11 @@ bash inference_video_scripts/inference_sana_video.sh \
       --motion_score 30 \
       --flow_shift 8 \
       --work_dir output/sana_t2v_video_results
+```
 
-# Text-Image to Video
+#### Image-to-Video
+
+```bash
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml \
@@ -226,3 +230,14 @@ python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_
 | **SANA-Video-2B** | **36** | **84.05** | **84.63** | **81.73** |
 
 **Summary**: Compared with the current SOTA small video models, SANA's performance is very competitive and speed is much faster. SANA provides 83.71 VBench overall performance with only 2B model parameters, **16× acceleration** at 480p, and achieves 84.05 total score with only **36s latency** at 720p resolution.
+
+### VBench Results - 30s Long Video Vbench
+
+| Models | FPS | Total ↑ | Quality ↑ | Semantic ↑ |
+|--------|-------------|---------|-----------|------------|
+| SkyReels-V2       | 0.49      |  75.29    | 80.77     | 53.37     |
+| FramePack         | 0.92      |  81.95    | 83.61     | 75.32     |
+| Self-Forcing      | 17.0      |  81.59    | 83.82     | 72.70     |
+| **LongSANA-2B**   | **27.5**  | **82.29** | **83.10** | **79.04** |
+
+**Summary**: Compared with the current SOTA long video generation models, LongSANA (SANA-Video + [LongLive](https://github.com/NVlabs/LongLive))'s speed and performance is very competitive. LongSANA's 27FPS generatin speed on H100 makes real-time generation possible.

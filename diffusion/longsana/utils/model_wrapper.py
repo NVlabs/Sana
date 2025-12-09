@@ -18,10 +18,9 @@ from .scheduler import FlowMatchScheduler, SchedulerInterface
 class SanaModelWrapper(torch.nn.Module):
     def __init__(self, sana_model, flow_shift: float = 3.0):
         super().__init__()
-        # 直接持有底层 SANA 模型，避免初始化完整 pipeline 造成显存占用
         self.model = sana_model
         self.flow_shift = float(flow_shift)
-        self.uniform_timestep = False  # Sana支持per-frame timestep
+        self.uniform_timestep = False
         self.scheduler = FlowMatchScheduler(shift=self.flow_shift, sigma_min=0.0, extra_one_step=True)
         self.scheduler.set_timesteps(1000, training=True)
 
@@ -45,14 +44,10 @@ class SanaModelWrapper(torch.nn.Module):
         self.get_scheduler()
 
     def enable_gradient_checkpointing(self):
-        """启用梯度检查点"""
         if hasattr(self.model, "enable_gradient_checkpointing"):
             self.model.enable_gradient_checkpointing()
 
-    # TODO 使用正确的scheduler
     def get_scheduler(self):
-        """获取调度器"""
-        # 参考 SANA 内部：使用 diffusers 的 FlowMatchEulerDiscreteScheduler
         return self.scheduler
 
     def _convert_flow_pred_to_x0(
@@ -114,27 +109,20 @@ class SanaModelWrapper(torch.nn.Module):
         **kwargs,
     ) -> torch.Tensor:
 
-        # 这里需要将Sana的接口适配到Wan的接口
         # noisy_image_or_video: (B, C, F, H, W)
-        # 处理 prompt_embeds 形状：期望 (B, 1, L, C)
+        # Process prompt_embeds shape: expected (B, 1, L, C)
         if condition.dim() == 3:
             condition = condition.unsqueeze(1)
         elif condition.dim() == 2:
             condition = condition.unsqueeze(0).unsqueeze(0)
 
-        # SANA 模型前向（支持保存/使用 KV cache）
-        # SANA 原始实现用 flow matching：返回的是 flow_pred，需转成 x0 以对齐 WAN 接口
+        # SANA model forward (supports saving/using KV cache)
+        # SANA original implementation uses flow matching: returns flow_pred, need to convert to x0 to align with WAN interface
         model = self.model
-        # 统一将 timestep 压缩到 [B]
         if timestep.dim() == 2:
             input_t = timestep[:, 0]
         else:
             input_t = timestep
-
-        # if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
-        #     print(f"[SanaModelWrapper] noisy_image_or_video.shape={noisy_image_or_video.shape}")
-        #     print(f"[SanaModelWrapper] input_t.shape={input_t.shape}")
-        #     print(f"[SanaModelWrapper] condition.shape={condition.shape}")
 
         model_out = model(
             noisy_image_or_video,
@@ -152,7 +140,7 @@ class SanaModelWrapper(torch.nn.Module):
         else:
             kv_cache_ret = None
 
-        # 兼容 diffusers 输出
+        # Compatible with diffusers output
         try:
             from diffusers.models.modeling_outputs import Transformer2DModelOutput
 
@@ -164,7 +152,7 @@ class SanaModelWrapper(torch.nn.Module):
         if isinstance(model_out, Transformer2DModelOutput):
             model_out = model_out[0]
 
-        # SANA 返回的是 flow_pred，形状 (B, C, F, H, W)
+        # B, C, F, H, W
         flow_pred_bcfhw = model_out
         flow_pred = rearrange(flow_pred_bcfhw, "b c f h w -> b f c h w")  # (B, F, C, H, W)
         noisy_image_or_video = rearrange(noisy_image_or_video, "b c f h w -> b f c h w")  # (B, F, C, H, W)
@@ -175,9 +163,6 @@ class SanaModelWrapper(torch.nn.Module):
         )  # (B, F, C, H, W)
         pred_x0_bcfhw = rearrange(pred_x0, "b f c h w -> b c f h w")  # (B, C, F, H, W)
 
-        # 对齐 WAN 接口：
-        # - 常规：返回 (flow_pred, pred_x0)
-        # - 当底层返回了 kv_cache（如 save_kv_cache=True）：返回 (flow_pred, pred_x0, kv_cache)
         return flow_pred_bcfhw, pred_x0_bcfhw, kv_cache_ret
 
 
@@ -192,7 +177,6 @@ class SanaTextEncoder(torch.nn.Module):
         self.text_encoder.eval().requires_grad_(False)
 
     def forward_chi(self, text_prompts: List[str], use_chi_prompt: bool = True) -> dict:
-        # import ipdb; ipdb.set_trace()
         if not isinstance(text_prompts, list):
             text_prompts = [text_prompts]
         chi_list = getattr(self.cfg.text_encoder, "chi_prompt", None) if use_chi_prompt else None
@@ -229,14 +213,11 @@ class SanaTextEncoder(torch.nn.Module):
             return_tensors="pt",
         ).to(self.device)
         with torch.no_grad():
-            # raw embeddings (B, L, C)
             embs_full = self.text_encoder(tokens.input_ids, tokens.attention_mask)[0]
 
         select_index = [0] + list(range(-max_len + 1, 0))
-        embs = embs_full[:, None][:, :, select_index].squeeze(1)  # (B, L, C)
-        # cast to target dtype (e.g., bf16) for downstream model consistency
+        embs = embs_full[:, None][:, :, select_index].squeeze(1)
         embs = embs.to(device=self.device, dtype=self.out_dtype)
-        # build mask aligned with selected tokens (B, L)
         emb_masks = tokens.attention_mask[:, select_index]
         return {"prompt_embeds": embs, "mask": emb_masks}
 
@@ -248,7 +229,6 @@ class SanaVAEWrapper(torch.nn.Module):
         self.dtype = dtype
         self.cfg = sana_cfg
         self.vae_name = sana_cfg.vae.vae_type
-        # 使用官方 pipeline 的 VAE dtype 以避免 dtype 不一致
         try:
             self.vae_dtype = get_weight_dtype(sana_cfg.vae.weight_dtype)
         except Exception:
@@ -266,12 +246,9 @@ class SanaVAEWrapper(torch.nn.Module):
         latent_bcthw = latent
         if latent_bcthw.dim() != 5:
             raise ValueError("latent must be a 5D tensor [B, C, T, H, W]")
-        b, c, t, h, w = latent_bcthw.shape
 
-        # 解码前将 latent 转为 VAE 的 dtype，确保与权重一致
         latent_bcthw = latent_bcthw.to(device=self.device, dtype=self.vae_dtype)
         pixel_bcthw = vae_decode(self.vae_name, self.vae, latent_bcthw)
-        # 兼容部分实现返回 list/tuple 的情况：堆叠为 Tensor
         if isinstance(pixel_bcthw, (list, tuple)):
             if len(pixel_bcthw) == 0:
                 raise RuntimeError("vae_decode returned empty list/tuple")

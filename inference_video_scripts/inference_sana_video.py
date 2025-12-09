@@ -235,9 +235,9 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     config.vae.vae_type, vae, torch.stack(images, dim=0)[:, :, None].to(vae_dtype), device=device
                 )  # 1,C,1,H,W
                 condition_frame_info = {
-                    0: (
-                        config.train.noise_multiplier if config.train.noise_multiplier is not None else 0.0
-                    ),  # frame_idx: frame_weight, weight is used for timestep
+                    0: config.train.noise_multiplier
+                    if config.train.noise_multiplier is not None
+                    else 0.0,  # frame_idx: frame_weight, weight is used for timestep
                 }
                 for frame_idx in list(condition_frame_info.keys()):
                     z[:, :, frame_idx : frame_idx + 1] = image_vae_embeds  # 1,C,F,H,W, first frame is the image
@@ -265,21 +265,6 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     cfg_scale=cfg_scale,
                     flow_shift=flow_shift,
                     model_kwargs=model_kwargs,
-                )
-                samples = flow_solver.sample(
-                    z,
-                    steps=sample_steps,
-                    generator=generator,
-                )
-            elif args.sampling_algo == "longlive_flow_euler":
-                base_chunk_frames = base_model_frames // config.vae.vae_stride[0]
-                flow_solver = LongLiveFlowEuler(
-                    model,
-                    condition=caption_embs,
-                    flow_shift=flow_shift,
-                    model_kwargs=model_kwargs,
-                    base_chunk_frames=base_chunk_frames,
-                    num_cached_blocks=args.num_cached_blocks,
                 )
                 samples = flow_solver.sample(
                     z,
@@ -317,6 +302,21 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     skip_type=args.skip_type,
                     method="multistep",
                     flow_shift=flow_shift,
+                )
+            elif args.sampling_algo == "longlive_flow_euler":
+                base_chunk_frames = base_model_frames // config.vae.vae_stride[0]
+                flow_solver = LongLiveFlowEuler(
+                    model,
+                    condition=caption_embs,
+                    flow_shift=flow_shift,
+                    model_kwargs=model_kwargs,
+                    base_chunk_frames=base_chunk_frames,
+                    num_cached_blocks=args.num_cached_blocks,
+                )
+                samples = flow_solver.sample(
+                    z,
+                    steps=sample_steps,
+                    generator=generator,
                 )
             else:
                 raise ValueError(f"{args.sampling_algo} is not defined")
@@ -381,9 +381,7 @@ class SanaInference(SanaVideoConfig):
     high_motion: bool = False
     prompt_split_token: str = "<split>"
     motion_score: int = 10
-    negative_prompt: str = (
-        "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
-    )
+    negative_prompt: str = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
     interval_k: float = 0.0
     unified_noise: bool = False
     stg_applied_layers: List[int] = field(default_factory=list)
@@ -450,6 +448,9 @@ if __name__ == "__main__":
             negative_parts.append(f"{key}: {value}")
         config.negative_prompt = " ".join(negative_parts)
     logger.info(f"negative_prompt: {config.negative_prompt}")
+
+    if args.sampling_algo == "longlive_flow_euler":
+        assert args.cfg_scale == 1.0, "cfg_scale must be 1.0 for longlive_flow_euler"
 
     guidance_type = args.guidance_type
     if guidance_type == "adaptive_projected_guidance":
@@ -581,7 +582,7 @@ if __name__ == "__main__":
     def create_save_root(args, dataset, epoch_name, step_name, sample_steps, num_frames):
         save_root = os.path.join(
             img_save_dir,
-            f"{dataset}_epoch{epoch_name}_step{step_name}_scale{args.cfg_scale}"
+            f"{dataset}_step{step_name}_scale{args.cfg_scale}"
             f"_step{sample_steps}_size{args.image_size}_numframes{num_frames}_bs{args.bs}_samp{args.sampling_algo}"
             f"_seed{args.seed}_{str(weight_dtype).split('.')[-1]}",
         )
@@ -593,7 +594,7 @@ if __name__ == "__main__":
         if args.interval_k > 0:
             save_root += f"_interval_k{int(args.interval_k*1000)}"
         if args.num_cached_blocks > 0:
-            save_root += f"_numcachedblocks{args.num_cached_blocks}"
+            save_root += f"_numcb{args.num_cached_blocks}"
         if args.high_motion:
             save_root += f"_highmotion"
         if args.motion_score > 0:

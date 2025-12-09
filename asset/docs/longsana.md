@@ -24,22 +24,58 @@ LongSANA's Core Contributions:
 
 ## 🏃 How to Inference
 
-### 1. How to use LongSANA Pipelines in `🧨diffusers`
+### 1. How to use LongSANA Pipelines in `🧨diffusers` ([Coming soon](https://github.com/huggingface/diffusers/pull/12723))
 
-The diffusers version will release soon.
+> [!IMPORTANT]
+>
+> ```bash
+> pip install git+https://github.com/huggingface/diffusers
+> ```
 
+```python
+import torch
+from diffusers import LongSanaVideoPipeline, FlowMatchEulerDiscreteScheduler
+from diffusers.utils import export_to_video
+
+pipe = LongSanaVideoPipeline.from_pretrained(
+    "Efficient-Large-Model/Sana-Video_2B_480p_LongLive_diffusers",
+    torch_dtype=torch.bfloat16,
+    base_chunk_frames=10,
+    num_cached_blocks=-1,
+)
+pipe.scheduler = FlowMatchEulerDiscreteScheduler()
+pipe.vae.to(torch.float32)
+pipe.text_encoder.to(torch.bfloat16)
+pipe.to("cuda")
+
+prompt = "Evening, backlight, side lighting, soft light, high contrast, mid-shot, centered composition, clean solo shot, warm color. A young Caucasian man stands in a forest, golden light glimmers on his hair as sunlight filters through the leaves. He wears a light shirt, wind gently blowing his hair and collar, light dances across his face with his movements. The background is blurred, with dappled light and soft tree shadows in the distance. The camera focuses on his lifted gaze, clear and emotional."
+negative_prompt = "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards"
+
+video = pipe(
+    prompt=prompt,
+    negative_prompt=negative_prompt,
+    height=480,
+    width=832,
+    frames=161,
+    guidance_scale=1.0,
+    timesteps=[1000, 960, 889, 727, 0],
+    generator=torch.Generator(device="cuda").manual_seed(42),
+).frames[0]
+export_to_video(video, "longsana.mp4", fps=16)
+```
 
 ### 2. Inference with TXT file
 
 ```bash
 # Text to Video
+# num_frames = N_seconds x 16 + 1
 accelerate launch --mixed_precision=bf16 \
     inference_video_scripts/inference_sana_video.py \
     --config=configs/sana_video_config/Sana_2000M_480px_adamW_fsdp_longsana.yaml \
     --model_path=hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth \
     --work_dir=output/inference/longsana_480p \
     --txt_file=asset/samples/video_prompts_samples.txt \
-    --dataset=samples --cfg_scale=1.0 --num_frames 961
+    --dataset=samples --cfg_scale=1.0 --num_frames 321
 ```
 
 ## 💻 How to Train

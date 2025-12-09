@@ -119,8 +119,6 @@ class ShardingLMDBDataset(Dataset):
             for local_i in range(self.latents_shape[shard_id][0]):
                 self.index.append((shard_id, local_i))
 
-            # print("shard_id ", shard_id, " local_i ", local_i)
-
         self.max_pair = max_pair
 
     def __len__(self):
@@ -272,38 +270,33 @@ class TwoTextDataset(Dataset):
 class MultiTextDataset(Dataset):
     """Dataset for multiple‑segment prompts stored in a JSONL file.
 
-    每行是一个 JSON 对象，例如
-        {"prompts": ["a cat", "a dog", "a bird"]}
+    Each line is a JSON object, e.g.
+    {"prompts": ["a cat", "a dog", "a bird"]}
 
-    参数
-    ----
-    prompt_path : str
-        JSONL 文件路径
-    field       : str
-        保存字符串列表的字段名，默认 "prompts"
-    cache_dir   : str | None
-        传给 HF Datasets 的 cache_dir，可选
+    Args:
+        prompt_path (str): JSONL file path
+        field (str): Field name to save the list of strings, default "prompts"
+        cache_dir (str | None): Cache directory for HF Datasets
     """
 
     def __init__(self, prompt_path: str, field: str = "prompts", cache_dir: str | None = None):
-        # 利用 HF Datasets 读取 jsonl，自动 mmap / Arrow 缓存
         self.ds = datasets.load_dataset(
             "json",
             data_files=prompt_path,
             split="train",
             cache_dir=cache_dir,
-            streaming=False,  # 如需流式加载可改 True
+            streaming=False,
         )
 
-        assert len(self.ds) > 0, "JSONL 为空"
-        assert field in self.ds.column_names, f"缺少字段 '{field}'"
+        assert len(self.ds) > 0, "JSONL is empty"
+        assert field in self.ds.column_names, f"Field '{field}' is missing"
 
-        # 校验所有样本 list 长度一致
+        # Check if all samples list length is consistent
         seg_len = len(self.ds[0][field])
         for i, ex in enumerate(self.ds):
             val = ex[field]
-            assert isinstance(val, list), f"第 {i} 行字段 '{field}' 不是 list"
-            assert len(val) == seg_len, f"第 {i} 行 list 长度不一致"
+            assert isinstance(val, list), f"The field '{field}' in the {i}th line is not a list"
+            assert len(val) == seg_len, f"The list length in the {i}th line is not consistent"
 
         self.field = field
 

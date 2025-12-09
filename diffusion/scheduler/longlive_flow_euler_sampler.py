@@ -1,13 +1,10 @@
-import os
 import time
 import types
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
-import imageio
 import torch
 from einops import rearrange
-from termcolor import colored
 
 from diffusion.model.nets.basic_modules import CachedGLUMBConvTemp
 from diffusion.model.nets.sana_blocks import CachedCausalAttention
@@ -186,15 +183,14 @@ class FlowMatchScheduler:
 
 class SanaModelWrapper(torch.nn.Module):
     """
-    Sana模型包装器，提供与WanDiffusionWrapper兼容的接口
+    SANA-Video Wrapper
     """
 
     def __init__(self, sana_model, flow_shift: float = 3.0):
         super().__init__()
-        # 直接持有底层 SANA 模型，避免初始化完整 pipeline 造成显存占用
         self.model = sana_model
         self.flow_shift = float(flow_shift)
-        self.uniform_timestep = False  # Sana支持per-frame timestep
+        self.uniform_timestep = False  # SANA-Video supports
         self.scheduler = FlowMatchScheduler(shift=self.flow_shift, sigma_min=0.0, extra_one_step=True)
         self.scheduler.set_timesteps(1000, training=True)
 
@@ -218,15 +214,8 @@ class SanaModelWrapper(torch.nn.Module):
         self.get_scheduler()
 
     def enable_gradient_checkpointing(self):
-        """启用梯度检查点"""
         if hasattr(self.model, "enable_gradient_checkpointing"):
             self.model.enable_gradient_checkpointing()
-
-    # TODO 使用正确的scheduler
-    def get_scheduler(self):
-        """获取调度器"""
-        # 参考 SANA 内部：使用 diffusers 的 FlowMatchEulerDiscreteScheduler
-        return self.scheduler
 
     def _convert_flow_pred_to_x0(
         self, flow_pred: torch.Tensor, xt: torch.Tensor, timestep: torch.Tensor
@@ -247,7 +236,6 @@ class SanaModelWrapper(torch.nn.Module):
         flow_pred, xt, sigmas, timesteps = map(
             lambda x: x.double().to(flow_pred.device), [flow_pred, xt, self.scheduler.sigmas, self.scheduler.timesteps]
         )
-
         timestep_id = torch.argmin((timesteps.unsqueeze(0) - timestep.unsqueeze(1)).abs(), dim=1)
         sigma_t = sigmas[timestep_id].reshape(-1, 1, 1, 1)
         x0_pred = xt - sigma_t * flow_pred
@@ -286,30 +274,16 @@ class SanaModelWrapper(torch.nn.Module):
         mask: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> torch.Tensor:
-        """
-        前向传播，兼容WanDiffusionWrapper的接口
-        """
-        # 这里需要将Sana的接口适配到Wan的接口
-        # noisy_image_or_video: (B, C, F, H, W)
-        # 处理 prompt_embeds 形状：期望 (B, 1, L, C)
         if condition.dim() == 3:
             condition = condition.unsqueeze(1)
         elif condition.dim() == 2:
             condition = condition.unsqueeze(0).unsqueeze(0)
 
-        # SANA 模型前向（支持保存/使用 KV cache）
-        # SANA 原始实现用 flow matching：返回的是 flow_pred，需转成 x0 以对齐 WAN 接口
         model = self.model
-        # 统一将 timestep 压缩到 [B]
         if timestep.dim() == 2:
             input_t = timestep[:, 0]
         else:
             input_t = timestep
-
-        # if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
-        #     print(f"[SanaModelWrapper] noisy_image_or_video.shape={noisy_image_or_video.shape}")
-        #     print(f"[SanaModelWrapper] input_t.shape={input_t.shape}")
-        #     print(f"[SanaModelWrapper] condition.shape={condition.shape}")
 
         model_out = model(
             noisy_image_or_video,
@@ -327,7 +301,6 @@ class SanaModelWrapper(torch.nn.Module):
         else:
             kv_cache_ret = None
 
-        # 兼容 diffusers 输出
         try:
             from diffusers.models.modeling_outputs import Transformer2DModelOutput
 
@@ -339,20 +312,14 @@ class SanaModelWrapper(torch.nn.Module):
         if isinstance(model_out, Transformer2DModelOutput):
             model_out = model_out[0]
 
-        # SANA 返回的是 flow_pred，形状 (B, C, F, H, W)
         flow_pred_bcfhw = model_out
-        flow_pred = rearrange(flow_pred_bcfhw, "b c f h w -> b f c h w")  # (B, F, C, H, W)
-        noisy_image_or_video = rearrange(noisy_image_or_video, "b c f h w -> b f c h w")  # (B, F, C, H, W)
+        flow_pred = rearrange(flow_pred_bcfhw, "b c f h w -> b f c h w")
+        noisy_image_or_video = rearrange(noisy_image_or_video, "b c f h w -> b f c h w")
         pred_x0 = self._convert_flow_pred_to_x0(
             flow_pred=flow_pred.flatten(0, 1), xt=noisy_image_or_video.flatten(0, 1), timestep=input_t
-        ).unflatten(
-            0, flow_pred.shape[:2]
-        )  # (B, F, C, H, W)
-        pred_x0_bcfhw = rearrange(pred_x0, "b f c h w -> b c f h w")  # (B, C, F, H, W)
+        ).unflatten(0, flow_pred.shape[:2])
+        pred_x0_bcfhw = rearrange(pred_x0, "b f c h w -> b c f h w")
 
-        # 对齐 WAN 接口：
-        # - 常规：返回 (flow_pred, pred_x0)
-        # - 当底层返回了 kv_cache（如 save_kv_cache=True）：返回 (flow_pred, pred_x0, kv_cache)
         return flow_pred_bcfhw, pred_x0_bcfhw, kv_cache_ret
 
 
@@ -368,25 +335,16 @@ class LongLiveFlowEuler:
         denoising_step_list=[1000, 960, 889, 727],
         **kwargs,
     ):
-        """
-        仅推理用的 SANA 管线：无梯度地生成整段视频。
-
-        初始化签名与 Trainer 中的使用保持一致：
-            SanaInferencePipeline(args, device, generator, text_encoder, vae)
-        """
         self.generator = SanaModelWrapper(model_fn, flow_shift=flow_shift)
         self.condition = condition
         self.mask = model_kwargs.pop("mask", None)
 
-        # timestep_shift = float(getattr(args, "timestep_shift", 3.0))
         self.scheduler = self.generator.get_scheduler()
-        # hyperparams
         self.num_frame_per_block = base_chunk_frames
         self.denoising_step_list = denoising_step_list
         if len(self.denoising_step_list) > 0 and self.denoising_step_list[-1] == 0:
             self.denoising_step_list = self.denoising_step_list[:-1]
-        # print(f"[SanaInferencePipeline] denoising_step_list={self.denoising_step_list}")
-        # model meta
+
         inner = self.generator.model if hasattr(self.generator, "model") else self.generator
         try:
             p = next(inner.parameters())
@@ -396,11 +354,9 @@ class LongLiveFlowEuler:
             self.model_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.model_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
 
-        # cache helpers
         self.cached_modules = None
         self.num_model_blocks = 0
         self.num_cached_blocks = num_cached_blocks
-        # print(f"[SanaInferencePipeline] num_cached_blocks={self.num_cached_blocks}")
 
         self._initialize_cached_modules()
 
@@ -487,34 +443,15 @@ class LongLiveFlowEuler:
         return cur_kv_cache
 
     @torch.no_grad()
-    def sample(self, latents: torch.Tensor, steps: int = 4, generator=None, **kwargs):
-        """
-        生成完整视频。
-
-        Args:
-            noise: [B, T, C, H, W] 或 [B, C, T, H, W] 的高斯噪声 latent。
-            text_prompts: 文本提示（长度=B）。
-            return_latents: 为 True 返回 latent（B,T,C,H,W）；否则返回像素（B,T,C,H,W，范围0..1的-1..1归一化由上游处理）。
-            initial_latent: 可选的首帧 latent，形状 [B, T0, C, H, W]（常用 T0=1）。
-        Returns:
-            video: 若 return_latents=True，返回 [B, T, C, H, W]；否则返回像素 [B, T, C, H, W]
-            info: dict
-        """
-        # 标准化 latent 形状到 B,C,T,H,W
-        start_time = time.time()
+    def sample(self, latents: torch.Tensor, **kwargs):
         if latents.dim() != 5:
             raise ValueError("noise should be a 5D tensor")
 
         latents_bcthw = latents
-        device = self.condition.device
 
         batch_size, c, total_t, h, w = latents_bcthw.shape
 
-        # 文本编码：对齐 trainer 中的构造方式（支持 chi_prompt、select_index、dtype/device 对齐）
-
-        # autoregressive 切分
         chunk_indices = self._create_autoregressive_segments(total_t, self.num_frame_per_block)
-        # print(f"[SanaInferencePipeline] chunk_indices={chunk_indices}")
         num_chunks = len(chunk_indices) - 1
         kv_cache = self._initialize_kv_cache(num_chunks)
 
@@ -528,13 +465,8 @@ class LongLiveFlowEuler:
         condition = self.condition
         mask = self.mask
 
-        # 输出 latent 容器（与输入相同 dtype/device）
         output = torch.zeros_like(latents_bcthw)
 
-        # 去噪步数
-        steps = max(1, len(self.denoising_step_list))
-        # print(colored(f"[SanaInferencePipeline] num_chunks={num_chunks}, steps={steps}", "red"))
-        # 逐 chunk 生成
         for chunk_idx in range(num_chunks):
             start_f = chunk_indices[chunk_idx]
             end_f = chunk_indices[chunk_idx + 1]
@@ -543,19 +475,16 @@ class LongLiveFlowEuler:
             chunk_condition = condition[chunk_idx].unsqueeze(0) if condition is not None else None
             chunk_mask = mask[chunk_idx] if mask is not None else None
 
-            # 取累计后的 KV cache（重算式累计）
             chunk_kv_cache = self._accumulate_kv_cache(kv_cache, chunk_idx)
-            # chunk_kv_cache = kv_cache[chunk_idx] # no accumulate, no update
             batch_size = local_latent.shape[0]
             current_num_frames = local_latent.shape[2]
-            # 全步 xt-style 推进：xt_{i+1} = x0_i + sigma_{i+1} * flow_pred_i
+
             for index, current_timestep in enumerate(self.denoising_step_list):
-                # print(f"[SanaInferencePipeline] step_idx={step_idx}, t={t}")
                 timestep = (
                     torch.ones(local_latent.shape[0], device=self.model_device, dtype=self.model_dtype)
                     * current_timestep
                 )
-                # import ipdb; ipdb.set_trace()
+
                 if index < len(self.denoising_step_list) - 1:
                     flow_pred, pred_x0, _ = self.generator(
                         noisy_image_or_video=local_latent,
@@ -566,8 +495,7 @@ class LongLiveFlowEuler:
                         save_kv_cache=False,
                         mask=chunk_mask,
                         kv_cache=chunk_kv_cache,
-                    )  # (B, C, F, H, W)
-                    # import ipdb; ipdb.set_trace()
+                    )
                     flow_pred = rearrange(flow_pred, "b c f h w -> b f c h w")
                     pred_x0 = rearrange(pred_x0, "b c f h w -> b f c h w")
                     next_timestep = self.denoising_step_list[index + 1]
@@ -590,10 +518,8 @@ class LongLiveFlowEuler:
                         mask=chunk_mask,
                         kv_cache=chunk_kv_cache,
                     )
-                    # 最后一步写回输出
                     output[:, :, start_f:end_f] = pred_x0.to(output.device)
 
-            # 保存并更新 KV 缓存，供后续 chunk 使用
             latent_for_cache = output[:, :, start_f:end_f]
             timestep_zero = torch.zeros(latent_for_cache.shape[0], device=self.model_device, dtype=self.model_dtype)
             _, _, updated_kv_cache = self.generator(
@@ -608,13 +534,4 @@ class LongLiveFlowEuler:
             )
             kv_cache[chunk_idx] = updated_kv_cache
 
-        # 输出
-        info = {
-            "total_frames": total_t,
-            "num_chunks": num_chunks,
-            "chunk_indices": chunk_indices,
-        }
-        dit_end_time = time.time()
-        # print(f"[SanaInferencePipeline] dit_time={dit_end_time - start_time}")
-
-        return output  # B,C,T,H,W
+        return output

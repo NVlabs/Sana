@@ -333,7 +333,6 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
 class CachedGLUMBConvTemp(GLUMBConvTemp):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.kv_cache = None
 
     def forward(self, x: torch.Tensor, HW=None, save_kv_cache=False, kv_cache=None, **kwargs) -> torch.Tensor:
         B, N, C = x.shape
@@ -358,18 +357,13 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
         padded_size = 0
         # Use internal cache with the same logic as before
         if kv_cache is not None:
-
             if kv_cache[2] is not None:
-                # import ipdb; ipdb.set_trace()
-                # import ipdb; ipdb.set_trace()
                 # Use previous chunk's temporal convolution cache
                 x_t_conv_in = torch.cat([kv_cache[2], x_reshaped], dim=2)  # B,C,P+T,HW
                 padded_size = kv_cache[2].shape[2]
 
             if save_kv_cache:  # Save current chunk's cache for next chunk
-                # import ipdb; ipdb.set_trace()
                 kv_cache[2] = x_reshaped[:, :, -padding_size:, :].detach().clone()
-                # print(f"CachedGLUMBConvTemp: Saved internal tconv cache, shape: {self.kv_cache[2].shape}")
 
         t_conv_out = self.t_conv(x_t_conv_in)[:, :, padded_size:]
         x_out = x_reshaped + t_conv_out
@@ -380,124 +374,6 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
             return x_out, kv_cache
 
         return x_out
-
-
-class SlimGLUMBConv(GLUMBConv):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # 移除 self.inverted_conv 层
-        del self.inverted_conv
-        self.out_dim = self.point_conv.out_dim
-
-    def forward(self, x: torch.Tensor, HW=None) -> torch.Tensor:
-        B, N, C = x.shape
-        if HW is None:
-            H = W = int(N**0.5)
-        else:
-            H, W = HW
-
-        # 直接使用 x，跳过 self.inverted_conv 层的调用
-        x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
-        # x = self.inverted_conv(x)
-        x = self.depth_conv(x)
-
-        x, gate = torch.chunk(x, 2, dim=1)
-        gate = self.glu_act(gate)
-        x = x * gate
-
-        x = self.point_conv(x)
-        x = x.reshape(B, self.out_dim, N).permute(0, 2, 1)
-
-        return x
-
-
-class MBConvPreGLU(nn.Module):
-    def __init__(
-        self,
-        in_dim: int,
-        out_dim: int,
-        kernel_size=3,
-        stride=1,
-        mid_dim=None,
-        expand=6,
-        padding: int or None = None,
-        use_bias=False,
-        norm=(None, None, "ln2d"),
-        act=("silu", "silu", None),
-    ):
-        super().__init__()
-        use_bias = val2tuple(use_bias, 3)
-        norm = val2tuple(norm, 3)
-        act = val2tuple(act, 3)
-
-        mid_dim = mid_dim or round(in_dim * expand)
-
-        self.inverted_conv = ConvLayer(
-            in_dim,
-            mid_dim * 2,
-            1,
-            use_bias=use_bias[0],
-            norm=norm[0],
-            act=None,
-        )
-        self.glu_act = build_act(act[0], inplace=False)
-        self.depth_conv = ConvLayer(
-            mid_dim,
-            mid_dim,
-            kernel_size,
-            stride=stride,
-            groups=mid_dim,
-            padding=padding,
-            use_bias=use_bias[1],
-            norm=norm[1],
-            act=act[1],
-        )
-        self.point_conv = ConvLayer(
-            mid_dim,
-            out_dim,
-            1,
-            use_bias=use_bias[2],
-            norm=norm[2],
-            act=act[2],
-        )
-
-    def forward(self, x: torch.Tensor, HW=None) -> torch.Tensor:
-        B, N, C = x.shape
-        if HW is None:
-            H = W = int(N**0.5)
-        else:
-            H, W = HW
-
-        x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
-
-        x = self.inverted_conv(x)
-        x, gate = torch.chunk(x, 2, dim=1)
-        gate = self.glu_act(gate)
-        x = x * gate
-
-        x = self.depth_conv(x)
-        x = self.point_conv(x)
-
-        x = x.reshape(B, C, N).permute(0, 2, 1)
-        return x
-
-    @property
-    def module_str(self) -> str:
-        _str = f"{self.depth_conv.kernel_size}{type(self).__name__}("
-        _str += f"in={self.inverted_conv.in_dim},mid={self.depth_conv.in_dim},out={self.point_conv.out_dim},s={self.depth_conv.stride}"
-        _str += (
-            f",norm={get_norm_name(self.inverted_conv.norm)}"
-            f"+{get_norm_name(self.depth_conv.norm)}"
-            f"+{get_norm_name(self.point_conv.norm)}"
-        )
-        _str += (
-            f",act={get_act_name(self.inverted_conv.act)}"
-            f"+{get_act_name(self.depth_conv.act)}"
-            f"+{get_act_name(self.point_conv.act)}"
-        )
-        _str += f",glu_act={get_act_name(self.glu_act)})"
-        return _str
 
 
 class DWMlp(Mlp):

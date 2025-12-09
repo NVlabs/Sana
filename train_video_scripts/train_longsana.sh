@@ -18,4 +18,4 @@ accelerate launch --mixed_precision=bf16 \
     --model_path=hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth \
     --work_dir=output/inference/longsana_480p \
     --txt_file=asset/samples/video_prompts_samples.txt \
-    --dataset=samples --cfg_scale=1.0 --num_frames 961
+    --dataset=samples --cfg_scale=1.0 --num_frames 161

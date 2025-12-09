@@ -31,7 +31,6 @@ from diffusion.model.nets.sana_blocks import (
     CachedCausalAttention,
     CaptionEmbedder,
     CausalWanRotaryPosEmbed,
-    ChunkAttention,
     ChunkCausalAttention,
     ChunkedLiteLAReLURope,
     ClipVisionProjection,
@@ -106,10 +105,6 @@ class SanaVideoMSBlock(nn.Module):
         elif attn_type == "cachedcausal":
             self_num_heads = hidden_size // linear_head_dim
             self.attn = CachedCausalAttention(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
-        elif attn_type == "chunkattn":
-            self.attn = ChunkAttention(
-                hidden_size, hidden_size, heads=hidden_size // linear_head_dim, eps=1e-8, qk_norm=qk_norm
-            )
         elif attn_type == "linear":
             # linear self attention
             # TODO: Here the num_heads set to 36 for tmp used

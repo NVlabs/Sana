@@ -20,7 +20,6 @@ class SchedulerInterface(ABC):
             - timestep: the timestep with shape [B]
         Output: the corrupted latent with shape [B, C, H, W]
         """
-        pass
 
     def convert_x0_to_noise(self, x0: torch.Tensor, xt: torch.Tensor, timestep: torch.Tensor) -> torch.Tensor:
         """

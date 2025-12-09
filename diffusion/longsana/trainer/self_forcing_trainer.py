@@ -64,7 +64,6 @@ class Trainer:
             )
 
         self.output_path = config.logdir
-        app_start_time = time.time_ns() / 1_000_000
 
         # Step 2: Initialize the model
         self.output_path = config.logdir

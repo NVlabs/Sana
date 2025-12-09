@@ -188,7 +188,7 @@ def debug():
         in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1, groups=512, device=device, dtype=dtype
     )
     x = torch.randn(16, 512, 32, 32, device=device, dtype=dtype).to(memory_format=torch.channels_last)
-    ref_y = conv(x)
+    # ref_y = conv(x)
     tri_y = depthwise_conv_fwd(x.permute(0, 2, 3, 1), conv.weight[:, 0], conv.bias).permute(0, 3, 1, 2)
 
 

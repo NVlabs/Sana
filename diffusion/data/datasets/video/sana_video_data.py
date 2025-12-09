@@ -143,7 +143,6 @@ class SanaZipDataset(Dataset):
                         zip_file = os.path.abspath(zip_file)
                         try:
                             with ZipFile(zip_file, "r") as z:
-                                external_captions = {}
                                 for i in z.infolist():
                                     if i.filename.endswith(".json"):
                                         continue
@@ -434,7 +433,7 @@ class SanaZipDataset(Dataset):
             data = self.dataset[idx]
             info = data["info"]
             key = data["key"]
-            ext = data["ext"]
+            data["ext"]
             if "dataset_name" in data:
                 dataset_name = data["dataset_name"]
             else:
@@ -461,6 +460,7 @@ class SanaZipDataset(Dataset):
                 "zip_file": data["zip_file"],
                 "ext": data["ext"],
                 "closest_ratio": closest_ratio,
+                "dataset_name": dataset_name,
             }
         except Exception as e:
             traceback_str = traceback.format_exc()

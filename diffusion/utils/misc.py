@@ -18,9 +18,7 @@ import collections
 import datetime
 import os
 import random
-import subprocess
 import time
-from multiprocessing import JoinableQueue, Process
 
 import numpy as np
 import torch

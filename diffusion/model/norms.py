@@ -15,7 +15,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
-import warnings
 
 import torch
 import torch.nn as nn

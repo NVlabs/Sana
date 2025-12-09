@@ -396,7 +396,6 @@ if __name__ == "__main__":
 
     if args.debug:
         print(f"debug mode, use fixed items")
-        pass
 
     for idx, item in enumerate(items):
         # args.seed = idx

@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import torch
 from einops import rearrange
@@ -202,7 +202,6 @@ class SanaInferenceInteractivePipeline:
 
         output = torch.zeros_like(latents_bcthw)
         kv_cache = self._initialize_kv_cache(num_chunks)
-        steps = max(1, len(self.denoising_step_list))
 
         # determine the corresponding prompt index for each chunk
         prompt_blocks = getattr(self.args, "prompt_blocks", kwargs.get("prompt_blocks", None))
@@ -213,7 +212,9 @@ class SanaInferenceInteractivePipeline:
                 blocks = []
                 for L in prompt_frame_lengths:
                     if L % self.num_frame_per_block != 0:
-                        raise ValueError("prompt_frame_lengths contains non-block-aligned lengths (must be a multiple of 10)")
+                        raise ValueError(
+                            "prompt_frame_lengths contains non-block-aligned lengths (must be a multiple of 10)"
+                        )
                     blocks.append(L // self.num_frame_per_block)
                 prompt_blocks = blocks
 

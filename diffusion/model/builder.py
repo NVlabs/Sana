@@ -220,7 +220,6 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
                 z = torch.from_numpy(np.stack(z)).to(device)
         except:
             z = None
-            pass
         if z is None or len(z) == 0:
             z = ae.encode(images.to(device))
             if isinstance(scaling_factor, float):
@@ -271,7 +270,6 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
                 z = [torch.from_numpy(_z).to(device) for _z in z]
         except:
             z = None
-            pass
 
         if z is None or len(z) == 0:
             z = ae.encode(images.to(device))

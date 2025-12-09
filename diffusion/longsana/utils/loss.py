@@ -26,7 +26,6 @@ class DenoisingLoss(ABC):
             - alphas_cumprod: the cumulative product of alphas (defining the noise schedule) with shape [T]
             - timestep: the current timestep with shape [B, F]
         """
-        pass
 
 
 class X0PredLoss(DenoisingLoss):

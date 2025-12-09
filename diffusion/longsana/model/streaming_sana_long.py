@@ -8,7 +8,7 @@
 #
 # SPDX-License-Identifier: CC-BY-NC-SA-4.0
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.distributed as dist

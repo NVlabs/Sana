@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 # SPDX-License-Identifier: Apache-2.0
-import argparse
 import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Tuple

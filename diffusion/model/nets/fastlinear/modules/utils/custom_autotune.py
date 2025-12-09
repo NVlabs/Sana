@@ -15,7 +15,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import builtins
-import json
 import os
 import pickle
 import time

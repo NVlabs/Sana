@@ -65,7 +65,6 @@ class ODESANATrainer:
             )
 
         self.output_path = config.logdir
-        app_start_time = time.time_ns() / 1_000_000
 
         # Step 2: Initialize the model and optimizer
         assert config.distribution_loss == "ode", "Only ODE loss is supported for ODE training"

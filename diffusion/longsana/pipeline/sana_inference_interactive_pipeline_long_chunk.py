@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import torch
 from einops import rearrange
@@ -191,7 +191,6 @@ class SanaInferenceInteractivePipelineLongChunk:
 
         output = torch.zeros_like(latents_bcthw)
         kv_cache = self._initialize_kv_cache(num_chunks)
-        steps = max(1, len(self.denoising_step_list))
 
         try:
             mapping = [f"[{chunk_indices[i]}:{chunk_indices[i+1]}) -> prompt[{i}]" for i in range(num_chunks)]

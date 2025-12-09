@@ -17,7 +17,6 @@
 import argparse
 import datetime
 import os
-import os.path as osp
 import shutil
 import subprocess
 
@@ -105,7 +104,6 @@ def main() -> None:
 
         # Get project root directory
         current_file = os.path.abspath(__file__)
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
 
         # HuggingFace login command if HF_TOKEN is set
         hf_token = os.environ.get("HF_TOKEN", "")

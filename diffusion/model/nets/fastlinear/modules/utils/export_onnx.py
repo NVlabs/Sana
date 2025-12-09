@@ -16,7 +16,7 @@
 
 import os
 import warnings
-from typing import Any, Tuple
+from typing import Tuple
 
 import torch
 

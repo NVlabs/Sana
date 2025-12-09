@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import os
 import random
-import socket
 import sqlite3
 import time
 import uuid

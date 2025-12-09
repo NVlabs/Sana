@@ -16,9 +16,7 @@
 
 import datetime
 import gc
-import getpass
 import hashlib
-import json
 import os
 import os.path as osp
 import random
@@ -865,8 +863,6 @@ def main(cfg: SanaVideoConfig) -> None:
     config = cfg
     args = cfg
 
-    # Record app start time at the beginning of main
-    app_start_time = int(time.time() * 1000)
 
     # 1.Initialize training mode
     if config.train.use_fsdp:

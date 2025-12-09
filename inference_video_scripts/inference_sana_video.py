@@ -19,8 +19,6 @@ import json
 import os
 import random
 import re
-import subprocess
-import tarfile
 import time
 import warnings
 from dataclasses import dataclass, field
@@ -235,9 +233,9 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     config.vae.vae_type, vae, torch.stack(images, dim=0)[:, :, None].to(vae_dtype), device=device
                 )  # 1,C,1,H,W
                 condition_frame_info = {
-                    0: config.train.noise_multiplier
-                    if config.train.noise_multiplier is not None
-                    else 0.0,  # frame_idx: frame_weight, weight is used for timestep
+                    0: (
+                        config.train.noise_multiplier if config.train.noise_multiplier is not None else 0.0
+                    ),  # frame_idx: frame_weight, weight is used for timestep
                 }
                 for frame_idx in list(condition_frame_info.keys()):
                     z[:, :, frame_idx : frame_idx + 1] = image_vae_embeds  # 1,C,F,H,W, first frame is the image
@@ -381,7 +379,9 @@ class SanaInference(SanaVideoConfig):
     high_motion: bool = False
     prompt_split_token: str = "<split>"
     motion_score: int = 10
-    negative_prompt: str = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+    negative_prompt: str = (
+        "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+    )
     interval_k: float = 0.0
     unified_noise: bool = False
     stg_applied_layers: List[int] = field(default_factory=list)

@@ -279,7 +279,7 @@ def create_interface():
     interface = InpaintingInterface()
 
     # Get model information for display
-    args = get_args()
+    get_args()
 
     title = f"""
         <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>

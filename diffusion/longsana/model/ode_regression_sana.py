@@ -2,7 +2,6 @@ import os
 from typing import Tuple
 
 import imageio
-
 import pyrallis
 import torch
 import torch.distributed as dist
@@ -51,7 +50,7 @@ class SanaModelChunkWrapper(SanaModelWrapper):
         if isinstance(model_out, tuple) and len(model_out) == 2:
             model_out, kv_cache_ret = model_out
         else:
-            kv_cache_ret = None
+            pass
 
         try:
             from diffusers.models.modeling_outputs import Transformer2DModelOutput
@@ -110,7 +109,7 @@ class ODERegressionSana(torch.nn.Module):
             state_dict = state_dict.get("state_dict", state_dict)
             try:
                 self.generator.model.load_state_dict(state_dict, strict=True)
-            except Exception as e:
+            except Exception:
                 self.generator.load_state_dict(state_dict, strict=True)
 
         self.num_frame_per_block = getattr(args, "num_frame_per_block", 1)

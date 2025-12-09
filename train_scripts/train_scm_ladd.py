@@ -1032,7 +1032,6 @@ def main(cfg: SanaConfig) -> None:
     image_size = config.model.image_size
     latent_size = int(image_size) // config.vae.vae_downsample_rate
     pred_sigma = getattr(config.scheduler, "pred_sigma", True)
-    learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
     max_length = config.text_encoder.model_max_length
     model_weight_dtype = get_weight_dtype(config.model.mixed_precision)
     vae = None
@@ -1328,7 +1327,7 @@ def main(cfg: SanaConfig) -> None:
             **config.train.auto_lr,
         )
     optimizer_G = build_optimizer(model, config.train.optimizer)
-    # 只为判别器的head部分构建优化器
+    # only build optimizer for discriminator's head
     optimizer_D = build_optimizer(disc.heads, config.train.optimizer)
 
     # print learning rates

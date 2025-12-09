@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import glob
 
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import os
@@ -31,6 +30,7 @@ from tqdm import tqdm
 from diffusion.data.builder import DATASETS
 from diffusion.data.datasets.sana_data import SanaWebDataset
 from diffusion.data.datasets.utils import *
+from diffusion.data.datasets.utils import ASPECT_RATIO_2048, ASPECT_RATIO_2880
 from diffusion.data.transforms import get_closest_ratio
 from diffusion.data.wids import lru_json_load
 

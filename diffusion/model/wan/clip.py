@@ -2,7 +2,6 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import logging
 import math
-import os
 
 import torch
 import torch.nn as nn

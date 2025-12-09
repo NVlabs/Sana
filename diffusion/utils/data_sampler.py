@@ -237,7 +237,6 @@ class AspectRatioBatchSamplerVideo(BatchSampler):
                 del bucket[:]
 
     def _get_data_info_and_ratio(self, idx):
-        str_idx = str(idx)
         data_info = self.dataset.get_data_info(int(idx))
 
         if data_info is None:

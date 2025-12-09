@@ -15,8 +15,6 @@
 # DISCLAIMER: This code is strongly influenced by https://github.com/pesser/pytorch_diffusion
 # and https://github.com/hojonathanho/diffusion
 
-import math
-import warnings
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 

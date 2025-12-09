@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import math
 
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import os

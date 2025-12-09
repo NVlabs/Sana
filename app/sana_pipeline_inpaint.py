@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 # SPDX-License-Identifier: Apache-2.0
-import argparse
 import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
@@ -236,7 +235,6 @@ class SanaPipelineInpaint(nn.Module):
         if prompt is None:
             prompt = [""]
         prompts = prompt if isinstance(prompt, list) else [prompt]
-        samples = []
 
         for prompt in prompts:
             # data prepare

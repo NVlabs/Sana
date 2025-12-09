@@ -1,7 +1,5 @@
-import copy
 import gc
 import logging
-import os
 import random
 import time
 
@@ -214,7 +212,7 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
 
             try:
                 scaled_generator_loss.backward()
-            except RuntimeError as e:
+            except RuntimeError:
                 raise
 
             generator_log_dict.update(

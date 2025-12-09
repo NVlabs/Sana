@@ -1004,7 +1004,6 @@ def main(cfg: SanaConfig) -> None:
 
     # 7. Resume training
     if config.model.resume_from is not None and config.model.resume_from["checkpoint"] is not None:
-        rng_state = None
         ckpt_path = osp.join(config.work_dir, "checkpoints")
         check_flag = osp.exists(ckpt_path) and len(os.listdir(ckpt_path)) != 0
 

@@ -1,4 +1,3 @@
-import os
 from typing import List, Optional, Tuple
 
 import imageio
@@ -198,7 +197,7 @@ class SanaTrainingPipeline:
         if not requires_grad:
             start_gradient_frame_index = video_frames  # Out of range: no gradients anywhere
         else:
-            start_gradient_frame_index = 0
+            pass
 
         if condition.shape[0] == batch_size:
             condition = condition.repeat_interleave(num_chunks, dim=0)

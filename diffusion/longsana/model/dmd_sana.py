@@ -1,9 +1,8 @@
 import os
 import time
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import imageio
-
 import pyrallis
 import torch
 import torch.distributed as dist
@@ -107,7 +106,7 @@ class DMDSana(torch.nn.Module):
             # load ode init model
             missing_g, unexpected_g = self.generator.load_state_dict(state_dict, strict=True)
 
-        except Exception as e:
+        except Exception:
             missing_g, unexpected_g = self.generator.model.load_state_dict(state_dict, strict=True)
 
         # eval mode and align dtype/device
@@ -127,7 +126,7 @@ class DMDSana(torch.nn.Module):
             fake_state = fake_state.get("state_dict", fake_state)
             try:
                 missing_f_fake, unexpected_f_fake = self.fake_score.load_state_dict(fake_state, strict=strict)
-            except Exception as e:
+            except Exception:
                 missing_f_fake, unexpected_f_fake = self.fake_score.model.load_state_dict(fake_state, strict=strict)
             fake_load_info = {"missing": missing_f_fake, "unexpected": unexpected_f_fake, "path": fake_ckpt}
             self.fake_score.model.eval()
@@ -141,7 +140,7 @@ class DMDSana(torch.nn.Module):
             real_state = real_state.get("state_dict", real_state)
             try:
                 missing_f_real, unexpected_f_real = self.real_score.load_state_dict(real_state, strict=strict)
-            except Exception as e:
+            except Exception:
                 missing_f_real, unexpected_f_real = self.real_score.model.load_state_dict(real_state, strict=strict)
             self.real_score.model.eval()
             self.real_score = self.real_score.to(device=self.device, dtype=self.dtype)

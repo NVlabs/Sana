@@ -24,10 +24,7 @@ import math
 import os
 import os.path as osp
 import random
-import re
 import sqlite3
-import sys
-import tempfile
 import uuid
 import warnings
 from functools import lru_cache, partial
@@ -547,7 +544,7 @@ class ShardListDataset(Dataset[T]):
             self.cache_dir = None
             self.localname = localname
         else:
-            import getpass
+            pass
 
             # when no cache dir or localname are given, use the cache from the environment
             self.cache_dir = os.environ.get("WIDS_CACHE", f"~/.cache/_wids_cache")
@@ -751,7 +748,7 @@ class ShardListDatasetMulti(ShardListDataset):
             self.cache_dir = None
             self.localname = localname
         else:
-            import getpass
+            pass
 
             # when no cache dir or localname are given, use the cache from the environment
             self.cache_dir = os.environ.get("WIDS_CACHE", f"~/.cache/_wids_cache")

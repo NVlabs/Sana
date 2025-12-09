@@ -590,7 +590,7 @@ class Decoder3d(nn.Module):
 
         # dimensions
         dims = [dim * u for u in [dim_mult[-1]] + dim_mult[::-1]]
-        scale = 1.0 / 2 ** (len(dim_mult) - 2)
+        # scale = 1.0 / 2 ** (len(dim_mult) - 2)
         # init block
         self.conv1 = CausalConv3d(z_dim, dims[0], 3, padding=1)
 

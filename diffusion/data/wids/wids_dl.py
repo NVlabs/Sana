@@ -96,9 +96,6 @@ default_cmds = {
 }
 
 
-# TODO(ligeng): change HTTPS download to python requests library
-
-
 def download_file_no_log(remote, local, handlers=default_cmds):
     """Download a file from a remote url to a local path.
     The remote url can be a pipe: url, in which case the remainder of

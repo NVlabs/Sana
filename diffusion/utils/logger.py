@@ -105,6 +105,7 @@ def get_logger(name, log_file=None, log_level=logging.INFO, timezone="UTC"):
 
     # only rank 0 will add a FileHandler
     if rank == 0 and log_file is not None:
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
         file_handler = logging.FileHandler(log_file, "a")
         handlers.append(file_handler)
 

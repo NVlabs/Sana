@@ -2,7 +2,7 @@
   <img src="https://nvlabs.github.io/Sana/Video/logo.svg" width="70%" alt="SANA-Sprint Logo"/>
 </p>
 
-# 🎬 LongSANA
+# 🎬 LongSANA: SANA-Video + [LongLive](https://github.com/NVlabs/LongLive)
 
 <div align="center">
   <a href="https://nvlabs.github.io/Sana/Video"><img src="https://img.shields.io/static/v1?label=Project&message=Github&color=blue&logo=github-pages"></a> &ensp;

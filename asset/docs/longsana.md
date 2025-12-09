@@ -47,8 +47,8 @@ accelerate launch --mixed_precision=bf16 \
 ### Data Preparation
 Please follow Self-Forcing to download training prompts:
 ```bash
-mkdir -p asset/longsana
-huggingface-cli download gdhe17/Self-Forcing vidprom_filtered_extended.txt --local-dir asset/longsana
+mkdir -p data/longsana
+hf download gdhe17/Self-Forcing vidprom_filtered_extended.txt --local-dir data/longsana
 ```
 
 ### Launch Training

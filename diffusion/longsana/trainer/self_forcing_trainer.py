@@ -5,6 +5,7 @@ import time
 
 import torch
 import torch.distributed as dist
+import wandb
 from omegaconf import OmegaConf
 from termcolor import colored
 from torch.distributed.fsdp import FullOptimStateDictConfig, FullStateDictConfig
@@ -12,7 +13,6 @@ from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import StateDictType
 from torchvision.io import write_video
 
-import wandb
 from diffusion.longsana.model import DMDSana
 from diffusion.longsana.pipeline import SanaInferencePipeline
 from diffusion.longsana.utils.dataset import ShardingLMDBDataset, TextDataset, TwoTextDataset, cycle

@@ -43,7 +43,9 @@ ______________________________________________________________________
 | Model | Reso | pth link | diffusers | Precision | Description |
 |------------------|--------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|-----------|----------------|
 | Sana-Video-2B | 480p | [Sana-Video_2B_480p](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p) | [Efficient-Large-Model/Sana-Video_2B_480p_diffusers](https://huggingface.co/Efficient-Large-Model/Sana-Video_2B_480p_diffusers) | bf16 | 5s Pre-train model |
-| LongSANA-Video-2B | 480p | [coming](<>) | [coming](<>) | bf16 | 27FPS Minute-length model |
+| LongSANA-Video-2B | 480p | [SANA-Video_2B_480p_LongLive](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_LongLive) | [Efficient-Large-Model/SANA-Video_2B_480p_LongLive_diffusers](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_LongLive_diffusers) | bf16 | 27FPS Minute-length model |
+| LongSANA-Video-2B-ODE-Init | 480p | [LongSANA_2B_480p_ode](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_ode) | --- | bf16 | LongSANA first step model initialized from ODE trajectories  |
+| LongSANA-Video-2B-Self-Forcing | 480p | [LongSANA_2B_480p_self_forcing](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_self_forcing) | --- | bf16 | LongSANA second step model trained by Self-Forcing |
 
 ______________________________________________________________________
 

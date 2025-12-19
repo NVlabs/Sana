@@ -8,9 +8,15 @@ on:
         type: boolean
         default: false
   pull_request:
-    types: [labeled, unlabeled]
+    types: [labeled, unlabeled, opened, synchronize, reopened]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   push:
     branches: [main, feat/Sana-public, feat/Sana-public-for-NVLab]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

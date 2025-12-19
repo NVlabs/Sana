@@ -1,0 +1,95 @@
+site_name: Sana Documentation
+site_description: Documentation for Sana - High-quality Diffusion Models for Images and Videos
+site_author: Sana Team
+site_url: https://nvlabs.github.io/Sana/docs/
+repo_name: NVlabs/Sana
+repo_url: https://github.com/NVlabs/Sana
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/logo.png
+  favicon: assets/logo.png
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+nav:
+  - Overview: index.md
+  - Getting Started:
+      - Installation: installation.md
+      - Model Zoo: model_zoo.md
+  - Image Generation:
+      - SANA: sana.md
+      - SANA-Sprint: sana_sprint.md
+      - 4-bit Quant: 4bit_sana.md
+      - 8-bit Quant: 8bit_sana.md
+      - Inference Scaling: inference_scaling/inference_scaling.md
+  - Video Generation:
+      - SANA-Video: sana_video.md
+      - Video Inference: sana_video_inference.md
+      - LongSANA: longsana.md
+  - Advanced:
+      - ControlNet: sana_controlnet.md
+      - LoRA & DreamBooth: sana_lora_dreambooth.md
+  - Integrations:
+      - ComfyUI: ComfyUI/comfyui.md
+  - Evaluation:
+      - Metrics Toolkit: metrics_toolkit.md
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/NVlabs/Sana
+  generator: false
+extra_css:
+  - stylesheets/extra.css
+copyright: Copyright &copy; 2024-2025 Sana Team

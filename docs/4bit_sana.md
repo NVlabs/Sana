@@ -24,7 +24,7 @@ Follow the official [SVDQuant-Nunchaku](https://github.com/mit-han-lab/nunchaku)
 1. Convert pth to SVDQuant required safetensor
 
 ```
-python tools/convert_sana_to_svdquant.py \
+python tools/convert_scripts/convert_sana_to_svdquant.py \
       --orig_ckpt_path Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth \
       --model_type SanaMS1.5_1600M_P1_D20 \
       --dtype bf16 \

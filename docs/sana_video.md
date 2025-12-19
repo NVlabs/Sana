@@ -175,7 +175,7 @@ bash train_video_scripts/train_video_ivjoint.sh \
 ## Convert pth to diffusers safetensor
 
 ```bash
-python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_2B_480p_diffusers --save_full_pipeline
+python scripts/convert_scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_2B_480p_diffusers --save_full_pipeline
 ```
 
 ## Performance

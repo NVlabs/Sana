@@ -16,7 +16,7 @@
 ```bash
 git clone https://github.com/comfyanonymous/ComfyUI.git
 cd ComfyUI
-git clone https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels.git custom_nodes/ComfyUI_ExtraModels
+git clone https://github.com/lawrence-cj/ComfyUI_ExtraModels.git custom_nodes/ComfyUI_ExtraModels
 
 python main.py
 ```

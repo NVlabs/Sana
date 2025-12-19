@@ -177,7 +177,7 @@ bash train_video_scripts/train_video_ivjoint.sh \
 ## Convert pth to diffusers safetensor
 
 ```bash
-python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_2B_480p_diffusers --save_full_pipeline
+python scripts/convert_scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_2B_480p_diffusers --save_full_pipeline
 ```
 
 ## Performance
@@ -241,3 +241,19 @@ python scripts/convert_sana_video_to_diffusers.py --dump_path output/SANA_Video_
 | **LongSANA-2B** | **27.5** | **82.29** | **83.10** | **79.04** |
 
 **Summary**: Compared with the current SOTA long video generation models, LongSANA (SANA-Video + [LongLive](https://github.com/NVlabs/LongLive))'s speed and performance is very competitive. LongSANA's 27FPS generatin speed on H100 makes real-time generation possible.
+
+______________________________________________________________________
+
+## Citation
+
+```bibtex
+@misc{chen2025sana,
+      title={SANA-Video: Efficient Video Generation with Block Linear Diffusion Transformer},
+      author={Chen, Junsong and Zhao, Yuyang and Yu, Jincheng and Chu, Ruihang and Chen, Junyu and Yang, Shuai and Wang, Xianbang and Pan, Yicheng and Zhou, Daquan and Ling, Huan and others},
+      year={2025},
+      eprint={2509.24695},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2509.24695},
+}
+```

@@ -108,7 +108,7 @@ bash train_scripts/train_scm_ladd.sh \
 ## Convert pth to diffusers safetensor
 
 ```bash
-python scripts/convert_sana_to_diffusers.py \
+python scripts/convert_scripts/convert_sana_to_diffusers.py \
       --orig_ckpt_path Efficient-Large-Model/Sana_Sprint_1.6B_1024px/checkpoints/Sana_Sprint_1.6B_1024px.pth \
       --model_type SanaSprint_1600M_P1_D20 \
       --scheduler_type scm \

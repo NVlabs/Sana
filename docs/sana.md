@@ -189,7 +189,7 @@ bash train_scripts/train.sh \
 Convert data to WebDataset format:
 
 ```bash
-python tools/convert_ImgDataset_to_WebDatasetMS_format.py
+python tools/convert_scripts/convert_ImgDataset_to_WebDatasetMS_format.py
 ```
 
 Then train:

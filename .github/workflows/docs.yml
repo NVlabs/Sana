@@ -42,9 +42,13 @@ jobs:
           # Save the built site
           mv site /tmp/site
 
-          # Switch to gh-pages branch
-          git fetch origin gh-pages:gh-pages || git checkout --orphan gh-pages
-          git checkout gh-pages
+          # Switch to gh-pages branch (create if not exists)
+          if git fetch origin gh-pages:gh-pages 2>/dev/null; then
+            git checkout gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . || true
+          fi
 
           # Remove old docs/ and copy new content
           rm -rf docs/

@@ -1,0 +1,236 @@
+/* ===========================================
+   Sana Documentation - NVIDIA Green Theme
+   =========================================== */
+
+/* ---------- Color Variables ---------- */
+:root {
+  /* NVIDIA Green */
+  --md-primary-fg-color: #76b900;
+  --md-primary-fg-color--light: #8bc34a;
+  --md-primary-fg-color--dark: #5a8f00;
+
+  /* Accent */
+  --md-accent-fg-color: #76b900;
+  --md-accent-fg-color--transparent: rgba(118, 185, 0, 0.1);
+
+  /* Typography */
+  --md-text-font: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --md-code-font: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Dark mode colors */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #76b900;
+  --md-primary-fg-color--light: #8bc34a;
+  --md-primary-fg-color--dark: #5a8f00;
+
+  --md-accent-fg-color: #76b900;
+
+  /* Darker background */
+  --md-default-bg-color: #0d1117;
+  --md-default-bg-color--light: #161b22;
+  --md-default-bg-color--lighter: #21262d;
+  --md-default-bg-color--lightest: #30363d;
+
+  /* Code blocks */
+  --md-code-bg-color: #161b22;
+}
+
+/* ---------- Header ---------- */
+.md-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d1117 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.md-header__title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Navigation Tabs ---------- */
+.md-tabs {
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+}
+
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: #76b900 !important;
+}
+
+/* ---------- Sidebar ---------- */
+/* Hide the redundant title in sidebar */
+.md-nav--primary > .md-nav__title {
+  display: none;
+}
+
+/* Section titles (Getting Started, Image Generation, etc.) */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item > label {
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #76b900 !important;
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(118, 185, 0, 0.3);
+}
+
+/* First section - no top border */
+.md-nav--primary > .md-nav__list > .md-nav__item:first-child > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item:first-child > label {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Sub-items */
+.md-nav__item .md-nav__link {
+  padding: 0.15rem 0.6rem;
+  border-radius: 4px;
+  font-weight: 450;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Reduce spacing between nav items */
+.md-nav__item {
+  margin: 0;
+  padding: 0;
+}
+
+.md-nav__list {
+  margin: 0;
+  padding: 0;
+}
+
+.md-nav__link:hover {
+  color: #76b900;
+  background-color: rgba(118, 185, 0, 0.1);
+}
+
+.md-nav__link--active {
+  color: #76b900 !important;
+  font-weight: 600;
+  background-color: rgba(118, 185, 0, 0.15);
+}
+
+/* Nested nav styling */
+.md-nav--secondary .md-nav__title {
+  font-weight: 600;
+  color: #76b900;
+}
+
+/* Sidebar background for dark mode */
+[data-md-color-scheme="slate"] .md-sidebar--primary .md-sidebar__scrollwrap {
+  background-color: #0d1117;
+}
+
+/* ---------- Content ---------- */
+.md-content h1 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #76b900 0%, #8bc34a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.md-content h2 {
+  border-bottom: 2px solid #76b900;
+  padding-bottom: 0.3em;
+}
+
+/* Links */
+.md-content a:not(.md-button) {
+  color: #76b900;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.md-content a:not(.md-button):hover {
+  border-bottom-color: #76b900;
+}
+
+/* ---------- Code Blocks ---------- */
+.highlight code,
+code {
+  border-radius: 6px;
+}
+
+.md-clipboard {
+  color: #76b900;
+}
+
+/* ---------- Buttons ---------- */
+.md-button--primary {
+  background: linear-gradient(135deg, #76b900 0%, #5a8f00 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(118, 185, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.md-button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(118, 185, 0, 0.4);
+}
+
+/* ---------- Search ---------- */
+.md-search__input {
+  border-radius: 8px;
+}
+
+.md-search__input::placeholder {
+  color: #888;
+}
+
+/* ---------- Tables ---------- */
+.md-typeset table:not([class]) {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.md-typeset table:not([class]) th {
+  background: linear-gradient(135deg, #76b900 0%, #5a8f00 100%);
+  color: white;
+  font-weight: 600;
+}
+
+/* ---------- Admonitions ---------- */
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: #76b900;
+}
+
+.md-typeset .admonition.note > .admonition-title,
+.md-typeset details.note > summary {
+  background-color: rgba(118, 185, 0, 0.1);
+}
+
+.md-typeset .admonition.note > .admonition-title::before,
+.md-typeset details.note > summary::before {
+  background-color: #76b900;
+}
+
+/* ---------- Footer ---------- */
+.md-footer {
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+}
+
+/* ---------- Animations ---------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.md-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ---------- Mobile Responsive ---------- */
+@media screen and (max-width: 76.1875em) {
+  .md-nav--primary .md-nav__title {
+    background: linear-gradient(135deg, #76b900 0%, #5a8f00 100%);
+  }
+}

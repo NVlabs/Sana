@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="50%" alt="Sana Logo"/>
+  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="40%" alt="Sana Logo"/>
 </p>
 
 # ⚡️ Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer
@@ -25,7 +25,7 @@ This guide covers training and inference for Sana text-to-image models.
 | Training | 32GB |
 
 !!! Note
-All tests are done on A100 GPUs. Different GPU versions may vary.
+    All tests are done on A100 GPUs. Different GPU versions may vary.
 
 ______________________________________________________________________
 

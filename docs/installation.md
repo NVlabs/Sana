@@ -24,7 +24,7 @@ bash ./environment_setup.sh sana
 | 4-bit Quantized | < 8GB |
 
 !!! Note
-All the tests are done on A100 GPUs. Different GPU versions may vary.
+    All the tests are done on A100 GPUs. Different GPU versions may vary.
 
 ## Diffusers Installation
 

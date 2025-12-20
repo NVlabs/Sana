@@ -53,8 +53,11 @@ In summary, SANA-Video enables high-quality video synthesis at an unmatched spee
 ### 1. How to use Sana-Video Pipelines in `🧨diffusers`
 
 !!! Note
-Upgrade your diffusers to use `SanaVideoPipeline`:
-\> `bash     > pip install git+https://github.com/huggingface/diffusers     > `
+    Upgrade your diffusers to use `SanaVideoPipeline`:
+
+    ```bash
+    pip install git+https://github.com/huggingface/diffusers
+    ```
 
 ### Text-to-Video: SanaVideoPipeline
 

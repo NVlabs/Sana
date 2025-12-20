@@ -1,5 +1,5 @@
-<p align="center">
-  <img src="assets/logo.png" width="300" alt="Sana Logo"/>
+<p align="center" style="border-radius: 10px">
+  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="50%" alt="Sana Logo"/>
 </p>
 
 <h3 align="center"><b>⚡️ Efficient High-Resolution Image & Video Generation</b></h3>

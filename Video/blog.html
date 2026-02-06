@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANA-Video Technical Report</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            --text-color: #1a1a1a;
+            --bg-color: #ffffff;
+            --accent-color: #000000;
+            --border-color: #e5e5e5;
+            --caption-color: #666666;
+            --link-color: #0000EE;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 840px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        a {
+            color: var(--text-color);
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 2px;
+        }
+        
+        a:hover {
+            opacity: 0.7;
+        }
+
+        /* Header Styles */
+        header {
+            margin-bottom: 50px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .metadata {
+            font-size: 0.95rem;
+            color: var(--caption-color);
+            margin-top: 1rem;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* Content Styles */
+        h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-top: 3.5rem;
+            margin-bottom: 1.2rem;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 2.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            font-size: 1.05rem;
+            color: #333;
+        }
+
+        strong {
+            font-weight: 600;
+            color: #000;
+        }
+
+        /* Abstract Box */
+        .abstract {
+            background-color: #f8f9fa;
+            padding: 24px;
+            border-radius: 6px;
+            margin-bottom: 40px;
+            border-left: 3px solid #000;
+            font-size: 1.0rem;
+        }
+
+        /* Images */
+        figure {
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        figcaption {
+            font-size: 0.9rem;
+            color: var(--caption-color);
+            text-align: center;
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 30px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            font-variant-numeric: tabular-nums;
+            background: #fff;
+        }
+
+        th {
+            text-align: left;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 16px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: #444;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+            justify-content: center;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+            color: #fff;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #e5e5e5;
+            color: #000;
+        }
+        
+        .btn-outline:hover {
+            background-color: #f8f8f8;
+            color: #000;
+        }
+
+        /* Callout */
+        .callout {
+            border-left: 3px solid #666;
+            padding: 15px 20px;
+            background-color: #fcfcfc;
+            margin: 20px 0;
+            font-style: italic;
+            color: #555;
+        }
+        
+        /* Layout Grid for Images */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>High-Fidelity 2K Video Generation via Two-Stage Inference and Step-Distilled Refinement</h1>
+        <div class="metadata">
+            <strong>SANA-Video Team</strong>
+            <span>&bull;</span>
+            <span>February 6, 2026</span>
+        </div>
+        
+        <figure style="margin-top: 40px;">
+            <img src="https://hackmd.io/_uploads/HkHJTNXwWg.jpg" alt="Video Comparison Stage 1 vs Stage 2" style="margin-bottom: 15px;">
+            <img src="https://hackmd.io/_uploads/r1bKOwXv-e.png" alt="Detail Zoom Comparison">
+        </figure>
+    </header>
+
+    <div class="abstract">
+        <strong>Abstract:</strong> In the pursuit of optimizing the trade-off between generation latency and visual fidelity, SANA-Video adopts an aggressive spatial compression strategy (\(32 \times 32\)). While this enables the generation of 720p video in under 30 seconds, the high compression ratio introduces inherent artifacts and blurring in motion dynamics. This report details our transition to a <strong>Two-Stage Inference Paradigm</strong>. By leveraging a high-compression base model for structural discovery (<strong>Stage 1</strong>) and a step-distilled refiner for high-frequency detail injection (<strong>Stage 2</strong>), we achieve 2K resolution output without compromising the latency profile of the original 720p generation.
+        <br><br>
+        Want to have a quick 2k video generation experience? Check out our <a href="https://github.com/NVlabs/Sana"><strong>Code</strong></a> and <a href="https://sana-video.hanlab.ai/"><strong>2K Demo</strong></a>.
+    </div>
+
+    <figure>
+        <img src="https://hackmd.io/_uploads/S1VfRN7PZg.png" alt="Visual Detail Comparison">
+        <figcaption>
+            <strong>Figure 1: Visual Demonstration.</strong> Comparing Stage 1 output (Right) vs. Stage 2 Refined output (Left). 
+            Note the restoration of critical high-frequency details—specifically the distinct facial features inside the helmet and the granular texture of the cracking surface—which are smoothed out in the base generation.
+        </figcaption>
+    </figure>
+
+    <h2>1. Motivation: The Compression-Fidelity Trade-off</h2>
+    <p>
+        The core efficiency of SANA-Video stems from its compact <strong>2B parameter</strong> architecture and <strong>rapid adaptation</strong> capabilities. This is facilitated by utilizing high-compression Variational Autoencoders (VAEs), specifically DCAE-V (\(32 \times 32 \times 4\)) and LTX-VAE (\(32 \times 32 \times 8\)).
+    </p>
+    <p>
+        These architectures allow for near-frictionless latent processing. However, the compression necessitates a loss of high-frequency spatial information, resulting in a characteristic "blurry" aesthetic in the initial output. Rather than increasing the parameter count of the base model—which would negate our lightweight advantage—we introduce a dedicated <strong>Refinement Stage</strong>. This stage functions not merely as a denoiser, but as a latent translator, converting the low-frequency "skeleton" generated by the base model into a high-fidelity output using a step-distilled sampler.
+    </p>
+
+    <h2>2. Performance Analysis</h2>
+    <p>To validate this paradigm, we conducted extensive benchmarking on NVIDIA H100 hardware.</p>
+
+    <h3>2.1 VAE Architecture Comparison</h3>
+    <p>We evaluated three mainstream VAEs at a resolution of \(704 \times 1280 \times 81\). The focus was on the balance between reconstruction quality (Panda70m metrics) and throughput.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>VAE</th>
+                    <th>Latent Size</th>
+                    <th>Compression Ratio</th>
+                    <th>Enc / Dec Latency (s)</th>
+                    <th>GPU Mem</th>
+                    <th>Panda70m (PSNR↑/LPIPS↓)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Wan2.1 (c16)</td>
+                    <td>88x160x21</td>
+                    <td>48</td>
+                    <td>2.9s / 5.0s</td>
+                    <td>18GB</td>
+                    <td>34.15 / 0.017</td>
+                </tr>
+                <tr>
+                    <td>DCAE-V (c64)</td>
+                    <td>22x40x20</td>
+                    <td>192</td>
+                    <td>5.2s / 5.6s</td>
+                    <td>47GB</td>
+                    <td><strong>35.03</strong> / 0.019</td>
+                </tr>
+                <tr>
+                    <td><strong>LTX2 (c128)</strong></td>
+                    <td>22x40x11</td>
+                    <td><strong>192</strong></td>
+                    <td><strong>1.3s / 0.9s</strong></td>
+                    <td>47GB</td>
+                    <td>32.41 / 0.039</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <strong>Key Insight:</strong> While Wan2.1 offers superior reconstruction metrics, its latent size is 16x larger than LTX2, creating a bottleneck for diffusion inference. LTX2 emerges as the efficiency optimal. Its 0.9s decoding time provides a significant "computational budget," allowing the Refiner to operate within the same total timeframe while utilizing 2-5 inference steps to recover the visual quality lost during compression.
+    </div>
+
+    <h3>2.2 Latency Analysis: The "Free" Upgrade</h3>
+    <figure>
+        <img src="https://hackmd.io/_uploads/SJtGXPmwZg.png" alt="Latency Chart">
+    </figure>
+    
+    <p>Comparing the total end-to-end latency reveals a compelling result. The efficiency gains from the new LTX-based pipeline allow us to generate 2K video in the same time required for the previous 720p pipeline.</p>
+
+    <ul>
+        <li><strong>SANA-Video-1.0 (720p):</strong> ~36s</li>
+        <li><strong>SANA-Video-LTX (720p):</strong> ~18s (40% Efficiency Gain)</li>
+        <li><strong>SANA-Video-LTX-Refine (2K):</strong> ~36s</li>
+    </ul>
+
+    <p>We have effectively achieved a resolution leap from 720p to 2K at zero additional temporal cost to the user.</p>
+
+    <figure>
+        <img src="https://hackmd.io/_uploads/ryUcl4QvWg.png" alt="Detailed Latency Comparison Chart">
+        <figcaption>Figure 2: End-to-end latency comparison showing the 2K Refined pipeline matching the V1.0 720p baseline.</figcaption>
+    </figure>
+
+    <h2>3. Engineering Implementation</h2>
+
+    <h3>3.1 The Step-Distilled Refiner</h3>
+    <p>
+        The LTX2 Refiner in Stage 2 utilizes <strong>Step Distillation</strong>, enabling it to operate without a full denoising trajectory. Instead, it inherits the knowledge distribution of the teacher model to inject high-frequency textures into the Stage 1 output in just <strong>4 steps</strong>. This design ensures the marginal cost of the second stage remains negligible.
+    </p>
+    <p>
+        Crucially, this model is <strong>not a standalone generator</strong>. As illustrated below, our experiments initializing generation from pure Gaussian noise using the 4-step schedule resulted in severe structural collapse. Consequently, the Refiner's function is strictly defined as <strong>Latent Adaptation and Enhancement</strong>—it relies on the structural prior provided by Stage 1 to perform a high-fidelity translation, rather than generating content from scratch.
+    </p>
+
+    <figure>
+        <img src="https://hackmd.io/_uploads/SktuDDQvZg.png" alt="Noise Initialization Failure Case">
+        <figcaption>Figure 3: Ablation study. Generation from pure noise (Left) fails to produce coherent structure compared to Stage 1 enhanced output (Right).</figcaption>
+    </figure>
+
+    <h3>3.2 Adaptation Strategy</h3>
+    <p>
+        A significant engineering challenge arose from the architectural mismatch between SANA-Video and the LTX2 Refiner. SANA-Video uses a different VAE with different channel dimensions than the LTX system.
+    </p>
+    <p>
+        To resolve this, we employed a rapid fine-tuning adaptation strategy on the SANA-Video 2B model:
+    </p>
+    <ol>
+        <li><strong>Initialization:</strong> We randomly initialized only the <em>Patch Embedding</em> layer and the <em>Final Output</em> layer to accommodate the LTX-VAE latent channels (\(c=128\)).</li>
+        <li><strong>Convergence:</strong> Training logs indicate that semantic information is recovered within 500 steps, with full color and texture restoration achieved by 5,000 steps.</li>
+    </ol>
+    <p>
+        This decoupling allows SANA-Video to handle the heavy lifting of motion logic (Structure), while the LTX2 Refiner handles the "rendering" (Texture), creating a universal, plug-and-play enhancement pipeline.
+    </p>
+
+    <figure>
+        <div class="grid-2">
+            <img src="https://hackmd.io/_uploads/r1eAc8Xv-l.png" alt="Training Loss Curve">
+            <img src="https://hackmd.io/_uploads/SJWz28XDbg.png" alt="Visuals during training">
+        </div>
+        <img src="https://hackmd.io/_uploads/Syyki8Qv-e.png" alt="Final Adaptation Results" style="margin-top: 15px;">
+        <figcaption>Figure 4: Adaptation process showing loss convergence (Top Left), visual recovery during training (Top Right), and final results (Bottom).</figcaption>
+    </figure>
+
+    <h3>3.3 Handling the Audio Branch via Zero-Initialization</h3>
+    <p>
+        Since the LTX2 architecture employs a dual-branch DiT for joint video and audio generation, the Stage 2 refiner inherently anticipates concurrent inputs for both Video and Audio Latents. However, current open-source video models, including SANA-Video, typically lack audio generation capabilities. The adaptation of the LTX refiner for such <strong>video-only architectures</strong> remains an under-explored challenge.
+    </p>
+    <p>
+        We propose a practical solution to bypass this dependency. We strictly initialize the audio input as a <strong>zero-tensor</strong> within the refiner. Empirically, we found that injecting noise at the default scale within the scheduler effectively simulates the necessary latent distribution. This strategy allows us to leverage the refiner's visual enhancement capabilities without requiring a valid audio signal or a pre-existing audio branch.
+    </p>
+
+    <h2>4. Conclusion & Future Work</h2>
+    <p>
+        This update validates that the future of video generation lies in workflow decoupling rather than monolithic scaling. The Two-Stage Inference paradigm—"Fast Structure" followed by "Beautiful Detail"—solves the high-compression artifact issue while maintaining SANA's signature speed.
+    </p>
+    <p>
+        <strong>Future Roadmap:</strong> We are optimizing the training scheme for the refiner and plan to open-source the complete lightweight refiner training workflow to the community.
+    </p>
+    
+    <h3>References</h3>
+    <p style="font-size: 0.9rem; color: #666;">
+        [1] LTX &nbsp;&nbsp; [2] Waver
+    </p>
+
+    <div class="button-group">
+        <a href="https://github.com/NVlabs/Sana" class="btn">View on GitHub</a>
+        <a href="https://sana-video.hanlab.ai/" class="btn btn-outline">Try the 2K Demo</a>
+    </div>
+
+    <footer style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.8rem; color: #888; text-align: center;">
+        &copy; 2026 SANA-Video Team. All rights reserved.
+    </footer>
+</div>
+
+</body>
+</html>

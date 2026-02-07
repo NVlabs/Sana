@@ -1353,6 +1353,17 @@
             </div>
         </section>
 
+        <!-- SANA + LTX Refiner Section -->
+        <section class="section">
+            <h2 class="section-title">SANA + LTX Refiner</h2>
+            <p class="section-description">
+                Refined video outputs using SANA with LTX Refiner
+            </p>
+            <div class="video-grid ltx-refiner-grid" id="ltx-refiner-grid">
+                <!-- SANA + LTX Refiner videos will be dynamically added here -->
+            </div>
+        </section>
+
         <!-- Image-to-Video Section -->
         <section class="section">
             <h2 class="section-title">Image-to-Video (I2V)</h2>
@@ -1495,6 +1506,11 @@
         // Function to create I2V video item
         function createI2VVideoItem(videoData) {
             return createVideoItem(videoData, 'i2v');
+        }
+
+        // Function to create SANA + LTX Refiner video item
+        function createLtxRefinerVideoItem(videoData) {
+            return createVideoItem(videoData, 'refiner');
         }
 
         // Function to create Application item (comparison style)
@@ -1645,6 +1661,12 @@
             const i2vGrid = document.getElementById('i2v-grid');
             i2vGrid.innerHTML = videoData.i2v.map(createI2VVideoItem).join('');
 
+            // Populate SANA + LTX Refiner grid
+            const ltxRefinerGrid = document.getElementById('ltx-refiner-grid');
+            if (videoData.ltxRefiner && videoData.ltxRefiner.length > 0) {
+                ltxRefinerGrid.innerHTML = videoData.ltxRefiner.map(createLtxRefinerVideoItem).join('');
+            }
+
             // Populate Application grid
             const applicationGrid = document.getElementById('application-grid');
             applicationGrid.innerHTML = videoData.application.map(createApplicationItem).join('');
@@ -1672,6 +1694,7 @@
         function addVideoToSection(sectionType, videoData) {
             const gridId = sectionType === 't2v' ? 't2v-grid' : 
                           sectionType === 'i2v' ? 'i2v-grid' : 
+                          sectionType === 'ltx-refiner' ? 'ltx-refiner-grid' : 
                           sectionType === 'application' ? 'application-grid' : 'long-video-grid';
             const grid = document.getElementById(gridId);
             
@@ -1680,6 +1703,8 @@
                 videoHTML = createI2VVideoItem(videoData);
             } else if (sectionType === 't2v') {
                 videoHTML = createT2VVideoItem(videoData);
+            } else if (sectionType === 'ltx-refiner') {
+                videoHTML = createLtxRefinerVideoItem(videoData);
             } else if (sectionType === 'application') {
                 videoHTML = createApplicationItem(videoData);
             } else {

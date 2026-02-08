@@ -47,9 +47,9 @@
 
         /* Header Styles */
         header {
-            margin-bottom: 50px;
+            margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 40px;
+            padding-bottom: 20px;
         }
 
         h1 {
@@ -120,7 +120,7 @@
             border-radius: 4px;
             display: block;
             margin: 0 auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: none;
         }
 
         figcaption {
@@ -225,7 +225,7 @@
 
 <div class="container">
     <header>
-        <h1>Bet Small to Win Big: Efficient 2K Video Generation via Deeper-compression AutoEncoder, Linear Attention and Two-Stage Refinement</h1>
+        <h1>Bet Small to Win Big: Efficient 2K Video Generation via Deeper-compression AutoEncoder, Linear Attention and Two-Stage Refiner</h1>
         <div class="metadata">
             <strong>SANA-Video Team</strong>
             <span>&bull;</span>
@@ -233,29 +233,31 @@
         </div>
         
         <figure style="margin-top: 40px;">
-            <video src="videos/sana_two_stages_compare.mp4" autoplay muted loop playsinline style="width: 85%;"></video>
-            <figcaption><strong>Video 1</strong></figcaption>
+            <video src="videos/1-stages-compare.mp4" autoplay muted loop playsinline style="width: 95%;"></video>
+            <figcaption><strong>Video 1:</strong> Side-by-side comparison of Stage 1 base generation (Left) vs. Stage 2 Refined output (Right). Prompt: <em>&ldquo;An astronaut hatches from a fragile egg on the surface of the Moon, the shell cracking and peeling apart in gentle low-gravity motion &hellip; Ultra-realistic detail, cinematic lighting, and a breath-taking, movie-like shot.&rdquo;</em></figcaption>
         </figure>
     </header>
 
     <div class="abstract">
-        <strong>Abstract:</strong> In the pursuit of optimizing the trade-off between generation latency and visual fidelity, SANA-Video adopts an aggressive spatial compression strategy (\(32 \times 32\)). While this enables the generation of 720p video in under 30 seconds, the high compression ratio introduces inherent artifacts and blurring in motion dynamics. This report details our transition to a <strong>Two-Stage Inference Paradigm</strong>. By leveraging a high-compression base model for structural discovery (<strong>Stage 1</strong>) and a step-distilled refiner for high-frequency detail injection (<strong>Stage 2</strong>), we achieve 2K resolution output without compromising the latency profile of the original 720p generation.
+        <strong>Abstract:</strong> In the pursuit of optimizing the trade-off between generation latency and visual fidelity, SANA-Video adopts an aggressive spatial compression strategy (\(32 \times 32\)). While this enables the generation of 720p video in under 30 seconds, the high compression ratio introduces inherent artifacts and blurring in motion dynamics. This blog details our transition to a <strong>Two-Stage Inference Paradigm</strong>. By leveraging a high-compression base model for structural discovery (<strong>Stage 1</strong>) and a step-distilled refiner for high-frequency detail injection (<strong>Stage 2</strong>), we achieve 2K resolution output without compromising the latency profile of the original 720p generation.
         <br><br>
         Want to have a quick 2k video generation experience? Here are our <a href="https://github.com/NVlabs/Sana"><strong>Code</strong></a> and <a href="https://sana-video.hanlab.ai/"><strong>720p Demo</strong></a>.
     </div>
 
-    <figure style="text-align: center;">
-        <img src="images/image1.png" alt="Detail Zoom Comparison" style="max-width: 70%;">
-        <figcaption><strong>Figure 1</strong></figcaption>
-    </figure>
+    <div class="grid-2" style="margin: 40px 0; grid-template-columns: 3fr 2fr; align-items: center;">
+        <figure style="margin: 0;">
+            <img src="images/1-detail-comparison.png" alt="Detail Zoom Comparison" style="max-width: 100%;">
+            <figcaption><strong>Figure 1:</strong> Visual comparison between Stage 1 (Left) and Stage 2 Refined output (Right).</figcaption>
+        </figure>
+        <figure style="margin: 0;">
+            <img src="images/2-benchmark-chart.png" alt="Benchmark Chart" style="max-width: 100%;">
+            <figcaption><strong>Figure 2:</strong> Latency comparison on H100 across different pipelines.</figcaption>
+        </figure>
+    </div>
 
     <p>
         Before detailing the methodology, we present a direct comparison of the generation stages. Figure 1 and Video 1 illustrate the qualitative leap provided by the Refiner. Stage 1 (Left) successfully captures the global motion dynamics but suffers from compression blur. Stage 2 (Right) effectively &ldquo;translates&rdquo; this blurry latent into high-fidelity footage. Note the restoration of critical high-frequency details&mdash;specifically the distinct facial features inside the helmet and the granular texture of the cracking surface&mdash;which are smoothed out in the base generation.
     </p>
-
-    <figure>
-        <img src="https://hackmd.io/_uploads/S1VfRN7PZg.png" alt="Visual Detail Comparison">
-    </figure>
 
     <h2>1. Motivation: The Compression-Fidelity Trade-off</h2>
     <p>
@@ -316,45 +318,33 @@
     </div>
 
     <div class="callout">
-        <strong>Key Insight:</strong> While Wan2.1 offers superior reconstruction metrics, its latent size is 16x larger than LTX2, creating a bottleneck for diffusion inference. LTX2 emerges as the efficiency optimal. Its 0.9s decoding time provides a significant "computational budget," allowing the Refiner to operate within the same total timeframe while utilizing 2-5 inference steps to recover the visual quality lost during compression.
+        <strong>Key Insight:</strong> While Wan2.1 offers superior reconstruction metrics, its latent size is 32x larger than LTX2, creating a bottleneck for diffusion inference. LTX2 emerges as the efficiency optimal. Its 0.9s decoding time provides a significant "computational budget," allowing the Refiner to operate within the same total timeframe while utilizing 2-5 inference steps to recover the visual quality lost during compression.
     </div>
 
     <h3>2.2 Latency Analysis: The "Free" Upgrade</h3>
     <figure>
-        <img src="https://hackmd.io/_uploads/SJtGXPmwZg.png" alt="Latency Chart">
+        <img src="images/3-latency-chart.png" alt="Latency Chart" style="width: 70%; max-width: 70%;">
+        <figcaption><strong>Figure 3:</strong> End-to-end latency comparison across different pipelines on H100.</figcaption>
     </figure>
     
     <p>Comparing the total end-to-end latency reveals a compelling result. The efficiency gains from the new LTX-based pipeline allow us to generate 2K video in the same time required for the previous 720p pipeline.</p>
 
     <ul>
         <li><strong>SANA-Video-1.0 (720p):</strong> ~36s</li>
-        <li><strong>SANA-Video-LTX (720p):</strong> ~18s (40% Efficiency Gain)</li>
-        <li><strong>SANA-Video-LTX-Refine (2K):</strong> ~36s</li>
+        <li><strong>SANA-Video-LTX (720p):</strong> ~18s (50% Efficiency Gain)</li>
+        <li><strong>SANA-Video-LTX-Refine (2K):</strong> ~36s (free lunch)</li>
     </ul>
 
     <p>Our upgrade from 720p to 2K is the ultimate free lunch: a massive resolution leap at no cost to user latency.</p>
 
     <figure>
-        <img src="https://hackmd.io/_uploads/ryUcl4QvWg.png" alt="Detailed Latency Comparison Chart">
-        <figcaption>Figure 2: End-to-end latency comparison showing the 2K Refined pipeline matching the V1.0 720p baseline.</figcaption>
+        <img src="images/4-pipeline.png" alt="Full Pipeline" style="width: 100%; max-width: 100%;">
+        <figcaption><strong>Figure 4:</strong> Full two-stage inference pipeline overview.</figcaption>
     </figure>
 
     <h2>3. Engineering Implementation</h2>
 
-    <h3>3.1 The Step-Distilled Refiner</h3>
-    <p>
-        The LTX2 Refiner in Stage 2 utilizes <strong>Step Distillation</strong>, enabling it to operate without a full denoising trajectory. Instead, it inherits the knowledge distribution of the teacher model to inject high-frequency textures into the Stage 1 output in just <strong>4 steps</strong>. This design ensures the marginal cost of the second stage remains negligible.
-    </p>
-    <p>
-        Crucially, this model is <strong>not a standalone generator</strong>. As illustrated in Figure 3, our experiments initializing generation from pure Gaussian noise using the 4-step schedule resulted in severe structural collapse and semantic incoherence. Consequently, the Refiner's function is strictly defined as <strong>Latent Adaptation and Enhancement</strong>&mdash;it requires the structural prior provided by the Stage 1 output to perform a high-fidelity translation, rather than generating content from scratch.
-    </p>
-
-    <figure>
-        <img src="https://hackmd.io/_uploads/SktuDDQvZg.png" alt="Noise Initialization Failure Case">
-        <figcaption>Figure: Attempting to generate video from pure Gaussian noise only using the Refiner (4 steps) results in structural collapse and semantic failure. Prompt: <em>A cat and a dog baking a cake together in a kitchen.</em></figcaption>
-    </figure>
-
-    <h3>3.2 Post-training Adaptation Strategy</h3>
+    <h3>3.1 Post-training Adaptation Strategy</h3>
     <p>
         A significant engineering challenge arose from the architectural mismatch between SANA-Video and the LTX2 Refiner. SANA-Video uses a different VAE with different channel dimensions than the LTX system.
     </p>
@@ -366,19 +356,28 @@
         <li><strong>Convergence:</strong> Training logs indicate that semantic information is recovered within 500 steps, with full color and texture restoration achieved by 5,000 steps.</li>
     </ol>
     <p>
-        This decoupling allows SANA-Video to handle the heavy lifting of motion logic (Structure), while the LTX2 Refiner handles the "rendering" (Texture), creating a universal, plug-and-play enhancement pipeline.
+        This decoupling allows SANA-Video to handle the heavy lifting of motion logic (Structure), while the LTX2 Refiner handles the &ldquo;rendering&rdquo; (Texture), creating a universal, plug-and-play enhancement pipeline.
     </p>
 
     <figure>
-        <div class="grid-2">
-            <img src="https://hackmd.io/_uploads/r1eAc8Xv-l.png" alt="Training Loss Curve">
-            <img src="https://hackmd.io/_uploads/SJWz28XDbg.png" alt="Visuals during training">
-        </div>
-        <img src="https://hackmd.io/_uploads/Syyki8Qv-e.png" alt="Final Adaptation Results" style="margin-top: 15px;">
-        <figcaption>Figure 4: Adaptation process showing loss convergence (Top Left), visual recovery during training (Top Right), and final results (Bottom).</figcaption>
+        <img src="images/5-refiner-loss-vis.png" alt="Refiner Results">
+        <figcaption><strong>Figure 5:</strong> Training loss curve and visual quality progression during LTX-VAE adaptation.</figcaption>
     </figure>
 
-    <h3>3.3 Handling the Audio Branch via Zero-Initialization</h3>
+    <h3>3.2 The Step-Distilled Refiner</h3>
+    <p>
+        The LTX2 Refiner in Stage 2 utilizes <strong>Step Distillation</strong>, enabling it to operate without a full denoising trajectory. Instead, it inherits the knowledge distribution of the teacher model to inject high-frequency textures into the Stage 1 output in just <strong>4 steps</strong>. This design ensures the marginal cost of the second stage remains negligible.
+    </p>
+    <p>
+        Crucially, this model is <strong>not a standalone generator</strong>. As illustrated in Figure 3, our experiments initializing generation from pure Gaussian noise using the 4-step schedule resulted in severe structural collapse and semantic incoherence. Consequently, the Refiner&rsquo;s function is strictly defined as <strong>Latent Adaptation and Enhancement</strong>&mdash;it requires the structural prior provided by the Stage 1 output to perform a high-fidelity translation, rather than generating content from scratch.
+    </p>
+
+    <figure>
+        <video src="videos/2-refiner-failure.mp4" autoplay muted loop playsinline style="width: 70%;"></video>
+        <figcaption><strong>Video 2:</strong> Attempting to generate video from pure Gaussian noise only using the Refiner (4 steps) results in structural collapse and semantic failure. Prompt: <em>A cat and a dog baking a cake together in a kitchen.</em></figcaption>
+    </figure>
+
+    <h3>3.3 Disable the Audio Branch via Zero-Initialization</h3>
     <p>
         Since the LTX2 architecture employs a dual-branch DiT for joint video and audio generation, the Stage 2 refiner inherently anticipates concurrent inputs for both Video and Audio Latents. However, current open-source video models, including SANA-Video, typically lack audio generation capabilities. The adaptation of the LTX refiner for such <strong>video-only architectures</strong> remains an under-explored challenge.
     </p>
@@ -394,6 +393,16 @@
         <strong>Future Roadmap:</strong> We are optimizing the training scheme for the refiner and plan to open-source the complete lightweight refiner training workflow to the community.
     </p>
     
+    <h2>Citation</h2>
+    <p>If you find our work helpful, please consider citing:</p>
+    <pre style="background-color: #f8f9fa; padding: 16px; border-radius: 6px; font-size: 0.85rem; overflow-x: auto; line-height: 1.5; color: #333;">@article{sana_video_with_refiner,
+    title={Bet Small to Win Big: Efficient 2K Video Generation via Deeper-compression AutoEncoder, Linear Attention and Two-Stage Refiner},
+    author={SANA-Video Team},
+    year={2026},
+    month={Feb},
+    url={https://nvlabs.github.io/Sana/Video/blog/blog.html}
+    }</pre>
+
     <h3>References</h3>
     <p style="font-size: 0.9rem; color: #666;">
         1. LTX-2: Efficient Joint Audio-Visual Foundation Model<br>

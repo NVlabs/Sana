@@ -22,6 +22,7 @@ import torch
 import torch.nn.functional as F
 from diffusers import AutoencoderDC
 from diffusers.models import AutoencoderKL
+from diffusers.models.autoencoders import AutoencoderKLLTX2Video
 from mmcv import Registry
 from termcolor import colored
 from transformers import (
@@ -175,6 +176,16 @@ def get_vae(name, model_path, device="cuda", dtype=None, config=None):
             device=device,
         )
         return vae
+    elif "LTX2VAE_diffusers" in name:
+        # Use diffusers AutoencoderKLLTX2Video for LTX2
+        assert config is not None, "config.vae is required for LTX2VAE_diffusers"
+        print(colored(f"[LTX2VAE_diffusers] Loading model from {config.vae_pretrained}", attrs=["bold"]))
+        vae = (
+            AutoencoderKLLTX2Video.from_pretrained(config.vae_pretrained, subfolder="vae", torch_dtype=dtype)
+            .to(device)
+            .eval()
+        )
+        return vae
     else:
         print("error load vae")
         exit()
@@ -292,6 +303,14 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
         ae = vae
         z = ae.encode(images.to(device))
         z = torch.stack(z, dim=0)
+    elif "LTX2VAE_diffusers" in name:
+        # LTX2VAE_diffusers (diffusers AutoencoderKLLTX2Video) expects input shape (B, C, T, H, W) with value range [-1, 1]
+        posterior = vae.encode(images.to(device=vae.device, dtype=vae.dtype)).latent_dist
+        z = posterior.mode()
+        # Normalize latents: z = (z - mean) / std * scaling_factor
+        latents_mean = vae.latents_mean.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
+        latents_std = vae.latents_std.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
+        z = (z - latents_mean) * vae.config.scaling_factor / latents_std
     else:
         print(f"{name} encode error")
         exit()
@@ -336,6 +355,15 @@ def vae_decode(name, vae, latent):
         samples = vae.decode(latent)
     elif "Wan2_2_VAE" in name:
         samples = vae.decode(latent)
+    elif "LTX2VAE_diffusers" in name:
+        # LTX2VAE_diffusers (diffusers AutoencoderKLLTX2Video)
+        # Denormalize latents: z = z * std / scaling_factor + mean
+        latents_mean = vae.latents_mean.view(1, -1, 1, 1, 1).to(latent.device, latent.dtype)
+        latents_std = vae.latents_std.view(1, -1, 1, 1, 1).to(latent.device, latent.dtype)
+        latent = latent * latents_std / vae.config.scaling_factor + latents_mean
+        latent = latent.to(vae.dtype)
+        # Decode without timestep conditioning (set temb=None)
+        samples = vae.decode(latent, temb=None, return_dict=False)[0]
     else:
         print(f"{name} decode error")
         exit()

@@ -70,7 +70,6 @@ def set_fsdp_env():
 
     # Auto wrapping policy
     os.environ["FSDP_AUTO_WRAP_POLICY"] = "TRANSFORMER_BASED_WRAP"
-    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaVideoMSBlock"  # Your transformer block name
 
     # Performance optimization settings
     os.environ["FSDP_BACKWARD_PREFETCH"] = "BACKWARD_PRE"
@@ -1161,7 +1160,10 @@ def main(cfg: SanaVideoConfig) -> None:
             f"{config.vae.vae_type}_{num_frames}x{video_height}x{video_width}",
         )
         os.makedirs(vae_cache_dir, exist_ok=True)
-        vae.cfg.cache_dir = vae_cache_dir
+        if hasattr(vae, "cfg"):
+            vae.cfg.cache_dir = vae_cache_dir
+        else:
+            config.vae.vae_cache_dir = vae_cache_dir
         logger.info(f"Cache VAE latent of {num_frames}x{video_height}x{video_width} to {vae_cache_dir}")
 
     # 4.preparing embeddings for visualization. We put it here for saving GPU memory
@@ -1317,6 +1319,9 @@ def main(cfg: SanaVideoConfig) -> None:
         null_embed_path=null_embed_path,
         **model_kwargs,
     ).train()
+
+    if config.train.use_fsdp:
+        os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = model.blocks[0].__class__.__name__
 
     if (not config.train.use_fsdp) and config.train.ema_update:
         model_ema = deepcopy(model).eval()

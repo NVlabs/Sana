@@ -1187,6 +1187,42 @@
             height: 100%;
             border: none;
         }
+
+        .citation-section .section-title { margin-bottom: 8px; }
+        .citation-block-wrap {
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+        .citation-block {
+            background: rgba(30, 30, 30, 0.8);
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            border: 1px solid #444;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .citation-block-wrap:hover .citation-block {
+            background: rgba(40, 40, 40, 0.9);
+            border-color: #64b5f6;
+        }
+        .citation-copy-hint {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 8px;
+        }
+        .citation-block-wrap.copied .citation-copy-hint { color: #66bb6a; }
+        @media (prefers-color-scheme: light) {
+            .citation-block {
+                background: #f5f5f5;
+                border-color: #ddd;
+            }
+            .citation-block-wrap:hover .citation-block { background: #eee; border-color: #42a5f5; }
+            .citation-copy-hint { color: #666; }
+            .citation-block-wrap.copied .citation-copy-hint { color: #2e7d32; }
+        }
     </style>
 </head>
 <body>
@@ -1439,6 +1475,23 @@
             </p>
             <div class="fp4-grid" id="fp4-grid">
                 <!-- FP4 videos will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Citation Section -->
+        <section class="section citation-section">
+            <h2 class="section-title">Citation</h2>
+            <p class="section-description">If you find our work helpful, please consider citing:</p>
+            <div class="citation-block-wrap" id="citation-block-wrap" title="Click to copy">
+                <pre class="citation-block" id="citation-bibtex">@inproceedings{
+    chen2025sanavideo,
+    title={SANA-Video: Efficient Video Generation with Block Linear Diffusion Transformer}, 
+    author={Junsong Chen and Yuyang Zhao and Jincheng Yu and Ruihang Chu and Junyu Chen and Shuai Yang and Xianbang Wang and Yicheng Pan and Daquan Zhou and Huan Ling and Haozhe Liu and Hongwei Yi and Hao Zhang and Muyang Li and Yukang Chen and Han Cai and Sanja Fidler and Ping Luo and Song Han and Enze Xie}    title={{SANA}-Video: Efficient Video Generation with Block Linear Diffusion Transformer},
+    booktitle={The Fourteenth International Conference on Learning Representations},
+    year={2026},
+    url={https://openreview.net/forum?id=mzAchylAtf}
+}</pre>
+                <p class="citation-copy-hint" id="citation-copy-hint">Click to copy</p>
             </div>
         </section>
     </div>
@@ -1734,6 +1787,26 @@
         // Initialize video grids when page loads
         document.addEventListener('DOMContentLoaded', function() {
             populateVideoGrids();
+
+            // Citation: copy to clipboard on click
+            var citationWrap = document.getElementById('citation-block-wrap');
+            if (citationWrap) {
+                citationWrap.addEventListener('click', function() {
+                    var pre = document.getElementById('citation-bibtex');
+                    var hint = document.getElementById('citation-copy-hint');
+                    var text = pre ? pre.textContent.trim() : '';
+                    navigator.clipboard.writeText(text).then(function() {
+                        hint.textContent = 'Copied!';
+                        citationWrap.classList.add('copied');
+                        setTimeout(function() {
+                            hint.textContent = 'Click to copy';
+                            citationWrap.classList.remove('copied');
+                        }, 2000);
+                    }).catch(function() {
+                        hint.textContent = 'Copy failed';
+                    });
+                });
+            }
             
             // Ensure videos are playing automatically
             document.querySelectorAll('.video-player').forEach(video => {

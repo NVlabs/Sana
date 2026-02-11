@@ -332,7 +332,7 @@
     <ul>
         <li><strong>SANA-Video-1.0 (720p):</strong> ~36s</li>
         <li><strong>SANA-Video-LTX (720p):</strong> ~18s (50% Efficiency Gain)</li>
-        <li><strong>SANA-Video-LTX-Refine (2K):</strong> ~36s (free lunch)</li>
+        <li><strong>SANA-Video-LTX-Refiner (2K):</strong> ~36s (Free Lunch!)</li>
     </ul>
 
     <p>Our upgrade from 720p to 2K is the ultimate free lunch: a massive resolution leap at no cost to user latency. <strong>Figure 4</strong> illustrates the complete two-stage inference pipeline.</p>
@@ -380,7 +380,7 @@
     </p>
 
     <figure>
-        <video src="videos/2-refiner-failure.mp4" autoplay muted loop playsinline style="width: 70%;"></video>
+        <video src="videos/2-refiner-failure.mp4" autoplay muted loop playsinline style="width: 50%;"></video>
         <figcaption><strong>Video 2:</strong> Attempting to generate video from pure Gaussian noise only using the Refiner (4 steps) results in structural collapse and semantic failure. Prompt: <em>A cat and a dog baking a cake together in a kitchen.</em></figcaption>
     </figure>
 
@@ -427,6 +427,26 @@
         &copy; 2026 SANA-Video Team. All rights reserved.
     </footer>
 </div>
+
+<script>
+    function sendHeight() {
+        const height = document.body.scrollHeight;
+        window.parent.postMessage({ height: height }, '*');
+    }
+    
+    window.addEventListener('load', sendHeight);
+    window.addEventListener('resize', sendHeight);
+    
+    window.addEventListener('load', function() {
+        if (window.MathJax) {
+            MathJax.startup.promise.then(function() {
+                sendHeight();
+            });
+        }
+        
+        setTimeout(sendHeight, 500);
+    });
+</script>
 
 </body>
 </html>

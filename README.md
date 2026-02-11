@@ -1,3 +1,5 @@
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/NVlabs/Sana)
+
 <p align="center" style="border-radius: 10px">
   <img src="asset/logo.png" width="35%" alt="logo"/>
 </p>

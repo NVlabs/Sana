@@ -45,6 +45,11 @@
             opacity: 0.7;
         }
 
+        /* 嵌入 iframe 时隐藏标题区，避免与父页面重复 */
+        body.embedded .embed-hide {
+            display: none !important;
+        }
+
         /* Header Styles */
         header {
             margin-bottom: 20px;
@@ -222,9 +227,15 @@
     </style>
 </head>
 <body>
-
+<script>
+    (function() {
+        if (window.self !== window.top) {
+            document.body.classList.add('embedded');
+        }
+    })();
+</script>
 <div class="container">
-    <header>
+    <header class="embed-hide">
         <h1>Bet Small to Win Big: Efficient 2K Video Generation via Deeper-compression AutoEncoder, Linear Attention and Two-Stage Refiner</h1>
         <div class="metadata">
             <strong>SANA-Video Team</strong>

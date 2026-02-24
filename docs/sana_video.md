@@ -26,14 +26,14 @@
 
 ## 📽️ About SANA-Video
 
-**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to $720 \\times 1280$) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
+**SANA-Video** is a small diffusion model designed for **efficient video generation**, capable of synthesizing high-resolution videos (up to 720 x 1280) and **minute-length duration** with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.
 
 SANA-Video's Core Contributions:
 
 - **Efficient Architecture (Linear DiT)**: Leverages **linear attention** as the core operation, which is significantly more efficient than vanilla attention for video generation due to the large number of tokens processed.
 - **Long-Sequence Capability (Constant-Memory KV Cache)**: Introduces a **Constant-Memory KV cache for Block Linear Attention**. This block-wise autoregressive approach uses a fixed-memory state derived from the cumulative properties of linear attention, which eliminates the need for a traditional KV cache, enabling **efficient minute-long video generation**.
 - **Low Training Cost**: Achieved effective data filters and model training strategies, narrowing the training cost to only **12 days on 64 H100 GPUs**, which is just **1%** of the cost of MovieGen.
-- **State-of-the-Art Speed and Performance**: Achieves competitive performance compared to modern SOTA small diffusion models (e.g., Wan 2.1-1.3B) while being **$16\\times$ faster** in measured latency。Deployment Acceleration: Can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (**$2.4\\times$ speedup**).
+- **State-of-the-Art Speed and Performance**: Achieves competitive performance compared to modern SOTA small diffusion models (e.g., Wan 2.1-1.3B) while being **16x faster** in measured latency。Deployment Acceleration: Can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (**2.4x speedup**).
 
 In summary, SANA-Video enables high-quality video synthesis at an unmatched speed and low operational cost.
 
@@ -162,7 +162,57 @@ bash inference_video_scripts/inference_sana_video.sh \
       --work_dir output/sana_ti2v_video_results
 ```
 
+### 3. Inference 720p Model
+
+The 720p model uses [LTX-2 VAE](https://huggingface.co/Lightricks/LTX-2) (32x spatial compression, 8x temporal compression) for higher-resolution video generation.
+
+#### Text-to-Video (720p)
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+      --np 1 \
+      --config configs/sana_video_config/Sana_2000M_720px_ltx2vae_AdamW_fsdp.yaml \
+      --model_path /path/to/720p_ltx2vae_checkpoint.pth \
+      --txt_file=asset/samples/video_prompts_samples.txt \
+      --cfg_scale 6 \
+      --motion_score 30 \
+      --flow_shift 8 \
+      --work_dir output/sana_t2v_720p_results
+```
+
+#### Image-to-Video (720p)
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+      --np 1 \
+      --config configs/sana_video_config/Sana_2000M_720px_ltx2vae_AdamW_fsdp.yaml \
+      --model_path /path/to/720p_ltx2vae_checkpoint.pth \
+      --txt_file=asset/samples/sample_i2v.txt \
+      --task=ltx \
+      --cfg_scale 6 \
+      --motion_score 30 \
+      --flow_shift 8 \
+      --work_dir output/sana_ti2v_720p_results
+```
+
+### 4. Sana Video + LTX2 Refiner Pipeline
+
+Use Sana-Video to generate video latents, then refine with LTX-2 Stage-2 for enhanced quality:
+
+```bash
+python app/sana_video_refiner_pipeline_diffusers.py \
+      --sana_model_id /path/to/sana_ltxvae_diffusers \
+      --ltx2_model_id Lightricks/LTX-2 \
+      --prompt "A cat and a dog baking a cake together in a kitchen." \
+      --sana_height 704 \
+      --sana_width 1280 \
+      --sana_frames 81 \
+      --output_path sana_ltx2_refined.mp4
+```
+
 ## 💻 How to Train
+
+### 480p Model (WanVAE)
 
 ```bash
 # 5s Video Model Pre-Training
@@ -174,6 +224,26 @@ bash train_video_scripts/train_video_ivjoint.sh \
       --train.num_workers=10 \
       --train.visualize=true
 ```
+
+### 720p Model
+
+```bash
+# 720p Video Model Training with LTX2 VAE
+bash train_video_scripts/train_video_ivjoint.sh \
+      configs/sana_video_config/Sana_2000M_720px_ltx2vae_AdamW_fsdp.yaml \
+      --data.data_dir="[data/toy_data]" \
+      --train.train_batch_size=1 \
+      --work_dir=output/sana_video_720p_ltx2 \
+      --train.num_workers=10 \
+      --train.visualize=true
+```
+
+Key differences for 720p LTX2 VAE training:
+
+- **VAE**: Uses `LTX2VAE_diffusers` (AutoencoderKLLTX2Video) with 128 latent channels and 32x spatial compression
+- **Model**: Uses `SanaMSVideo_2000M_P1_D20` (patch_size=1) since LTX2 VAE already compresses 32x spatially
+- **Aspect Ratio**: Uses `ASPECT_RATIO_VIDEO_720_MS_DIV32` to ensure spatial dims are divisible by 32
+- **Initialization**: Loads from 480p checkpoint with `remove_state_dict_keys` to handle input/output dim changes
 
 ## Convert pth to diffusers safetensor
 

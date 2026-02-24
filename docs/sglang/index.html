@@ -12,13 +12,13 @@
         <meta name="author" content="Sana Team">
       
       
-        <link rel="canonical" href="https://nvlabs.github.io/Sana/docs/4bit_sana/">
+        <link rel="canonical" href="https://nvlabs.github.io/Sana/docs/sglang/">
       
       
-        <link rel="prev" href="../sana_sprint/">
+        <link rel="prev" href="../ComfyUI/comfyui/">
       
       
-        <link rel="next" href="../8bit_sana/">
+        <link rel="next" href="../metrics_toolkit/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>4-bit Quant - Sana Documentation</title>
+        <title>SGLang - Sana Documentation</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#4bit-sanapipeline" class="md-skip">
+        <a href="#sglang-high-performance-serving-for-sana" class="md-skip">
           Skip to content
         </a>
       
@@ -119,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              4-bit Quant
+              SGLang
             
           </span>
         </div>
@@ -413,10 +413,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -439,11 +437,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -464,7 +464,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -535,37 +535,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    4-bit Quant
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../4bit_sana/" class="md-nav__link">
         
   
   
@@ -581,70 +554,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1-environment-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Environment setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1-1-quantize-sana-with-svdquant-4bit-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1-1. Quantize Sana with SVDQuant-4bit (Optional)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-code-snap-for-inference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Code snap for inference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-online-demo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Online demo
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -993,8 +902,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1011,13 +922,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -1038,7 +947,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1081,10 +990,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../sglang/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SGLang
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1100,6 +1036,170 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-python-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Python SDK
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-mode-openai-compatible-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Mode (OpenAI-Compatible API)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Mode (OpenAI-Compatible API)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#launch-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch the Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send-requests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send Requests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Optimization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lora-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoRA Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#citation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Citation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1232,10 +1332,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-environment-setup" class="md-nav__link">
+  <a href="#supported-models" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Environment setup
+        Supported Models
       
     </span>
   </a>
@@ -1243,10 +1343,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-1-quantize-sana-with-svdquant-4bit-optional" class="md-nav__link">
+  <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1-1. Quantize Sana with SVDQuant-4bit (Optional)
+        Installation
       
     </span>
   </a>
@@ -1254,10 +1354,88 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-code-snap-for-inference" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Code snap for inference
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-python-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Python SDK
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-mode-openai-compatible-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Mode (OpenAI-Compatible API)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Mode (OpenAI-Compatible API)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#launch-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch the Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send-requests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send Requests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Optimization
       
     </span>
   </a>
@@ -1265,10 +1443,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-online-demo" class="md-nav__link">
+  <a href="#lora-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Online demo
+        LoRA Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#citation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Citation
       
     </span>
   </a>
@@ -1295,74 +1495,176 @@
   
 
 
-<!--Copyright 2024 NVIDIA CORPORATION & AFFILIATES
-#
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License. -->
+<p align="center" style="border-radius: 10px">
+  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="40%" alt="Sana Logo"/>
+</p>
 
-<h1 id="4bit-sanapipeline">4bit SanaPipeline<a class="headerlink" href="#4bit-sanapipeline" title="Permanent link">&para;</a></h1>
-<h3 id="1-environment-setup">1. Environment setup<a class="headerlink" href="#1-environment-setup" title="Permanent link">&para;</a></h3>
-<p>Follow the official <a href="https://github.com/mit-han-lab/nunchaku">SVDQuant-Nunchaku</a> repository to set up the environment. The guidance can be found <a href="https://github.com/mit-han-lab/nunchaku?tab=readme-ov-file#installation">here</a>.</p>
-<h3 id="1-1-quantize-sana-with-svdquant-4bit-optional">1-1. Quantize Sana with SVDQuant-4bit (Optional)<a class="headerlink" href="#1-1-quantize-sana-with-svdquant-4bit-optional" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Convert pth to SVDQuant required safetensor</li>
-</ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python tools/convert_scripts/convert_sana_to_svdquant.py \
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>      --orig_ckpt_path Efficient-Large-Model/SANA1.5_1.6B_1024px/checkpoints/SANA1.5_1.6B_1024px.pth \
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>      --model_type SanaMS1.5_1600M_P1_D20 \
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      --dtype bf16 \
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      --dump_path output/SANA1.5_1.6B_1024px_svdquant_diffusers \
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>      --save_full_pipeline
+<h1 id="sglang-high-performance-serving-for-sana">🚀 SGLang: High-Performance Serving for SANA<a class="headerlink" href="#sglang-high-performance-serving-for-sana" title="Permanent link">&para;</a></h1>
+<div align="center">
+  <a href="https://github.com/sgl-project/sglang"><img src="https://img.shields.io/static/v1?label=Project&message=SGLang&color=blue&logo=github"></a> &ensp;
+  <a href="https://github.com/NVlabs/Sana"><img src="https://img.shields.io/static/v1?label=Project&message=Sana&color=blue&logo=github-pages"></a> &ensp;
+</div>
+
+<p><a href="https://github.com/sgl-project/sglang">SGLang</a> is an inference framework for accelerated image/video generation. SANA models are natively supported in SGLang, providing high-performance serving with OpenAI-compatible API, CLI, and Python SDK.</p>
+<h2 id="supported-models">Supported Models<a class="headerlink" href="#supported-models" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>HuggingFace ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sana 0.6B (512px)</td>
+<td><code>Efficient-Large-Model/Sana_600M_512px_diffusers</code></td>
+</tr>
+<tr>
+<td>Sana 0.6B (1024px)</td>
+<td><code>Efficient-Large-Model/Sana_600M_1024px_diffusers</code></td>
+</tr>
+<tr>
+<td>Sana 1.6B (512px)</td>
+<td><code>Efficient-Large-Model/Sana_1600M_512px_diffusers</code></td>
+</tr>
+<tr>
+<td>Sana 1.6B (1024px)</td>
+<td><code>Efficient-Large-Model/Sana_1600M_1024px_diffusers</code></td>
+</tr>
+<tr>
+<td>SANA-1.5 1.6B (1024px)</td>
+<td><code>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers</code></td>
+</tr>
+<tr>
+<td>SANA-1.5 4.8B (1024px)</td>
+<td><code>Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;sglang[diffusion]&#39;</span><span class="w"> </span>--prerelease<span class="o">=</span>allow
 </code></pre></div>
-<ol>
-<li>follow the guidance to compress model
-   <a href="https://github.com/mit-han-lab/deepcompressor/tree/main/examples/diffusion">Quantization guidance</a></li>
-</ol>
-<h3 id="2-code-snap-for-inference">2. Code snap for inference<a class="headerlink" href="#2-code-snap-for-inference" title="Permanent link">&para;</a></h3>
-<p>Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the <a href="https://github.com/mit-han-lab/nunchaku/blob/main/examples/sana_1600m_pag.py">SanaPAGPipeline</a> section.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">diffusers</span><span class="w"> </span><span class="kn">import</span> <span class="n">SanaPipeline</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">nunchaku.models.transformer_sana</span><span class="w"> </span><span class="kn">import</span> <span class="n">NunchakuSanaTransformer2DModel</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">transformer</span> <span class="o">=</span> <span class="n">NunchakuSanaTransformer2DModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;mit-han-lab/svdq-int4-sana-1600m&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">SanaPipeline</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s2">&quot;Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">transformer</span><span class="o">=</span><span class="n">transformer</span><span class="p">,</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">&quot;bf16&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">pipe</span><span class="o">.</span><span class="n">text_encoder</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">pipe</span><span class="o">.</span><span class="n">vae</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;A cute 🐼 eating 🎋, ink drawing style&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
-<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
-<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">4.5</span><span class="p">,</span>
-<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="p">)</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;sana_1600m.png&quot;</span><span class="p">)</span>
+<p>For more installation methods (e.g. Docker, ROCm/AMD), check the <a href="https://github.com/sgl-project/sglang/tree/main/docs/diffusion/installation.md">SGLang installation guide</a>.</p>
+<hr />
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<h3 id="1-cli">1. CLI<a class="headerlink" href="#1-cli" title="Permanent link">&para;</a></h3>
+<p>The simplest way to generate an image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sglang<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--model-path<span class="w"> </span>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span>--save-output
 </code></pre></div>
-<h3 id="3-online-demo">3. Online demo<a class="headerlink" href="#3-online-demo" title="Permanent link">&para;</a></h3>
-<p>1). Launch the 4bit Sana.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>app/app_sana_4bit.py
+<h3 id="2-python-sdk">2. Python SDK<a class="headerlink" href="#2-python-sdk" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sglang.multimodal_gen</span><span class="w"> </span><span class="kn">import</span> <span class="n">DiffGenerator</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">generator</span> <span class="o">=</span> <span class="n">DiffGenerator</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">model_path</span><span class="o">=</span><span class="s2">&quot;Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">num_gpus</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">image</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">sampling_params_kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">prompt</span><span class="o">=</span><span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">height</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">width</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">4.5</span><span class="p">,</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="n">save_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;outputs/&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="p">)</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">)</span>
 </code></pre></div>
-<p>2). Compare with BF16 version</p>
-<p>Refer to the original <a href="https://github.com/mit-han-lab/nunchaku/tree/main/app/sana/t2i">Nunchaku-Sana.</a> guidance for SanaPAGPipeline</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>app/app_sana_4bit_compare_bf16.py
+<hr />
+<h2 id="server-mode-openai-compatible-api">Server Mode (OpenAI-Compatible API)<a class="headerlink" href="#server-mode-openai-compatible-api" title="Permanent link">&para;</a></h2>
+<h3 id="launch-the-server">Launch the Server<a class="headerlink" href="#launch-the-server" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sglang<span class="w"> </span>serve<span class="w"> </span>--model-path<span class="w"> </span>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span>--port<span class="w"> </span><span class="m">30000</span>
+</code></pre></div>
+<h3 id="send-requests">Send Requests<a class="headerlink" href="#send-requests" title="Permanent link">&para;</a></h3>
+<p>Once the server is running, use the OpenAI-compatible image generation API:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">&quot;http://127.0.0.1:30000/v1/images/generations&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="s2">&quot;1024x1024&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">&quot;num_inference_steps&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="s2">&quot;guidance_scale&quot;</span><span class="p">:</span> <span class="mf">4.5</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">&quot;response_format&quot;</span><span class="p">:</span> <span class="s2">&quot;b64_json&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="p">},</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">)</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="n">result</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+</code></pre></div>
+<hr />
+<h2 id="memory-optimization">Memory Optimization<a class="headerlink" href="#memory-optimization" title="Permanent link">&para;</a></h2>
+<p>For GPUs with limited VRAM, SGLang provides CPU offloading options:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sglang<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>--model-path<span class="w"> </span>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--text-encoder-cpu-offload<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--vae-cpu-offload<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>--pin-cpu-memory<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s2">&quot;A beautiful landscape&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span>--save-output
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--dit-cpu-offload</code></td>
+<td>Offload DiT model to CPU</td>
+</tr>
+<tr>
+<td><code>--text-encoder-cpu-offload</code></td>
+<td>Offload text encoder to CPU</td>
+</tr>
+<tr>
+<td><code>--vae-cpu-offload</code></td>
+<td>Offload VAE to CPU</td>
+</tr>
+<tr>
+<td><code>--pin-cpu-memory</code></td>
+<td>Pin CPU memory for faster transfer</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="lora-support">LoRA Support<a class="headerlink" href="#lora-support" title="Permanent link">&para;</a></h2>
+<p>Apply LoRA adapters during inference:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sglang<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span>--model-path<span class="w"> </span>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span>--lora-path<span class="w"> </span>&lt;your-lora-path&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s2">&quot;A beautiful landscape&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span>--save-output
+</code></pre></div>
+<hr />
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/sgl-project/sglang/tree/main/docs/diffusion">SGLang Diffusion Documentation</a></li>
+<li><a href="../model_zoo/">Model Zoo</a> - All available Sana models</li>
+<li><a href="../sana/">SANA Inference &amp; Training</a> - Native inference pipeline</li>
+</ul>
+<hr />
+<h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nc">@misc</span><span class="p">{</span><span class="nl">xie2024sana</span><span class="p">,</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">      </span><span class="na">title</span><span class="p">=</span><span class="s">{Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer}</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">      </span><span class="na">author</span><span class="p">=</span><span class="s">{Enze Xie and Junsong Chen and Junyu Chen and Han Cai and Haotian Tang and Yujun Lin and Zhekai Zhang and Muyang Li and Ligeng Zhu and Yao Lu and Song Han}</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="na">year</span><span class="p">=</span><span class="s">{2024}</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="na">eprint</span><span class="p">=</span><span class="s">{2410.10629}</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="na">archivePrefix</span><span class="p">=</span><span class="s">{arXiv}</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="na">primaryClass</span><span class="p">=</span><span class="s">{cs.CV}</span><span class="p">,</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">      </span><span class="na">url</span><span class="p">=</span><span class="s">{https://arxiv.org/abs/2410.10629}</span><span class="p">,</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
 </code></pre></div>
 
 

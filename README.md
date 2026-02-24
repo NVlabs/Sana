@@ -3,7 +3,7 @@
 </p>
 
 <h3 align="center">
-<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a>
+<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a>
 </h3>
 
 <p align="center">
@@ -31,6 +31,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## 🔥🔥 News
 
+- (🔥 New) [2026/02] 🚀**SANA is now supported in [SGLang](https://github.com/sgl-project/sglang)!** High-performance serving with OpenAI-compatible API. [[Guidance]](https://nvlabs.github.io/Sana/docs/sglang/)
 - (🔥 New) [2026/01/26] **SANA-Video is accepted as Oral by ICLR-2026.** 🎉🎉🎉
 - (🔥 New) [2025/12/09] 🎬 [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/): 27FPS real-time minute-length video generation model, training and inference code are all released. Thanks to [LongLive Team](https://github.com/NVlabs/LongLive). Refer to: [[Train]](https://nvlabs.github.io/Sana/docs/longsana/#how-to-train) | [[Test]](https://nvlabs.github.io/Sana/docs/longsana/#how-to-inference) | [[Weight]](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video)
 - (🔥 New) [2025/11/24] 🪶 [Blog](https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory): how Causal Linear Attention unlocks infinite context for LLMs and long video generation.
@@ -157,6 +158,7 @@ image[0].save("sana.png")
 - [LoRA / DreamBooth](https://nvlabs.github.io/Sana/docs/sana_lora_dreambooth/)
 - [Quantization (4bit / 8bit)](https://nvlabs.github.io/Sana/docs/4bit_sana/)
 - [ComfyUI](https://nvlabs.github.io/Sana/docs/ComfyUI/comfyui/)
+- [SGLang](https://nvlabs.github.io/Sana/docs/sglang/)
 
 ## Performance
 

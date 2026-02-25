@@ -229,7 +229,7 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
                         with z_vae_cache.open(key + ".npz", "r") as f:
                             z.append(np.load(f)["z"] if "z" in np.load(f) else np.load(f))
                 z = torch.from_numpy(np.stack(z)).to(device)
-        except:
+        except Exception:
             z = None
         if z is None or len(z) == 0:
             z = ae.encode(images.to(device))
@@ -248,7 +248,7 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
                         np.savez_compressed(f, z=z[i].float().cpu().numpy())  # bf16 not support for cpu
                         try:
                             os.link(f.name, cf)
-                        except:
+                        except Exception:
                             pass
     elif "AutoencoderDC" in name:
         ae = vae
@@ -279,7 +279,7 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
                         with z_vae_cache.open(key + ".npz", "r") as f:
                             z.append(np.load(f)["z"] if "z" in np.load(f) else np.load(f))
                 z = [torch.from_numpy(_z).to(device) for _z in z]
-        except:
+        except Exception:
             z = None
 
         if z is None or len(z) == 0:
@@ -295,7 +295,7 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
                         np.savez_compressed(f, z=z[i].float().cpu().numpy())  # bf16 not support for cpu
                         try:
                             os.link(f.name, cf)
-                        except:
+                        except Exception:
                             pass
 
         z = torch.stack(z, dim=0)

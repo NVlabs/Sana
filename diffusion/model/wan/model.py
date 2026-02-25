@@ -1085,7 +1085,7 @@ class WanModel(ModelMixin, ConfigMixin):
                 try:
                     self.get_parameter(name)
                     exists = True
-                except:
+                except Exception:
                     exists = False
                 if exists:
                     # get device and dtype of the parameter

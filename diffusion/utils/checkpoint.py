@@ -354,7 +354,7 @@ def load_checkpoint_fsdp(
         # Load metadata to get video_step and image_step
         try:
             metadata = torch.load(os.path.join(checkpoint, "metadata.pth"), map_location="cpu")
-        except:
+        except Exception:
             metadata = {}
 
     if remove_state_dict_keys is None:

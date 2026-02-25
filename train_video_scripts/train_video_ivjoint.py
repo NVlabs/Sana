@@ -1239,7 +1239,7 @@ def main(cfg: SanaVideoConfig) -> None:
         tracker_config = dict(vars(config))
         try:
             accelerator.init_trackers(args.tracker_project_name, tracker_config)
-        except:
+        except Exception:
             accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
@@ -1299,7 +1299,7 @@ def main(cfg: SanaVideoConfig) -> None:
         try:
             start_epoch = int(path.replace(".pth", "").split("_")[1]) - 1
             start_step = int(path.replace(".pth", "").split("_")[3])
-        except:
+        except Exception:
             pass
 
         # Set video_step and image_step based on availability

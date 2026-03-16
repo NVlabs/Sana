@@ -1855,13 +1855,14 @@
 </div>
 
 <h2 id="about-sana-video">📽️ About SANA-Video<a class="headerlink" href="#about-sana-video" title="Permanent link">&para;</a></h2>
-<p><strong>SANA-Video</strong> is a small diffusion model designed for <strong>efficient video generation</strong>, capable of synthesizing high-resolution videos (up to 720 x 1280) and <strong>minute-length duration</strong> with strong text-video alignment, while maintaining a remarkably fast speed.It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.</p>
+<p><strong>SANA-Video</strong> is a small diffusion model designed for <strong>efficient video generation</strong>, capable of synthesizing high-resolution videos (up to <strong>2K resolution</strong> with Two-Stage Refiner) and <strong>minute-length duration</strong> with strong text-video alignment, while maintaining a remarkably fast speed. It enables low-cost, high-quality video generation and can be deployed efficiently on consumer GPUs like the RTX 5090.</p>
 <p>SANA-Video's Core Contributions:</p>
 <ul>
 <li><strong>Efficient Architecture (Linear DiT)</strong>: Leverages <strong>linear attention</strong> as the core operation, which is significantly more efficient than vanilla attention for video generation due to the large number of tokens processed.</li>
 <li><strong>Long-Sequence Capability (Constant-Memory KV Cache)</strong>: Introduces a <strong>Constant-Memory KV cache for Block Linear Attention</strong>. This block-wise autoregressive approach uses a fixed-memory state derived from the cumulative properties of linear attention, which eliminates the need for a traditional KV cache, enabling <strong>efficient minute-long video generation</strong>.</li>
 <li><strong>Low Training Cost</strong>: Achieved effective data filters and model training strategies, narrowing the training cost to only <strong>12 days on 64 H100 GPUs</strong>, which is just <strong>1%</strong> of the cost of MovieGen.</li>
 <li><strong>State-of-the-Art Speed and Performance</strong>: Achieves competitive performance compared to modern SOTA small diffusion models (e.g., Wan 2.1-1.3B) while being <strong>16x faster</strong> in measured latency。Deployment Acceleration: Can be deployed on RTX 5090 GPUs with NVFP4 precision, accelerating the inference speed of generating a 5-second 720p video from 71s to 29s (<strong>2.4x speedup</strong>).</li>
+<li><strong>Two-Stage Inference Paradigm (<a href="https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html">"Bet Small to Win Big"</a>)</strong>: Decouples video generation into a lightweight 2B base model for temporal dynamics (Structure) and a step-distilled <a href="https://arxiv.org/abs/2601.03233">LTX2 Refiner</a> for spatial resolution (Texture). This &ldquo;Small Model + 2-Stage&rdquo; strategy delivers <strong>2K quality at 720p latency</strong>, achieving a massive resolution upgrade at zero additional cost to the user.</li>
 </ul>
 <p>In summary, SANA-Video enables high-quality video synthesis at an unmatched speed and low operational cost.</p>
 <h2 id="block-causal-linear-attention-causal-mix-ffn-mechanism">💻 Block Causal Linear Attention &amp;&amp; Causal Mix-FFN Mechanism<a class="headerlink" href="#block-causal-linear-attention-causal-mix-ffn-mechanism" title="Permanent link">&para;</a></h2>
@@ -1997,9 +1998,9 @@
 <a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">      </span>--work_dir<span class="w"> </span>output/sana_ti2v_720p_results
 </code></pre></div>
 <h3 id="4-sana-video-ltx2-refiner-pipeline">4. Sana Video + LTX2 Refiner Pipeline<a class="headerlink" href="#4-sana-video-ltx2-refiner-pipeline" title="Permanent link">&para;</a></h3>
-<p>Use Sana-Video to generate video latents, then refine with LTX-2 Stage-2 for enhanced quality:</p>
+<p>We adopt a <a href="https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html"><strong>Two-Stage Inference Paradigm</strong></a>: Stage 1 generates video latents with SANA-Video, Stage 1.5 upsamples the latent spatially, and Stage 2 refines with a step-distilled <a href="https://arxiv.org/abs/2601.03233">LTX2 Refiner</a> for 2K quality at 720p latency. See the <a href="../sana_video_inference/#sana-video-ltx2-refiner">full diffusers pipeline code</a> for details.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>app/sana_video_refiner_pipeline_diffusers.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">      </span>--sana_model_id<span class="w"> </span>/path/to/sana_ltxvae_diffusers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">      </span>--sana_model_id<span class="w"> </span>Efficient-Large-Model/SANA-Video_2B_720p_diffusers<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">      </span>--ltx2_model_id<span class="w"> </span>Lightricks/LTX-2<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span>--prompt<span class="w"> </span><span class="s2">&quot;A cat and a dog baking a cake together in a kitchen.&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span>--sana_height<span class="w"> </span><span class="m">704</span><span class="w"> </span><span class="se">\</span>
@@ -2007,6 +2008,17 @@
 <a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span>--sana_frames<span class="w"> </span><span class="m">81</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">      </span>--output_path<span class="w"> </span>sana_ltx2_refined.mp4
 </code></pre></div>
+<p><strong>Result Comparison:</strong> Stage 1 base output (Left) vs. Stage 2 Refined output (Right).</p>
+<div style="display: flex; gap: 16px; margin: 20px 0; width: 100%;">
+  <div style="flex: 1; min-width: 0; text-align: center;">
+    <video src="https://nvlabs.github.io/Sana/Video/refiner/sana_ori.mp4" autoplay muted loop playsinline style="width: 100%; border-radius: 8px; display: block;"></video>
+    <p style="margin-top: 6px; font-size: 0.9em; color: #666;"><strong>Stage 1:</strong> SANA-Video Base (720p)</p>
+  </div>
+  <div style="flex: 1; min-width: 0; text-align: center;">
+    <video src="https://nvlabs.github.io/Sana/Video/refiner/sana_ltx2_refined.mp4" autoplay muted loop playsinline style="width: 100%; border-radius: 8px; display: block;"></video>
+    <p style="margin-top: 6px; font-size: 0.9em; color: #666;"><strong>Stage 2:</strong> + LTX2 Refiner (2K)</p>
+  </div>
+</div>
 <h2 id="how-to-train">💻 How to Train<a class="headerlink" href="#how-to-train" title="Permanent link">&para;</a></h2>
 <h3 id="480p-model-wanvae">480p Model (WanVAE)<a class="headerlink" href="#480p-model-wanvae" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 5s Video Model Pre-Training</span>

@@ -1279,17 +1279,25 @@
                     </a>
                     <a href="https://hanlab.mit.edu/blog/infinite-context-length-with-global-but-constant-attention-memory" target="_blank" class="badge code">
                         <span class="badge-icon">🪶</span>
-                        Blog
+                        Blog: Linear Attention
+                    </a>
+                    <a href="https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html" target="_blank" class="badge code">
+                        <span class="badge-icon">🪶</span>
+                        Blog: Two-Stage Refiner
                     </a>
                     <a href="https://sana-video.hanlab.ai" target="_blank" class="badge demo">
                         <span class="badge-icon">🎬</span>
                         Demo
                     </a>
+                    <a href="https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video" target="_blank" class="badge code">
+                        <span class="badge-icon">🤗</span>
+                        Models
+                    </a>
                 </div>
             </div>
             <p class="subtitle">
                 <span class="abstract-title">About SANA-Video</span><br/>
-                We introduce <strong>SANA-Video</strong>, a small diffusion model that can efficiently generate videos up to 720×1280 resolution and minute-length duration. 
+                We introduce <strong>SANA-Video</strong>, a small diffusion model that can efficiently generate videos up to <strong>2K resolution</strong> and minute-length duration. 
             <strong>SANA-Video</strong> synthesizes high-resolution, high-quality and long videos with strong text-video alignment at a remarkably fast speed, deployable on RTX 5090 GPU. Two core designs ensure our efficient, effective and long video generation:
             (1) <strong>Linear DiT:</strong> We leverage linear attention as the core operation, which is more efficient than vanilla attention given the large number of tokens processed in video generation.
             (2) <strong>Constant-Memory KV cache for Block Linear Attention:</strong> we design block-wise autoregressive approach for long video generation by employing a constant-memory state, derived from the cumulative properties of linear attention. This KV cache provides the Linear DiT with global context at a fixed memory cost, eliminating the need for a traditional KV cache and enabling efficient, minute-long video generation.
@@ -1393,7 +1401,8 @@
         <section class="section">
             <h2 class="section-title">SANA + LTX2-Refiner</h2>
             <p class="section-description">
-                Generated 720P video outputs using SANA-Video with <a href="https://arxiv.org/abs/2601.03233" target="_blank">LTX2-Refiner</a>
+                Generated 720P video outputs using SANA-Video with <a href="https://arxiv.org/abs/2601.03233" target="_blank">LTX2-Refiner</a>.
+                Read our <a href="https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html" target="_blank">technical blog</a> for details on the Two-Stage Inference Paradigm.
             </p>
             <div class="video-grid ltx-refiner-grid" id="ltx-refiner-grid">
                 <!-- SANA + LTX Refiner videos will be dynamically added here -->

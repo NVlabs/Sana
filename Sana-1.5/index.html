@@ -51,6 +51,75 @@
             border-radius: 30px;
             text-decoration: none;
         }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #90caf9;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+
+        .badge:hover {
+            transform: translateY(-1px);
+            border-color: #64b5f6;
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.1);
+        }
+
+        .badge.paper {
+            border-color: #ef9a9a;
+        }
+
+        .badge.paper:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        .badge.code {
+            border-color: #90caf9;
+        }
+
+        .badge.code:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+            background: rgba(25, 118, 210, 0.1);
+        }
+
+        .badge.demo {
+            border-color: #a5d6a7;
+            background: transparent;
+            margin-top: 0;
+            text-align: left;
+        }
+
+        .badge.demo:hover {
+            border-color: #388e3c;
+            color: #388e3c;
+            background: rgba(56, 142, 60, 0.1);
+        }
+
+        .badge-icon {
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+
         .gallery-container {
             max-width: 77%; /* Limit the width of the gallery */
             margin: 0 auto; /* Center the gallery */
@@ -533,9 +602,24 @@
           </div>
         </div>
 
-        <a href="https://arxiv.org/abs/2501.18427" class="button">Paper</a>
-        <a href="https://github.com/NVlabs/Sana" class="button">Code</a>
-        <a href="https://sana.hanlab.ai/" class="button">Demo</a>
+        <div class="badges">
+            <a href="https://arxiv.org/abs/2501.18427" target="_blank" class="badge paper">
+                <span class="badge-icon">📄</span>
+                Paper
+            </a>
+            <a href="https://github.com/NVlabs/Sana" target="_blank" class="badge code">
+                <span class="badge-icon">💻</span>
+                Code
+            </a>
+            <a href="https://nvlabs.github.io/Sana/docs/sana/" target="_blank" class="badge code">
+                <span class="badge-icon">📖</span>
+                Docs
+            </a>
+            <a href="https://sana.hanlab.ai/" target="_blank" class="badge demo">
+                <span class="badge-icon">🚀</span>
+                Demo
+            </a>
+        </div>
     </div>
 
     <div class="gallery-container">

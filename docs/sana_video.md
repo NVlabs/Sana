@@ -93,6 +93,8 @@ video = pipe(
 export_to_video(video, "sana_video.mp4", fps=16)
 ```
 
+For **720p** generation, use `model_id = "Efficient-Large-Model/SANA-Video_2B_720p_diffusers"` with `height=704, width=1280, frames=81`. See [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video) for the 720p entry.
+
 ### Image-to-Video: SanaImageToVideoPipeline
 
 ```python
@@ -164,7 +166,7 @@ bash inference_video_scripts/inference_sana_video.sh \
 
 ### 3. Inference 720p Model
 
-The 720p model uses [LTX-2 VAE](https://huggingface.co/Lightricks/LTX-2) (32x spatial compression, 8x temporal compression) for higher-resolution video generation.
+The 720p model uses [LTX-2 VAE](https://huggingface.co/Lightricks/LTX-2) (32x spatial compression, 8x temporal compression) for higher-resolution video generation. Weights are available on Hugging Face: [SANA-Video_2B_720p_diffusers](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_720p_diffusers). You can use **SanaVideoPipeline** (see section 1) with `model_id = "Efficient-Large-Model/SANA-Video_2B_720p_diffusers"` and `height=704, width=1280, frames=81`, or run the script below with a local `.pth` checkpoint.
 
 #### Text-to-Video (720p)
 
@@ -172,7 +174,7 @@ The 720p model uses [LTX-2 VAE](https://huggingface.co/Lightricks/LTX-2) (32x sp
 bash inference_video_scripts/inference_sana_video.sh \
       --np 1 \
       --config configs/sana_video_config/Sana_2000M_720px_ltx2vae_AdamW_fsdp.yaml \
-      --model_path /path/to/720p_ltx2vae_checkpoint.pth \
+      --model_path hf://Efficient-Large-Model/SANA-Video_2B_720p/checkpoints/SANA_Video_2B_720p.pth \
       --txt_file=asset/samples/video_prompts_samples.txt \
       --cfg_scale 6 \
       --motion_score 30 \
@@ -180,28 +182,13 @@ bash inference_video_scripts/inference_sana_video.sh \
       --work_dir output/sana_t2v_720p_results
 ```
 
-#### Image-to-Video (720p)
-
-```bash
-bash inference_video_scripts/inference_sana_video.sh \
-      --np 1 \
-      --config configs/sana_video_config/Sana_2000M_720px_ltx2vae_AdamW_fsdp.yaml \
-      --model_path /path/to/720p_ltx2vae_checkpoint.pth \
-      --txt_file=asset/samples/sample_i2v.txt \
-      --task=ltx \
-      --cfg_scale 6 \
-      --motion_score 30 \
-      --flow_shift 8 \
-      --work_dir output/sana_ti2v_720p_results
-```
-
 ### 4. Sana Video + LTX2 Refiner Pipeline
 
-Use Sana-Video to generate video latents, then refine with LTX-2 Stage-2 for enhanced quality:
+Use Sana-Video to generate video latents, then refine with LTX-2 Stage-2 for enhanced quality. The 720p Sana model is recommended: [SANA-Video_2B_720p_diffusers](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_720p_diffusers).
 
 ```bash
 python app/sana_video_refiner_pipeline_diffusers.py \
-      --sana_model_id /path/to/sana_ltxvae_diffusers \
+      --sana_model_id Efficient-Large-Model/SANA-Video_2B_720p_diffusers \
       --ltx2_model_id Lightricks/LTX-2 \
       --prompt "A cat and a dog baking a cake together in a kitchen." \
       --sana_height 704 \

@@ -33,6 +33,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
+- 🔥 [2026/03] 📺 **SANA-Video 720p model with LTX-VAE** is released. Use it with LTX2 Refiner to upscale the videos to 2K resolution! See [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video), [SANA-Video doc](https://nvlabs.github.io/Sana/docs/sana_video/) and [Blog about refiner](https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html).
 - 🔥 [2026/03] 💪 **Post Training Infra: SANA × Cosmos-RL** — We partner with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl) to provide a complete RL infrastructure for SANA. You can now post-train (SFT/RL) SANA-Image and SANA-Video with state-of-the-art algorithms (e.g. Diffusion-NFT, Flow-GRPO), preset configs, reward services, and flexible datasets. See [SANA on Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md) and our [Cosmos-RL integration doc](https://nvlabs.github.io/Sana/docs/sana_cosmos_rl/).
 - 🔥 [2026/02] 🚀 **SANA is now supported in [SGLang](https://github.com/sgl-project/sglang)!** High-performance serving with OpenAI-compatible API. [[Guidance]](https://nvlabs.github.io/Sana/docs/sglang/)
 - 🔥 [2026/01/26] **SANA-Video is accepted as Oral by ICLR-2026.** 🎉🎉🎉

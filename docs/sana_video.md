@@ -184,7 +184,7 @@ bash inference_video_scripts/inference_sana_video.sh \
 
 ### 4. Sana Video + LTX2 Refiner Pipeline
 
-Use Sana-Video to generate video latents, then refine with LTX-2 Stage-2 for enhanced quality. The 720p Sana model is recommended: [SANA-Video_2B_720p_diffusers](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_720p_diffusers).
+Use Sana-Video to generate video latents, then refine with LTX-2 Stage-2 for enhanced quality. The 720p Sana model is recommended: [SANA-Video_2B_720p_diffusers](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_720p_diffusers). For more details, check our [📚 Online Documentation](https://nvlabs.github.io/Sana/docs/sana_video/#4-sana-video-ltx2-refiner-pipeline) and [📝 Blog: Bet Small, Win Big](https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html).
 
 ```bash
 python app/sana_video_refiner_pipeline_diffusers.py \

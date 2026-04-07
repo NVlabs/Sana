@@ -1,8 +1,11 @@
 from collections import defaultdict
-from contextlib import nullcontext
-import copy
+from concurrent import futures
+import logging
 import os
+import random
 import sys
+import tempfile
+import time
 
 _rank = int(os.environ.get("RANK", 0))
 _cache_root = os.environ.get("CACHE_ROOT", os.path.expanduser("~/.cache/sol_rl"))
@@ -10,19 +13,21 @@ os.environ.setdefault("TRITON_CACHE_DIR", f"{_cache_root}/triton/rank_{_rank}")
 os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", f"{_cache_root}/torchinductor/rank_{_rank}")
 os.environ.setdefault("TORCHINDUCTOR_FX_GRAPH_CACHE", "1")
 
-from concurrent import futures
-import logging
-import random
-import tempfile
-import time
+import warnings
+warnings.filterwarnings("ignore", message=".*truncated.*")
+
+import transformers
+transformers.logging.set_verbosity_error()
 
 import numpy as np
 from absl import app, flags
-from diffusers import StableDiffusion3Pipeline
+from diffusers import FluxPipeline
+from diffusers.models import FluxTransformer2DModel
 from ml_collections import config_flags
 from peft import LoraConfig, PeftModel, get_peft_model
 from PIL import Image
 import torch
+import torch.nn as nn
 from torch.cuda.amp import GradScaler, autocast as torch_autocast
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -31,14 +36,12 @@ from torch.utils.data.distributed import DistributedSampler
 import tqdm
 import wandb
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from diffusers.pipelines.flux.pipeline_flux import retrieve_timesteps
 
-import diffusion.flow_grpo.rewards
-from diffusion.flow_grpo.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob
-from diffusion.flow_grpo.diffusers_patch.train_dreambooth_lora_sd3 import encode_prompt
-from diffusion.flow_grpo.ema import EMAModuleWrapper
-from diffusion.flow_grpo.stat_tracking import PerPromptStatTracker
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from train_utils import (
     setup_distributed,
     cleanup_distributed,
@@ -46,7 +49,6 @@ from train_utils import (
     set_seed,
     gather_tensor_to_all,
     DistributedTimeLogger,
-    to_jsonable,
     slice_prompt_metadata,
     extract_prompt_reward_group,
     save_step_reward_groups,
@@ -59,7 +61,6 @@ from train_utils import (
     unwrap_compiled,
     sync_lora_to_inference,
     wrap_forward_with_fp8,
-    BF16TELinear,
     replace_linear_with_te,
     NVFP4_RECIPE,
     _HAS_TE,
@@ -71,60 +72,206 @@ from train_utils import (
     build_datasets_and_loaders,
 )
 
+from diffusion.flow_grpo.diffusers_patch.solver import run_sampling
+import diffusion.flow_grpo.rewards
+from diffusion.flow_grpo.ema import EMAModuleWrapper
+from diffusion.flow_grpo.stat_tracking import PerPromptStatTracker
+
 
 tqdm = tqdm.tqdm
 FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file(
     "config",
-    "configs/nft/nft_sd3.py",
+    "configs/sol_rl/flux1.py",
     "Training configuration.",
 )
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
+FLUX_NVFP4_DEFAULT_SKIP_MODULES = [
+    "x_embedder", "context_embedder",
+    "time_text_embed", "norm_out",
+]
+
 TEXT_ENCODER_MAX_SEQ_LEN = 128
 TOKENIZER_MAX_LENGTH = 256
 WANDB_MAX_LOG_IMAGES = 12
 
 
-def compute_text_embeddings(prompts, text_encoders, tokenizers, max_sequence_length, device):
+def calculate_shift(
+    image_seq_len,
+    base_seq_len: int = 256,
+    max_seq_len: int = 4096,
+    base_shift: float = 0.5,
+    max_shift: float = 1.15,
+):
+    m = (max_shift - base_shift) / (max_seq_len - base_seq_len)
+    b = base_shift - m * base_seq_len
+    return image_seq_len * m + b
+
+
+def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
     with torch.no_grad():
-        prompt_embeds, pooled_prompt_embeds = encode_prompt(
-            text_encoders,
-            tokenizers,
-            prompts,
-            max_sequence_length,
+        prompt_embeds, pooled_prompt_embeds, text_ids = pipeline.encode_prompt(
+            prompt=prompts,
+            prompt_2=prompts,
+            prompt_embeds=None,
+            pooled_prompt_embeds=None,
+            device=device,
+            num_images_per_prompt=1,
+            max_sequence_length=max_sequence_length,
+            lora_scale=None,
         )
-        prompt_embeds = prompt_embeds.to(device)
-        pooled_prompt_embeds = pooled_prompt_embeds.to(device)
-    return prompt_embeds, pooled_prompt_embeds
+    return prompt_embeds.to(device), pooled_prompt_embeds.to(device), text_ids.to(device)
 
 
-def _build_sd3_latents_from_seeds(seed_list, latent_shape, device, dtype):
-    latents = []
-    channels, latent_h, latent_w = latent_shape
-    for seed in seed_list:
-        generator = torch.Generator(device=device).manual_seed(int(seed))
-        latents.append(
-            torch.randn(
-                1,
-                channels,
-                latent_h,
-                latent_w,
-                device=device,
-                dtype=dtype,
-                generator=generator,
-            )
+def _build_generators_from_seeds(seed_list, device):
+    return [torch.Generator(device=device).manual_seed(int(seed)) for seed in seed_list]
+
+
+@torch.no_grad()
+def pipeline_with_logprob_flux(
+    pipeline,
+    prompt=None,
+    prompt_2=None,
+    height=None,
+    width=None,
+    num_inference_steps=28,
+    guidance_scale=3.5,
+    num_images_per_prompt=1,
+    generator=None,
+    latents=None,
+    prompt_embeds=None,
+    pooled_prompt_embeds=None,
+    text_ids=None,
+    output_type="pt",
+    joint_attention_kwargs=None,
+    max_sequence_length=512,
+    noise_level=0.7,
+    deterministic=False,
+    solver="flow",
+    sequential_decode=False,
+):
+    height = height or pipeline.default_sample_size * pipeline.vae_scale_factor
+    width = width or pipeline.default_sample_size * pipeline.vae_scale_factor
+
+    pipeline.check_inputs(
+        prompt,
+        prompt_2,
+        height,
+        width,
+        prompt_embeds=prompt_embeds,
+        pooled_prompt_embeds=pooled_prompt_embeds,
+        max_sequence_length=max_sequence_length,
+    )
+
+    if prompt is not None and isinstance(prompt, str):
+        batch_size = 1
+    elif prompt is not None and isinstance(prompt, list):
+        batch_size = len(prompt)
+    else:
+        batch_size = prompt_embeds.shape[0]
+
+    device = pipeline._execution_device
+    lora_scale = joint_attention_kwargs.get("scale", None) if joint_attention_kwargs is not None else None
+
+    if prompt_embeds is None or pooled_prompt_embeds is None or text_ids is None:
+        prompt_embeds, pooled_prompt_embeds, text_ids = pipeline.encode_prompt(
+            prompt=prompt,
+            prompt_2=prompt_2,
+            prompt_embeds=prompt_embeds,
+            pooled_prompt_embeds=pooled_prompt_embeds,
+            device=device,
+            num_images_per_prompt=num_images_per_prompt,
+            max_sequence_length=max_sequence_length,
+            lora_scale=lora_scale,
         )
-    return torch.cat(latents, dim=0)
 
+    num_channels_latents = pipeline.transformer.config.in_channels // 4
+    if latents is None:
+        latents, latent_image_ids = pipeline.prepare_latents(
+            batch_size * num_images_per_prompt,
+            num_channels_latents,
+            height,
+            width,
+            prompt_embeds.dtype,
+            device,
+            generator,
+            latents,
+        )
+    else:
+        latents = latents.to(device)
+        latent_image_ids = pipeline._prepare_latent_image_ids(
+            batch_size * num_images_per_prompt,
+            height // pipeline.vae_scale_factor,
+            width // pipeline.vae_scale_factor,
+            device,
+            prompt_embeds.dtype,
+        )
 
-def _fp8_autocast(enabled):
-    """Return te.fp8_autocast context if enabled and TE is available, else nullcontext."""
-    if enabled and _HAS_TE:
-        return te.fp8_autocast(enabled=True, fp8_recipe=NVFP4_RECIPE)
-    return nullcontext()
+    sigmas = np.linspace(1.0, 1 / num_inference_steps, num_inference_steps)
+    if hasattr(pipeline.scheduler.config, "use_flow_sigmas") and pipeline.scheduler.config.use_flow_sigmas:
+        sigmas = None
+
+    image_seq_len = latents.shape[1]
+    mu = calculate_shift(
+        image_seq_len,
+        pipeline.scheduler.config.get("base_image_seq_len", 256),
+        pipeline.scheduler.config.get("max_image_seq_len", 4096),
+        pipeline.scheduler.config.get("base_shift", 0.5),
+        pipeline.scheduler.config.get("max_shift", 1.15),
+    )
+    _, num_inference_steps = retrieve_timesteps(
+        pipeline.scheduler,
+        num_inference_steps,
+        device,
+        sigmas=sigmas,
+        mu=mu,
+    )
+    sigmas = pipeline.scheduler.sigmas.float()
+
+    active_transformer = pipeline.transformer
+    guidance_config = unwrap_compiled(active_transformer).config
+    if guidance_config.guidance_embeds:
+        guidance = torch.full([1], guidance_scale, device=device, dtype=torch.float32).expand(latents.shape[0])
+    else:
+        guidance = None
+
+    def v_pred_fn(z, sigma):
+        timestep = torch.full([z.shape[0]], float(sigma), device=z.device, dtype=z.dtype)
+        noise_pred = active_transformer(
+            hidden_states=z,
+            timestep=timestep,
+            guidance=guidance,
+            pooled_projections=pooled_prompt_embeds,
+            encoder_hidden_states=prompt_embeds,
+            txt_ids=text_ids,
+            img_ids=latent_image_ids,
+            joint_attention_kwargs=joint_attention_kwargs,
+            return_dict=False,
+        )[0]
+        return noise_pred
+
+    all_latents = [latents]
+    latents, all_latents, all_log_probs = run_sampling(v_pred_fn, latents, sigmas, solver, deterministic, noise_level)
+
+    latents = pipeline._unpack_latents(latents, height, width, pipeline.vae_scale_factor)
+    latents = (latents / pipeline.vae.config.scaling_factor) + pipeline.vae.config.shift_factor
+    latents = latents.to(dtype=pipeline.vae.dtype)
+
+    if sequential_decode and latents.shape[0] > 1:
+        decoded_batches = []
+        for idx in range(latents.shape[0]):
+            decoded_batches.append(pipeline.vae.decode(latents[idx : idx + 1], return_dict=False)[0])
+        image = torch.cat(decoded_batches, dim=0)
+    else:
+        image = pipeline.vae.decode(latents, return_dict=False)[0]
+
+    image = pipeline.image_processor.postprocess(image, output_type=output_type)
+    pipeline.maybe_free_model_hooks()
+
+    return image, all_latents, latent_image_ids, text_ids, all_log_probs
 
 
 def eval_fn(
@@ -150,10 +297,6 @@ def eval_fn(
         ema.copy_ema_to(transformer_trainable_parameters, store_temp=True)
 
     pipeline.transformer.eval()
-    neg_prompt_embed, neg_pooled_prompt_embed = compute_text_embeddings(
-        [""], text_encoders, tokenizers, max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN, device=device
-    )
-
     all_rewards = defaultdict(list)
     test_sampler = (
         DistributedSampler(test_dataloader.dataset, num_replicas=world_size, rank=rank, shuffle=False)
@@ -174,18 +317,17 @@ def eval_fn(
         disable=not is_main_process(rank),
         dynamic_ncols=True,
     ):
-        prompt_embeds, pooled_prompt_embeds = compute_text_embeddings(
-            prompts, text_encoders, tokenizers, max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN, device=device
+        prompt_embeds, pooled_prompt_embeds, text_ids = compute_text_embeddings(
+            prompts, pipeline, max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN, device=device
         )
         bs = len(prompts)
         with torch_autocast(enabled=(config.mixed_precision in ["fp16", "bf16"]), dtype=mixed_precision_dtype):
             with torch.no_grad():
-                images, _, _ = pipeline_with_logprob(
+                images, _, _, _, _ = pipeline_with_logprob_flux(
                     pipeline,
                     prompt_embeds=prompt_embeds,
                     pooled_prompt_embeds=pooled_prompt_embeds,
-                    negative_prompt_embeds=neg_prompt_embed.repeat(bs, 1, 1),
-                    negative_pooled_prompt_embeds=neg_pooled_prompt_embed.repeat(bs, 1),
+                    text_ids=text_ids,
                     num_inference_steps=config.sample.eval_num_steps,
                     guidance_scale=config.eval_sample_guidance_scale,
                     output_type="pt",
@@ -194,7 +336,6 @@ def eval_fn(
                     noise_level=config.sample.noise_level,
                     deterministic=True,
                     solver=config.sample.solver,
-                    model_type="sd3",
                     sequential_decode=sequential_decode,
                 )
         rewards_future = executor.submit(reward_fn, images, prompts, prompt_metadata, only_strict=False)
@@ -272,8 +413,7 @@ def _rollout_for_one_prompt(
     prompt_meta,
     prompt_embed_single,
     pooled_embed_single,
-    neg_prompt_embed_single,
-    neg_pooled_prompt_embed_single,
+    text_ids_single,
     prompt_token_ids_single,
     config,
     device,
@@ -290,10 +430,6 @@ def _rollout_for_one_prompt(
     draft_total = int(config.sample.per_prompt_iter_num) * int(config.sample.rollout_batch_size)
     full_rollout_num = int(getattr(config.sample, "full_rollout_num", config.sample.best_of_n))
     full_rollout_num = max(1, min(full_rollout_num, draft_total))
-
-    latent_h = config.resolution // 8
-    latent_w = config.resolution // 8
-    latent_shape = (16, latent_h, latent_w)
 
     seed_pool = []
     draft_reward_pool = []
@@ -316,8 +452,7 @@ def _rollout_for_one_prompt(
                 batch_size = int(config.sample.rollout_batch_size)
                 prompt_embeds = prompt_embed_single.repeat(batch_size, 1, 1)
                 pooled_prompt_embeds = pooled_embed_single.repeat(batch_size, 1)
-                neg_prompt_embeds = neg_prompt_embed_single.repeat(batch_size, 1, 1)
-                neg_pooled_prompt_embeds = neg_pooled_prompt_embed_single.repeat(batch_size, 1)
+                text_ids = text_ids_single
 
                 seed_list = torch.randint(
                     low=0,
@@ -325,21 +460,15 @@ def _rollout_for_one_prompt(
                     size=(batch_size,),
                     device="cpu",
                 ).tolist()
-                init_latents = _build_sd3_latents_from_seeds(
-                    seed_list,
-                    latent_shape=latent_shape,
-                    device=device,
-                    dtype=prompt_embeds.dtype,
-                )
+                generators = _build_generators_from_seeds(seed_list, device=device)
 
                 with torch_autocast(enabled=enable_amp, dtype=amp_dtype):
-                    images, _, _ = pipeline_with_logprob(
+                    images, _, _, _, _ = pipeline_with_logprob_flux(
                         pipeline,
-                        latents=init_latents,
+                        generator=generators,
                         prompt_embeds=prompt_embeds,
                         pooled_prompt_embeds=pooled_prompt_embeds,
-                        negative_prompt_embeds=neg_prompt_embeds,
-                        negative_pooled_prompt_embeds=neg_pooled_prompt_embeds,
+                        text_ids=text_ids,
                         num_inference_steps=preview_step,
                         guidance_scale=config.rollout_sample_guidance_scale,
                         output_type="pt",
@@ -348,7 +477,6 @@ def _rollout_for_one_prompt(
                         noise_level=config.sample.noise_level,
                         deterministic=True,
                         solver=config.sample.solver,
-                        model_type="sd3",
                         sequential_decode=sequential_decode,
                     )
                 rewards, _ = reward_fn(
@@ -378,23 +506,16 @@ def _rollout_for_one_prompt(
             bs = len(seed_chunk)
             prompt_embeds = prompt_embed_single.repeat(bs, 1, 1)
             pooled_prompt_embeds = pooled_embed_single.repeat(bs, 1)
-            neg_prompt_embeds = neg_prompt_embed_single.repeat(bs, 1, 1)
-            neg_pooled_prompt_embeds = neg_pooled_prompt_embed_single.repeat(bs, 1)
-            init_latents = _build_sd3_latents_from_seeds(
-                seed_chunk,
-                latent_shape=latent_shape,
-                device=device,
-                dtype=prompt_embeds.dtype,
-            )
+            text_ids = text_ids_single
+            generators = _build_generators_from_seeds(seed_chunk, device=device)
             with torch.no_grad():
                 with torch_autocast(enabled=enable_amp, dtype=amp_dtype):
-                    images, latents, _ = pipeline_with_logprob(
+                    images, latents, latent_image_ids, text_ids, _ = pipeline_with_logprob_flux(
                         pipeline,
-                        latents=init_latents,
+                        generator=generators,
                         prompt_embeds=prompt_embeds,
                         pooled_prompt_embeds=pooled_prompt_embeds,
-                        negative_prompt_embeds=neg_prompt_embeds,
-                        negative_pooled_prompt_embeds=neg_pooled_prompt_embeds,
+                        text_ids=text_ids,
                         num_inference_steps=full_steps,
                         guidance_scale=config.rollout_sample_guidance_scale,
                         output_type="pt",
@@ -403,7 +524,6 @@ def _rollout_for_one_prompt(
                         noise_level=config.sample.noise_level,
                         deterministic=True,
                         solver=config.sample.solver,
-                        model_type="sd3",
                         sequential_decode=sequential_decode,
                     )
             timesteps = pipeline.scheduler.timesteps.repeat(bs, 1).to(device)
@@ -421,6 +541,8 @@ def _rollout_for_one_prompt(
                     "prompt_ids": prompt_token_ids_single.repeat(bs, 1),
                     "prompt_embeds": prompt_embeds,
                     "pooled_prompt_embeds": pooled_prompt_embeds,
+                    "txt_ids": text_ids.repeat(bs, 1, 1),
+                    "img_ids": latent_image_ids.repeat(bs, 1, 1),
                     "timesteps": timesteps,
                     "next_timesteps": torch.concatenate([timesteps[:, 1:], torch.zeros_like(timesteps[:, :1])], dim=1),
                     "latents_clean": latents[:, -1],
@@ -434,29 +556,22 @@ def _rollout_for_one_prompt(
             batch_size = int(config.sample.rollout_batch_size)
             prompt_embeds = prompt_embed_single.repeat(batch_size, 1, 1)
             pooled_prompt_embeds = pooled_embed_single.repeat(batch_size, 1)
-            neg_prompt_embeds = neg_prompt_embed_single.repeat(batch_size, 1, 1)
-            neg_pooled_prompt_embeds = neg_pooled_prompt_embed_single.repeat(batch_size, 1)
+            text_ids = text_ids_single
             seed_list = torch.randint(
                 low=0,
                 high=2**31 - 1,
                 size=(batch_size,),
                 device="cpu",
             ).tolist()
-            init_latents = _build_sd3_latents_from_seeds(
-                seed_list,
-                latent_shape=latent_shape,
-                device=device,
-                dtype=prompt_embeds.dtype,
-            )
+            generators = _build_generators_from_seeds(seed_list, device=device)
             with torch.no_grad():
                 with torch_autocast(enabled=enable_amp, dtype=amp_dtype):
-                    images, latents, _ = pipeline_with_logprob(
+                    images, latents, latent_image_ids, text_ids, _ = pipeline_with_logprob_flux(
                         pipeline,
-                        latents=init_latents,
+                        generator=generators,
                         prompt_embeds=prompt_embeds,
                         pooled_prompt_embeds=pooled_prompt_embeds,
-                        negative_prompt_embeds=neg_prompt_embeds,
-                        negative_pooled_prompt_embeds=neg_pooled_prompt_embeds,
+                        text_ids=text_ids,
                         num_inference_steps=full_steps,
                         guidance_scale=config.rollout_sample_guidance_scale,
                         output_type="pt",
@@ -465,7 +580,6 @@ def _rollout_for_one_prompt(
                         noise_level=config.sample.noise_level,
                         deterministic=True,
                         solver=config.sample.solver,
-                        model_type="sd3",
                         sequential_decode=sequential_decode,
                     )
             timesteps = pipeline.scheduler.timesteps.repeat(batch_size, 1).to(device)
@@ -483,6 +597,8 @@ def _rollout_for_one_prompt(
                     "prompt_ids": prompt_token_ids_single.repeat(batch_size, 1),
                     "prompt_embeds": prompt_embeds,
                     "pooled_prompt_embeds": pooled_prompt_embeds,
+                    "txt_ids": text_ids.repeat(batch_size, 1, 1),
+                    "img_ids": latent_image_ids.repeat(batch_size, 1, 1),
                     "timesteps": timesteps,
                     "next_timesteps": torch.concatenate([timesteps[:, 1:], torch.zeros_like(timesteps[:, :1])], dim=1),
                     "latents_clean": latents[:, -1],
@@ -533,6 +649,9 @@ def main(_):
 
     set_seed(config.seed, rank)
 
+    # cuDNN SDPA backward graph fails on Blackwell (sm_100); fall back to flash/math
+    torch.backends.cuda.enable_cudnn_sdp(False)
+
     mixed_precision_dtype = None
     if config.mixed_precision == "fp16":
         mixed_precision_dtype = torch.float16
@@ -541,26 +660,23 @@ def main(_):
     enable_amp = mixed_precision_dtype is not None
     scaler = GradScaler(enabled=enable_amp)
 
-    pipeline = StableDiffusion3Pipeline.from_pretrained(config.pretrained.model)
+    pipeline = FluxPipeline.from_pretrained(config.pretrained.model)
     pipeline.vae.requires_grad_(False)
     pipeline.text_encoder.requires_grad_(False)
     pipeline.text_encoder_2.requires_grad_(False)
-    pipeline.text_encoder_3.requires_grad_(False)
     pipeline.transformer.requires_grad_(not config.use_lora)
-    pipeline.safety_checker = None
     pipeline.set_progress_bar_config(disable=True)
-    text_encoders = [pipeline.text_encoder, pipeline.text_encoder_2, pipeline.text_encoder_3]
-    tokenizers = [pipeline.tokenizer, pipeline.tokenizer_2, pipeline.tokenizer_3]
+    text_encoders = [pipeline.text_encoder, pipeline.text_encoder_2]
+    tokenizers = [pipeline.tokenizer, pipeline.tokenizer_2]
 
     text_encoder_dtype = mixed_precision_dtype if enable_amp else torch.float32
     pipeline.vae.to(device, dtype=torch.float32)
     pipeline.text_encoder.to(device, dtype=text_encoder_dtype)
     pipeline.text_encoder_2.to(device, dtype=text_encoder_dtype)
-    pipeline.text_encoder_3.to(device, dtype=text_encoder_dtype)
 
-    transformer = pipeline.transformer.to(device)
+    transformer = pipeline.transformer.to(device, dtype=torch.bfloat16)
+    transformer.enable_gradient_checkpointing()
 
-    # --- Inference models: clean copies (no PEFT), optionally nvfp4 + torch.compile ---
     compile_mode = str(getattr(config, "compile_mode", "max-autotune-no-cudagraphs"))
     preview_step = int(getattr(config, "preview_step", 0))
     preview_model_key = str(getattr(config, "preview_model", "peft"))
@@ -577,15 +693,15 @@ def main(_):
             needed_model_types.add(fullrollout_model_key)
 
     inference_models = {}
-    nvfp4_skip_modules = list(getattr(config, "nvfp4_skip_modules", []))
-    nvfp4_min_dim = int(getattr(config, "nvfp4_min_dim", 0))
+    nvfp4_skip_modules = list(getattr(config, "nvfp4_skip_modules", FLUX_NVFP4_DEFAULT_SKIP_MODULES))
+    nvfp4_min_dim = int(getattr(config, "nvfp4_min_dim", 1000))
 
     for mtype in sorted(needed_model_types):
         logger.info(f"[INIT] Creating inference model: {mtype!r} ...")
-        m = copy.deepcopy(transformer)
-        m.eval()
+        m = FluxTransformer2DModel.from_config(transformer.config).to(device, dtype=torch.bfloat16)
+        m.load_state_dict(transformer.state_dict())
         m.requires_grad_(False)
-        m.to(dtype=torch.bfloat16)
+        m.eval()
 
         if "nvfp4" in mtype:
             if not _HAS_TE:
@@ -630,7 +746,7 @@ def main(_):
             r=config.train.lora_rank,
             lora_alpha=config.train.lora_alpha,
             init_lora_weights=init_lora_weights,
-            target_modules=list(config.train.lora_target_modules),
+            target_modules=list(getattr(config.train, "flux_lora_target_modules", ["to_k", "to_q", "to_v", "to_out.0"])),
         )
         if config.train.lora_path:
             transformer = PeftModel.from_pretrained(transformer, config.train.lora_path)
@@ -640,12 +756,14 @@ def main(_):
         transformer.add_adapter("old", transformer_lora_config)
         transformer.set_adapter("default")
 
-    transformer_ddp = DDP(transformer, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
-    transformer_ddp.module.set_adapter("default")
-    transformer_trainable_parameters = list(filter(lambda p: p.requires_grad, transformer_ddp.module.parameters()))
-    transformer_ddp.module.set_adapter("old")
-    old_transformer_trainable_parameters = list(filter(lambda p: p.requires_grad, transformer_ddp.module.parameters()))
-    transformer_ddp.module.set_adapter("default")
+    transformer.set_adapter("default")
+    transformer_trainable_parameters = list(filter(lambda p: p.requires_grad, transformer.parameters()))
+    transformer.set_adapter("old")
+    old_transformer_trainable_parameters = list(filter(lambda p: p.requires_grad, transformer.parameters()))
+    for p in old_transformer_trainable_parameters:
+        p.requires_grad_(False)
+    transformer.set_adapter("default")
+    transformer_ddp = DDP(transformer, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
 
     if config.allow_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -660,10 +778,6 @@ def main(_):
     )
 
     _, train_dataloader, train_sampler, _, test_dataloader = build_datasets_and_loaders(config, world_size, rank)
-
-    neg_prompt_embed, neg_pooled_prompt_embed = compute_text_embeddings(
-        [""], text_encoders, tokenizers, max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN, device=device
-    )
 
     if config.sample.best_of_n == 1:
         config.per_prompt_stat_tracking = False
@@ -689,7 +803,7 @@ def main(_):
     global_step = 0
     candidates = find_resume_candidates(config)
     global_step, resume_parameters = resume_from_checkpoint(
-        candidates, transformer_ddp.module, ema, optimizer, scaler, device,
+        candidates, unwrap_compiled(transformer_ddp.module), ema, optimizer, scaler, device,
     )
     first_epoch = global_step
 
@@ -697,21 +811,20 @@ def main(_):
         for src_param, tgt_param in zip(transformer_trainable_parameters, old_transformer_trainable_parameters, strict=True):
             tgt_param.data.copy_(src_param.detach().data)
 
+    for mtype, inf_model in inference_models.items():
+        n_synced = sync_lora_to_inference(
+            unwrap_compiled(transformer_ddp.module),
+            unwrap_compiled(inf_model),
+            adapter_name="old",
+        )
+        logger.info(f"[SYNC] Initial sync: merged {n_synced} LoRA layers -> {mtype!r}")
+
     if global_step != 0:
         for i in range(global_step):
             prompts, prompt_metadata = next(train_iter)
 
     if world_size > 1:
         dist.barrier()
-
-    # Sync old adapter weights → all inference models (after resume or fresh init)
-    for mtype, inf_model in inference_models.items():
-        n_synced = sync_lora_to_inference(
-            transformer_ddp.module,
-            unwrap_compiled(inf_model),
-            adapter_name="old",
-        )
-        logger.info(f"[SYNC] Initial sync: merged {n_synced} LoRA layers → {mtype!r}")
 
     time_logger = DistributedTimeLogger(device)
     start_time = time.time()
@@ -724,9 +837,12 @@ def main(_):
         if epoch % config.save_freq == 0 and not config.debug:
             save_ckpt(config.save_dir, transformer_ddp, global_step, rank, ema, config, optimizer, scaler)
 
-
         time_logger.start("eval_time")
         if epoch % config.eval_freq == 0 and not config.debug:
+            pipeline.text_encoder.to(device, dtype=text_encoder_dtype)
+            pipeline.text_encoder_2.to(device, dtype=text_encoder_dtype)
+            pipeline.vae.to(device, dtype=torch.float32)
+
             py_rng_state = random.getstate()
             np_rng_state = np.random.get_state()
             torch_rng_state = torch.random.get_rng_state()
@@ -755,12 +871,14 @@ def main(_):
             torch.cuda.set_rng_state_all(cuda_rng_state)
         time_logger.end("eval_time")
 
-
         time_logger.start("rollout_time")
+        pipeline.text_encoder.to(device, dtype=text_encoder_dtype)
+        pipeline.text_encoder_2.to(device, dtype=text_encoder_dtype)
+        pipeline.vae.to(device, dtype=torch.float32)
         pipeline.transformer.eval()
         prompts, prompt_metadata = next(train_iter)
-        prompt_embeds_all, pooled_prompt_embeds_all = compute_text_embeddings(
-            prompts, text_encoders, tokenizers, max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN, device=device
+        prompt_embeds_all, pooled_prompt_embeds_all, text_ids_all = compute_text_embeddings(
+            prompts, pipeline, max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN, device=device
         )
         prompt_ids_all = tokenizers[0](
             prompts,
@@ -778,13 +896,14 @@ def main(_):
 
         _saved_pipeline_transformer = pipeline.transformer
 
-        # For non-preview path, set up the model once (same as before)
         if preview_step == 0:
             if fullrollout_model_key != "peft" and fullrollout_model_key in inference_models:
                 pipeline.transformer = inference_models[fullrollout_model_key]
             else:
                 transformer_ddp.module.set_adapter("old")
 
+        for _p in transformer_trainable_parameters:
+            _p.requires_grad_(True)
         for prompt_idx in tqdm(
             range(config.sample.per_gpu_to_process_prompts),
             desc=f"Epoch {epoch}: rollout",
@@ -799,8 +918,7 @@ def main(_):
                 prompt_meta=prompt_metadata[prompt_idx],
                 prompt_embed_single=prompt_embeds_all[prompt_idx : prompt_idx + 1],
                 pooled_embed_single=pooled_prompt_embeds_all[prompt_idx : prompt_idx + 1],
-                neg_prompt_embed_single=neg_prompt_embed,
-                neg_pooled_prompt_embed_single=neg_pooled_prompt_embed,
+                text_ids_single=text_ids_all,
                 prompt_token_ids_single=prompt_ids_all[prompt_idx : prompt_idx + 1],
                 config=config,
                 device=device,
@@ -822,9 +940,10 @@ def main(_):
             prompts_for_log = final_prompts
             rewards_for_log = collated_prompt_samples["rewards"]["avg"]
 
-        # Restore original transformer and switch back to "default" adapter
         pipeline.transformer = _saved_pipeline_transformer
         transformer_ddp.module.set_adapter("default")
+        for _p in transformer_trainable_parameters:
+            _p.requires_grad_(True)
 
         save_step_reward_groups(
             config=config,
@@ -891,12 +1010,17 @@ def main(_):
         if advantages.shape[0] != world_size * samples_per_gpu:
             raise RuntimeError("Unexpected advantage shape after all-gather")
         collated_samples["advantages"] = torch.from_numpy(
-            advantages.reshape(world_size, samples_per_gpu, -1)[rank]
+            advantages.reshape(world_size, samples_per_gpu, -1)[rank].astype("float32")
         ).to(device)
 
         del collated_samples["rewards"]
         del collated_samples["prompt_ids"]
         time_logger.end("rollout_time")
+
+        pipeline.text_encoder.to("cpu")
+        pipeline.text_encoder_2.to("cpu")
+        pipeline.vae.to("cpu")
+        torch.cuda.empty_cache()
 
         total_batch_size_filtered, num_timesteps_filtered = collated_samples["timesteps"].shape
         assert total_batch_size_filtered == config.sample.per_gpu_total_samples_to_train
@@ -932,55 +1056,68 @@ def main(_):
                 dynamic_ncols=True,
             ):
                 current_bs = len(train_batch["prompt_embeds"])
-                if config.train_sample_guidance_scale > 1.0:
-                    embeds = torch.cat(
-                        [
-                            neg_prompt_embed.repeat(current_bs, 1, 1),
-                            train_batch["prompt_embeds"],
-                        ]
-                    )
-                    pooled_embeds = torch.cat(
-                        [
-                            neg_pooled_prompt_embed.repeat(current_bs, 1),
-                            train_batch["pooled_prompt_embeds"],
-                        ]
+                embeds = train_batch["prompt_embeds"]
+                pooled_embeds = train_batch["pooled_prompt_embeds"]
+                txt_ids_batch = train_batch["txt_ids"][0]
+                img_ids_batch = train_batch["img_ids"][0]
+                if transformer_ddp.module.config.guidance_embeds:
+                    guidance_batch = torch.full(
+                        [current_bs],
+                        float(config.train_sample_guidance_scale),
+                        device=device,
+                        dtype=torch.float32,
                     )
                 else:
-                    embeds = train_batch["prompt_embeds"]
-                    pooled_embeds = train_batch["pooled_prompt_embeds"]
+                    guidance_batch = None
 
                 for j_idx in range(num_train_timesteps):
                     x0 = train_batch["latents_clean"]
-                    t = train_batch["timesteps"][:, j_idx] / 1000.0
+                    t = torch.clamp(train_batch["timesteps"][:, j_idx] / 1000.0, 0.0, 1.0).to(x0.dtype)
                     t_expanded = t.view(-1, *([1] * (len(x0.shape) - 1)))
-                    noise = torch.randn_like(x0.float())
+                    noise = torch.randn_like(x0)
                     xt = (1 - t_expanded) * x0 + t_expanded * noise
+                    timestep_for_model = t
 
-                    with torch_autocast(enabled=enable_amp, dtype=mixed_precision_dtype):
-                        transformer_ddp.module.set_adapter("old")
-                        with torch.no_grad():
-                            old_prediction = transformer_ddp(
+                    transformer_ddp.module.set_adapter("old")
+                    for _p in transformer_trainable_parameters:
+                        _p.requires_grad_(True)
+                    with torch.no_grad():
+                        with torch_autocast(enabled=enable_amp, dtype=mixed_precision_dtype):
+                            old_prediction = transformer_ddp.module(
                                 hidden_states=xt,
-                                timestep=train_batch["timesteps"][:, j_idx],
+                                timestep=timestep_for_model,
+                                guidance=guidance_batch,
                                 encoder_hidden_states=embeds,
                                 pooled_projections=pooled_embeds,
+                                txt_ids=txt_ids_batch,
+                                img_ids=img_ids_batch,
                                 return_dict=False,
                             )[0].detach()
-                        transformer_ddp.module.set_adapter("default")
+                    transformer_ddp.module.set_adapter("default")
+                    for _p in transformer_trainable_parameters:
+                        _p.requires_grad_(True)
+                    with torch_autocast(enabled=enable_amp, dtype=mixed_precision_dtype):
                         forward_prediction = transformer_ddp(
                             hidden_states=xt,
-                            timestep=train_batch["timesteps"][:, j_idx],
+                            timestep=timestep_for_model,
+                            guidance=guidance_batch,
                             encoder_hidden_states=embeds,
                             pooled_projections=pooled_embeds,
+                            txt_ids=txt_ids_batch,
+                            img_ids=img_ids_batch,
                             return_dict=False,
                         )[0]
-                        with torch.no_grad():
+                    with torch.no_grad():
+                        with torch_autocast(enabled=enable_amp, dtype=mixed_precision_dtype):
                             with transformer_ddp.module.disable_adapter():
-                                ref_forward_prediction = transformer_ddp(
+                                ref_forward_prediction = transformer_ddp.module(
                                     hidden_states=xt,
-                                    timestep=train_batch["timesteps"][:, j_idx],
+                                    timestep=timestep_for_model,
+                                    guidance=guidance_batch,
                                     encoder_hidden_states=embeds,
                                     pooled_projections=pooled_embeds,
+                                    txt_ids=txt_ids_batch,
+                                    img_ids=img_ids_batch,
                                     return_dict=False,
                                 )[0]
                             transformer_ddp.module.set_adapter("default")
@@ -1034,6 +1171,10 @@ def main(_):
                     loss_terms = {}
                     loss_terms["policy_loss"] = policy_loss.detach()
                     loss_terms["unweighted_policy_loss"] = ori_policy_loss.mean().detach()
+                    loss_terms["x0_norm"] = torch.mean(x0 ** 2).detach()
+                    loss_terms["x0_norm_max"] = torch.max(x0 ** 2).detach()
+                    loss_terms["old_deviate"] = torch.mean((forward_prediction - old_prediction) ** 2).detach()
+                    loss_terms["old_deviate_max"] = torch.max((forward_prediction - old_prediction) ** 2).detach()
 
                     kl_div_loss = ((forward_prediction - ref_forward_prediction) ** 2).mean(dim=tuple(range(1, x0.ndim)))
                     loss += config.train.beta * torch.mean(kl_div_loss)
@@ -1046,10 +1187,6 @@ def main(_):
                     loss_terms["old_kl_div"] = torch.mean(
                         ((old_prediction - ref_forward_prediction) ** 2).mean(dim=tuple(range(1, x0.ndim)))
                     ).detach()
-                    loss_terms["x0_norm"] = torch.mean(x0 ** 2).detach()
-                    loss_terms["x0_norm_max"] = torch.max(x0 ** 2).detach()
-                    loss_terms["old_deviate"] = torch.mean((forward_prediction - old_prediction) ** 2).detach()
-                    loss_terms["old_deviate_max"] = torch.max((forward_prediction - old_prediction) ** 2).detach()
                     loss_terms["total_loss"] = loss.detach()
 
                     scaled_loss = loss / effective_grad_accum_steps
@@ -1118,10 +1255,9 @@ def main(_):
                     tgt_param.detach().data * decay + src_param.detach().clone().data * (1.0 - decay)
                 )
 
-        # Sync updated old adapter → all inference models for next rollout
         for mtype, inf_model in inference_models.items():
             sync_lora_to_inference(
-                transformer_ddp.module,
+                unwrap_compiled(transformer_ddp.module),
                 unwrap_compiled(inf_model),
                 adapter_name="old",
             )

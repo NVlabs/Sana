@@ -14,7 +14,7 @@ def _get_config(n_gpus=8, dataset="pickscore", reward_fn=None):
 
     config = base.get_config()
     config.dataset = os.path.join(os.getcwd(), f"dataset/{dataset}")
-    config.native_config = "configs/nft/Sana1.0_1600M_linear.yaml"
+    config.native_config = "configs/sol_rl/Sana1.0_1600M_linear.yaml"
     config.resolution = 1024
     config.train.lora_target_modules = [
         "attn.qkv", "attn.proj",

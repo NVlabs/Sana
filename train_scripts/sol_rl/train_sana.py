@@ -1,6 +1,6 @@
 """
 Sana post-training (BON + preview rollout) using diffusers SanaPipeline.
-Structure mirrors train_nft_sd3_baseline_bon_preview.py.
+Structure mirrors train_sd3 (Sol-RL) with BON + preview rollout.
 """
 from collections import defaultdict
 from contextlib import nullcontext
@@ -37,7 +37,7 @@ import tqdm
 import wandb
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import diffusion.flow_grpo.rewards
 from diffusion.flow_grpo.diffusers_patch.solver import run_sampling
@@ -83,7 +83,7 @@ tqdm = tqdm.tqdm
 FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file(
     "config",
-    "configs/nft/nft_sana.py",
+    "configs/sol_rl/sana.py",
     "Training configuration.",
 )
 flags.DEFINE_string("native_config", "diffusers_to_native/config_sana10_training_linear.yaml", "Native model YAML config path")

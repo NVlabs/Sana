@@ -2,7 +2,7 @@
   <img src="https://nvlabs.github.io/Sana/assets/cosmos-rl/sana-cosmos-rl-logo.png" width="90%" alt="SANA × Cosmos-RL Logo"/>
 </p>
 
-# SANA &times; Cosmos-RL: Post-Training (SFT/RL) for Image & Video Diffusion Models
+# SANA × Cosmos-RL: Post-Training (SFT/RL) for Image & Video Diffusion Models
 
 <div align="center">
   <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><img src="https://img.shields.io/static/v1?label=SANA&message=Cosmos-RL%20README&color=blue&logo=github" alt="SANA on Cosmos-RL"></a>

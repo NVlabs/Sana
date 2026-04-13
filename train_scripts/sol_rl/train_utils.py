@@ -19,6 +19,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 _logger = logging.getLogger(__name__)
 
+_TE_IMPORT_ERROR = None
 try:
     import transformer_engine.pytorch as te
     from transformer_engine.common.recipe import DelayedScaling, Format
@@ -29,10 +30,20 @@ try:
         amax_compute_algo="max",
     )
     _HAS_TE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError) as exc:
     te = None
     NVFP4_RECIPE = None
     _HAS_TE = False
+    _TE_IMPORT_ERROR = exc
+
+
+def ensure_transformer_engine_available(feature="Transformer Engine"):
+    if _HAS_TE:
+        return
+    detail = f": {_TE_IMPORT_ERROR}" if _TE_IMPORT_ERROR is not None else ""
+    raise RuntimeError(
+        f"{feature} requires a working `transformer_engine[pytorch]` installation{detail}"
+    ) from _TE_IMPORT_ERROR
 
 
 # ---------------------------------------------------------------------------
@@ -357,6 +368,7 @@ def sync_lora_to_inference(peft_model, inference_model, adapter_name="old"):
 
 
 def wrap_forward_with_fp8(module):
+    ensure_transformer_engine_available("NVFP4 quantization")
     original_forward = module.forward
 
     @wraps(original_forward)
@@ -395,38 +407,8 @@ class BF16TELinear(nn.Module):
         return self.te_linear(x.to(torch.bfloat16))
 
 
-class BF16TEConv1x1AsLinear(nn.Module):
-    """Replaces a 1x1 Conv2d with te.Linear for NVFP4 quantization."""
-
-    def __init__(self, te_linear):
-        super().__init__()
-        self.te_linear = te_linear
-
-    @property
-    def weight(self):
-        return self.te_linear.weight
-
-    @property
-    def bias(self):
-        return self.te_linear.bias
-
-    def forward(self, x):
-        B, C, H, W = x.shape
-        x_2d = x.flatten(2).transpose(1, 2).contiguous()
-        y_2d = self.te_linear(x_2d.to(torch.bfloat16))
-        return y_2d.transpose(1, 2).reshape(B, -1, H, W)
-
-
-def _is_replaceable_conv1x1(module):
-    return (
-        isinstance(module, nn.Conv2d)
-        and module.kernel_size == (1, 1)
-        and module.stride == (1, 1)
-        and module.groups == 1
-    )
-
-
-def replace_linear_with_te(model, skip_modules=None, min_dim=0, replace_conv1x1=False, _prefix=""):
+def replace_linear_with_te(model, skip_modules=None, min_dim=0, _prefix=""):
+    ensure_transformer_engine_available("NVFP4 quantization")
     if skip_modules is None:
         skip_modules = []
     replaced = skipped = 0
@@ -435,12 +417,8 @@ def replace_linear_with_te(model, skip_modules=None, min_dim=0, replace_conv1x1=
     for name, child in list(model.named_children()):
         fqn = f"{_prefix}.{name}" if _prefix else name
 
-        is_linear = isinstance(child, nn.Linear)
-        is_conv1x1 = replace_conv1x1 and _is_replaceable_conv1x1(child)
-
-        if is_linear or is_conv1x1:
-            in_feat = child.in_features if is_linear else child.in_channels
-            out_feat = child.out_features if is_linear else child.out_channels
+        if isinstance(child, nn.Linear):
+            in_feat, out_feat = child.in_features, child.out_features
             has_bias = child.bias is not None
 
             skip_reason = None
@@ -458,19 +436,14 @@ def replace_linear_with_te(model, skip_modules=None, min_dim=0, replace_conv1x1=
                     device=child.weight.device, dtype=child.weight.dtype
                 )
                 with torch.no_grad():
-                    weight = child.weight.reshape(out_feat, in_feat) if is_conv1x1 else child.weight
-                    te_lin.weight.copy_(weight)
+                    te_lin.weight.copy_(child.weight)
                     if has_bias and te_lin.bias is not None:
                         te_lin.bias.copy_(child.bias)
-
-                wrapper = BF16TEConv1x1AsLinear(te_lin) if is_conv1x1 else BF16TELinear(te_lin)
-                setattr(model, name, wrapper)
+                setattr(model, name, BF16TELinear(te_lin))
                 replaced += 1
                 replaced_details.append(info)
         else:
-            r, s, rd, sd = replace_linear_with_te(
-                child, skip_modules, min_dim=min_dim, replace_conv1x1=replace_conv1x1, _prefix=fqn
-            )
+            r, s, rd, sd = replace_linear_with_te(child, skip_modules, min_dim=min_dim, _prefix=fqn)
             replaced += r
             skipped += s
             replaced_details.extend(rd)
@@ -628,7 +601,7 @@ def build_datasets_and_loaders(config, world_size, rank):
 
     Returns ``(train_dataset, train_dataloader, train_sampler, test_dataset, test_dataloader)``.
     """
-    from diffusion.flow_grpo.prompt_dataset import (
+    from diffusion.post_training.prompt_dataset import (
         DistributedKRepeatSampler,
         GenevalPromptDataset,
         TextPromptDataset,

@@ -23,6 +23,7 @@ from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
 from diffusion.model.nets.basic_modules import DWMlp, GLUMBConv, Mlp
+from diffusion.model.nets.basic_modules_linear import GLUMBConvLinear
 from diffusion.model.nets.sana import Sana, get_2d_sincos_pos_embed
 from diffusion.model.nets.sana_blocks import (
     Attention,
@@ -116,6 +117,14 @@ class SanaMSBlock(nn.Module):
             )
         elif ffn_type == "glumbconv":
             self.mlp = GLUMBConv(
+                in_features=hidden_size,
+                hidden_features=int(hidden_size * mlp_ratio),
+                use_bias=(True, True, False),
+                norm=(None, None, None),
+                act=mlp_acts,
+            )
+        elif ffn_type == "glumbconv_linear":
+            self.mlp = GLUMBConvLinear(
                 in_features=hidden_size,
                 hidden_features=int(hidden_size * mlp_ratio),
                 use_bias=(True, True, False),
@@ -473,6 +482,17 @@ class SanaMSCM(SanaMS):
             return trigflow_model_out
 
 
+@MODELS.register_module()
+class SanaMSLinearFFN(SanaMS):
+    """SanaMS variant using GLUMBConvLinear in the FFN blocks."""
+
+    def __init__(self, *args, **kwargs):
+        ffn_type = kwargs.pop("ffn_type", "glumbconv_linear")
+        if ffn_type != "glumbconv_linear":
+            raise ValueError(f"SanaMSLinearFFN expects ffn_type='glumbconv_linear', got {ffn_type!r}")
+        super().__init__(*args, ffn_type="glumbconv_linear", **kwargs)
+
+
 #################################################################################
 #                                   Sana Multi-scale Configs                              #
 #################################################################################
@@ -503,6 +523,28 @@ def SanaMS_1600M_P1_D20(**kwargs):
 def SanaMS_1600M_P2_D20(**kwargs):
     # 28 layers, 1648.48M
     return SanaMS(depth=20, hidden_size=2240, patch_size=2, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSLinearFFN_600M_P1_D28(**kwargs):
+    return SanaMSLinearFFN(depth=28, hidden_size=1152, patch_size=1, num_heads=16, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSLinearFFN_600M_P2_D28(**kwargs):
+    return SanaMSLinearFFN(depth=28, hidden_size=1152, patch_size=2, num_heads=16, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSLinearFFN_1600M_P1_D20(**kwargs):
+    # 20 layers, 1648.48M
+    return SanaMSLinearFFN(depth=20, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSLinearFFN_1600M_P2_D20(**kwargs):
+    # 20 layers, 1648.48M
+    return SanaMSLinearFFN(depth=20, hidden_size=2240, patch_size=2, num_heads=20, **kwargs)
 
 
 @MODELS.register_module()

@@ -24,13 +24,11 @@ transformers.logging.set_verbosity_error()
 import numpy as np
 import torch
 import torch.distributed as dist
-import torch.nn as nn
 import tqdm
 import wandb
 from absl import app, flags
 from diffusers import FluxPipeline
 from diffusers.models import FluxTransformer2DModel
-from diffusers.pipelines.flux.pipeline_flux import retrieve_timesteps
 from ml_collections import config_flags
 from peft import LoraConfig, PeftModel, get_peft_model
 from PIL import Image
@@ -40,12 +38,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from train_utils import (
     _HAS_TE,
-    NVFP4_RECIPE,
     DistributedTimeLogger,
     build_datasets_and_loaders,
     calculate_zero_std_ratio,
@@ -68,15 +64,14 @@ from train_utils import (
     setup_distributed,
     slice_prompt_metadata,
     sync_lora_to_inference,
-    te,
     unwrap_compiled,
     wrap_forward_with_fp8,
 )
 
-import diffusion.flow_grpo.rewards
-from diffusion.flow_grpo.diffusers_patch.solver import run_sampling
-from diffusion.flow_grpo.ema import EMAModuleWrapper
-from diffusion.flow_grpo.stat_tracking import PerPromptStatTracker
+import diffusion.post_training.rewards
+from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_flux
+from diffusion.post_training.ema import EMAModuleWrapper
+from diffusion.post_training.stat_tracking import PerPromptStatTracker
 
 tqdm = tqdm.tqdm
 FLAGS = flags.FLAGS
@@ -100,19 +95,6 @@ TEXT_ENCODER_MAX_SEQ_LEN = 128
 TOKENIZER_MAX_LENGTH = 256
 WANDB_MAX_LOG_IMAGES = 12
 
-
-def calculate_shift(
-    image_seq_len,
-    base_seq_len: int = 256,
-    max_seq_len: int = 4096,
-    base_shift: float = 0.5,
-    max_shift: float = 1.15,
-):
-    m = (max_shift - base_shift) / (max_seq_len - base_seq_len)
-    b = base_shift - m * base_seq_len
-    return image_seq_len * m + b
-
-
 def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
     with torch.no_grad():
         prompt_embeds, pooled_prompt_embeds, text_ids = pipeline.encode_prompt(
@@ -130,150 +112,6 @@ def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
 
 def _build_generators_from_seeds(seed_list, device):
     return [torch.Generator(device=device).manual_seed(int(seed)) for seed in seed_list]
-
-
-@torch.no_grad()
-def pipeline_with_logprob_flux(
-    pipeline,
-    prompt=None,
-    prompt_2=None,
-    height=None,
-    width=None,
-    num_inference_steps=28,
-    guidance_scale=3.5,
-    num_images_per_prompt=1,
-    generator=None,
-    latents=None,
-    prompt_embeds=None,
-    pooled_prompt_embeds=None,
-    text_ids=None,
-    output_type="pt",
-    joint_attention_kwargs=None,
-    max_sequence_length=512,
-    noise_level=0.7,
-    deterministic=False,
-    solver="flow",
-    sequential_decode=False,
-):
-    height = height or pipeline.default_sample_size * pipeline.vae_scale_factor
-    width = width or pipeline.default_sample_size * pipeline.vae_scale_factor
-
-    pipeline.check_inputs(
-        prompt,
-        prompt_2,
-        height,
-        width,
-        prompt_embeds=prompt_embeds,
-        pooled_prompt_embeds=pooled_prompt_embeds,
-        max_sequence_length=max_sequence_length,
-    )
-
-    if prompt is not None and isinstance(prompt, str):
-        batch_size = 1
-    elif prompt is not None and isinstance(prompt, list):
-        batch_size = len(prompt)
-    else:
-        batch_size = prompt_embeds.shape[0]
-
-    device = pipeline._execution_device
-    lora_scale = joint_attention_kwargs.get("scale", None) if joint_attention_kwargs is not None else None
-
-    if prompt_embeds is None or pooled_prompt_embeds is None or text_ids is None:
-        prompt_embeds, pooled_prompt_embeds, text_ids = pipeline.encode_prompt(
-            prompt=prompt,
-            prompt_2=prompt_2,
-            prompt_embeds=prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            device=device,
-            num_images_per_prompt=num_images_per_prompt,
-            max_sequence_length=max_sequence_length,
-            lora_scale=lora_scale,
-        )
-
-    num_channels_latents = pipeline.transformer.config.in_channels // 4
-    if latents is None:
-        latents, latent_image_ids = pipeline.prepare_latents(
-            batch_size * num_images_per_prompt,
-            num_channels_latents,
-            height,
-            width,
-            prompt_embeds.dtype,
-            device,
-            generator,
-            latents,
-        )
-    else:
-        latents = latents.to(device)
-        latent_image_ids = pipeline._prepare_latent_image_ids(
-            batch_size * num_images_per_prompt,
-            height // pipeline.vae_scale_factor,
-            width // pipeline.vae_scale_factor,
-            device,
-            prompt_embeds.dtype,
-        )
-
-    sigmas = np.linspace(1.0, 1 / num_inference_steps, num_inference_steps)
-    if hasattr(pipeline.scheduler.config, "use_flow_sigmas") and pipeline.scheduler.config.use_flow_sigmas:
-        sigmas = None
-
-    image_seq_len = latents.shape[1]
-    mu = calculate_shift(
-        image_seq_len,
-        pipeline.scheduler.config.get("base_image_seq_len", 256),
-        pipeline.scheduler.config.get("max_image_seq_len", 4096),
-        pipeline.scheduler.config.get("base_shift", 0.5),
-        pipeline.scheduler.config.get("max_shift", 1.15),
-    )
-    _, num_inference_steps = retrieve_timesteps(
-        pipeline.scheduler,
-        num_inference_steps,
-        device,
-        sigmas=sigmas,
-        mu=mu,
-    )
-    sigmas = pipeline.scheduler.sigmas.float()
-
-    active_transformer = pipeline.transformer
-    guidance_config = unwrap_compiled(active_transformer).config
-    if guidance_config.guidance_embeds:
-        guidance = torch.full([1], guidance_scale, device=device, dtype=torch.float32).expand(latents.shape[0])
-    else:
-        guidance = None
-
-    def v_pred_fn(z, sigma):
-        timestep = torch.full([z.shape[0]], float(sigma), device=z.device, dtype=z.dtype)
-        noise_pred = active_transformer(
-            hidden_states=z,
-            timestep=timestep,
-            guidance=guidance,
-            pooled_projections=pooled_prompt_embeds,
-            encoder_hidden_states=prompt_embeds,
-            txt_ids=text_ids,
-            img_ids=latent_image_ids,
-            joint_attention_kwargs=joint_attention_kwargs,
-            return_dict=False,
-        )[0]
-        return noise_pred
-
-    all_latents = [latents]
-    latents, all_latents, all_log_probs = run_sampling(v_pred_fn, latents, sigmas, solver, deterministic, noise_level)
-
-    latents = pipeline._unpack_latents(latents, height, width, pipeline.vae_scale_factor)
-    latents = (latents / pipeline.vae.config.scaling_factor) + pipeline.vae.config.shift_factor
-    latents = latents.to(dtype=pipeline.vae.dtype)
-
-    if sequential_decode and latents.shape[0] > 1:
-        decoded_batches = []
-        for idx in range(latents.shape[0]):
-            decoded_batches.append(pipeline.vae.decode(latents[idx : idx + 1], return_dict=False)[0])
-        image = torch.cat(decoded_batches, dim=0)
-    else:
-        image = pipeline.vae.decode(latents, return_dict=False)[0]
-
-    image = pipeline.image_processor.postprocess(image, output_type=output_type)
-    pipeline.maybe_free_model_hooks()
-
-    return image, all_latents, latent_image_ids, text_ids, all_log_probs
 
 
 def eval_fn(
@@ -798,8 +636,8 @@ def main(_):
     else:
         raise ValueError("per_prompt_stat_tracking must be enabled for this recipe")
 
-    reward_fn = getattr(diffusion.flow_grpo.rewards, "multi_score")(device, config.reward_fn)
-    eval_reward_fn = getattr(diffusion.flow_grpo.rewards, "multi_score")(device, config.reward_fn)
+    reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
+    eval_reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
     executor = futures.ThreadPoolExecutor(max_workers=8)
 
     ema = None

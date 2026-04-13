@@ -15,6 +15,10 @@ def _get_config(n_gpus=8, dataset="pickscore", reward_fn=None):
     config = base.get_config()
     config.dataset = os.path.join(os.getcwd(), f"dataset/{dataset}")
     config.native_config = "configs/sol_rl/Sana1.0_1600M_linear.yaml"
+    config.native_model_path = os.environ.get(
+        "SANA_NATIVE_MODEL_PATH", os.path.join(os.getcwd(), "output/pretrained_models/SANA_LinearFFN.pth")
+    )
+    config.native_model_source = os.environ.get("SANA_NATIVE_MODEL_SOURCE", "hf://yitongl/SANA_LinearFFN/SANA_LinearFFN.pth")
     config.resolution = 1024
     config.train.lora_target_modules = [
         "attn.qkv",

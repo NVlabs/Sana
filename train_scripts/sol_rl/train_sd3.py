@@ -2,7 +2,6 @@ import copy
 import os
 import sys
 from collections import defaultdict
-from contextlib import nullcontext
 
 _rank = int(os.environ.get("RANK", 0))
 _cache_root = os.environ.get("CACHE_ROOT", os.path.expanduser("~/.cache/sol_rl"))
@@ -32,13 +31,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from train_utils import (
     _HAS_TE,
-    NVFP4_RECIPE,
-    BF16TELinear,
     DistributedTimeLogger,
     build_datasets_and_loaders,
     calculate_zero_std_ratio,
@@ -61,17 +57,15 @@ from train_utils import (
     setup_distributed,
     slice_prompt_metadata,
     sync_lora_to_inference,
-    te,
-    to_jsonable,
     unwrap_compiled,
     wrap_forward_with_fp8,
 )
 
-import diffusion.flow_grpo.rewards
-from diffusion.flow_grpo.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob
-from diffusion.flow_grpo.diffusers_patch.train_dreambooth_lora_sd3 import encode_prompt
-from diffusion.flow_grpo.ema import EMAModuleWrapper
-from diffusion.flow_grpo.stat_tracking import PerPromptStatTracker
+import diffusion.post_training.rewards
+from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_sd3
+from diffusion.post_training.diffusers_patch.train_dreambooth_lora_sd3 import encode_prompt
+from diffusion.post_training.ema import EMAModuleWrapper
+from diffusion.post_training.stat_tracking import PerPromptStatTracker
 
 tqdm = tqdm.tqdm
 FLAGS = flags.FLAGS
@@ -119,14 +113,6 @@ def _build_sd3_latents_from_seeds(seed_list, latent_shape, device, dtype):
             )
         )
     return torch.cat(latents, dim=0)
-
-
-def _fp8_autocast(enabled):
-    """Return te.fp8_autocast context if enabled and TE is available, else nullcontext."""
-    if enabled and _HAS_TE:
-        return te.fp8_autocast(enabled=True, fp8_recipe=NVFP4_RECIPE)
-    return nullcontext()
-
 
 def eval_fn(
     pipeline,
@@ -181,7 +167,7 @@ def eval_fn(
         bs = len(prompts)
         with torch_autocast(enabled=(config.mixed_precision in ["fp16", "bf16"]), dtype=mixed_precision_dtype):
             with torch.no_grad():
-                images, _, _ = pipeline_with_logprob(
+                images, _, _ = pipeline_with_logprob_sd3(
                     pipeline,
                     prompt_embeds=prompt_embeds,
                     pooled_prompt_embeds=pooled_prompt_embeds,
@@ -195,7 +181,6 @@ def eval_fn(
                     noise_level=config.sample.noise_level,
                     deterministic=True,
                     solver=config.sample.solver,
-                    model_type="sd3",
                     sequential_decode=sequential_decode,
                 )
         rewards_future = executor.submit(reward_fn, images, prompts, prompt_metadata, only_strict=False)
@@ -338,7 +323,7 @@ def _rollout_for_one_prompt(
                 )
 
                 with torch_autocast(enabled=enable_amp, dtype=amp_dtype):
-                    images, _, _ = pipeline_with_logprob(
+                    images, _, _ = pipeline_with_logprob_sd3(
                         pipeline,
                         latents=init_latents,
                         prompt_embeds=prompt_embeds,
@@ -353,7 +338,6 @@ def _rollout_for_one_prompt(
                         noise_level=config.sample.noise_level,
                         deterministic=True,
                         solver=config.sample.solver,
-                        model_type="sd3",
                         sequential_decode=sequential_decode,
                     )
                 rewards, _ = reward_fn(
@@ -395,7 +379,7 @@ def _rollout_for_one_prompt(
             )
             with torch.no_grad():
                 with torch_autocast(enabled=enable_amp, dtype=amp_dtype):
-                    images, latents, _ = pipeline_with_logprob(
+                    images, latents, _ = pipeline_with_logprob_sd3(
                         pipeline,
                         latents=init_latents,
                         prompt_embeds=prompt_embeds,
@@ -410,7 +394,6 @@ def _rollout_for_one_prompt(
                         noise_level=config.sample.noise_level,
                         deterministic=True,
                         solver=config.sample.solver,
-                        model_type="sd3",
                         sequential_decode=sequential_decode,
                     )
             timesteps = pipeline.scheduler.timesteps.repeat(bs, 1).to(device)
@@ -457,7 +440,7 @@ def _rollout_for_one_prompt(
             )
             with torch.no_grad():
                 with torch_autocast(enabled=enable_amp, dtype=amp_dtype):
-                    images, latents, _ = pipeline_with_logprob(
+                    images, latents, _ = pipeline_with_logprob_sd3(
                         pipeline,
                         latents=init_latents,
                         prompt_embeds=prompt_embeds,
@@ -472,7 +455,6 @@ def _rollout_for_one_prompt(
                         noise_level=config.sample.noise_level,
                         deterministic=True,
                         solver=config.sample.solver,
-                        model_type="sd3",
                         sequential_decode=sequential_decode,
                     )
             timesteps = pipeline.scheduler.timesteps.repeat(batch_size, 1).to(device)
@@ -681,8 +663,8 @@ def main(_):
     else:
         raise ValueError("per_prompt_stat_tracking must be enabled for this recipe")
 
-    reward_fn = getattr(diffusion.flow_grpo.rewards, "multi_score")(device, config.reward_fn)
-    eval_reward_fn = getattr(diffusion.flow_grpo.rewards, "multi_score")(device, config.reward_fn)
+    reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
+    eval_reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
     executor = futures.ThreadPoolExecutor(max_workers=8)
 
     ema = None

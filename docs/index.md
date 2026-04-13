@@ -62,6 +62,16 @@ ______________________________________________________________________
 - ⏱️ **27 FPS real-time** minute-length video with LongSana
 - 📦 **Full training & inference codebase**
 
+## Post Training
+
+### Cosmos-RL
+
+[Cosmos-RL](sana_cosmos_rl.md) is the broader post-training infrastructure for **SANA image and video**. It is the right choice when you want a flexible **SFT + RL** stack with async reward services, scalable configuration patterns, and support for more general training workflows.
+
+### Sol-RL
+
+[Sol-RL](sol_rl.md) is the high-throughput post-training path packaged directly in this repository. It focuses on efficient diffusion RL with practical single-node launchers, preset config families, and support for **SANA**, **FLUX.1**, and **SD3.5-L**.
+
 ## Quick Start
 
 ```bash

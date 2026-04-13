@@ -27,20 +27,16 @@ from absl import app, flags
 from diffusers import SanaPipeline
 from ml_collections import config_flags
 from peft import LoraConfig, PeftModel, get_peft_model
-from PIL import Image
 from torch.cuda.amp import GradScaler
-from torch.cuda.amp import autocast as torch_autocast
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import pyrallis
 from train_utils import (
     _HAS_TE,
-    NVFP4_RECIPE,
     DistributedTimeLogger,
     build_datasets_and_loaders,
     calculate_zero_std_ratio,
@@ -62,20 +58,18 @@ from train_utils import (
     setup_distributed,
     slice_prompt_metadata,
     sync_lora_to_inference,
-    te,
-    to_jsonable,
     unwrap_compiled,
     wrap_forward_with_fp8,
 )
 
-import diffusion.flow_grpo.rewards
+import diffusion.post_training.rewards
 import diffusion.model.nets.sana_multi_scale  # noqa: F401
-import diffusion.model.nets.sana_multi_scale_linear  # noqa: F401
-from diffusion.flow_grpo.diffusers_patch.solver import run_sampling
-from diffusion.flow_grpo.ema import EMAModuleWrapper
-from diffusion.flow_grpo.stat_tracking import PerPromptStatTracker
+from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_sana
+from diffusion.post_training.ema import EMAModuleWrapper
+from diffusion.post_training.stat_tracking import PerPromptStatTracker
 from diffusion.model.builder import MODELS
 from diffusion.utils.config import SanaConfig, model_init_config
+from tools.download import find_model
 
 tqdm = tqdm.tqdm
 FLAGS = flags.FLAGS
@@ -84,9 +78,7 @@ config_flags.DEFINE_config_file(
     "configs/sol_rl/sana.py",
     "Training configuration.",
 )
-flags.DEFINE_string(
-    "native_config", "diffusers_to_native/config_sana10_training_linear.yaml", "Native model YAML config path"
-)
+flags.DEFINE_string("native_config", "", "Optional override for native model YAML config path")
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -94,6 +86,26 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 TEXT_ENCODER_MAX_SEQ_LEN = 300
 TOKENIZER_MAX_LENGTH = 300
 WANDB_MAX_LOG_IMAGES = 12
+
+
+# ===================== Native Checkpoint Helpers =====================
+
+
+def _resolve_native_checkpoint_source(config, native_cfg):
+    native_model_path = str(getattr(config, "native_model_path", "") or "").strip()
+    native_model_source = str(getattr(config, "native_model_source", "") or "").strip()
+
+    if native_model_path:
+        native_cfg.model.load_from = native_model_path
+        if os.path.isfile(native_model_path):
+            return native_model_path
+        if native_model_source:
+            logger.info(
+                "[INIT] Native checkpoint missing at %s; falling back to %s", native_model_path, native_model_source
+            )
+            return native_model_source
+
+    return native_cfg.model.load_from
 
 
 # ===================== Latent Helpers =====================
@@ -105,107 +117,6 @@ def _prepare_latents_from_seeds(seed_list, num_channels, latent_h, latent_w, dev
         g = torch.Generator(device=device).manual_seed(int(seed))
         latents.append(torch.randn(1, num_channels, latent_h, latent_w, device=device, dtype=dtype, generator=g))
     return torch.cat(latents, dim=0)
-
-
-# ===================== Rollout with Native Sana =====================
-
-
-@torch.no_grad()
-def pipeline_with_logprob_sana(
-    transformer,
-    vae,
-    *,
-    latents=None,
-    num_channels=None,
-    latent_size=None,
-    prompt_embeds=None,
-    prompt_attention_mask=None,
-    negative_prompt_embeds=None,
-    negative_prompt_attention_mask=None,
-    num_inference_steps=20,
-    guidance_scale=4.5,
-    noise_level=0.7,
-    deterministic=False,
-    sequential_decode=False,
-    solver="flow",
-):
-    """Native DiT forward + flow sampling + VAE decode (mirrors sana_inference_yaml_linear.py).
-
-    Returns
-    -------
-    images       : Tensor (B, C, H, W) in [0, 1]
-    all_latents  : list[Tensor] – latent state after each step
-    sigmas       : Tensor (num_steps,) – sigma schedule used (0-1 range)
-    """
-    assert prompt_embeds is not None
-
-    if latents is None:
-        assert num_channels is not None and latent_size is not None
-        latents = torch.randn(
-            prompt_embeds.shape[0],
-            num_channels,
-            latent_size,
-            latent_size,
-            device=prompt_embeds.device,
-            dtype=prompt_embeds.dtype,
-        )
-
-    device = latents.device
-    dtype = latents.dtype
-    sigmas = torch.linspace(1.0, 0.0, num_inference_steps + 1, device=device, dtype=dtype)
-
-    do_cfg = guidance_scale > 1.0 and negative_prompt_embeds is not None
-
-    caption_4d = prompt_embeds.unsqueeze(1) if prompt_embeds.dim() == 3 else prompt_embeds
-    mask_4d = (
-        prompt_attention_mask.unsqueeze(1).unsqueeze(1).to(torch.int16)
-        if prompt_attention_mask is not None and prompt_attention_mask.dim() == 2
-        else prompt_attention_mask
-    )
-
-    if do_cfg:
-        neg_4d = negative_prompt_embeds.unsqueeze(1) if negative_prompt_embeds.dim() == 3 else negative_prompt_embeds
-        neg_mask_4d = (
-            negative_prompt_attention_mask.unsqueeze(1).unsqueeze(1).to(torch.int16)
-            if negative_prompt_attention_mask is not None and negative_prompt_attention_mask.dim() == 2
-            else negative_prompt_attention_mask
-        )
-        y_in = torch.cat([neg_4d, caption_4d], dim=0)
-        m_in = torch.cat([neg_mask_4d, mask_4d], dim=0) if mask_4d is not None else None
-    else:
-        y_in = caption_4d
-        m_in = mask_4d
-
-    def v_pred_fn(z, sigma):
-        z_in = torch.cat([z, z], dim=0) if do_cfg else z
-        t_batch = sigma.expand(z_in.shape[0]).to(device)
-        pred = transformer(z_in, t_batch, y_in, mask=m_in)
-        if do_cfg:
-            u, c = pred.chunk(2)
-            pred = u + guidance_scale * (c - u)
-        return pred
-
-    latents, all_latents, _ = run_sampling(
-        v_pred_fn,
-        latents,
-        sigmas,
-        solver,
-        deterministic,
-        noise_level,
-    )
-
-    vae_dtype = next(vae.parameters()).dtype
-    latents_dec = latents.to(vae_dtype) / vae.config.scaling_factor
-    if sequential_decode and latents_dec.shape[0] > 1:
-        decoded = []
-        for idx in range(latents_dec.shape[0]):
-            decoded.append(vae.decode(latents_dec[idx : idx + 1], return_dict=False)[0])
-        image = torch.cat(decoded, dim=0)
-    else:
-        image = vae.decode(latents_dec, return_dict=False)[0]
-    images = (image / 2 + 0.5).clamp(0, 1)
-
-    return images, all_latents, sigmas[:-1]
 
 
 # ===================== Inference Model Selection =====================
@@ -502,6 +413,8 @@ def eval_fn(
 
 def main(_):
     config = FLAGS.config
+    if FLAGS.native_config:
+        config.native_config = FLAGS.native_config
 
     # cuDNN SDPA backward graph fails on Blackwell (sm_100); fall back to flash/math
     torch.backends.cuda.enable_cudnn_sdp(False)
@@ -539,6 +452,7 @@ def main(_):
     # ===================== Build native transformer from YAML config =====================
     with open(config.native_config, encoding="utf-8") as _f:
         native_cfg = pyrallis.load(SanaConfig, _f)
+    ckpt_source = _resolve_native_checkpoint_source(config, native_cfg)
 
     # ===================== Build pipeline (text encoder + VAE only) =====================
     pipeline = SanaPipeline.from_pretrained(
@@ -561,9 +475,8 @@ def main(_):
     transformer = MODELS.build(dict(type=native_cfg.model.model), default_args=model_kwargs)
     transformer.to(device, dtype=torch.bfloat16)
 
-    ckpt_path = native_cfg.model.load_from
-    logger.info(f"[INIT] Loading native checkpoint from {ckpt_path}")
-    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    logger.info(f"[INIT] Loading native checkpoint from {ckpt_source}")
+    ckpt = find_model(ckpt_source)
     if isinstance(ckpt, dict):
         if "state_dict" in ckpt:
             state = ckpt["state_dict"]
@@ -619,7 +532,7 @@ def main(_):
             if not _HAS_TE:
                 raise RuntimeError(f"{mtype!r} requires transformer_engine")
             n_rep, n_skip, rep_d, skip_d = replace_linear_with_te(
-                m, skip_modules=nvfp4_skip_modules, min_dim=nvfp4_min_dim, replace_conv1x1=True
+                m, skip_modules=nvfp4_skip_modules, min_dim=nvfp4_min_dim
             )
             logger.info(f"[NVFP4] {mtype}: replaced {n_rep} -> te.Linear, skipped {n_skip}")
             if is_main_process(rank):
@@ -705,8 +618,8 @@ def main(_):
     stat_tracker = PerPromptStatTracker(config.global_std) if config.per_prompt_stat_tracking else None
     executor = futures.ThreadPoolExecutor(max_workers=8)
 
-    reward_fn = getattr(diffusion.flow_grpo.rewards, "multi_score")(device, config.reward_fn)
-    eval_reward_fn = getattr(diffusion.flow_grpo.rewards, "multi_score")(device, config.reward_fn)
+    reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
+    eval_reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
 
     # --- Timestep config ---
     timestep_clip = getattr(config, "timestep_clip", None)

@@ -113,6 +113,7 @@ def _build_sd3_latents_from_seeds(seed_list, latent_shape, device, dtype):
         )
     return torch.cat(latents, dim=0)
 
+
 def eval_fn(
     pipeline,
     test_dataloader,

@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import torch
-from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import retrieve_timesteps
 from diffusers.pipelines.flux.pipeline_flux import retrieve_timesteps as retrieve_flux_timesteps
+from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import retrieve_timesteps
 
 from .solver import run_sampling
 

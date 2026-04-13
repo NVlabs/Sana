@@ -5,10 +5,10 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-from PIL import Image
-from torchvision.transforms import Compose, InterpolationMode, Normalize
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
+from PIL import Image
+from torchvision.transforms import Compose, InterpolationMode, Normalize
 
 CKPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../reward_ckpts")
 
@@ -70,15 +70,18 @@ def _hpsv2_image_transform(image_size, mean=None, std=None, fill_color=0):
         mean = (mean,) * 3
     if not isinstance(std, (list, tuple)):
         std = (std,) * 3
-    return Compose([
-        _ResizeMaxSize(image_size, fill=fill_color),
-        _MaskAwareNormalize(mean=mean, std=std),
-    ])
+    return Compose(
+        [
+            _ResizeMaxSize(image_size, fill=fill_color),
+            _MaskAwareNormalize(mean=mean, std=std),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
 # CLIP transform helper
 # ---------------------------------------------------------------------------
+
 
 def _get_clip_size(size):
     if isinstance(size, int):
@@ -117,6 +120,7 @@ def _patch_imagereward_compat():
     import transformers.modeling_utils as _mu
 
     if not hasattr(_mu, "apply_chunking_to_forward"):
+
         def _apply_chunking_to_forward(forward_fn, chunk_size, chunk_dim, *input_tensors):
             if chunk_size > 0:
                 num_chunks = input_tensors[0].shape[chunk_dim] // chunk_size
@@ -124,9 +128,11 @@ def _patch_imagereward_compat():
                 output_chunks = tuple(forward_fn(*chunk) for chunk in zip(*input_chunks))
                 return torch.cat(output_chunks, dim=chunk_dim)
             return forward_fn(*input_tensors)
+
         _mu.apply_chunking_to_forward = _apply_chunking_to_forward
 
     if not hasattr(_mu, "find_pruneable_heads_and_indices"):
+
         def _find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_heads):
             mask = torch.ones(n_heads, head_size)
             heads = set(heads) - already_pruned_heads
@@ -134,9 +140,11 @@ def _patch_imagereward_compat():
                 head -= sum(1 if h < head else 0 for h in already_pruned_heads)
                 mask[head] = 0
             return heads, mask.view(-1).contiguous().eq(1).nonzero().squeeze()
+
         _mu.find_pruneable_heads_and_indices = _find_pruneable_heads_and_indices
 
     if not hasattr(_mu, "prune_linear_layer"):
+
         def _prune_linear_layer(layer, index, dim=0):
             W = layer.weight.index_select(dim, index.to(layer.weight.device)).clone().detach()
             if layer.bias is not None:
@@ -152,12 +160,14 @@ def _patch_imagereward_compat():
                 new_layer.bias.copy_(b)
                 new_layer.bias.requires_grad_(True)
             return new_layer
+
         _mu.prune_linear_layer = _prune_linear_layer
 
     import ImageReward.models.BLIP.blip_pretrain as _blip_pt
 
     def _patched_init_tokenizer():
         from transformers import BertTokenizer
+
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         tokenizer.add_special_tokens({"bos_token": "[DEC]"})
         tokenizer.add_special_tokens({"additional_special_tokens": ["[ENC]"]})
@@ -167,15 +177,15 @@ def _patch_imagereward_compat():
     _blip_pt.init_tokenizer = _patched_init_tokenizer
 
     from transformers import PreTrainedModel as _PTM
+
     if not hasattr(_PTM, "all_tied_weights_keys"):
-        _PTM.all_tied_weights_keys = property(
-            lambda self: getattr(self, "_tied_weights_keys", [])
-        )
+        _PTM.all_tied_weights_keys = property(lambda self: getattr(self, "_tied_weights_keys", []))
 
 
 # =========================================================================
 # Scorer classes (heavy deps lazy-loaded inside __init__)
 # =========================================================================
+
 
 class HPSv2Scorer(nn.Module):
     def __init__(self, dtype, device):
@@ -187,10 +197,15 @@ class HPSv2Scorer(nn.Module):
         model = create_model(
             "ViT-H-14",
             os.path.join(CKPT_PATH, "open_clip_pytorch_model.bin"),
-            precision="amp", device=device, jit=False,
-            force_quick_gelu=False, force_custom_text=False,
-            force_patch_dropout=False, force_image_size=None,
-            pretrained_image=False, output_dict=True,
+            precision="amp",
+            device=device,
+            jit=False,
+            force_quick_gelu=False,
+            force_custom_text=False,
+            force_patch_dropout=False,
+            force_image_size=None,
+            pretrained_image=False,
+            output_dict=True,
         )
         image_size = model.visual.image_size
         if isinstance(image_size, tuple):
@@ -219,7 +234,7 @@ class HPSv2Scorer(nn.Module):
 class ClipScorer(nn.Module):
     def __init__(self, device):
         super().__init__()
-        from transformers import CLIPProcessor, CLIPModel
+        from transformers import CLIPModel, CLIPProcessor
 
         self.device = device
         self.model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14").to(device)
@@ -240,7 +255,7 @@ class ClipScorer(nn.Module):
 class PickScoreScorer(nn.Module):
     def __init__(self, device="cuda", dtype=torch.float32):
         super().__init__()
-        from transformers import AutoProcessor, AutoModel
+        from transformers import AutoModel, AutoProcessor
 
         self.device = device
         self.dtype = dtype
@@ -304,6 +319,7 @@ class ImageRewardScorer(nn.Module):
 # =========================================================================
 # Factory functions (image format normalisation) & dispatcher
 # =========================================================================
+
 
 def clip_score(device):
     scorer = ClipScorer(device=device)

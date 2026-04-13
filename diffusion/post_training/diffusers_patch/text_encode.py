@@ -181,12 +181,14 @@ def encode_sana_prompt(
     do_classifier_free_guidance=True,
 ):
     prompt = _as_prompt_list(prompt)
-    prompt_embeds, prompt_attention_mask, negative_prompt_embeds, negative_prompt_attention_mask = pipeline.encode_prompt(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        device=device,
-        max_sequence_length=max_sequence_length,
-        do_classifier_free_guidance=do_classifier_free_guidance,
+    prompt_embeds, prompt_attention_mask, negative_prompt_embeds, negative_prompt_attention_mask = (
+        pipeline.encode_prompt(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            device=device,
+            max_sequence_length=max_sequence_length,
+            do_classifier_free_guidance=do_classifier_free_guidance,
+        )
     )
 
     target_device = device if device is not None else prompt_embeds.device

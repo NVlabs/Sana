@@ -1,13 +1,14 @@
-from datasets import load_dataset, Dataset
 import random
 
+from datasets import Dataset, load_dataset
+
 # Load the original dataset
-dataset = load_dataset('yuvalkirstain/pickapic_v1', num_proc=16)
+dataset = load_dataset("yuvalkirstain/pickapic_v1", num_proc=16)
 
 # Process train split
-text_dataset = dataset['train'].select_columns(["caption"])
+text_dataset = dataset["train"].select_columns(["caption"])
 unique_dataset = text_dataset.unique("caption")
-unique_dataset = [s for s in unique_dataset if s.count(' ') >= 5]
+unique_dataset = [s for s in unique_dataset if s.count(" ") >= 5]
 
 # Shuffle the unique dataset
 random.shuffle(unique_dataset)

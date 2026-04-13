@@ -4,7 +4,6 @@ import os
 import torch
 from torch.utils.data import Dataset, Sampler
 
-
 _LOCAL_DATASET_ROOT = os.path.join(os.path.dirname(__file__), "dataset")
 
 

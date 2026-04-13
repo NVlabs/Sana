@@ -96,6 +96,7 @@ TEXT_ENCODER_MAX_SEQ_LEN = 128
 TOKENIZER_MAX_LENGTH = 256
 WANDB_MAX_LOG_IMAGES = 12
 
+
 def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
     with torch.no_grad():
         prompt_embeds, pooled_prompt_embeds, text_ids = encode_flux_prompt(

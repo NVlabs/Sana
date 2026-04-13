@@ -62,13 +62,13 @@ from train_utils import (
     wrap_forward_with_fp8,
 )
 
-import diffusion.post_training.rewards
 import diffusion.model.nets.sana_multi_scale  # noqa: F401
+import diffusion.post_training.rewards
+from diffusion.model.builder import MODELS
 from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_sana
 from diffusion.post_training.diffusers_patch.text_encode import encode_sana_prompt
 from diffusion.post_training.ema import EMAModuleWrapper
 from diffusion.post_training.stat_tracking import PerPromptStatTracker
-from diffusion.model.builder import MODELS
 from diffusion.utils.config import SanaConfig, model_init_config
 from tools.download import find_model
 
@@ -100,6 +100,7 @@ def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
             do_classifier_free_guidance=True,
         )
 
+
 def _resolve_native_checkpoint_source(config, native_cfg):
     native_model_path = str(getattr(config, "native_model_path", "") or "").strip()
     native_model_source = str(getattr(config, "native_model_source", "") or "").strip()
@@ -116,12 +117,14 @@ def _resolve_native_checkpoint_source(config, native_cfg):
 
     return native_cfg.model.load_from
 
+
 def _prepare_latents_from_seeds(seed_list, num_channels, latent_h, latent_w, device, dtype):
     latents = []
     for seed in seed_list:
         g = torch.Generator(device=device).manual_seed(int(seed))
         latents.append(torch.randn(1, num_channels, latent_h, latent_w, device=device, dtype=dtype, generator=g))
     return torch.cat(latents, dim=0)
+
 
 def _select_inference_transformer(mode, inference_models, transformer_ddp, peft_transformer):
     """Return the transformer to use for inference based on *mode*.
@@ -131,6 +134,7 @@ def _select_inference_transformer(mode, inference_models, transformer_ddp, peft_
         transformer_ddp.module.set_adapter("old")
         return peft_transformer
     return inference_models[mode]
+
 
 def _rollout_for_one_prompt(
     rollout_transformer,
@@ -318,6 +322,7 @@ def _rollout_for_one_prompt(
     collated = filter_by_indices(collated, keep)
     return collated, final_images, final_prompts
 
+
 def eval_fn(
     pipeline,
     eval_transformer,
@@ -398,6 +403,7 @@ def eval_fn(
         ema.copy_temp_to(transformer_trainable_parameters)
     if world_size > 1:
         dist.barrier()
+
 
 def main(_):
     config = FLAGS.config

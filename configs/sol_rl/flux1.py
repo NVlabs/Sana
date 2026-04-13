@@ -152,32 +152,53 @@ def flux1_diffusionnft_imagereward():
 
 
 # ============================================================================
-# Naive Scaling: 24-in-96, BF16 compile model
+# Naive Scaling: 24-in-96, PEFT model
 # ============================================================================
 
 
 def flux1_naive_scaling_pickscore():
-    cfg = _build_reward("pickscore", 24, 96)
-    cfg.fullrollout_model = "compile"
-    return _set_run(cfg, "flux1_naive_scaling_pickscore")
+    return _set_run(_build_reward("pickscore", 24, 96), "flux1_naive_scaling_pickscore")
 
 
 def flux1_naive_scaling_clipscore():
-    cfg = _build_reward("clipscore", 24, 96)
-    cfg.fullrollout_model = "compile"
-    return _set_run(cfg, "flux1_naive_scaling_clipscore")
+    return _set_run(_build_reward("clipscore", 24, 96), "flux1_naive_scaling_clipscore")
 
 
 def flux1_naive_scaling_hpsv2():
-    cfg = _build_reward("hpsv2", 24, 96)
-    cfg.fullrollout_model = "compile"
-    return _set_run(cfg, "flux1_naive_scaling_hpsv2")
+    return _set_run(_build_reward("hpsv2", 24, 96), "flux1_naive_scaling_hpsv2")
 
 
 def flux1_naive_scaling_imagereward():
+    return _set_run(_build_reward("imagereward", 24, 96), "flux1_naive_scaling_imagereward")
+
+
+# ============================================================================
+# Compile: 24-in-96, BF16 compile model
+# ============================================================================
+
+
+def flux1_compile_pickscore():
+    cfg = _build_reward("pickscore", 24, 96)
+    cfg.fullrollout_model = "compile"
+    return _set_run(cfg, "flux1_compile_pickscore")
+
+
+def flux1_compile_clipscore():
+    cfg = _build_reward("clipscore", 24, 96)
+    cfg.fullrollout_model = "compile"
+    return _set_run(cfg, "flux1_compile_clipscore")
+
+
+def flux1_compile_hpsv2():
+    cfg = _build_reward("hpsv2", 24, 96)
+    cfg.fullrollout_model = "compile"
+    return _set_run(cfg, "flux1_compile_hpsv2")
+
+
+def flux1_compile_imagereward():
     cfg = _build_reward("imagereward", 24, 96)
     cfg.fullrollout_model = "compile"
-    return _set_run(cfg, "flux1_naive_scaling_imagereward")
+    return _set_run(cfg, "flux1_compile_imagereward")
 
 
 # ============================================================================

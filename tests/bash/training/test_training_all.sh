@@ -21,7 +21,7 @@ bash train_scripts/train.sh configs/sana1-5_config/1024ms/Sana_1600M_1024px_Adam
 # test SANA-Sprint(sCM + LADD) training
 bash train_scripts/train_scm_ladd.sh configs/sana_sprint_config/1024ms/SanaSprint_1600M_1024px_allqknorm_bf16_scm_ladd.yaml  --data.data_dir="[data/toy_data]" --data.load_vae_feat=true --train.num_epochs=1 --train.log_interval=1
 
-# test Sol-RL launcher smoke tests
+# test Sol-RL training
 bash tests/bash/training/test_training_sol_rl.sh
 
 # test FSDP video training

@@ -4,7 +4,6 @@ import ml_collections
 def get_config():
     config = ml_collections.ConfigDict()
 
-    ###### General ######
     # run name for wandb logging and checkpoint saving -- if not provided, will be auto-generated based on the datetime.
     config.run_name = ""
     config.debug = False
@@ -34,12 +33,10 @@ def get_config():
     config.dataset = ""
     config.resolution = 768
 
-    ###### Pretrained Model ######
     config.pretrained = pretrained = ml_collections.ConfigDict()
     # base model to load. either a path to a local directory, or a model name from the HuggingFace model hub.
     pretrained.model = ""
 
-    ###### Sampling ######
     config.sample = sample = ml_collections.ConfigDict()
     # number of sampler inference steps.
     sample.num_steps = 40
@@ -51,7 +48,6 @@ def get_config():
     # number of best of n samples to select from each prompt
     sample.best_of_n = 24
 
-    ###### Training ######
     config.train = train = ml_collections.ConfigDict()
     # batch size (per GPU!) to use for training.
     train.batch_size = 1
@@ -89,21 +85,17 @@ def get_config():
     train.lora_target_modules = None
     train.ema = True
 
-    ###### Prompt Function ######
     config.prompt_fn = ""
 
-    ###### Reward Function ######
     # reward function to use. see `rewards.py` for available reward functions.
     config.reward_fn = ml_collections.ConfigDict()
     config.save_dir = ""
 
-    ###### Per-Prompt Stat Tracking ######
     config.per_prompt_stat_tracking = True
 
     config.global_std = True
     config.after_adv = False
 
-    ###### Rollout / Eval / Training Guidance ######
     config.beta = 1.0
     config.decay_type = 1
     config.rollout_sample_guidance_scale = 1.0
@@ -113,12 +105,10 @@ def get_config():
     config.preview_step = 0
     config.sequential_decode = True
 
-    ###### Debug Image ######
     config.enable_debug_image_save = True
     config.debug_image_every_steps = 10
     config.debug_image_subset_size = 6
 
-    ###### Inference Model Mode ######
     config.compile_mode = "max-autotune-no-cudagraphs"
     config.preview_model = "peft"
     config.fullrollout_model = "peft"

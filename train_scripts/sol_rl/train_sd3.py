@@ -63,7 +63,7 @@ from train_utils import (
 
 import diffusion.post_training.rewards
 from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_sd3
-from diffusion.post_training.diffusers_patch.train_dreambooth_lora_sd3 import encode_prompt
+from diffusion.post_training.diffusers_patch.text_encode import encode_sd3_prompt
 from diffusion.post_training.ema import EMAModuleWrapper
 from diffusion.post_training.stat_tracking import PerPromptStatTracker
 
@@ -85,14 +85,13 @@ WANDB_MAX_LOG_IMAGES = 12
 
 def compute_text_embeddings(prompts, text_encoders, tokenizers, max_sequence_length, device):
     with torch.no_grad():
-        prompt_embeds, pooled_prompt_embeds = encode_prompt(
+        prompt_embeds, pooled_prompt_embeds = encode_sd3_prompt(
             text_encoders,
             tokenizers,
             prompts,
             max_sequence_length,
+            device=device,
         )
-        prompt_embeds = prompt_embeds.to(device)
-        pooled_prompt_embeds = pooled_prompt_embeds.to(device)
     return prompt_embeds, pooled_prompt_embeds
 
 

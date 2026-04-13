@@ -70,6 +70,7 @@ from train_utils import (
 
 import diffusion.post_training.rewards
 from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_flux
+from diffusion.post_training.diffusers_patch.text_encode import encode_flux_prompt
 from diffusion.post_training.ema import EMAModuleWrapper
 from diffusion.post_training.stat_tracking import PerPromptStatTracker
 
@@ -97,17 +98,13 @@ WANDB_MAX_LOG_IMAGES = 12
 
 def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
     with torch.no_grad():
-        prompt_embeds, pooled_prompt_embeds, text_ids = pipeline.encode_prompt(
-            prompt=prompts,
-            prompt_2=prompts,
-            prompt_embeds=None,
-            pooled_prompt_embeds=None,
-            device=device,
-            num_images_per_prompt=1,
+        prompt_embeds, pooled_prompt_embeds, text_ids = encode_flux_prompt(
+            pipeline,
+            prompts,
             max_sequence_length=max_sequence_length,
-            lora_scale=None,
+            device=device,
         )
-    return prompt_embeds.to(device), pooled_prompt_embeds.to(device), text_ids.to(device)
+    return prompt_embeds, pooled_prompt_embeds, text_ids
 
 
 def _build_generators_from_seeds(seed_list, device):

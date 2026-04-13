@@ -1,5 +1,3 @@
-# Copied from another repo, but I can't remember exactly which one.
-
 from collections.abc import Iterable
 
 import torch
@@ -74,7 +72,6 @@ class EMAModuleWrapper:
 
     def copy_temp_to(self, parameters: Iterable[torch.nn.Parameter]) -> None:
         for temp_parameter, parameter in zip(self.temp_stored_parameters, parameters, strict=True):
-            # Ensure the temp parameter is on the right device
             parameter.data.copy_(temp_parameter.to(parameter.device))
 
         self.temp_stored_parameters = None

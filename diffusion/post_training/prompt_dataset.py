@@ -37,9 +37,6 @@ class TextPromptDataset(Dataset):
         self.file_path = _resolve_dataset_file(dataset, f"{split}.txt")
         with open(self.file_path, encoding="utf-8") as f:
             self.prompts = [line.strip() for line in f.readlines()]
-        # if split == "test":
-        #     self.prompts = self.prompts
-        #     self.prompts = self.prompts[:1024]
 
     def __len__(self):
         return len(self.prompts)
@@ -60,8 +57,6 @@ class GenevalPromptDataset(Dataset):
         with open(self.file_path, encoding="utf-8") as f:
             self.metadatas = [json.loads(line) for line in f]
             self.prompts = [item["prompt"] for item in self.metadatas]
-        # if split == "test":
-        #     self.prompts = self.prompts[:256]
 
     def __len__(self):
         return len(self.prompts)

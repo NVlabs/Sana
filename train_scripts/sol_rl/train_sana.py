@@ -65,6 +65,7 @@ from train_utils import (
 import diffusion.post_training.rewards
 import diffusion.model.nets.sana_multi_scale  # noqa: F401
 from diffusion.post_training.diffusers_patch.pipeline_with_logprob import pipeline_with_logprob_sana
+from diffusion.post_training.diffusers_patch.text_encode import encode_sana_prompt
 from diffusion.post_training.ema import EMAModuleWrapper
 from diffusion.post_training.stat_tracking import PerPromptStatTracker
 from diffusion.model.builder import MODELS
@@ -88,8 +89,16 @@ TOKENIZER_MAX_LENGTH = 300
 WANDB_MAX_LOG_IMAGES = 12
 
 
-# ===================== Native Checkpoint Helpers =====================
-
+def compute_text_embeddings(prompts, pipeline, max_sequence_length, device):
+    with torch.no_grad():
+        return encode_sana_prompt(
+            pipeline,
+            prompts,
+            max_sequence_length=max_sequence_length,
+            device=device,
+            negative_prompt="",
+            do_classifier_free_guidance=True,
+        )
 
 def _resolve_native_checkpoint_source(config, native_cfg):
     native_model_path = str(getattr(config, "native_model_path", "") or "").strip()
@@ -107,20 +116,12 @@ def _resolve_native_checkpoint_source(config, native_cfg):
 
     return native_cfg.model.load_from
 
-
-# ===================== Latent Helpers =====================
-
-
 def _prepare_latents_from_seeds(seed_list, num_channels, latent_h, latent_w, device, dtype):
     latents = []
     for seed in seed_list:
         g = torch.Generator(device=device).manual_seed(int(seed))
         latents.append(torch.randn(1, num_channels, latent_h, latent_w, device=device, dtype=dtype, generator=g))
     return torch.cat(latents, dim=0)
-
-
-# ===================== Inference Model Selection =====================
-
 
 def _select_inference_transformer(mode, inference_models, transformer_ddp, peft_transformer):
     """Return the transformer to use for inference based on *mode*.
@@ -130,10 +131,6 @@ def _select_inference_transformer(mode, inference_models, transformer_ddp, peft_
         transformer_ddp.module.set_adapter("old")
         return peft_transformer
     return inference_models[mode]
-
-
-# ===================== Rollout for One Prompt =====================
-
 
 def _rollout_for_one_prompt(
     rollout_transformer,
@@ -321,10 +318,6 @@ def _rollout_for_one_prompt(
     collated = filter_by_indices(collated, keep)
     return collated, final_images, final_prompts
 
-
-# ===================== Eval Function =====================
-
-
 def eval_fn(
     pipeline,
     eval_transformer,
@@ -367,12 +360,11 @@ def eval_fn(
     for test_batch in tqdm(eval_loader, desc="Eval:", disable=not is_main_process(rank)):
         prompts, prompt_metadata = test_batch
         with torch.no_grad():
-            prompt_embeds, prompt_mask, neg_embeds, neg_mask = pipeline.encode_prompt(
-                prompt=prompts,
-                negative_prompt="",
-                device=device,
+            prompt_embeds, prompt_mask, neg_embeds, neg_mask = compute_text_embeddings(
+                prompts,
+                pipeline,
                 max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN,
-                do_classifier_free_guidance=True,
+                device=device,
             )
             images, _, _ = pipeline_with_logprob_sana(
                 eval_transformer,
@@ -407,10 +399,6 @@ def eval_fn(
     if world_size > 1:
         dist.barrier()
 
-
-# ===================== Main =====================
-
-
 def main(_):
     config = FLAGS.config
     if FLAGS.native_config:
@@ -421,7 +409,6 @@ def main(_):
 
     start_time = time.time()
 
-    # --- Distributed Setup ---
     rank = int(os.environ["RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
     local_rank = int(os.environ["LOCAL_RANK"])
@@ -449,12 +436,12 @@ def main(_):
     enable_amp = mixed_precision_dtype is not None
     scaler = GradScaler(enabled=enable_amp and mixed_precision_dtype == torch.float16)
 
-    # ===================== Build native transformer from YAML config =====================
+    # Build native transformer from the Sana YAML config.
     with open(config.native_config, encoding="utf-8") as _f:
         native_cfg = pyrallis.load(SanaConfig, _f)
     ckpt_source = _resolve_native_checkpoint_source(config, native_cfg)
 
-    # ===================== Build pipeline (text encoder + VAE only) =====================
+    # Keep the diffusers text encoder + VAE, but replace the native transformer.
     pipeline = SanaPipeline.from_pretrained(
         "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers", torch_dtype=torch.bfloat16
     )
@@ -497,7 +484,7 @@ def main(_):
     num_channels = native_cfg.vae.vae_latent_dim
     transformer.requires_grad_(not config.use_lora)
 
-    # --- Inference models (deepcopy + optional compile/nvfp4) ---
+    # Create optional inference-only copies for compiled and/or NVFP4 rollout modes.
     compile_mode = str(getattr(config, "compile_mode", "max-autotune-no-cudagraphs"))
     preview_step = int(getattr(config, "preview_step", 0))
     preview_model_key = str(getattr(config, "preview_model", "peft"))
@@ -563,7 +550,6 @@ def main(_):
     else:
         logger.info("[INIT] No inference models needed, using PEFT model for all inference")
 
-    # --- LoRA ---
     if config.use_lora:
         init_lora_weights = getattr(config.train, "lora_init_mode", config.train.lora_init_weights)
         lora_cfg = LoraConfig(
@@ -581,7 +567,6 @@ def main(_):
         transformer.set_adapter("default")
     peft_transformer = transformer
 
-    # --- DDP ---
     transformer_ddp = DDP(transformer, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
     transformer_ddp.module.set_adapter("default")
     transformer_trainable_parameters = list(filter(lambda p: p.requires_grad, transformer_ddp.module.parameters()))
@@ -601,7 +586,6 @@ def main(_):
         eps=config.train.adam_epsilon,
     )
 
-    # --- EMA ---
     ema = None
     if config.train.ema:
         ema = EMAModuleWrapper(
@@ -611,7 +595,6 @@ def main(_):
             device=device,
         )
 
-    # --- Datasets ---
     _, train_dataloader, train_sampler, _, test_dataloader = build_datasets_and_loaders(config, world_size, rank)
     train_iter = iter(train_dataloader)
 
@@ -621,7 +604,6 @@ def main(_):
     reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
     eval_reward_fn = getattr(diffusion.post_training.rewards, "multi_score")(device, config.reward_fn)
 
-    # --- Timestep config ---
     timestep_clip = getattr(config, "timestep_clip", None)
     if timestep_clip is not None:
         _ts_start, _ts_end = int(timestep_clip[0]), int(timestep_clip[1])
@@ -630,7 +612,6 @@ def main(_):
         _ts_start = _ts_end = None
         num_train_timesteps = int(config.rollout_sample_num_steps * config.train.timestep_fraction)
 
-    # --- Resume ---
     first_epoch = 0
     global_step = 0
     candidates = find_resume_candidates(config)
@@ -648,7 +629,7 @@ def main(_):
         for src_p, tgt_p in zip(transformer_trainable_parameters, old_transformer_trainable_parameters, strict=True):
             tgt_p.data.copy_(src_p.detach().data)
 
-    # Sync initial old adapter → inference models
+    # The rollout path reads from the "old" adapter weights.
     for mtype, inf_model in inference_models.items():
         sync_lora_to_inference(transformer_ddp.module, unwrap_compiled(inf_model), adapter_name="old")
 
@@ -662,9 +643,6 @@ def main(_):
     if world_size > 1:
         dist.barrier()
 
-    # ================================================================
-    #  Training Loop
-    # ================================================================
     for epoch in range(first_epoch, config.num_epochs):
         time_logger.start("total_time")
 
@@ -705,21 +683,17 @@ def main(_):
             torch.cuda.set_rng_state_all(cuda_rng)
         time_logger.end("eval_time")
 
-        # ============================================================
-        #  ROLLOUT
-        # ============================================================
         time_logger.start("rollout_time")
         peft_transformer.eval()
         prompts, prompt_metadata = next(train_iter)
 
         time_logger.start("text_tokenizer_time")
         with torch.no_grad():
-            prompt_embeds, prompt_masks, neg_embeds, neg_masks = pipeline.encode_prompt(
-                prompt=prompts,
-                negative_prompt="",
-                device=device,
+            prompt_embeds, prompt_masks, neg_embeds, neg_masks = compute_text_embeddings(
+                prompts,
+                pipeline,
                 max_sequence_length=TEXT_ENCODER_MAX_SEQ_LEN,
-                do_classifier_free_guidance=True,
+                device=device,
             )
         txt_tokens = pipeline.tokenizer(
             prompts,
@@ -855,9 +829,6 @@ def main(_):
         del collated_samples["prompt_ids"]
         time_logger.end("rollout_time")
 
-        # ============================================================
-        #  TRAINING
-        # ============================================================
         total_batch_size_filtered, num_timesteps_filtered = collated_samples["timesteps"].shape
 
         time_logger.start("train_time")

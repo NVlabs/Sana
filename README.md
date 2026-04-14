@@ -97,6 +97,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/)**: Efficient training-time and inference-time compute scaling for better quality.
 - **[SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/)**: One/few-step generation via sCM distillation, **0.1s per 1024px image** on H100.
 - **[SANA-Video/LongSANA](https://nvlabs.github.io/Sana/Video/)**: Efficient video generation with Block Linear Attention / with [LongLive](https://github.com/NVlabs/LongLive).
+- **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 
 **Key Techniques:**
 
@@ -106,6 +107,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **Block Causal Linear Attention & Causal Mix-FFN**: Efficient attention and feedforward for long video generation.
 - **Flow-DPM-Solver**: Reduce sampling steps with efficient training and sampling.
 - **sCM Distillation**: One/few-step generation with continuous-time consistency distillation.
+- **Sol-RL**: Low precision(NVFP4) rollout selection, high precesion(BF16) optimization for faster RL training.
 
 **In summary**, SANA is a fully open-source framework integrating **efficient training, fast inference, and flexible deployment** for both image and video generation. Deployable on laptop GPUs with **< 8GB VRAM** via 4-bit quantization.
 

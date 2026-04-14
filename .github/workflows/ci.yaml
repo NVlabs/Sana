@@ -283,6 +283,26 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           sana-run --pty -m ci -J test-training-sol-rl bash tests/bash/training/test_training_sol_rl.sh
+  remove-label:
+    needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video, test-training-longsana]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'run-tests'
+              });
+              console.log('Successfully removed run-tests label');
+            } catch (error) {
+              console.log('Failed to remove label (may already be removed):', error.message);
+            }
 
 # tests-python:
 #     needs: pre-commit

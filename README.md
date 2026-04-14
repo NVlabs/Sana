@@ -24,7 +24,7 @@
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
 
-**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), and [SANA-Video](https://nvlabs.github.io/Sana/Video/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
+**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
 
 Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with the community! If you have any questions, run into issues, or are interested in contributing, don't hesitate to reach out!
 
@@ -34,7 +34,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
-- 🔥 [2026/04] ⚡ **Sol-RL: NVFP4 Rollout, BF16 Training RL** is available! All training recipes for **SANA**, **FLUX.1**, and **SD3.5-L**, together with bundled post-training datasets, are released. See [Sol-RL doc](https://nvlabs.github.io/Sana/docs/sol_rl/) | [Page](https://nvlabs.github.io/Sana/Sol-RL/) | [paper](https://arxiv.org/abs/2604.06916).
+- 🔥 [2026/04] ⚡ **Sol-RL: NVFP4 Rollout, BF16 Training RL** is available! All training recipes for **SANA**, **FLUX.1**, and **SD3.5-L**, together with bundled post-training datasets, are released. See [Sol-RL doc](https://nvlabs.github.io/Sana/docs/sol_rl/) | [Page](https://nvlabs.github.io/Sana/Sol-RL/) | [Paper](https://arxiv.org/abs/2604.06916).
 - 🔥 [2026/03] 📺 **SANA-Video 720p model with LTX-VAE** is released. Use it with LTX2 Refiner to upscale the videos to 2K resolution! See [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video), [SANA-Video doc](https://nvlabs.github.io/Sana/docs/sana_video/) and [Blog about refiner](https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html).
 - 🔥 [2026/03] 💪 **Post Training Infra: SANA × Cosmos-RL** — We partner with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl) to provide a complete RL infrastructure for SANA. You can now post-train (SFT/RL) SANA-Image and SANA-Video with state-of-the-art algorithms (e.g. Diffusion-NFT, Flow-GRPO), preset configs, reward services, and flexible datasets. See [SANA on Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md) and our [Cosmos-RL integration doc](https://nvlabs.github.io/Sana/docs/sana_cosmos_rl/).
 - 🔥 [2026/02] 🚀 **SANA is now supported in [SGLang](https://github.com/sgl-project/sglang)!** High-performance serving with OpenAI-compatible API. [[Guidance]](https://nvlabs.github.io/Sana/docs/sglang/)

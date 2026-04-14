@@ -529,6 +529,8 @@ def SanaMS_1600M_P2_D20(**kwargs):
 def SanaMSLinearFFN_1600M_P1_D20(**kwargs):
     # 20 layers, 1648.48M
     return SanaMSLinearFFN(depth=20, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)
+
+
 @MODELS.register_module()
 def SanaMS_2400M_P1_D30(**kwargs):
     return SanaMS(depth=30, hidden_size=2240, patch_size=1, num_heads=20, **kwargs)

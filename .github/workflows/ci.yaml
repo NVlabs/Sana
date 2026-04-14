@@ -284,8 +284,7 @@ jobs:
         run: |
           sana-run --pty -m ci -J test-training-sol-rl bash tests/bash/training/test_training_sol_rl.sh
   remove-label:
-    needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video, test-training-longsana]
-    if: always() && github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Remove label

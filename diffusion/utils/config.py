@@ -138,6 +138,11 @@ class AEConfig(BaseConfig):
     vae_stride: Optional[List[int]] = None
     if_cache: bool = False
     cache_dir: Optional[str] = None
+    # Framewise / tiling fields used by LTX2VAE_diffusers for long-video decode.
+    use_framewise_encoding: bool = False
+    use_framewise_decoding: bool = False
+    tile_sample_stride_num_frames: int = 64
+    tile_sample_min_num_frames: int = 96
     extra: Any = None
 
 

@@ -14,20 +14,51 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import os.path as osp
 
 from huggingface_hub import hf_hub_download, snapshot_download
 
+HF_URI_SCHEME = "hf://"
 
-def hf_download_or_fpath(path):
+
+def resolve_hf_path(path):
+    """Resolve a possibly ``hf://``-prefixed path to a local filesystem path.
+
+    Accepts either:
+
+    * a local path (returned unchanged if it exists), or
+    * ``hf://<owner>/<repo>[/<subpath>]`` — snapshot-downloads the (sub)tree
+      from the Hub and returns the absolute path to the file or directory.
+
+    Downloads are scoped via ``allow_patterns`` so only the requested subtree
+    is materialised; unrelated artefacts in the same repo are skipped.
+    """
+    if not isinstance(path, str) or not path:
+        return path
     if osp.exists(path):
         return path
+    if not path.startswith(HF_URI_SCHEME):
+        return path
 
-    if path.startswith("hf://"):
-        segs = path.replace("hf://", "").split("/")
-        repo_id = "/".join(segs[:2])
-        filename = "/".join(segs[2:])
-        return hf_download_data(repo_id, filename, repo_type="model", download_full_repo=True)
+    parts = path[len(HF_URI_SCHEME) :].split("/", 2)
+    if len(parts) < 2 or not parts[0] or not parts[1]:
+        raise ValueError(f"Invalid HF path {path!r}; expected hf://<owner>/<repo>[/<subpath>].")
+    repo_id = f"{parts[0]}/{parts[1]}"
+    subpath = parts[2] if len(parts) > 2 else ""
+
+    allow_patterns = None
+    if subpath:
+        # Cover both ``subpath`` being a file and being a directory prefix.
+        allow_patterns = [subpath, f"{subpath}/*", f"{subpath}/**"]
+
+    local_root = snapshot_download(repo_id=repo_id, allow_patterns=allow_patterns)
+    return os.path.join(local_root, subpath) if subpath else local_root
+
+
+def hf_download_or_fpath(path):
+    """Backwards-compatible alias for :func:`resolve_hf_path`."""
+    return resolve_hf_path(path)
 
 
 def hf_download_data(

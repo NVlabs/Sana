@@ -14,11 +14,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import math
 import os
 import random
 import re
 import sys
+import time
 from collections.abc import Iterable
+from functools import lru_cache
 from itertools import repeat
 from typing import Any
 
@@ -27,6 +30,7 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
+from torch.nn.attention.flex_attention import create_block_mask
 from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 
 
@@ -604,3 +608,130 @@ def get_weight_dtype(mixed_precision):
         return torch.float32
     else:
         raise ValueError(f"weigh precision {mixed_precision} is not defined")
+
+
+class Timer:
+    def __init__(self, name="timer"):
+        self.name = name
+
+    def __enter__(self):
+        self.start = time.time()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        end = time.time()
+        print(f"{self.name} use: {end - self.start:.4f} s")
+
+
+# 全局mask缓存，避免每个attention层都存储
+_GLOBAL_DIAGONAL_MASK_CACHE = {}
+
+
+def clear_diagonal_mask_cache():
+    """清理全局对角线mask缓存以释放内存"""
+    global _GLOBAL_DIAGONAL_MASK_CACHE
+    _GLOBAL_DIAGONAL_MASK_CACHE.clear()
+
+
+def get_diagonal_mask_cache_info():
+    """获取对角线mask缓存信息"""
+    total_size = 0
+    cache_info = []
+
+    for key, mask in _GLOBAL_DIAGONAL_MASK_CACHE.items():
+        mask_size_mb = mask.numel() * mask.element_size() / (1024 * 1024)
+        total_size += mask_size_mb
+        cache_info.append(
+            {"key": key, "shape": mask.shape, "size_mb": mask_size_mb, "device": mask.device, "dtype": mask.dtype}
+        )
+
+    return {"total_size_mb": total_size, "num_cached": len(_GLOBAL_DIAGONAL_MASK_CACHE), "cache_details": cache_info}
+
+
+@lru_cache
+def create_block_mask_cached(score_mod, B, H, M, N, device="cuda", _compile=False):
+    block_mask = create_block_mask(score_mod, B, H, M, N, device=device, _compile=_compile)
+    return block_mask
+
+
+def generate_temporal_head_mask_mod(
+    context_length: int = 226, prompt_length: int = 226, num_frames: int = 13, token_per_frame: int = 1350, mul: int = 2
+):
+    def round_to_multiple(idx):
+        return math.ceil(idx / 128) * 128
+
+    def temporal_mask_mod(b, h, q_idx, kv_idx):
+        two_frame = round_to_multiple(mul * token_per_frame)
+        temporal_head_mask = torch.abs(q_idx - kv_idx) <= two_frame
+
+        # return temporal_head_mask
+        first_frame_mask = kv_idx < token_per_frame
+        video_mask = first_frame_mask | temporal_head_mask
+        return video_mask
+
+    return temporal_mask_mod
+
+
+def generate_dense_mask_mod():
+    def dense_mask_mod(b, h, q_idx, kv_idx):
+        return q_idx >= 0  # True
+
+    return dense_mask_mod
+
+
+def sparsity_to_width(sparsity, context_length, num_frame, frame_size):
+    seq_len = context_length + num_frame * frame_size
+    total_elements = seq_len**2
+
+    sparsity = (sparsity * total_elements - 2 * seq_len * context_length) / total_elements
+
+    width = seq_len * (1 - math.sqrt(1 - sparsity))
+    width_frame = width / frame_size
+
+    return width_frame
+
+
+def get_attention_mask(mask_name, sample_mse_max_row, context_length, num_frame, frame_size):
+
+    from termcolor import colored
+
+    allocated = torch.cuda.memory_allocated() / 1e9
+    print(colored(f"Allocated Memory: {allocated:.2f} GB", "yellow"))
+
+    attention_mask = torch.zeros(
+        (context_length + num_frame * frame_size, context_length + num_frame * frame_size), device="cpu"
+    )
+
+    # TODO: fix hard coded mask
+    if mask_name == "spatial":
+        pixel_attn_mask = torch.zeros_like(attention_mask, dtype=torch.bool, device="cpu")
+
+        pixel_attn_mask[:, :frame_size] = 1  # First Frame Sink
+
+        block_size, block_thres = 128, frame_size * 2
+        num_block = math.ceil(num_frame * frame_size / block_size)
+        for i in range(num_block):
+            for j in range(num_block):
+                if abs(i - j) < block_thres // block_size:
+                    pixel_attn_mask[i * block_size : (i + 1) * block_size, j * block_size : (j + 1) * block_size] = 1
+        attention_mask = pixel_attn_mask
+    else:
+        pixel_attn_mask = torch.zeros_like(attention_mask, dtype=torch.bool, device="cpu")
+
+        pixel_attn_mask[:, :frame_size] = 1  # First Frame Sink
+
+        block_size, block_thres = 128, frame_size * 2
+        num_block = math.ceil(num_frame * frame_size / block_size)
+        for i in range(num_block):
+            for j in range(num_block):
+                if abs(i - j) < block_thres // block_size:
+                    pixel_attn_mask[i * block_size : (i + 1) * block_size, j * block_size : (j + 1) * block_size] = 1
+
+        pixel_attn_mask = (
+            pixel_attn_mask.reshape(frame_size, num_frame, frame_size, num_frame)
+            .permute(1, 0, 3, 2)
+            .reshape(frame_size * num_frame, frame_size * num_frame)
+        )
+        attention_mask = pixel_attn_mask
+
+    attention_mask = attention_mask[:sample_mse_max_row].cuda()
+    return attention_mask

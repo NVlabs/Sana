@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="../asset/sana-wm-logo.png" width="70%" alt="SANA-WM Logo"/>
+  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/sana-wm-logo.png" width="70%" alt="SANA-WM Logo"/>
 </p>
 
 # 🌍 SANA-WM: Efficient Minute-Scale World Modeling with Hybrid Linear Diffusion Transformer
@@ -26,6 +26,8 @@ Core contributions:
 - **Robust Annotation Pipeline** — metric-scale 6-DoF camera poses extracted from public corpora yield spatiotemporally consistent action supervision.
 
 SANA-WM completes pre-training in 15 days on 64 H100s and generates a 60s 720p clip on a single GPU; the distilled variant runs on an RTX 5090 with NVFP4 quantisation.
+
+> **Note** This is the initial release and currently ships **bidirectional inference only**. More variants are on the way — stay tuned.
 
 ## ⚙️ Environment Setup
 

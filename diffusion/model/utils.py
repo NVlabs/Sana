@@ -265,7 +265,7 @@ def get_mask(batch, length, mask_ratio, device, mask_type=None, data_info=None, 
                         -1,
                     )
                 )
-            elif type == "laplacian":
+            elif mask_type == "laplacian":
                 laplacian_kernel = torch.tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]], dtype=torch.float32).reshape(
                     1, 1, 3, 3
                 )
@@ -303,9 +303,9 @@ def mask_out_token(x, ids_keep, ids_removed=None):
         - x_masked: masked sequence
     """
     N, L, D = x.shape  # batch, length, dim
-    x_remain = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
+    x_remain = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).expand(-1, -1, D))
     if ids_removed is not None:
-        x_masked = torch.gather(x, dim=1, index=ids_removed.unsqueeze(-1).repeat(1, 1, D))
+        x_masked = torch.gather(x, dim=1, index=ids_removed.unsqueeze(-1).expand(-1, -1, D))
         return x_remain, x_masked
     else:
         return x_remain
@@ -328,7 +328,7 @@ def mask_tokens(x, mask_ratio):
 
     # keep the first subset
     ids_keep = ids_shuffle[:, :len_keep]
-    x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
+    x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).expand(-1, -1, D))
 
     # generate the binary mask: 0 is keep, 1 is remove
     mask = torch.ones([N, L], device=x.device)
@@ -342,7 +342,7 @@ def unmask_tokens(x, ids_restore, mask_token):
     # x: [N, T, D] if extras == 0 (i.e., no cls token) else x: [N, T+1, D]
     mask_tokens = mask_token.repeat(x.shape[0], ids_restore.shape[1] - x.shape[1], 1)
     x = torch.cat([x, mask_tokens], dim=1)
-    x = torch.gather(x, dim=1, index=ids_restore.unsqueeze(-1).repeat(1, 1, x.shape[2]))  # unshuffle
+    x = torch.gather(x, dim=1, index=ids_restore.unsqueeze(-1).expand(-1, -1, x.shape[2]))  # unshuffle
     return x
 
 
@@ -386,9 +386,9 @@ def init_processes(fn, args):
 
 def mprint(*args, **kwargs):
     """
-    Print only from rank 0.
+    Print only from rank 0. Safe to call before dist.init_process_group().
     """
-    if dist.get_rank() == 0:
+    if not dist.is_available() or not dist.is_initialized() or dist.get_rank() == 0:
         print(*args, **kwargs)
 
 
@@ -565,18 +565,22 @@ def mask_feature(emb, mask):
 
 
 def list_sum(x: list) -> Any:
-    return x[0] if len(x) == 1 else x[0] + list_sum(x[1:])
+    """Sum a list of items iteratively (avoids recursion and O(n) list slicing)."""
+    result = x[0]
+    for item in x[1:]:
+        result = result + item
+    return result
 
 
-def val2list(x: list or tuple or any, repeat_time=1) -> list:  # type: ignore
-    """Repeat `val` for `repeat_time` times and return the list or val if list/tuple."""
+def val2list(x, repeat_time: int = 1) -> list:
+    """Return list from x; repeat scalar `repeat_time` times."""
     if isinstance(x, (list, tuple)):
         return list(x)
     return [x for _ in range(repeat_time)]
 
 
-def val2tuple(x: list or tuple or any, min_len: int = 1, idx_repeat: int = -1) -> tuple:  # type: ignore
-    """Return tuple with min_len by repeating element at idx_repeat."""
+def val2tuple(x, min_len: int = 1, idx_repeat: int = -1) -> tuple:
+    """Return tuple with at least min_len elements by repeating element at idx_repeat."""
     # convert to list first
     x = val2list(x)
 

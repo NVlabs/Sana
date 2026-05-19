@@ -37,20 +37,13 @@ from diffusion.model.ops.fused_cam_gdn import (
     _prepare_ucpe_rope_tables,
     _process_camera_conditions_raymats_only,
     cam_prep_func,
-    cam_prep_func_with_grad,
-    cam_scan_func,
-    cam_scan_func_with_grad,
 )
-from diffusion.model.ops.fused_cam_gdn_chunkwise_bwd import cam_gdn_chunkwise_stateful_autograd
 from diffusion.model.ops.fused_gdn import (
-    fused_bigdn_forward_with_grad,
     fused_bigdn_func,
-    fused_gdn_func,
     fused_qk_inv_rms,
     prepare_rope_tables,
 )
-from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_bidi_chunkwise, cam_scan_pair_chunkwise
-from diffusion.model.ops.fused_gdn_chunkwise_stateful_raw import fused_gdn_chunkwise_stateful_raw_autograd
+from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_bidi_chunkwise
 from diffusion.model.registry import ATTENTION_BLOCKS
 from diffusion.utils.chunk_utils import (
     is_chunk_causal_request,
@@ -511,39 +504,21 @@ class BidirectionalGDNTriton(BidirectionalGDN):
         # No ``*_bwd`` overrides: the kernel's ``reverse=True`` path already
         # implements the exclusive (t+1..T) reverse recurrence, matching the
         # torch ``flip_and_shift`` semantics used in ``BidirectionalGDN``.
-        if getattr(self, "use_autograd_kernel", False):
-            # Autograd path: the wrapper recomputes inv-RMS internally so q/k
-            # norm backward flows naturally; full-sequence bidirectional only.
-            out = fused_bigdn_forward_with_grad(
-                qkv,
-                beta,
-                decay,
-                q_nw,
-                k_nw,
-                rope_cos,
-                rope_sin,
-                F=T,
-                S=S,
-                k_scale=k_scale,
-                norm_eps=norm_eps,
-                eps=self.eps,
-            )
-        else:
-            out = fused_bigdn_func(
-                qkv,
-                q_inv_rms,
-                k_inv_rms,
-                q_norm_weight=q_nw,
-                k_norm_weight=k_nw,
-                rope_cos=rope_cos,
-                rope_sin=rope_sin,
-                beta=beta,
-                decay=decay,
-                F=T,
-                S=S,
-                k_scale=k_scale,
-                eps=self.eps,
-            )  # (B, N, H, D)
+        out = fused_bigdn_func(
+            qkv,
+            q_inv_rms,
+            k_inv_rms,
+            q_norm_weight=q_nw,
+            k_norm_weight=k_nw,
+            rope_cos=rope_cos,
+            rope_sin=rope_sin,
+            beta=beta,
+            decay=decay,
+            F=T,
+            S=S,
+            k_scale=k_scale,
+            eps=self.eps,
+        )  # (B, N, H, D)
 
         # ---- 9. Output gate + projection. --------------------------------
         out = out.reshape(B, N, C)
@@ -781,8 +756,7 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
                 getattr(self.q_norm_cam, "variance_epsilon", 1e-6),
             )
         )
-        prep_fn = cam_prep_func_with_grad if getattr(self, "use_autograd_kernel", False) else cam_prep_func
-        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = prep_fn(
+        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = cam_prep_func(
             q_raw,
             k_raw,
             v_raw,
@@ -829,16 +803,8 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
         k_cam_trans = k_cam_trans.contiguous()
         v_cam_trans = v_cam_trans.contiguous()
 
-        # ---- 7. Fused bidirectional scan. ------------------------------
-        if getattr(self, "use_autograd_kernel", False):
-            # Keep the autograd path on the explicit scan calls so gradients
-            # continue to flow through the existing CamScanFunction wrapper.
-            scan_fn = cam_scan_func_with_grad
-            out_fwd = scan_fn(q_cam_trans, k_cam_trans, v_cam_trans, beta, decay, reverse=False)
-            out_bwd = scan_fn(q_cam_trans, k_cam_trans, v_cam_trans, beta, decay, reverse=True)
-            out = out_fwd + out_bwd
-        else:
-            out = cam_scan_bidi_chunkwise(q_cam_trans, k_cam_trans, v_cam_trans, beta, decay)
+        # ---- 7. Fused bidirectional chunkwise scan. --------------------
+        out = cam_scan_bidi_chunkwise(q_cam_trans, k_cam_trans, v_cam_trans, beta, decay)
 
         # ---- 9. Cast back to input dtype, then inverse UCPE. -----------
         if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
@@ -969,10 +935,7 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
                 getattr(self.q_norm_cam, "variance_epsilon", 1e-6),
             )
         )
-        # Always use autograd-enabled prep so the training graph stays
-        # connected back to qkv / norm weights.
-        prep_fn = cam_prep_func_with_grad
-        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = prep_fn(
+        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = cam_prep_func(
             q_raw,
             k_raw,
             v_raw,

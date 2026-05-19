@@ -22,7 +22,7 @@ import gc
 import logging
 import math
 import os
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -37,7 +37,6 @@ import pyrallis
 import torch
 from PIL import Image
 from torchvision import transforms as T
-from tqdm.auto import tqdm
 
 # Importing diffusion.model.nets registers all Sana / Sana-WM blocks.
 import diffusion.model.nets  # noqa: F401
@@ -50,16 +49,7 @@ from diffusion.model.builder import (
     vae_encode,
 )
 from diffusion.model.utils import get_weight_dtype
-from diffusion.refiner.inference_utils import TextEncoder as RefinerTextEncoder
-from diffusion.refiner.inference_utils import build_vae_decoder as build_refiner_vae_decoder
-from diffusion.refiner.inference_utils import decode_video as refiner_decode_video
-from diffusion.refiner.ltx_core.ltx_student_wrapper import LTXStudentWrapper
-from diffusion.refiner.ltx_core.streaming_fm import run_streaming_forward
-from diffusion.refiner.vendor.ltx_core.components.diffusion_steps import EulerDiffusionStep
-from diffusion.refiner.vendor.ltx_core.components.patchifiers import VideoLatentPatchifier
-from diffusion.refiner.vendor.ltx_core.tools import VideoLatentTools
-from diffusion.refiner.vendor.ltx_core.types import VideoLatentShape
-from diffusion.refiner.vendor.ltx_pipelines.utils.constants import STAGE_2_DISTILLED_SIGMA_VALUES
+from diffusion.refiner.diffusers_ltx2_refiner import DiffusersLTX2Refiner, STAGE_2_DISTILLED_SIGMA_VALUES
 from diffusion.utils.action_overlay import apply_overlay
 from diffusion.utils.cam_utils import compute_raymap, get_pose_inverse
 from diffusion.utils.camctrl_config import ModelVideoCamCtrlConfig, model_video_camctrl_init_config
@@ -85,6 +75,7 @@ HF_DEFAULTS = {
     "model_path": f"hf://{HF_REPO}/dit/sana_wm_1600m_720p.safetensors",
     "config": f"hf://{HF_REPO}/config.yaml",
     "refiner_checkpoint": f"hf://{HF_REPO}/refiner/refiner.safetensors",
+    "refiner_diffusers_root": None,
     "refiner_gemma_root": f"hf://{HF_REPO}/refiner/text_encoder",
 }
 
@@ -94,10 +85,6 @@ DEFAULT_TRANSLATION_SPEED = 0.05
 DEFAULT_ROTATION_SPEED_DEG = 1.2
 DEFAULT_PITCH_LIMIT_DEG = 85.0
 ALLOWED_ACTION_KEYS: frozenset[str] = frozenset("wasdijkl")
-
-# Sentinel: the sink-merged refiner ships LoRA already merged into the base.
-_NO_LORA_TARGETS: list[str] = ["__SENTINEL_NO_LORA_TARGETS__"]
-
 
 # ============================================================================
 # Config
@@ -137,6 +124,7 @@ class RefinerSettings:
 
     checkpoint: Path | str
     gemma_root: Path | str
+    diffusers_root: Path | str | None = None
     sink_size: int = 1
     seed: int = 42
 
@@ -573,34 +561,61 @@ class SanaWMPipeline:
             return
         if "LTX2VAE_diffusers" not in self.config.vae.vae_type:
             raise ValueError(f"The refiner requires LTX2VAE_diffusers, got {self.config.vae.vae_type!r}.")
-        ckpt = resolve_hf_path(str(self.refiner_settings.checkpoint))
+        refiner_root = self._resolve_refiner_root(self.refiner_settings)
         gemma = resolve_hf_path(str(self.refiner_settings.gemma_root))
-        self.refiner_text_encoder = RefinerTextEncoder(ckpt, gemma, dtype=self.weight_dtype, device=self.device)
-        self.refiner_student = LTXStudentWrapper(
-            checkpoint_path=ckpt,
-            lora_rank=1,
-            lora_alpha=1.0,
-            lora_target_modules=_NO_LORA_TARGETS,
-            device=self.device,
+        self.refiner = DiffusersLTX2Refiner(
+            refiner_root=refiner_root,
+            gemma_root=gemma,
             dtype=self.weight_dtype,
+            device=self.device,
         )
-        self.refiner_student._transformer.to(self.device).eval()
-        self.refiner_student.device = self.device
-        self.refiner_vae_dec = build_refiner_vae_decoder(ckpt, device=self.device, dtype=self.weight_dtype)
         self._refiner_built = True
+
+    def _resolve_refiner_root(self, refiner: RefinerSettings) -> str:
+        candidates: list[Path] = []
+        repo_root = Path(__file__).resolve().parents[1]
+
+        if refiner.diffusers_root is not None:
+            root = Path(resolve_hf_path(str(refiner.diffusers_root)))
+            candidates.append(root)
+
+        checkpoint = str(refiner.checkpoint)
+        checkpoint_path = Path(checkpoint).expanduser()
+        if checkpoint_path.exists():
+            if checkpoint_path.is_dir():
+                candidates.append(checkpoint_path)
+            else:
+                candidates.extend(
+                    [
+                        checkpoint_path.parent / "refiner_diffusers",
+                        checkpoint_path.parent.parent / "refiner_diffusers",
+                    ]
+                )
+
+        candidates.append(repo_root / "output" / "pretrained_models" / "SANA-WM_bidirectional" / "refiner_diffusers")
+
+        for candidate in candidates:
+            if (candidate / "transformer" / "config.json").is_file() and (
+                candidate / "connectors" / "config.json"
+            ).is_file():
+                return str(candidate)
+
+        raise FileNotFoundError(
+            "Could not find a diffusers-format LTX-2 refiner. Pass --refiner_diffusers_root "
+            "or convert the single-file checkpoint with tools/convert_sana_wm_refiner_to_diffusers.py."
+        )
 
     def _release_refiner(self) -> None:
         if not self._refiner_built:
             return
-        for attr in ("refiner_text_encoder", "refiner_student", "refiner_vae_dec"):
+        for attr in ("refiner",):
             obj = getattr(self, attr, None)
             if obj is None:
                 continue
-            inner = getattr(obj, "_transformer", obj)
             try:
-                inner.to("meta")
+                obj.to("meta")
             except Exception:
-                inner.to("cpu")
+                obj.to("cpu")
             setattr(self, attr, None)
         self._refiner_built = False
         torch.cuda.empty_cache()
@@ -813,6 +828,8 @@ class SanaWMPipeline:
 
     def _decode_with_sana_vae(self, sana_latent: torch.Tensor) -> np.ndarray:
         self.logger.info(f"[sana-vae] decoding {sana_latent.shape[2]} latent frames")
+        if getattr(self, "vae", None) is None:
+            self._build_vae()
         if self.offload_vae:
             self.vae.to(self.device)
         samples = sana_latent.to(device=self.device, dtype=self.vae_dtype)
@@ -843,55 +860,23 @@ class SanaWMPipeline:
         start_sigma = float(sigmas[0])
         self.logger.info(f"[refiner] {len(sigmas) - 1}-step Euler, start_sigma={start_sigma:.4f}")
 
-        v_context = self.refiner_text_encoder.encode(prompt).to(device=self.device, dtype=self.weight_dtype)
-        z = sana_latent.to(device=self.device, dtype=self.weight_dtype)
-        if z.shape[2] <= refiner.sink_size:
-            raise ValueError(f"Stage-1 latent has {z.shape[2]} frames but sink_size={refiner.sink_size}.")
-        sink, cur = z[:, :, : refiner.sink_size].contiguous(), z[:, :, refiner.sink_size :].contiguous()
-        B, C, T_cur, H, W = cur.shape
-        gen = torch.Generator(device=self.device).manual_seed(int(refiner.seed))
-        eps = torch.randn(B, C, T_cur, H, W, generator=gen, device=self.device, dtype=self.weight_dtype)
-        x_t = (1.0 - start_sigma) * cur + start_sigma * eps
-
-        tools = VideoLatentTools(
-            patchifier=VideoLatentPatchifier(patch_size=1),
-            target_shape=VideoLatentShape(batch=B, channels=C, frames=T_cur, height=H, width=W),
+        refined = self.refiner.refine_latents(
+            sana_latent,
+            prompt,
             fps=float(params.fps),
+            sink_size=int(refiner.sink_size),
+            seed=int(refiner.seed),
+            progress=True,
         )
-        stepper = EulerDiffusionStep()
+        if self.offload_refiner:
+            self._release_refiner()
 
-        for i in tqdm(range(len(sigmas) - 1), desc="refiner", unit="step"):
-            sigma = sigmas[i].view(1).float()
-            pred = run_streaming_forward(
-                student=self.refiner_student,
-                context_z_ref_list=[sink],
-                context_temporal_offsets=[0],
-                cur_latent_5d=x_t,
-                cur_clean_5d=torch.zeros_like(x_t),
-                cur_temporal_offset=int(refiner.sink_size),
-                v_context=v_context,
-                sigma=sigma,
-                fps=float(params.fps),
-            )
-            x_t_patched = tools.patchifier.patchify(x_t.to(self.weight_dtype))
-            new_patched = stepper.step(x_t_patched, pred, sigmas, i)
-            state = tools.create_initial_state(
-                device=self.device,
-                dtype=self.weight_dtype,
-                initial_latent=x_t,
-                temporal_offset=int(refiner.sink_size),
-            )
-            x_t = tools.unpatchify(tools.clear_conditioning(replace(state, latent=new_patched))).latent
-
-        refined = torch.cat([sink, x_t], dim=2)
-        self.logger.info(f"[refiner] decoding {refined.shape[2]} latent frames with the vendor VAE")
-        video = refiner_decode_video(self.refiner_vae_dec, refined).detach().cpu().to(torch.uint8).numpy()
+        self.logger.info(f"[refiner] decoding {refined.shape[2]} latent frames with diffusers LTX2 VAE")
+        video = self._decode_with_sana_vae(refined)
         # The refiner's first decoded frame is the clean sink anchor; drop it so
         # the output starts from the first refined frame.
         video = video[1:]
-        del v_context, sink, cur, eps, x_t, refined
-        if self.offload_refiner:
-            self._release_refiner()
+        del refined
         torch.cuda.empty_cache()
         gc.collect()
         return video
@@ -979,7 +964,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--refiner_checkpoint",
         default=HF_DEFAULTS["refiner_checkpoint"],
-        help="LTX-2 refiner safetensors (local path or hf:// URI).",
+        help="Legacy LTX-2 refiner safetensors path. Used only to locate a sibling diffusers conversion.",
+    )
+    p.add_argument(
+        "--refiner_diffusers_root",
+        default=HF_DEFAULTS["refiner_diffusers_root"],
+        help="Diffusers-format LTX-2 refiner root containing transformer/ and connectors/.",
     )
     p.add_argument(
         "--refiner_gemma_root",
@@ -1046,6 +1036,7 @@ def main() -> None:
         else RefinerSettings(
             checkpoint=args.refiner_checkpoint,
             gemma_root=args.refiner_gemma_root,
+            diffusers_root=args.refiner_diffusers_root,
             sink_size=args.sink_size,
             seed=args.refiner_seed,
         )

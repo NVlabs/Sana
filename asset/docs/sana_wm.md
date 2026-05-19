@@ -105,6 +105,7 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 | `--cfg_scale` | Classifier-free-guidance scale (default `5.0`). |
 | `--flow_shift` | Override the scheduler's `inference_flow_shift`. |
 | `--no_refiner` | Skip the LTX-2 refiner and decode Stage-1 latents with the Sana VAE (faster, lower quality). |
+| `--refiner_diffusers_root` | Diffusers-format LTX-2 refiner root containing `transformer/` and `connectors/`. |
 | `--no_action_overlay` | Skip the WASD + joystick overlay on the output video. |
 | `--offload_vae` | Move the VAE to CPU between encode / decode steps. |
 | `--offload_refiner` | Lazy-load the LTX-2 refiner only when needed; release afterwards. |
@@ -117,9 +118,14 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 |------------------------------------|--------------------------------------------|-------:|
 | Sana DiT (Stage 1) | `dit/sana_wm_1600m_720p.safetensors` | 10 GB |
 | LTX-2 VAE (diffusers) | `vae/` | 2 GB |
-| LTX-2 refiner (Stage 2) | `refiner/refiner.safetensors` | 41 GB |
+| LTX-2 refiner source checkpoint | `refiner/refiner.safetensors` | 41 GB |
+| LTX-2 refiner (diffusers) | `refiner_diffusers/{transformer,connectors}/` | 38 GB |
 | Gemma text encoder for the refiner | `refiner/text_encoder/` | 46 GB |
 | Inference config | `config.yaml` | — |
+
+If the repository only has the single-file refiner checkpoint locally, convert
+it once with `tools/convert_sana_wm_refiner_to_diffusers.py` and pass the output
+directory via `--refiner_diffusers_root`.
 
 The Sana text encoder (`gemma-2-2b-it`) is fetched separately from
 `Efficient-Large-Model/gemma-2-2b-it`.

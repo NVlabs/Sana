@@ -74,7 +74,7 @@ HF_REPO = "Efficient-Large-Model/SANA-WM_bidirectional"
 HF_DEFAULTS = {
     "model_path": f"hf://{HF_REPO}/dit/sana_wm_1600m_720p.safetensors",
     "config": f"hf://{HF_REPO}/config.yaml",
-    "refiner_diffusers_root": f"hf://{HF_REPO}/refiner_diffusers",
+    "refiner_root": f"hf://{HF_REPO}/refiner",
     "refiner_gemma_root": f"hf://{HF_REPO}/refiner/text_encoder",
 }
 
@@ -121,7 +121,7 @@ class GenerationParams:
 class RefinerSettings:
     """LTX-2 sink-bidirectional Euler refiner configuration."""
 
-    diffusers_root: Path | str
+    root: Path | str
     gemma_root: Path | str
     sink_size: int = 1
     seed: int = 42
@@ -570,11 +570,10 @@ class SanaWMPipeline:
         self._refiner_built = True
 
     def _resolve_refiner_root(self, refiner: RefinerSettings) -> str:
-        root = Path(resolve_hf_path(str(refiner.diffusers_root)))
+        root = Path(resolve_hf_path(str(refiner.root)))
         if not (root / "transformer" / "config.json").is_file() or not (root / "connectors" / "config.json").is_file():
             raise FileNotFoundError(
-                f"Diffusers-format LTX-2 refiner not found at {root}. Expected "
-                "transformer/config.json and connectors/config.json."
+                f"LTX-2 refiner not found at {root}. Expected " "transformer/config.json and connectors/config.json."
             )
         return str(root)
 
@@ -935,9 +934,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no_refiner", action="store_true", help="Skip the LTX-2 refiner; decode stage-1 latents with the Sana VAE."
     )
     p.add_argument(
-        "--refiner_diffusers_root",
-        default=HF_DEFAULTS["refiner_diffusers_root"],
-        help="Diffusers-format LTX-2 refiner root containing transformer/ and connectors/.",
+        "--refiner_root",
+        default=HF_DEFAULTS["refiner_root"],
+        help="LTX-2 refiner root containing transformer/ and connectors/.",
     )
     p.add_argument(
         "--refiner_gemma_root",
@@ -1002,7 +1001,7 @@ def main() -> None:
         None
         if args.no_refiner
         else RefinerSettings(
-            diffusers_root=args.refiner_diffusers_root,
+            root=args.refiner_root,
             gemma_root=args.refiner_gemma_root,
             sink_size=args.sink_size,
             seed=args.refiner_seed,

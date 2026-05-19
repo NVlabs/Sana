@@ -970,6 +970,25 @@ def _resolve_trajectory(args: argparse.Namespace) -> np.ndarray:
     return c2w_raw
 
 
+def _snap_num_frames(n: int, stride: int = 8, *, upper_bound: int | None = None) -> int:
+    """Snap ``n`` to the nearest ``stride*k + 1`` (LTX-2 VAE constraint).
+
+    Ties round up to keep the user's requested length when possible. If the
+    rounded value would exceed ``upper_bound`` (e.g., trajectory length), the
+    floor candidate is returned instead.
+    """
+    if n < 1:
+        return 1
+    if (n - 1) % stride == 0:
+        return n
+    floor_cand = n - ((n - 1) % stride)
+    ceil_cand = floor_cand + stride
+    snapped = floor_cand if (n - floor_cand) < (ceil_cand - n) else ceil_cand
+    if upper_bound is not None and snapped > upper_bound:
+        snapped = floor_cand
+    return max(snapped, 1)
+
+
 def main() -> None:
     args = _build_parser().parse_args()
 
@@ -983,6 +1002,14 @@ def main() -> None:
 
     c2w_full = _resolve_trajectory(args)
     num_frames = min(args.num_frames, c2w_full.shape[0])
+    snapped = _snap_num_frames(num_frames, stride=8, upper_bound=c2w_full.shape[0])
+    if snapped != args.num_frames:
+        logger.warning(
+            f"LTX-2 VAE requires num_frames = 8k+1; "
+            f"--num_frames={args.num_frames} snapped to {snapped} "
+            f"(trajectory has {c2w_full.shape[0]} frames)."
+        )
+    num_frames = snapped
     c2w = c2w_full[:num_frames]
 
     cropped, src_size, resized_size, crop_offset = resize_and_center_crop(image)

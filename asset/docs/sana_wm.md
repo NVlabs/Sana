@@ -11,7 +11,7 @@
 </div>
 
 <div align="center">
-  <video src="https://nvlabs.github.io/Sana/WM/media/videos/hero_reel_v9.mp4" controls muted loop width="90%"></video>
+  <video src="https://nvlabs.github.io/Sana/WM/media/videos/hero_reel_v9.mp4#t=1" autoplay playsinline controls muted loop width="90%" onloadedmetadata="this.currentTime=1;this.playbackRate=5"></video>
 </div>
 
 ## 📽️ About SANA-WM

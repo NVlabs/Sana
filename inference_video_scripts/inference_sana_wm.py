@@ -49,7 +49,7 @@ from diffusion.model.builder import (
     vae_encode,
 )
 from diffusion.model.utils import get_weight_dtype
-from diffusion.refiner.diffusers_ltx2_refiner import DiffusersLTX2Refiner, STAGE_2_DISTILLED_SIGMA_VALUES
+from diffusion.refiner.diffusers_ltx2_refiner import STAGE_2_DISTILLED_SIGMA_VALUES, DiffusersLTX2Refiner
 from diffusion.utils.action_overlay import apply_overlay
 from diffusion.utils.cam_utils import compute_raymap, get_pose_inverse
 from diffusion.utils.camctrl_config import ModelVideoCamCtrlConfig, model_video_camctrl_init_config
@@ -74,8 +74,7 @@ HF_REPO = "Efficient-Large-Model/SANA-WM_bidirectional"
 HF_DEFAULTS = {
     "model_path": f"hf://{HF_REPO}/dit/sana_wm_1600m_720p.safetensors",
     "config": f"hf://{HF_REPO}/config.yaml",
-    "refiner_checkpoint": f"hf://{HF_REPO}/refiner/refiner.safetensors",
-    "refiner_diffusers_root": None,
+    "refiner_diffusers_root": f"hf://{HF_REPO}/refiner_diffusers",
     "refiner_gemma_root": f"hf://{HF_REPO}/refiner/text_encoder",
 }
 
@@ -122,9 +121,8 @@ class GenerationParams:
 class RefinerSettings:
     """LTX-2 sink-bidirectional Euler refiner configuration."""
 
-    checkpoint: Path | str
+    diffusers_root: Path | str
     gemma_root: Path | str
-    diffusers_root: Path | str | None = None
     sink_size: int = 1
     seed: int = 42
 
@@ -572,38 +570,13 @@ class SanaWMPipeline:
         self._refiner_built = True
 
     def _resolve_refiner_root(self, refiner: RefinerSettings) -> str:
-        candidates: list[Path] = []
-        repo_root = Path(__file__).resolve().parents[1]
-
-        if refiner.diffusers_root is not None:
-            root = Path(resolve_hf_path(str(refiner.diffusers_root)))
-            candidates.append(root)
-
-        checkpoint = str(refiner.checkpoint)
-        checkpoint_path = Path(checkpoint).expanduser()
-        if checkpoint_path.exists():
-            if checkpoint_path.is_dir():
-                candidates.append(checkpoint_path)
-            else:
-                candidates.extend(
-                    [
-                        checkpoint_path.parent / "refiner_diffusers",
-                        checkpoint_path.parent.parent / "refiner_diffusers",
-                    ]
-                )
-
-        candidates.append(repo_root / "output" / "pretrained_models" / "SANA-WM_bidirectional" / "refiner_diffusers")
-
-        for candidate in candidates:
-            if (candidate / "transformer" / "config.json").is_file() and (
-                candidate / "connectors" / "config.json"
-            ).is_file():
-                return str(candidate)
-
-        raise FileNotFoundError(
-            "Could not find a diffusers-format LTX-2 refiner. Pass --refiner_diffusers_root "
-            "or convert the single-file checkpoint with tools/convert_sana_wm_refiner_to_diffusers.py."
-        )
+        root = Path(resolve_hf_path(str(refiner.diffusers_root)))
+        if not (root / "transformer" / "config.json").is_file() or not (root / "connectors" / "config.json").is_file():
+            raise FileNotFoundError(
+                f"Diffusers-format LTX-2 refiner not found at {root}. Expected "
+                "transformer/config.json and connectors/config.json."
+            )
+        return str(root)
 
     def _release_refiner(self) -> None:
         if not self._refiner_built:
@@ -962,11 +935,6 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no_refiner", action="store_true", help="Skip the LTX-2 refiner; decode stage-1 latents with the Sana VAE."
     )
     p.add_argument(
-        "--refiner_checkpoint",
-        default=HF_DEFAULTS["refiner_checkpoint"],
-        help="Legacy LTX-2 refiner safetensors path. Used only to locate a sibling diffusers conversion.",
-    )
-    p.add_argument(
         "--refiner_diffusers_root",
         default=HF_DEFAULTS["refiner_diffusers_root"],
         help="Diffusers-format LTX-2 refiner root containing transformer/ and connectors/.",
@@ -1034,9 +1002,8 @@ def main() -> None:
         None
         if args.no_refiner
         else RefinerSettings(
-            checkpoint=args.refiner_checkpoint,
-            gemma_root=args.refiner_gemma_root,
             diffusers_root=args.refiner_diffusers_root,
+            gemma_root=args.refiner_gemma_root,
             sink_size=args.sink_size,
             seed=args.refiner_seed,
         )

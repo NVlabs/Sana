@@ -115,17 +115,12 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 `Efficient-Large-Model/SANA-WM_bidirectional`:
 
 | Component | Path | Size |
-|------------------------------------|--------------------------------------------|-------:|
+|------------------------------------|---------------------------------------------|-------:|
 | Sana DiT (Stage 1) | `dit/sana_wm_1600m_720p.safetensors` | 10 GB |
 | LTX-2 VAE (diffusers) | `vae/` | 2 GB |
-| LTX-2 refiner source checkpoint | `refiner/refiner.safetensors` | 41 GB |
-| LTX-2 refiner (diffusers) | `refiner_diffusers/{transformer,connectors}/` | 38 GB |
+| LTX-2 refiner (Stage 2, diffusers) | `refiner_diffusers/{transformer,connectors}/` | 38 GB |
 | Gemma text encoder for the refiner | `refiner/text_encoder/` | 46 GB |
 | Inference config | `config.yaml` | — |
-
-If the repository only has the single-file refiner checkpoint locally, convert
-it once with `tools/convert_sana_wm_refiner_to_diffusers.py` and pass the output
-directory via `--refiner_diffusers_root`.
 
 The Sana text encoder (`gemma-2-2b-it`) is fetched separately from
 `Efficient-Large-Model/gemma-2-2b-it`.

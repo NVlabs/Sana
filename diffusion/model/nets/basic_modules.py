@@ -150,6 +150,7 @@ class GLUMBConv(nn.Module):
         B, N, C = x.shape
         if HW is None:
             H = W = int(N**0.5)
+            x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
         elif len(HW) == 2:
             H, W = HW
             x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
@@ -261,7 +262,7 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
         # add the last chunk index
         chunk_index = chunk_index[:]
         chunk_index.append(T)
-        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
+        chunk_sizes = [chunk_index[i + 1] - chunk_index[i] for i in range(len(chunk_index) - 1)]
         x_reshaped_list = x_reshaped.split(chunk_sizes, dim=-2)
         # for the first chunk, padding padding_size zero to the right
         # for the other chunks, padding padding_size zero to the right, padding the padding_size items in the last chunk to the left

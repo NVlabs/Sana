@@ -45,6 +45,15 @@ def t2i_modulate(x, shift, scale):
     return x * (1 + scale) + shift
 
 
+def apply_rotary_emb_rope(hidden_states: torch.Tensor, freqs: torch.Tensor) -> torch.Tensor:
+    """Apply rotary positional embedding (RoPE). Module-level to avoid per-call closure allocation."""
+    x_rotated = torch.view_as_complex(
+        hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2))
+    )
+    x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
+    return x_out.type_as(hidden_states)
+
+
 class MultiHeadCrossAttention(nn.Module):
     def __init__(self, d_model, num_heads, attn_drop=0.0, proj_drop=0.0, qk_norm=False, **block_kwargs):
         super().__init__()
@@ -87,7 +96,7 @@ class MultiHeadCrossAttention(nn.Module):
             q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
             if mask is not None and mask.ndim == 2:
                 mask = (1 - mask.to(q.dtype)) * -10000.0
-                mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+                mask = mask[:, None, None]  # broadcast over heads; no .repeat() needed
             x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
             x = x.transpose(1, 2)
 
@@ -256,8 +265,7 @@ class LiteLA(Attention_):
         vk = torch.matmul(v, k)
         out = torch.matmul(vk, q)
 
-        if out.dtype in [torch.float16, torch.bfloat16]:
-            out = out.float()
+        out = out.float()  # always divide in fp32 for numerical stability
         out = out[:, :, :-1] / (out[:, :, -1:] + self.eps)
 
         return out
@@ -356,13 +364,8 @@ class LiteLAReLURope(Attention_):
         q = self.kernel_func(q)  # B, h, h_d, N
         k = self.kernel_func(k)
 
-        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
-            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
-            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
-            return x_out.type_as(hidden_states)
-
-        q_rotated = apply_rotary_emb(q, rotary_emb)
-        k_rotated = apply_rotary_emb(k, rotary_emb)
+        q_rotated = apply_rotary_emb_rope(q, rotary_emb)
+        k_rotated = apply_rotary_emb_rope(k, rotary_emb)
 
         # Store qkv for visualization if buffer is provided
         if self.qkv_store_buffer is not None:
@@ -426,13 +429,8 @@ class ChunkCausalAttention(LiteLAReLURope):
         q = self.kernel_func(q)  # B, h, h_d, N
         k = self.kernel_func(k)
 
-        def apply_rotary_emb(hidden_states: torch.Tensor, freqs: torch.Tensor):
-            x_rotated = torch.view_as_complex(hidden_states.permute(0, 1, 3, 2).to(torch.float64).unflatten(3, (-1, 2)))
-            x_out = torch.view_as_real(x_rotated * freqs).flatten(3, 4).permute(0, 1, 3, 2)
-            return x_out.type_as(hidden_states)
-
-        q_rotated = apply_rotary_emb(q, rotary_emb)  # B, h, h_d, N
-        k_rotated = apply_rotary_emb(k, rotary_emb)  # B, h, h_d, N
+        q_rotated = apply_rotary_emb_rope(q, rotary_emb)  # B, h, h_d, N
+        k_rotated = apply_rotary_emb_rope(k, rotary_emb)  # B, h, h_d, N
 
         # Store qkv for visualization if buffer is provided
         if self.qkv_store_buffer is not None:
@@ -453,7 +451,7 @@ class ChunkCausalAttention(LiteLAReLURope):
             chunk_index.append(f)
         else:
             chunk_index = [0, f]
-        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
+        chunk_sizes = [chunk_index[i + 1] - chunk_index[i] for i in range(len(chunk_index) - 1)]
 
         B, h, h_d, N = q_rotated.shape
         q_rotated = q_rotated.unflatten(-1, HW)  # B, h, h_d, N --> B, h, h_d, f,h,w

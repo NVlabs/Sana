@@ -45,7 +45,8 @@ class FlowEuler:
         if do_classifier_free_guidance:
             prompt_embeds = torch.cat([self.uncondition, self.condition], dim=0)
 
-        for i, t in tqdm(list(enumerate(timesteps)), disable=os.getenv("DPM_TQDM", "False") == "True"):
+        _disable_tqdm = os.getenv("DPM_TQDM", "False") == "True"
+        for i, t in tqdm(enumerate(timesteps), total=len(timesteps), disable=_disable_tqdm):
 
             # expand the latents if we are doing classifier free guidance
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
@@ -140,7 +141,8 @@ class LTXFlowEuler(FlowEuler):
 
         init_latents = latents.clone()  # here we need to clone to avoid modifying the original latents
 
-        for i, t in tqdm(list(enumerate(timesteps)), disable=os.getenv("DPM_TQDM", "False") == "True"):
+        _disable_tqdm = os.getenv("DPM_TQDM", "False") == "True"
+        for i, t in tqdm(enumerate(timesteps), total=len(timesteps), disable=_disable_tqdm):
             if image_cond_noise_scale > 0:
                 latents = self.add_noise_to_image_conditioning_latents(
                     t / 1000.0, init_latents, latents, image_cond_noise_scale, condition_mask, generator

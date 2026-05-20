@@ -24,7 +24,7 @@ def cli(func):
 def sana_video_ltx2_refine(
     prompt: str = "A cat and a dog baking a cake together in a kitchen. The cat is carefully measuring flour, while the dog is stirring the batter with a wooden spoon. The kitchen is cozy, with sunlight streaming through the window.",
     negative_prompt: str = "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience.",
-    sana_model_id: str = "/home/junsongc/junsongc/code/diffusion/Sana/output/Sana_1600M_720px_ltx2_t2v_ltx_resample/checkpoints/sana_ltxvae",
+    sana_model_id: str = "Efficient-Large-Model/SANA-Video_2B_720p_diffusers",
     ltx2_model_id: str = "Lightricks/LTX-2",
     sana_height: int = 704,
     sana_width: int = 1280,

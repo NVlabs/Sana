@@ -9,6 +9,10 @@ on:
       - synchronize
       - labeled
       - unlabeled
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
 # run only one unit test for a branch / tag.
 concurrency:
   group: ci-lint-${{ github.head_ref || github.ref }}
@@ -45,6 +49,7 @@ jobs:
           git commit -m "[CI-Lint] Fix code style issues with pre-commit ${{ github.sha }}" -a
           git push
       - name: Remove label(s) after lint
+        if: always()
         uses: actions-ecosystem/action-remove-labels@v1
         with:
           labels: lint wanted

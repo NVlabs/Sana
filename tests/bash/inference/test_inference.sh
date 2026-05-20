@@ -28,3 +28,13 @@ python inference_video_scripts/inference_sana_video.py \
     --config=configs/sana_video_config/Sana_2000M_480px_adamW_fsdp_longsana.yaml \
     --model_path=hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth \
     --cfg_scale=1.0 --debug=true
+
+python inference_video_scripts/inference_sana_wm.py \
+    --image=asset/sana_wm/demo_0.png \
+    --prompt=asset/sana_wm/demo_0.txt \
+    --camera=asset/sana_wm/demo_0_pose.npy \
+    --intrinsics=asset/sana_wm/demo_0_intrinsics.npy \
+    --output_dir=results/sana_wm_ci \
+    --name=demo_0 \
+    --num_frames=9 \
+    --step=4

@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/sana-wm-logo.png" width="70%" alt="SANA-WM Logo"/>
+  <img src="../sana-wm-logo.png" width="70%" alt="SANA-WM Logo"/>
 </p>
 
 # 🌍 SANA-WM: Efficient Minute-Scale World Modeling with Hybrid Linear Diffusion Transformer

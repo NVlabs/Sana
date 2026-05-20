@@ -7,7 +7,7 @@ on:
         required: false
         type: boolean
         default: false
-  pull_request:
+  pull_request_target:
     types: [labeled, unlabeled, opened, synchronize, reopened]
     paths-ignore:
       - '**.md'
@@ -27,6 +27,9 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -37,13 +40,16 @@ jobs:
     needs: pre-commit
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
-      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -80,13 +86,16 @@ jobs:
     needs: pre-commit
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
-      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -123,13 +132,16 @@ jobs:
     needs: pre-commit
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
-      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -166,13 +178,16 @@ jobs:
     needs: pre-commit
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
-      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -209,13 +224,16 @@ jobs:
     needs: pre-commit
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
-      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       - name: Clean Python caches
         run: |
           echo "Removing stale Python byte code files..."
@@ -248,13 +266,16 @@ jobs:
     needs: pre-commit
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
-      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       - name: Clean Python caches
         run: |
           echo "Removing stale Python byte code files..."
@@ -285,7 +306,7 @@ jobs:
           sana-run --pty -m ci -J test-training-sol-rl bash tests/bash/training/test_training_sol_rl.sh
   remove-label:
     needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video, test-training-longsana, test-training-sol-rl]
-    if: always() && github.event_name == 'pull_request'
+    if: always() && github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:

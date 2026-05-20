@@ -240,7 +240,7 @@ python scripts/convert_scripts/convert_sana_video_to_diffusers.py --dump_path ou
 | Self-Forcing | 17.0 | 81.59 | 83.82 | 72.70 |
 | **LongSANA-2B** | **27.5** | **82.29** | **83.10** | **79.04** |
 
-**Summary**: Compared with the current SOTA long video generation models, LongSANA (SANA-Video + [LongLive](https://github.com/NVlabs/LongLive))'s speed and performance is very competitive. LongSANA's 27FPS generatin speed on H100 makes real-time generation possible.
+**Summary**: Compared with the current SOTA long video generation models, LongSANA (SANA-Video + [LongLive](https://github.com/NVlabs/LongLive))'s speed and performance is very competitive. LongSANA's 27FPS generating speed on H100 makes real-time generation possible.
 
 ______________________________________________________________________
 

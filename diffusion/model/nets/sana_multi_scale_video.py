@@ -479,7 +479,7 @@ class SanaMSVideo(Sana):
 
         if get_rank() == 0:
             if ffn_type == "GLUMBConvTemp":
-                self.logger(f"{ffn_type} Temporal kernal: {t_kernel_size}")
+                self.logger(f"{ffn_type} Temporal kernel: {t_kernel_size}")
 
         self.initialize()
 

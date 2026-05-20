@@ -1,6 +1,6 @@
 # 💻 How to Inference & Test Metrics (FID, CLIP Score, GenEval, DPG-Bench, etc...)
 
-This ToolKit will automatically inference your model and log the metrics results onto wandb as chart for better illustration. We curerntly support:
+This ToolKit will automatically inference your model and log the metrics results onto wandb as chart for better illustration. We currently support:
 
 - [x] [FID](https://github.com/mseitzer/pytorch-fid) & [CLIP-Score](https://github.com/openai/CLIP)
 - [x] [GenEval](https://github.com/djghosh13/geneval)

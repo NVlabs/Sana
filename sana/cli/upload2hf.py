@@ -174,7 +174,7 @@ def main():
                 path_or_fileobj=fpath,
                 path_in_repo=rpath,
             )
-            print(colored(f"Commiting {rpath}", "green"))
+            print(colored(f"Committing {rpath}", "green"))
             ops.append(operation)
             commit_size += operation.upload_info.size
             commit_description += f"Upload {rpath}\n"

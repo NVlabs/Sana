@@ -32,8 +32,8 @@ SANA-WM completes pre-training in 15 days on 64 H100s and generates a 60s 720p c
 ## ⚙️ Environment Setup
 
 ```bash
-bash ./environment_setup_sana_wm.sh sana-wm
-conda activate sana-wm
+bash ./environment_setup.sh sana
+conda activate sana
 ```
 
 ## 🏃 Inference

@@ -25,7 +25,7 @@ bash train_scripts/train_scm_ladd.sh configs/sana_sprint_config/1024ms/SanaSprin
 bash tests/bash/training/test_training_sol_rl.sh
 
 # test FSDP video training
-bash train_video_scripts/train_video_ivjoint.sh configs/sana_video_config/Sana_2000M_256px_AdamW_fsdp.yaml --np=2 --train.num_epochs=1 --train.log_interval=1 --train.train_batch_size=1
+bash train_video_scripts/train_video_ivjoint.sh configs/sana_video_config/Sana_2000M_256px_AdamW_fsdp.yaml --np=2 --train.num_epochs=1 --train.log_interval=1 --train.train_batch_size=1 --train.joint_training_interval=0
 
 # test LongSANA training
 bash tests/bash/training/test_training_longsana.sh

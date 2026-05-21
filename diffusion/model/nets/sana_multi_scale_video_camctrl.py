@@ -879,30 +879,8 @@ class SanaMSVideoCamCtrl(Sana):
         return latents
 
     def _compute_rope_with_cp(self, device: torch.device, h: int, w: int) -> torch.Tensor:
-        """Compute RoPE frequencies with correct global positions under CP.
-
-        Under Context Parallel, each rank holds only ``self.f`` local frames
-        but needs RoPE positions corresponding to its *global* frame range.
-        We generate frequencies for the full global sequence and slice this
-        rank's portion.  When CP is inactive, falls back to the standard call.
-        """
-        from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
-
-        if not cp_enabled():
-            return self.rope((self.f, h, w), device)
-
-        import torch.distributed as dist
-
-        cp_group = get_cp_group()
-        cp_rank = dist.get_rank(cp_group)
-        cp_world = dist.get_world_size(cp_group)
-        global_f = self.f * cp_world
-
-        full_rope = self.rope((global_f, h, w), device)
-        hw = h * w
-        full_rope = full_rope.view(1, 1, global_f, hw, -1)
-        local_rope = full_rope[:, :, cp_rank * self.f : (cp_rank + 1) * self.f, :, :]
-        return local_rope.reshape(1, 1, self.f * hw, -1)
+        """Compute RoPE frequencies for the local frame window."""
+        return self.rope((self.f, h, w), device)
 
     def forward(self, x, timestep, y, mask=None, **kwargs):
         """

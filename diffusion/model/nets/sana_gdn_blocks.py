@@ -22,14 +22,12 @@ import math
 import os
 
 import torch
-import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 from fla.modules import ShortConvolution
 from timm.models.vision_transformer import Attention as Attention_
 
-from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
 from diffusion.model.liger_norms import get_rmsnorm_class
 from diffusion.utils.chunk_utils import (
     chunk_index_from_chunk_size,
@@ -463,22 +461,6 @@ class GDN(Attention_):
             from functools import partial
 
             self.update_rule_func = partial(torch_chunk_sana_gdn, chunk_size=chunk_gdn_chunk_size)
-        elif update_rule_func == "triton_chunk_sana_gdn":
-            from functools import partial
-
-            from diffusion.model.ops.frame_gdn import triton_chunk_sana_gdn
-
-            # proj_dtype=bfloat16: q/q_rot are only used for the output
-            # projection and can be saved in BF16, halving their footprint.
-            self.update_rule_func = partial(
-                triton_chunk_sana_gdn,
-                chunk_size=chunk_gdn_chunk_size,
-                proj_dtype=torch.bfloat16,
-            )
-        elif update_rule_func == "triton_recurrent_sana_gdn":
-            from diffusion.model.ops.frame_gdn import triton_recurrent_sana_gdn
-
-            self.update_rule_func = triton_recurrent_sana_gdn
         else:
             raise ValueError(f"Unsupported update rule function: {update_rule_func}")
 
@@ -680,16 +662,7 @@ class GDN(Attention_):
         del kwargs  # unused in base class
 
         x, B, S, T = self._reshape_to_temporal(x, HW)
-        if cp_enabled() and self.conv_kernel_size > 0:
-            from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-
-            K = conv.weight.shape[-1]
-            halo = K - 1
-            x = cp_halo_exchange(x, left_size=halo, right_size=0, dim=1, group=get_cp_group()).contiguous()
-            x = self._causal_conv_1d(x, conv)
-            x = x[:, halo:, :]
-        else:
-            x = self._causal_conv_1d(x, conv)
+        x = self._causal_conv_1d(x, conv)
         return self._reshape_from_temporal(x, B, S, T)
 
     @staticmethod
@@ -759,101 +732,6 @@ class GDN(Attention_):
         beta_valid_mask = m.view(B, 1, T, 1)
         decay_valid_mask = m.view(B, 1, T)
         return token_valid_mask, beta_valid_mask, decay_valid_mask
-
-    def _forward_cp_scan(
-        self,
-        x: torch.Tensor,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        q_rot: torch.Tensor,
-        k_rot: torch.Tensor,
-        beta: torch.Tensor,
-        decay: torch.Tensor,
-        *,
-        B: int,
-        T: int,
-        S: int,
-        C: int,
-        HW: tuple[int, int, int],
-        apply_output_gate: bool = True,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        """Run GDN scan via Context Parallel (no All-to-All).
-
-        Each GPU processes its local T frames, exchanges only the D x D
-        state with neighbors, and corrects the scan results.
-        """
-        from torch.utils.checkpoint import checkpoint as grad_checkpoint
-
-        from diffusion.distributed.context_parallel.distributed_scan import cp_frame_gdn_scan
-        from diffusion.model.ops.frame_gdn.api import (
-            _build_transition_matrices,
-            compiled_gdn_output_projection,
-        )
-
-        cp_group = get_cp_group()
-        N_local = q.shape[3]
-
-        dtype_orig = x.dtype
-        if getattr(self, "fp32_attention", True):
-            q, k, v = q.float(), k.float(), v.float()
-            q_rot, k_rot = q_rot.float(), k_rot.float()
-            beta, decay = beta.float(), decay.float()
-
-        D = self.dim
-        BH = B * self.heads
-
-        def to_frame(t: torch.Tensor) -> torch.Tensor:
-            return t.view(B, self.heads, D, T, S).permute(0, 1, 3, 2, 4)
-
-        q_f, k_f, v_f = to_frame(q), to_frame(k), to_frame(v)
-        q_rot_f, k_rot_f = to_frame(q_rot), to_frame(k_rot)
-        beta_f = beta.unsqueeze(3) if beta.ndim == 4 else beta.view(B, self.heads, T, 1, 1)
-        decay_f = decay.view(B, self.heads, T, 1, 1)
-
-        I = torch.eye(D, device=q.device, dtype=q.dtype).reshape(1, 1, 1, D, D)
-
-        W_kv, U_kv, W_z, U_z = grad_checkpoint(
-            _build_transition_matrices,
-            k_f,
-            v_f,
-            k_rot_f,
-            beta_f,
-            decay_f,
-            I,
-            BH,
-            T,
-            D,
-            use_reentrant=False,
-        )
-
-        S_kv_all, S_z_all = cp_frame_gdn_scan(W_kv, U_kv, W_z, U_z, cp_group)
-
-        S_kv_all = S_kv_all.view(B, self.heads, T, D, D)
-        S_z_all = S_z_all.view(B, self.heads, T, D)
-
-        out_num, out_den = compiled_gdn_output_projection(S_kv_all, S_z_all, q_rot_f, q_f, eps=self.eps)
-
-        final_num = out_num.permute(0, 1, 3, 2, 4).reshape(B, self.heads, D, N_local)
-        final_den = out_den.permute(0, 1, 3, 2, 4).reshape(B, self.heads, 1, N_local)
-
-        out = final_num / (final_den + self.eps)
-
-        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-            out = out.to(dtype_orig)
-
-        out = out.permute(0, 3, 1, 2).reshape(B, N_local, C)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, N_local, 1).to(out.dtype)
-
-        if apply_output_gate:
-            out = self._apply_output_gate(out, x)
-            out = self.proj(out.to(self.proj.weight.dtype))
-            if token_valid_mask is not None:
-                out = out * token_valid_mask.view(B, N_local, 1).to(out.dtype)
-            return out
-        return out
 
     def forward(
         self,
@@ -967,27 +845,6 @@ class GDN(Attention_):
             decay_m = decay_valid_mask.to(decay.dtype)
             decay = decay * decay_m + (1.0 - decay_m)
 
-        # Context Parallel path: each GPU scans its local frames,
-        # then corrects via distributed state exchange.
-        if cp_enabled():
-            return self._forward_cp_scan(
-                x,
-                q,
-                k,
-                v,
-                q_rot,
-                k_rot,
-                beta,
-                decay,
-                B=B,
-                T=T,
-                S=S,
-                C=C,
-                HW=HW,
-                apply_output_gate=apply_output_gate,
-                token_valid_mask=token_valid_mask,
-            )
-
         # Run the frame-wise GDN update.
         # Force FP32 to preserve recurrent stability.
         dtype_orig = x.dtype
@@ -1040,10 +897,6 @@ class BidirectionalGDN(GDN):
         both directions and average, yielding a symmetric temporal filter
         with a single set of weights.
 
-        Under CP, boundary frames need context from neighboring
-        ranks.  We exchange halos of size K-1 on both sides so the
-        bidirectional conv sees real neighbor data instead of zeros.
-
         Args:
             x: Input tensor of shape (B, N, C) where N = T * S.
             conv: FLA ``ShortConvolution`` module.
@@ -1056,188 +909,8 @@ class BidirectionalGDN(GDN):
         del kwargs
 
         x, B, S, T = self._reshape_to_temporal(x, HW)
-        if cp_enabled() and self.conv_kernel_size > 0:
-            from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-
-            K = conv.weight.shape[-1]
-            halo = K - 1
-            x = cp_halo_exchange(x, left_size=halo, right_size=halo, dim=1, group=get_cp_group()).contiguous()
-            x = self._bidirectional_causal_conv_1d(x, conv)
-            x = x[:, halo : T + halo, :]
-        else:
-            x = self._bidirectional_causal_conv_1d(x, conv)
+        x = self._bidirectional_causal_conv_1d(x, conv)
         return self._reshape_from_temporal(x, B, S, T)
-
-    def _forward_cp_scan(
-        self,
-        x: torch.Tensor,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        q_rot: torch.Tensor,
-        k_rot: torch.Tensor,
-        beta: torch.Tensor,
-        decay: torch.Tensor,
-        *,
-        B: int,
-        T: int,
-        S: int,
-        C: int,
-        HW: tuple[int, int, int],
-        apply_output_gate: bool = True,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        """Bidirectional GDN scan via Context Parallel.
-
-        Runs two CP scans:
-          - Forward recurrence (GPU 0 -> P-1): inclusive [1..t]
-          - Backward recurrence (GPU P-1 -> 0): exclusive [t+1..T]
-
-        The backward inputs are prepared with a distributed flip_and_shift
-        using ``cp_halo_exchange`` for the boundary exchange.
-        """
-        from torch.utils.checkpoint import checkpoint as grad_checkpoint
-
-        from diffusion.distributed.context_parallel.distributed_scan import cp_frame_gdn_scan
-        from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-        from diffusion.model.ops.frame_gdn.api import (
-            _build_transition_matrices,
-            compiled_gdn_output_projection,
-        )
-
-        cp_group = get_cp_group()
-        N_local = q.shape[3]
-
-        dtype_orig = x.dtype
-        if getattr(self, "fp32_attention", True):
-            q, k, v = q.float(), k.float(), v.float()
-            q_rot, k_rot = q_rot.float(), k_rot.float()
-            beta, decay = beta.float(), decay.float()
-
-        D = self.dim
-        BH = B * self.heads
-
-        def to_frame(t: torch.Tensor) -> torch.Tensor:
-            return t.view(B, self.heads, D, T, S).permute(0, 1, 3, 2, 4)
-
-        def from_frame(t: torch.Tensor) -> torch.Tensor:
-            return t.permute(0, 1, 3, 2, 4).reshape(B, self.heads, D, N_local)
-
-        q_f, k_f, v_f = to_frame(q), to_frame(k), to_frame(v)
-        q_rot_f, k_rot_f = to_frame(q_rot), to_frame(k_rot)
-        beta_f = beta.unsqueeze(3) if beta.ndim == 4 else beta.view(B, self.heads, T, 1, 1)
-        decay_f = decay.view(B, self.heads, T, 1, 1)
-
-        I = torch.eye(D, device=q.device, dtype=q.dtype).reshape(1, 1, 1, D, D)
-
-        # ---- Forward recurrence (inclusive 1..t) ----
-        W_kv_fwd, U_kv_fwd, W_z_fwd, U_z_fwd = grad_checkpoint(
-            _build_transition_matrices,
-            k_f,
-            v_f,
-            k_rot_f,
-            beta_f,
-            decay_f,
-            I,
-            BH,
-            T,
-            D,
-            use_reentrant=False,
-        )
-        S_kv_fwd, S_z_fwd = cp_frame_gdn_scan(W_kv_fwd, U_kv_fwd, W_z_fwd, U_z_fwd, cp_group)
-
-        S_kv_fwd = S_kv_fwd.view(B, self.heads, T, D, D)
-        S_z_fwd = S_z_fwd.view(B, self.heads, T, D)
-
-        num_fwd, den_fwd = compiled_gdn_output_projection(S_kv_fwd, S_z_fwd, q_rot_f, q_f, eps=self.eps)
-
-        # ---- Backward recurrence (exclusive t+1..T) ----
-        # Distributed flip_and_shift: exchange first frames between neighbors
-        # via halo exchange, then locally flip and concatenate.
-        def _cp_flip_and_shift(tensors: list[torch.Tensor], shift_vals: list[float]) -> list[torch.Tensor]:
-            """Batched distributed flip_and_shift across CP ranks.
-
-            For the last CP rank the right halo is zero-filled by
-            ``cp_halo_exchange``.  We override that with the caller-supplied
-            ``shift_val`` so that, e.g., the decay boundary is 1.0 (identity
-            transition) instead of 0.0.
-            """
-            cp_world = dist.get_world_size(cp_group)
-            cp_rank_local = dist.get_rank(cp_group)
-            is_last = cp_rank_local == cp_world - 1
-
-            results = []
-            for tensor, sv in zip(tensors, shift_vals):
-                first_frame = tensor[:, :, :1, ...].contiguous()
-                haloed = cp_halo_exchange(first_frame, left_size=0, right_size=1, dim=2, group=cp_group)
-                boundary = haloed[:, :, 1:2, ...]
-                if is_last and sv != 0.0:
-                    # Keep autograd graph topology identical across CP ranks.
-                    # Value is forced to `sv` while gradient to boundary is zero.
-                    boundary = boundary.mul(0.0).add(sv)
-                T_loc = tensor.shape[2]
-                flipped = torch.flip(tensor, dims=[2])
-                body = flipped[:, :, : T_loc - 1, ...]
-                results.append(torch.cat([boundary, body], dim=2))
-            return results
-
-        q_bwd_f = torch.flip(q_f, dims=[2])
-        q_rot_bwd_f = torch.flip(q_rot_f, dims=[2])
-
-        k_bwd_f, v_bwd_f, k_rot_bwd_f, beta_bwd_f, decay_bwd_f = _cp_flip_and_shift(
-            [k_f, v_f, k_rot_f, beta_f, decay_f],
-            [0.0, 0.0, 0.0, 0.0, 1.0],
-        )
-
-        W_kv_bwd, U_kv_bwd, W_z_bwd, U_z_bwd = grad_checkpoint(
-            _build_transition_matrices,
-            k_bwd_f,
-            v_bwd_f,
-            k_rot_bwd_f,
-            beta_bwd_f,
-            decay_bwd_f,
-            I,
-            BH,
-            T,
-            D,
-            use_reentrant=False,
-        )
-        S_kv_bwd, S_z_bwd = cp_frame_gdn_scan(W_kv_bwd, U_kv_bwd, W_z_bwd, U_z_bwd, cp_group, reverse=True)
-
-        S_kv_bwd = S_kv_bwd.view(B, self.heads, T, D, D)
-        S_z_bwd = S_z_bwd.view(B, self.heads, T, D)
-
-        num_bwd_flipped, den_bwd_flipped = compiled_gdn_output_projection(
-            S_kv_bwd,
-            S_z_bwd,
-            q_rot_bwd_f,
-            q_bwd_f,
-            eps=self.eps,
-        )
-
-        num_bwd = torch.flip(num_bwd_flipped, dims=[2])
-        den_bwd = torch.flip(den_bwd_flipped, dims=[2])
-
-        # ---- Combine forward + backward ----
-        total_num = from_frame(num_fwd + num_bwd)
-        total_den = (den_fwd + den_bwd).permute(0, 1, 3, 2, 4).reshape(B, self.heads, 1, N_local)
-
-        out = total_num / (total_den + self.eps)
-
-        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-            out = out.to(dtype_orig)
-
-        out = out.permute(0, 3, 1, 2).reshape(B, N_local, C)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, N_local, 1).to(out.dtype)
-
-        if apply_output_gate:
-            out = self._apply_output_gate(out, x)
-            out = self.proj(out.to(self.proj.weight.dtype))
-            if token_valid_mask is not None:
-                out = out * token_valid_mask.view(B, N_local, 1).to(out.dtype)
-            return out
-        return out
 
     def forward(
         self,
@@ -1347,26 +1020,6 @@ class BidirectionalGDN(GDN):
         if decay_valid_mask is not None:
             decay_m = decay_valid_mask.to(decay.dtype)
             decay = decay * decay_m + (1.0 - decay_m)
-
-        # Context Parallel path.
-        if cp_enabled():
-            return self._forward_cp_scan(
-                x,
-                q,
-                k,
-                v,
-                q_rot,
-                k_rot,
-                beta,
-                decay,
-                B=B,
-                T=T,
-                S=S,
-                C=C,
-                HW=HW,
-                apply_output_gate=apply_output_gate,
-                token_valid_mask=token_valid_mask,
-            )
 
         H_eff = q.shape[1]
         N_eff = q.shape[3]

@@ -44,7 +44,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fla.modules import ShortConvolution
 
-from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
 from diffusion.utils.chunk_utils import is_chunk_causal_request, normalize_chunk_index
 
 from .sana_camctrl_blocks import _maybe_drop_cam_branch, prepare_prope_fns
@@ -70,8 +69,6 @@ def _prepare_softmax_main_qkv_post_rope(
     x: torch.Tensor,
     HW: tuple[int, int, int],
     rotary_emb: torch.Tensor | None,
-    *,
-    cp_safe: bool = False,
     **kwargs: object,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.dtype]:
     """Project Q/K/V for the softmax main branch, apply norm and RoPE.
@@ -85,19 +82,11 @@ def _prepare_softmax_main_qkv_post_rope(
         x: Input tokens of shape ``(B, N, C)``.
         HW: ``(T, H, W)`` token layout.
         rotary_emb: Optional RoPE table; ``None`` skips RoPE.
-        cp_safe: When True, allow context-parallel mode (caller is
-            responsible for slicing ``rotary_emb`` to the per-rank window).
 
     Returns:
         ``(q, k, v, dtype_orig)`` where Q/K/V are shape ``(B, H, N, D)``
         and ``dtype_orig`` is the original ``x.dtype``.
     """
-    if cp_enabled() and not cp_safe:
-        raise NotImplementedError(
-            "_prepare_softmax_main_qkv_post_rope does not support "
-            "context-parallel mode unless caller passes cp_safe=True."
-        )
-
     B, N, C = x.shape
     T, H_sp, W_sp = HW
     S = H_sp * W_sp
@@ -976,40 +965,20 @@ class _GDNUCPEBase(GDN):
             decay_m = decay_valid_mask.to(decay.dtype)
             decay = decay * decay_m + (1.0 - decay_m)
 
-        if cp_enabled():
-            cam_tokens = self._forward_cp_scan(
-                x,
-                q_cam,
-                k_cam,
-                v_cam_trans,
-                q_cam_trans,
-                k_cam_trans,
-                beta,
-                decay,
-                B=B,
-                T=T,
-                S=S,
-                C=self.cam_dim,
-                HW=HW,
-                apply_output_gate=False,
-                token_valid_mask=token_valid_mask,
-            )
-            out = cam_tokens.view(B, N, self.cam_heads, self.cam_head_dim).permute(0, 2, 3, 1).contiguous()
-        else:
-            out = self._run_cam_gdn(
-                q_cam,
-                k_cam,
-                v_cam_trans,
-                q_cam_trans,
-                k_cam_trans,
-                beta,
-                decay,
-            )
+        out = self._run_cam_gdn(
+            q_cam,
+            k_cam,
+            v_cam_trans,
+            q_cam_trans,
+            k_cam_trans,
+            beta,
+            decay,
+        )
 
-            if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-                out = out.to(dtype_orig)
-            if token_valid_mask is not None:
-                out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
+        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
+            out = out.to(dtype_orig)
+        if token_valid_mask is not None:
+            out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
 
         # Inverse UCPE transform on output.
         out_before_apply_fn_o = out
@@ -1169,83 +1138,63 @@ class BidirectionalGDNUCPELiteLA(_GDNUCPEBase, BidirectionalGDN):
         H_heads = self.cam_heads
         D_head = self.cam_head_dim
 
-        if cp_enabled():
-            cam_tokens = self._forward_cp_scan(
-                x,
-                q_cam,
-                k_cam,
-                v_cam_trans,
-                q_cam_trans,
-                k_cam_trans,
-                beta,
-                decay,
-                B=B,
-                T=T,
-                S=S,
-                C=self.cam_dim,
-                HW=HW,
-                apply_output_gate=False,
-                token_valid_mask=token_valid_mask,
-            )
-            out = cam_tokens.view(B, N, H_heads, D_head).permute(0, 2, 3, 1).contiguous()
-        else:
-            # -- Forward pass (inclusive 1..t) --
-            num_fwd, den_fwd = self._run_cam_gdn_components(
-                q_cam,
-                k_cam,
-                v_cam_trans,
-                q_cam_trans,
-                k_cam_trans,
-                beta,
-                decay,
-            )
+        # -- Forward pass (inclusive 1..t) --
+        num_fwd, den_fwd = self._run_cam_gdn_components(
+            q_cam,
+            k_cam,
+            v_cam_trans,
+            q_cam_trans,
+            k_cam_trans,
+            beta,
+            decay,
+        )
 
-            # -- Backward pass (exclusive t+1..T) --
-            def to_time(t: torch.Tensor) -> torch.Tensor:
-                return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
+        # -- Backward pass (exclusive t+1..T) --
+        def to_time(t: torch.Tensor) -> torch.Tensor:
+            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
 
-            def from_time(t: torch.Tensor) -> torch.Tensor:
-                return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N)
+        def from_time(t: torch.Tensor) -> torch.Tensor:
+            return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N)
 
-            q_T = to_time(q_cam)
-            k_T = to_time(k_cam)
-            v_T = to_time(v_cam_trans)
-            q_rot_T = to_time(q_cam_trans)
-            k_rot_T = to_time(k_cam_trans)
+        q_T = to_time(q_cam)
+        k_T = to_time(k_cam)
+        v_T = to_time(v_cam_trans)
+        q_rot_T = to_time(q_cam_trans)
+        k_rot_T = to_time(k_cam_trans)
 
-            q_bwd = torch.flip(q_T, dims=[2])
-            q_rot_bwd = torch.flip(q_rot_T, dims=[2])
-            k_bwd = flip_and_shift(k_T, dim=2, shift_val=0.0)
-            v_bwd = flip_and_shift(v_T, dim=2, shift_val=0.0)
-            k_rot_bwd = flip_and_shift(k_rot_T, dim=2, shift_val=0.0)
-            beta_bwd = flip_and_shift(beta, dim=2, shift_val=0.0)
-            decay_bwd = flip_and_shift(decay, dim=2, shift_val=1.0)
+        q_bwd = torch.flip(q_T, dims=[2])
+        q_rot_bwd = torch.flip(q_rot_T, dims=[2])
+        k_bwd = flip_and_shift(k_T, dim=2, shift_val=0.0)
+        v_bwd = flip_and_shift(v_T, dim=2, shift_val=0.0)
+        k_rot_bwd = flip_and_shift(k_rot_T, dim=2, shift_val=0.0)
+        beta_bwd = flip_and_shift(beta, dim=2, shift_val=0.0)
+        decay_bwd = flip_and_shift(decay, dim=2, shift_val=1.0)
 
-            num_bwd_f, den_bwd_f = self._run_cam_gdn_components(
-                from_time(q_bwd),
-                from_time(k_bwd),
-                from_time(v_bwd),
-                from_time(q_rot_bwd),
-                from_time(k_rot_bwd),
-                beta_bwd,
-                decay_bwd,
-            )
+        num_bwd_f, den_bwd_f = self._run_cam_gdn_components(
+            from_time(q_bwd),
+            from_time(k_bwd),
+            from_time(v_bwd),
+            from_time(q_rot_bwd),
+            from_time(k_rot_bwd),
+            beta_bwd,
+            decay_bwd,
+        )
 
-            def flip_back(tensor: torch.Tensor) -> torch.Tensor:
-                d = tensor.shape[2]
-                return torch.flip(
-                    tensor.view(B, H_heads, d, T, S),
-                    dims=[3],
-                ).reshape(B, H_heads, d, N)
+        def flip_back(tensor: torch.Tensor) -> torch.Tensor:
+            d = tensor.shape[2]
+            return torch.flip(
+                tensor.view(B, H_heads, d, T, S),
+                dims=[3],
+            ).reshape(B, H_heads, d, N)
 
-            num_bwd = flip_back(num_bwd_f)
-            den_bwd = flip_back(den_bwd_f)
-            out = (num_fwd + num_bwd) / (den_fwd + den_bwd + self.eps)
+        num_bwd = flip_back(num_bwd_f)
+        den_bwd = flip_back(den_bwd_f)
+        out = (num_fwd + num_bwd) / (den_fwd + den_bwd + self.eps)
 
-            if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-                out = out.to(dtype_orig)
-            if token_valid_mask is not None:
-                out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
+        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
+            out = out.to(dtype_orig)
+        if token_valid_mask is not None:
+            out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
 
         out_before_apply_fn_o = out
         out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
@@ -1287,146 +1236,6 @@ class BidirectionalGDNUCPESinglePathLiteLA(BidirectionalGDNUCPELiteLAPostUCPERen
     replaces the camera branch's ``num / den`` recurrence with a single-path
     delta rule over the transformed camera stream only.
     """
-
-    def _forward_cp_scan_single_path(
-        self,
-        q_cam_trans: torch.Tensor,
-        k_cam_trans: torch.Tensor,
-        v_cam_trans: torch.Tensor,
-        beta: torch.Tensor,
-        decay: torch.Tensor,
-        *,
-        B: int,
-        T: int,
-        S: int,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        """Context-Parallel scan for the single-path (numerator-only) camera branch.
-
-        Reuses the distributed GDN scan infrastructure (``cp_frame_gdn_scan``)
-        but passes zero placeholders for the denominator (z) component since
-        the single-path delta rule has no normalisation denominator.
-        """
-        import torch.distributed as dist
-
-        from diffusion.distributed.context_parallel.distributed_scan import cp_frame_gdn_scan
-        from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-        from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
-
-        cp_group = get_cp_group()
-        if cp_group is None:
-            raise RuntimeError("Context Parallel is enabled but CP group is not initialized.")
-
-        H_heads = self.cam_heads
-        D_head = self.cam_head_dim
-        N_local = q_cam_trans.shape[3]
-        dtype_orig = q_cam_trans.dtype
-
-        if getattr(self, "fp32_attention", True):
-            q_cam_trans = q_cam_trans.float()
-            k_cam_trans = k_cam_trans.float()
-            v_cam_trans = v_cam_trans.float()
-            beta = beta.float()
-            decay = decay.float()
-
-        BH = B * H_heads
-
-        def to_frame(t: torch.Tensor) -> torch.Tensor:
-            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
-
-        def from_frame(t: torch.Tensor) -> torch.Tensor:
-            return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N_local)
-
-        q_rot_f = to_frame(q_cam_trans)
-        k_rot_f = to_frame(k_cam_trans)
-        v_f = to_frame(v_cam_trans)
-        beta_f = beta.unsqueeze(3) if beta.ndim == 4 else beta.view(B, H_heads, T, 1, 1)
-        decay_f = decay.view(B, H_heads, T, 1, 1)
-
-        I = torch.eye(D_head, device=q_cam_trans.device, dtype=q_cam_trans.dtype).reshape(1, 1, 1, D_head, D_head)
-
-        # ---- Forward recurrence (global causal via CP scan) ----
-        # _build_transition_matrices returns (W_kv, U_kv, W_z, U_z);
-        # we only need W_kv, U_kv for the single-path numerator-only scan.
-        # For the z component, we pass zero-valued matrices/vectors so the
-        # scan infrastructure operates correctly but the z output is trivial.
-        # Note: no inner grad_checkpoint here — the outer auto_grad_checkpoint
-        # already wraps each transformer block.
-        W_kv, U_kv, W_z, U_z = _build_transition_matrices(
-            k_rot_f,  # k_f (single-path uses rotated keys only)
-            v_f,
-            k_rot_f,  # k_rot_f
-            beta_f,
-            decay_f,
-            I,
-            BH,
-            T,
-            D_head,
-        )
-        # Zero out z component — single-path has no denominator.
-        W_z = torch.zeros_like(W_z)
-        U_z = torch.zeros_like(U_z)
-
-        S_kv_fwd, _ = cp_frame_gdn_scan(W_kv, U_kv, W_z, U_z, cp_group)
-        S_kv_fwd = S_kv_fwd.view(B, H_heads, T, D_head, D_head)
-        out_fwd = torch.matmul(S_kv_fwd, q_rot_f)  # (B, H, T, D, S)
-
-        # ---- Backward recurrence (global anti-causal via CP scan in reverse) ----
-        def _cp_flip_and_shift(
-            tensors: list[torch.Tensor],
-            shift_vals: list[float],
-        ) -> list[torch.Tensor]:
-            cp_world = dist.get_world_size(cp_group)
-            cp_rank_local = dist.get_rank(cp_group)
-            is_last = cp_rank_local == cp_world - 1
-
-            results: list[torch.Tensor] = []
-            for tensor, sv in zip(tensors, shift_vals):
-                first_frame = tensor[:, :, :1, ...].contiguous()
-                haloed = cp_halo_exchange(first_frame, left_size=0, right_size=1, dim=2, group=cp_group)
-                boundary = haloed[:, :, 1:2, ...]
-                if is_last and sv != 0.0:
-                    boundary = boundary.mul(0.0).add(sv)
-                T_loc = tensor.shape[2]
-                flipped = torch.flip(tensor, dims=[2])
-                body = flipped[:, :, : T_loc - 1, ...]
-                results.append(torch.cat([boundary, body], dim=2))
-            return results
-
-        q_rot_bwd_f = torch.flip(q_rot_f, dims=[2])
-        k_rot_bwd_f, v_bwd_f, beta_bwd_f, decay_bwd_f = _cp_flip_and_shift(
-            [k_rot_f, v_f, beta_f, decay_f],
-            [0.0, 0.0, 0.0, 1.0],
-        )
-
-        W_kv_bwd, U_kv_bwd, W_z_bwd, U_z_bwd = _build_transition_matrices(
-            k_rot_bwd_f,
-            v_bwd_f,
-            k_rot_bwd_f,
-            beta_bwd_f,
-            decay_bwd_f,
-            I,
-            BH,
-            T,
-            D_head,
-        )
-        W_z_bwd = torch.zeros_like(W_z_bwd)
-        U_z_bwd = torch.zeros_like(U_z_bwd)
-
-        S_kv_bwd, _ = cp_frame_gdn_scan(W_kv_bwd, U_kv_bwd, W_z_bwd, U_z_bwd, cp_group, reverse=True)
-        S_kv_bwd = S_kv_bwd.view(B, H_heads, T, D_head, D_head)
-        out_bwd_flipped = torch.matmul(S_kv_bwd, q_rot_bwd_f)
-        out_bwd = torch.flip(out_bwd_flipped, dims=[2])
-
-        # ---- Combine forward + backward ----
-        out = from_frame(out_fwd + out_bwd)
-
-        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-            out = out.to(dtype_orig)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, 1, 1, N_local).to(out.dtype)
-
-        return out
 
     def _forward_cam_branch(
         self,
@@ -1486,56 +1295,43 @@ class BidirectionalGDNUCPESinglePathLiteLA(BidirectionalGDNUCPELiteLAPostUCPERen
 
         H_heads = self.cam_heads
         D_head = self.cam_head_dim
-        if cp_enabled():
-            out = self._forward_cp_scan_single_path(
-                q_cam_trans,
-                k_cam_trans,
-                v_cam_trans,
-                beta,
-                decay,
-                B=B,
-                T=T,
-                S=S,
-                token_valid_mask=token_valid_mask,
-            )
-        else:
-            out_fwd = self._run_cam_single_path(
-                q_cam_trans,
-                k_cam_trans,
-                v_cam_trans,
-                beta,
-                decay,
-            )
+        out_fwd = self._run_cam_single_path(
+            q_cam_trans,
+            k_cam_trans,
+            v_cam_trans,
+            beta,
+            decay,
+        )
 
-            def to_time(t: torch.Tensor) -> torch.Tensor:
-                return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
+        def to_time(t: torch.Tensor) -> torch.Tensor:
+            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
 
-            def from_time(t: torch.Tensor) -> torch.Tensor:
-                return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N)
+        def from_time(t: torch.Tensor) -> torch.Tensor:
+            return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N)
 
-            q_rot_T = to_time(q_cam_trans)
-            k_rot_T = to_time(k_cam_trans)
-            v_T = to_time(v_cam_trans)
+        q_rot_T = to_time(q_cam_trans)
+        k_rot_T = to_time(k_cam_trans)
+        v_T = to_time(v_cam_trans)
 
-            q_rot_bwd = torch.flip(q_rot_T, dims=[2])
-            k_rot_bwd = flip_and_shift(k_rot_T, dim=2, shift_val=0.0)
-            v_bwd = flip_and_shift(v_T, dim=2, shift_val=0.0)
-            beta_bwd = flip_and_shift(beta, dim=2, shift_val=0.0)
-            decay_bwd = flip_and_shift(decay, dim=2, shift_val=1.0)
+        q_rot_bwd = torch.flip(q_rot_T, dims=[2])
+        k_rot_bwd = flip_and_shift(k_rot_T, dim=2, shift_val=0.0)
+        v_bwd = flip_and_shift(v_T, dim=2, shift_val=0.0)
+        beta_bwd = flip_and_shift(beta, dim=2, shift_val=0.0)
+        decay_bwd = flip_and_shift(decay, dim=2, shift_val=1.0)
 
-            out_bwd_f = self._run_cam_single_path(
-                from_time(q_rot_bwd),
-                from_time(k_rot_bwd),
-                from_time(v_bwd),
-                beta_bwd,
-                decay_bwd,
-            )
+        out_bwd_f = self._run_cam_single_path(
+            from_time(q_rot_bwd),
+            from_time(k_rot_bwd),
+            from_time(v_bwd),
+            beta_bwd,
+            decay_bwd,
+        )
 
-            out_bwd = torch.flip(
-                out_bwd_f.view(B, H_heads, D_head, T, S),
-                dims=[3],
-            ).reshape(B, H_heads, D_head, N)
-            out = out_fwd + out_bwd
+        out_bwd = torch.flip(
+            out_bwd_f.view(B, H_heads, D_head, T, S),
+            dims=[3],
+        ).reshape(B, H_heads, D_head, N)
+        out = out_fwd + out_bwd
 
         if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
             out = out.to(dtype_orig)

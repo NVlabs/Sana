@@ -1558,60 +1558,6 @@ class SanaMSVideoCamCtrl(Sana):
 
 
 @MODELS.register_module()
-def SanaMSVideoCamCtrl_600M_P1_D28(**kwargs):
-    return SanaMSVideoCamCtrl(depth=28, hidden_size=1152, patch_size=(1, 1, 1), num_heads=16, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_600M_P2_D28(**kwargs):
-    return SanaMSVideoCamCtrl(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
-
-
-@MODELS.register_module()
 def SanaMSVideoCamCtrl_1600M_P1_D20(**kwargs):
     # 20 layers, 1648.48M
     return SanaMSVideoCamCtrl(depth=20, hidden_size=2240, patch_size=(1, 1, 1), num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_1600M_P2_D20(**kwargs):
-    # 20 layers, 1648.48M
-    return SanaMSVideoCamCtrl(depth=20, hidden_size=2240, patch_size=(1, 2, 2), num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_1600M_P2S1_D20(**kwargs):
-    # 20 layers, 1648.48M
-    return SanaMSVideoCamCtrl(
-        depth=20, hidden_size=2240, patch_size=(1, 1, 1), num_heads=20, patch_embed_kernel=(1, 2, 2), **kwargs
-    )
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_2000M_P2_D20(**kwargs):
-    # 20 layers, 2016.26M
-    return SanaMSVideoCamCtrl(depth=20, hidden_size=2304, patch_size=(1, 2, 2), num_heads=18, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_2800M_P2_D28(**kwargs):
-    # 28 layers, 2861.13M
-    return SanaMSVideoCamCtrl(depth=28, hidden_size=2240, patch_size=(1, 2, 2), num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_4000M_P2_D28(**kwargs):
-    # 28 layers, 3459.49M
-    return SanaMSVideoCamCtrl(depth=28, hidden_size=2560, patch_size=(1, 2, 2), num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_4800M_P1_D60(**kwargs):
-    # 60 layers, 4800M
-    return SanaMSVideoCamCtrl(depth=60, hidden_size=2240, patch_size=(1, 1, 1), num_heads=20, **kwargs)
-
-
-@MODELS.register_module()
-def SanaMSVideoCamCtrl_4800M_P2_D60(**kwargs):
-    # 60 layers, 4800M
-    return SanaMSVideoCamCtrl(depth=60, hidden_size=2240, patch_size=(1, 2, 2), num_heads=20, **kwargs)

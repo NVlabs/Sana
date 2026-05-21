@@ -115,13 +115,12 @@ def torch_recurrent_sana_gdn(q, k, v, q_rot, k_rot, beta, decay, recall_gate, ep
     """
     # Reshape inputs to (B, H, T, D, S).
     B, H, D, N = q.shape
-    # 安全获取 T: beta 输入是 (B, H, T) 或 (B, H, T, S)，所以取 dim=2
+    # beta has shape (B, H, T) or (B, H, T, S); T is always dim=2.
     T = beta.shape[2]
     S = N // T
 
     target_z = 1.0
 
-    # 2. Reshape 输入
     def to_frame_seq(x):
         return x.view(B, H, D, T, S).permute(0, 1, 3, 2, 4)
 
@@ -148,7 +147,6 @@ def torch_recurrent_sana_gdn(q, k, v, q_rot, k_rot, beta, decay, recall_gate, ep
     num_list = []
     den_list = []
 
-    # 3. 循环 T 次
     for t in range(T):
         # Slice
         qt, kt, vt = q[:, :, t], k[:, :, t], v[:, :, t]
@@ -184,7 +182,6 @@ def torch_recurrent_sana_gdn(q, k, v, q_rot, k_rot, beta, decay, recall_gate, ep
     # (B, H, T, 1, S)
     den_stacked = torch.stack(den_list, dim=2)
 
-    # === 修复点: 动态传入 D 进行 reshape ===
     def restore_shape(tensor, target_d):
         # tensor: (B, H, T, d_in, S) -> (B, H, d_in, T*S)
         return tensor.permute(0, 1, 3, 2, 4).reshape(B, H, target_d, N)

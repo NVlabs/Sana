@@ -1,3 +1,4 @@
+from . import sana_gdn_blocks, sana_gdn_blocks_triton, sana_gdn_camctrl_blocks
 from .sana import (
     Sana,
     SanaBlock,
@@ -31,6 +32,10 @@ from .sana_multi_scale_video import (
     SanaMSVideo_2000M_P1_D20,
     SanaMSVideo_2000M_P2_D20,
 )
+from .sana_multi_scale_video_camctrl import (
+    SanaMSVideoCamCtrl,
+    SanaMSVideoCamCtrl_1600M_P1_D20,
+)
 from .sana_U_shape import (
     SanaU,
     SanaU_600M_P1_D28,
@@ -49,19 +54,3 @@ from .sana_U_shape_multi_scale import (
     SanaUMS_1600M_P2_D20,
     SanaUMSBlock,
 )
-
-# Sana-WM (camera-controlled video) — imported best-effort so the other Sana
-# inference paths still load in environments that lack the WM extras (Triton,
-# FLA, etc.). The WM env-setup script installs everything needed.
-try:
-    from . import sana_gdn_blocks, sana_gdn_blocks_triton, sana_gdn_camctrl_blocks  # noqa: F401
-    from .sana_multi_scale_video_camctrl import (
-        SanaMSVideoCamCtrl,
-        SanaMSVideoCamCtrl_600M_P1_D28,
-        SanaMSVideoCamCtrl_600M_P2_D28,
-        SanaMSVideoCamCtrl_1600M_P1_D20,
-        SanaMSVideoCamCtrl_1600M_P2_D20,
-        SanaMSVideoCamCtrl_1600M_P2S1_D20,
-    )
-except ImportError:
-    pass

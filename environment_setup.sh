@@ -21,11 +21,13 @@ else
     echo "Skipping conda environment creation. Make sure you have the correct environment activated."
 fi
 
-# init a raw torch to avoid installation errors.
-# pip install torch
-
 # update pip to latest version for pyproject.toml setup.
 pip install -U pip
+
+# Pin PyTorch to a version compatible with flash-attn==2.8.2.
+# PyTorch>=2.8.0 does not yet have prebuilt flash-attn wheels; pinning to 2.6.0 ensures
+# a successful install. See: https://github.com/NVlabs/Sana/issues/375
+pip install torch==2.6.0+cu128 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # for fast attn
 pip install -U xformers==0.0.32.post2 --index-url https://download.pytorch.org/whl/cu128

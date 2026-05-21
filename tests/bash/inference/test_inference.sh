@@ -32,9 +32,8 @@ python inference_video_scripts/inference_sana_video.py \
 python inference_video_scripts/inference_sana_wm.py \
     --image=asset/sana_wm/demo_0.png \
     --prompt=asset/sana_wm/demo_0.txt \
-    --camera=asset/sana_wm/demo_0_pose.npy \
-    --intrinsics=asset/sana_wm/demo_0_intrinsics.npy \
+    --action=w-641 \
     --output_dir=results/sana_wm_ci \
     --name=demo_0 \
-    --num_frames=9 \
+    --num_frames=641 \
     --step=4

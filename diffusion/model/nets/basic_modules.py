@@ -96,6 +96,15 @@ class ConvLayer(nn.Module):
         return x
 
 
+# Safe element-count threshold for a single conv call: PyTorch's 2D conv kernels
+# (both cuDNN and the ATEN fallback) use 32-bit indexing internally, so very
+# large ``(BT, C, H, W)`` inputs (e.g. minute-scale video at default CFG) can
+# overflow. Empirically a single call up to ~1 B elements is safe; above that
+# we chunk along the leading dim. Set so short videos stay on the original
+# fused path (no chunking, no overhead) and long videos transparently split.
+_INT32_SAFE_CONV_ELEMENTS = 1 << 30  # 1,073,741,824
+
+
 class GLUMBConv(nn.Module):
     def __init__(
         self,
@@ -146,6 +155,25 @@ class GLUMBConv(nn.Module):
             act=act[2],
         )
 
+    def _apply_spatial(self, x: torch.Tensor) -> torch.Tensor:
+        """Fused spatial pipeline: inverted_conv -> depth_conv -> GLU -> point_conv."""
+        x = self.inverted_conv(x)
+        x = self.depth_conv(x)
+        a, g = torch.chunk(x, 2, dim=1)
+        g = self.glu_act(g)
+        return self.point_conv(a * g)
+
+    def _apply_spatial_autochunked(self, x: torch.Tensor) -> torch.Tensor:
+        """Run :meth:`_apply_spatial`, chunking dim 0 to keep each call under
+        PyTorch's 32-bit conv indexing limit. No-op for short inputs."""
+        BT, _, H, W = x.shape
+        # Conservative estimate of the largest intermediate (after inverted_conv).
+        elements_per_bt = self.inverted_conv.conv.out_channels * H * W
+        max_bt = max(1, _INT32_SAFE_CONV_ELEMENTS // elements_per_bt)
+        if BT <= max_bt:
+            return self._apply_spatial(x)
+        return torch.cat([self._apply_spatial(x[s : s + max_bt]) for s in range(0, BT, max_bt)], dim=0)
+
     def forward(self, x: torch.Tensor, HW=None) -> torch.Tensor:
         B, N, C = x.shape
         if HW is None:
@@ -157,14 +185,8 @@ class GLUMBConv(nn.Module):
             T, H, W = HW
             x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
 
-        x = self.inverted_conv(x)
-        x = self.depth_conv(x)
+        x = self._apply_spatial_autochunked(x)
 
-        x, gate = torch.chunk(x, 2, dim=1)
-        gate = self.glu_act(gate)
-        x = x * gate
-
-        x = self.point_conv(x)
         if len(HW) == 3:
             x = x.reshape(B * T, C, H * W).permute(0, 2, 1)
             x = x.reshape(B, N, C)
@@ -220,14 +242,7 @@ class GLUMBConvTemp(GLUMBConv):
         T, H, W = HW
         x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
 
-        x = self.inverted_conv(x)
-        x = self.depth_conv(x)
-
-        # Space aggregation
-        x, gate = torch.chunk(x, 2, dim=1)
-        gate = self.glu_act(gate)
-        x = x * gate
-        x = self.point_conv(x)
+        x = self._apply_spatial_autochunked(x)
 
         # Temporal aggregation
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)
@@ -246,14 +261,7 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
         T, H, W = HW
         x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
 
-        x = self.inverted_conv(x)
-        x = self.depth_conv(x)
-
-        # Space aggregation
-        x, gate = torch.chunk(x, 2, dim=1)
-        gate = self.glu_act(gate)
-        x = x * gate
-        x = self.point_conv(x)
+        x = self._apply_spatial_autochunked(x)
 
         # Temporal aggregation
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)  # B, C, T, H*W
@@ -341,14 +349,7 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
         T, H, W = HW
         x = x.reshape(B * T, H, W, C).permute(0, 3, 1, 2)
 
-        x = self.inverted_conv(x)
-        x = self.depth_conv(x)
-
-        # Space aggregation
-        x, gate = torch.chunk(x, 2, dim=1)
-        gate = self.glu_act(gate)
-        x = x * gate
-        x = self.point_conv(x)
+        x = self._apply_spatial_autochunked(x)
 
         # Temporal aggregation
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)  # B,C,T,HW

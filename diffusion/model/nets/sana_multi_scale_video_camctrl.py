@@ -58,6 +58,8 @@ from .sana_gdn_blocks_triton import (
 )
 from .sana_gdn_camctrl_blocks import (
     BidirectionalSoftmaxUCPESinglePathLiteLA,
+    CachedChunkCausalGDNUCPESinglePathLiteLA,
+    CachedSoftmaxUCPESinglePathLiteLA,
 )
 
 # xformers is OFF by default on this stack (see diffusion/model/nets/sana_blocks.py for rationale).
@@ -119,7 +121,7 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         t_kernel_size=3,
         additional_flash_attn=False,
         flash_attn_window_count=None,
-        camctrl_type=None,
+        camctrl_cls=None,
         patch_size=(1, 2, 2),
         cam_attn_compress=2,
         fp32_norm=False,
@@ -148,27 +150,14 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
             self.norm1 = FP32LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         else:
             self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        if camctrl_type == "BidirectionalGDNUCPESinglePathLiteLABothTriton":
-            # Both main and camera branches route through fused Triton kernels
-            # (``fused_bigdn_func`` for main, ``cam_prep_func`` +
-            # ``cam_scan_func`` for camera).  Module shapes and state-dict
-            # keys are identical -- inference-only, no CP, no frame_valid_mask,
-            # requires ``k_conv_only=True``.
+
+        # Self-attention slot: when ``camctrl_cls`` is given, instantiate the
+        # UCPE camera-controlled attention; otherwise fall back to the plain
+        # ``attn_type`` registered in ATTENTION_BLOCKS (used for non-camctrl
+        # layers, e.g. when camctrl_layers_num < depth).
+        if camctrl_cls is not None:
             self_num_heads = hidden_size // linear_head_dim
-            self.attn = BidirectionalGDNUCPESinglePathLiteLABothTriton(
-                hidden_size,
-                hidden_size,
-                heads=self_num_heads,
-                cam_dim=hidden_size // cam_attn_compress,
-                cam_heads=max(1, self_num_heads // cam_attn_compress),
-                eps=1e-8,
-                qk_norm=qk_norm,
-                patch_size=patch_size,
-                **block_kwargs,
-            )
-        elif camctrl_type == "BidirectionalSoftmaxUCPESinglePathLiteLA":
-            self_num_heads = hidden_size // linear_head_dim
-            self.attn = BidirectionalSoftmaxUCPESinglePathLiteLA(
+            self.attn = camctrl_cls(
                 hidden_size,
                 hidden_size,
                 heads=self_num_heads,
@@ -180,7 +169,6 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
                 **block_kwargs,
             )
         else:
-            # attn_type registered via ATTENTION_BLOCKS (e.g. "BidirectionalGDNTriton").
             attn_cls = ATTENTION_BLOCKS.get(attn_type)
             if attn_cls is None:
                 raise ValueError(f"Unknown attn_type: {attn_type}")
@@ -360,11 +348,21 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         if chunk_size is not None:
             self_attn_kwargs["chunk_size"] = chunk_size
 
+        save_kv_cache = kwargs.get("save_kv_cache", None)
+        if save_kv_cache is not None:
+            self_attn_kwargs["save_kv_cache"] = save_kv_cache
+        kv_cache = kwargs.get("kv_cache", None)
+        if kv_cache is not None:
+            self_attn_kwargs["kv_cache"] = kv_cache
+
         x_norm1 = self.norm1(x).reshape(B, num_frames, -1, C)
         x_msa_in = t2i_modulate(x_norm1, shift_msa, scale_msa).reshape(B, N, C)
         if frame_token_mask is not None:
             x_msa_in = x_msa_in * frame_token_mask
-        attn_out = self.attn(x_msa_in, **self_attn_kwargs).reshape(B, num_frames, -1, C)
+        attn_out_raw = self.attn(x_msa_in, **self_attn_kwargs)
+        if kv_cache is not None:
+            attn_out_raw, kv_cache = attn_out_raw
+        attn_out = attn_out_raw.reshape(B, num_frames, -1, C)
         attn_out = (gate_msa * attn_out).reshape(B, N, C)
         if frame_token_mask is not None:
             attn_out = attn_out * frame_token_mask
@@ -409,11 +407,19 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         if chunk_size is not None:
             mlp_kwargs["chunk_size"] = chunk_size
 
+        if save_kv_cache is not None:
+            mlp_kwargs["save_kv_cache"] = save_kv_cache
+        if kv_cache is not None:
+            mlp_kwargs["kv_cache"] = kv_cache
+
         x_norm2 = self.norm2(x).reshape(B, num_frames, -1, C)
         x_mlp_in = t2i_modulate(x_norm2, shift_mlp, scale_mlp).reshape(B, N, C)
         if frame_token_mask is not None:
             x_mlp_in = x_mlp_in * frame_token_mask
-        mlp_out = self.mlp(x_mlp_in, **mlp_kwargs).reshape(B, num_frames, -1, C)
+        mlp_out_raw = self.mlp(x_mlp_in, **mlp_kwargs)
+        if kv_cache is not None:
+            mlp_out_raw, kv_cache = mlp_out_raw
+        mlp_out = mlp_out_raw.reshape(B, num_frames, -1, C)
         mlp_out = (gate_mlp * mlp_out).reshape(B, N, C)
         if frame_token_mask is not None:
             mlp_out = mlp_out * frame_token_mask
@@ -421,6 +427,8 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         if frame_token_mask is not None:
             x = x * frame_token_mask
 
+        if kv_cache is not None:
+            return x, kv_cache
         return x
 
     def forward(self, x, y, t, mask=None, THW=None, rotary_emb=None, block_mask=None, chunk_index=None, **kwargs):
@@ -487,6 +495,15 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         if chunk_size is not None:
             self_attn_kwargs["chunk_size"] = chunk_size
 
+        save_kv_cache = kwargs.get("save_kv_cache", None)
+        if save_kv_cache is not None:
+            self_attn_kwargs["save_kv_cache"] = save_kv_cache
+        kv_cache = kwargs.get("kv_cache", None)
+        if kv_cache is not None:
+            self_attn_kwargs["kv_cache"] = kv_cache
+        x_sa = self.attn(x_sa_in, **self_attn_kwargs)
+        if kv_cache is not None:
+            x_sa, kv_cache = x_sa
         if frame_token_mask is not None:
             x_sa = x_sa * frame_token_mask
 
@@ -536,6 +553,16 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         if chunk_size is not None:
             mlp_kwargs["chunk_size"] = chunk_size
 
+        if save_kv_cache is not None:
+            mlp_kwargs["save_kv_cache"] = save_kv_cache
+        if kv_cache is not None:
+            mlp_kwargs["kv_cache"] = kv_cache
+        x_mlp_in = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
+        if frame_token_mask is not None:
+            x_mlp_in = x_mlp_in * frame_token_mask
+        mlp_out = self.mlp(x_mlp_in, **mlp_kwargs)
+        if kv_cache is not None:
+            mlp_out, kv_cache = mlp_out
         if frame_token_mask is not None:
             mlp_out = mlp_out * frame_token_mask
         x = x + self.drop_path(gate_mlp * mlp_out)
@@ -547,39 +574,53 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
         if self.block_hook is not None:
             self.block_hook(**intermediate_feats)
 
+        if kv_cache is not None:
+            return x, kv_cache
+
         return x
 
 
-_GDN_TO_SOFTMAX_CAMCTRL: dict[str, str] = {
-    "BidirectionalGDNUCPESinglePathLiteLABothTriton": "BidirectionalSoftmaxUCPESinglePathLiteLA",
-}
-
-
-def _inject_softmax_layers(
-    attn_type_list: list,
-    camctrl_type_list: list,
+def _build_camctrl_cls_list(
+    gdn_cls: type | None,
+    softmax_cls: type | None,
+    depth: int,
+    camctrl_layers_num: int,
     softmax_every_n: int,
-) -> tuple:
-    """Replace every ``softmax_every_n``-th block's camctrl variant with its softmax counterpart.
+) -> list[type | None]:
+    """Build the per-block ``camctrl_cls`` schedule.
 
-    Pattern: for ``softmax_every_n=4``, blocks 3, 7, 11, ... (0-indexed at n-1) use
-    softmax attention; the remaining blocks keep GDN. Blocks whose camctrl_type has
-    no softmax mapping are left as-is.
+    The first ``camctrl_layers_num`` blocks use the camera-controlled
+    attention.  Within that range, every ``softmax_every_n``-th block
+    (1-indexed) swaps the GDN variant for the softmax variant when one is
+    provided.  Remaining blocks (or trailing layers above
+    ``camctrl_layers_num``) get ``None``, which routes the block to a plain
+    ``attn_type`` attention.
     """
-    attn_out = list(attn_type_list)
-    camctrl_out = list(camctrl_type_list)
-    for i in range(len(attn_out)):
-        if (i + 1) % softmax_every_n != 0:
-            continue
-        if camctrl_out[i] in _GDN_TO_SOFTMAX_CAMCTRL:
-            camctrl_out[i] = _GDN_TO_SOFTMAX_CAMCTRL[camctrl_out[i]]
-    return attn_out, camctrl_out
+    out: list[type | None] = [None] * depth
+    for i in range(min(depth, camctrl_layers_num)):
+        if softmax_every_n > 0 and softmax_cls is not None and (i + 1) % softmax_every_n == 0:
+            out[i] = softmax_cls
+        else:
+            out[i] = gdn_cls
+    return out
 
 
 class SanaMSVideoCamCtrl(Sana):
+    """Bidirectional camera-controlled video Sana DiT.
+
+    Uses the fully-fused Triton UCPE GDN camera branch
+    (:class:`BidirectionalGDNUCPESinglePathLiteLABothTriton`), with every
+    ``softmax_every_n``-th block swapped to the softmax-attention sibling
+    (:class:`BidirectionalSoftmaxUCPESinglePathLiteLA`).
+
+    For streaming chunk-causal AR inference with a per-block kv_cache, use
+    :class:`SanaMSVideoCamCtrlStreaming` instead.
     """
-    Diffusion model with a Transformer backbone.
-    """
+
+    # Camera-controlled attention classes used for the GDN and softmax slots.
+    # Subclasses override these to swap in cached / chunk-causal variants.
+    _camctrl_cls_gdn: type = BidirectionalGDNUCPESinglePathLiteLABothTriton
+    _camctrl_cls_softmax: type = BidirectionalSoftmaxUCPESinglePathLiteLA
 
     def __init__(
         self,
@@ -619,7 +660,6 @@ class SanaMSVideoCamCtrl(Sana):
         flash_attn_layer_type=None,
         flash_attn_window_count=None,
         pack_latents=False,
-        camctrl_type: str = "PluckerPatchifyAdd",
         camctrl_layers_num: int = None,
         cam_attn_compress: int = 2,
         init_cam_from_base: bool = False,
@@ -641,6 +681,10 @@ class SanaMSVideoCamCtrl(Sana):
         use_autograd_kernel: bool = False,
         **kwargs,
     ):
+        # Older YAML configs still set ``camctrl_type``; the class now picks
+        # the camera attention via class-level ``_camctrl_cls_gdn`` /
+        # ``_camctrl_cls_softmax``, so silently drop the legacy kwarg.
+        kwargs.pop("camctrl_type", None)
         super().__init__(
             input_size=input_size,
             patch_size=patch_size,
@@ -681,12 +725,6 @@ class SanaMSVideoCamCtrl(Sana):
         self.pos_embed_ms = None
         self.pack_latents = pack_latents
         self.attn_type = attn_type
-
-        self.camctrl_type = camctrl_type
-        assert self.camctrl_type in [
-            "BidirectionalGDNUCPESinglePathLiteLABothTriton",
-            "BidirectionalSoftmaxUCPESinglePathLiteLA",
-        ], f"Not supported camera control type: {self.camctrl_type}"
 
         self.camctrl_layers_num = camctrl_layers_num if camctrl_layers_num is not None else depth
         self.cam_attn_compress = cam_attn_compress
@@ -791,23 +829,24 @@ class SanaMSVideoCamCtrl(Sana):
         self.diagonal_mask = None
         self.softmax_every_n = softmax_every_n
         attn_type_list = [attn_type] * depth
-        camctrl_type_list = [camctrl_type if i < self.camctrl_layers_num else None for i in range(depth)]
         if attn_type in ["flex", "FlexLinearAttention"]:
             attn_type_list[0] = "flash"
             attn_type_list[1] = "flash"
 
-        if softmax_every_n > 0:
-            attn_type_list, camctrl_type_list = _inject_softmax_layers(
-                attn_type_list,
-                camctrl_type_list,
-                softmax_every_n,
+        camctrl_cls_list = _build_camctrl_cls_list(
+            gdn_cls=self._camctrl_cls_gdn,
+            softmax_cls=self._camctrl_cls_softmax,
+            depth=depth,
+            camctrl_layers_num=self.camctrl_layers_num,
+            softmax_every_n=softmax_every_n,
+        )
+        if get_rank() == 0:
+            cls_name_list = [c.__name__ if c is not None else None for c in camctrl_cls_list]
+            self.logger(
+                f"Hybrid attention (softmax_every_n={softmax_every_n}):\n"
+                f"  attn_type_list = {attn_type_list}\n"
+                f"  camctrl_cls_list = {cls_name_list}"
             )
-            if get_rank() == 0:
-                self.logger(
-                    f"Hybrid attention (softmax_every_n={softmax_every_n}):\n"
-                    f"  attn_type_list = {attn_type_list}\n"
-                    f"  camctrl_type_list = {camctrl_type_list}"
-                )
 
         self.blocks = nn.ModuleList(
             [
@@ -826,7 +865,7 @@ class SanaMSVideoCamCtrl(Sana):
                     t_kernel_size=t_kernel_size,
                     additional_flash_attn=additional_flash_attn[i],
                     flash_attn_window_count=flash_attn_window_count,
-                    camctrl_type=camctrl_type_list[i],
+                    camctrl_cls=camctrl_cls_list[i],
                     patch_size=patch_size,
                     cam_attn_compress=self.cam_attn_compress,
                     fp32_norm=fp32_norm,
@@ -1013,16 +1052,6 @@ class SanaMSVideoCamCtrl(Sana):
             while image_pos_embed.ndim > 4:
                 image_pos_embed = image_pos_embed.squeeze(1)
 
-        # --- FSDP2 block timing (SANA_FSDP2_BLOCK_TIMING=1) ---
-        import os as _os_fwd
-
-        _fsdp2_block_timing = _os_fwd.environ.get("SANA_FSDP2_BLOCK_TIMING", "0") in ("1", "true")
-        if _fsdp2_block_timing:
-            import time as _time_fwd
-
-            torch.cuda.synchronize()
-            _t_embed_start = _time_fwd.perf_counter()
-
         t = self.t_embedder(timestep.flatten())  # (N, D)
         t0 = self.t_block(t)
         t = t.unflatten(dim=0, sizes=timestep.shape)
@@ -1069,7 +1098,6 @@ class SanaMSVideoCamCtrl(Sana):
         if self.diagonal_mask is not None:
             seq_len = x.shape[1]
             self.diagonal_mask = self.diagonal_mask.to(x.device)
-            # self.diagonal_mask = torch.ones_like(self.diagonal_mask).bool().to(x.device)
 
             def mask_mod(b, h, q_idx, kv_idx):
                 return self.diagonal_mask[q_idx, kv_idx].bool()
@@ -1112,18 +1140,9 @@ class SanaMSVideoCamCtrl(Sana):
                 cam_pos_embeds=cam_pos_embeds,
             )
 
-        if _fsdp2_block_timing:
-            torch.cuda.synchronize()
-            _t_pre_blocks = _time_fwd.perf_counter()
-            print(f"[FSDP2-BT] embeddings+prep: {(_t_pre_blocks - _t_embed_start)*1000:.1f}ms", flush=True)
-
         for i, block in enumerate(self.blocks):
             if self.save_qkv:
                 block.attn.qkv_store_buffer = {}
-
-            if _fsdp2_block_timing:
-                torch.cuda.synchronize()
-                _t_blk_start = _time_fwd.perf_counter()
 
             x = auto_grad_checkpoint(
                 block,
@@ -1136,27 +1155,11 @@ class SanaMSVideoCamCtrl(Sana):
                 block_mask=block_mask if i > 1 else None,
                 **kwargs,
                 use_reentrant=False,
-            )  # (N, T, D) #support grad checkpoint
-
-            if _fsdp2_block_timing:
-                torch.cuda.synchronize()
-                _t_blk_end = _time_fwd.perf_counter()
-                _blk_ms = (_t_blk_end - _t_blk_start) * 1000
-                _attn_name = (
-                    type(block.attn).__name__
-                    if not hasattr(block, "_checkpoint_wrapped_module")
-                    else type(getattr(block, "_checkpoint_wrapped_module", block).attn).__name__
-                )
-                print(f"[FSDP2-BT] block[{i}] ({_attn_name}): {_blk_ms:.1f}ms", flush=True)
+            )
 
             if self.save_qkv:
                 self.qkv_store_buffer[int(timestep[0].item())][f"block_{i}"] = block.attn.qkv_store_buffer
                 block.attn.qkv_store_buffer = None
-
-        if _fsdp2_block_timing:
-            torch.cuda.synchronize()
-            _t_post_blocks = _time_fwd.perf_counter()
-            print(f"[FSDP2-BT] all blocks: {(_t_post_blocks - _t_pre_blocks)*1000:.1f}ms", flush=True)
 
         if _delta_t_emb is not None:
             if t.ndim == 2:
@@ -1175,31 +1178,6 @@ class SanaMSVideoCamCtrl(Sana):
             block_output = self.get_block_output()
             self.block_output_buffer[self.inference_timestep] = block_output
         return x
-
-    # ------------------------------------------------------------------ #
-    # AR KV-cache streaming forward
-    # ------------------------------------------------------------------ #
-
-    _SOFTMAX_OPTION_Y_TYPES: tuple = ()  # filled lazily; see _is_softmax_option_y_block
-
-    @staticmethod
-    def _is_softmax_option_y_block(block: nn.Module) -> bool:
-        """Return ``True`` iff ``block.attn`` is a softmax-attention camctrl
-        variant (``_SoftmaxUCPESinglePathLiteLA`` or registered aliases).
-
-        Detected by class name (rather than ``isinstance``) to avoid the
-        circular import that would result from importing the class here.
-        """
-        attn_cls_name = type(block.attn).__name__
-        return attn_cls_name in (
-            "_SoftmaxUCPESinglePathLiteLA",
-            "BidirectionalSoftmaxUCPESinglePathLiteLA",
-            "ChunkCausalSoftmaxUCPESinglePathLiteLA",
-            "SoftmaxUCPELiteLA",
-        )
-
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
 
     def forward_with_dpmsolver(self, x, timestep, y, data_info, **kwargs):
         """
@@ -1555,6 +1533,416 @@ class SanaMSVideoCamCtrl(Sana):
 #################################################################################
 #                             Sana Multi-scale Configs                          #
 #################################################################################
+
+
+class SanaMSVideoCamCtrlStreaming(SanaMSVideoCamCtrl):
+    """Streaming chunk-causal AR variant of :class:`SanaMSVideoCamCtrl`.
+
+    Uses cached chunk-causal UCPE attention
+    (:class:`CachedChunkCausalGDNUCPESinglePathLiteLA` + the softmax sibling
+    :class:`CachedSoftmaxUCPESinglePathLiteLA`) so each block accepts a
+    per-block ``kv_cache`` slot and updates it in place.
+
+    The streaming entry point is :meth:`forward_long`, which the
+    self-forcing scheduler invokes directly. Plain :meth:`forward` is
+    inherited but will raise inside the cached attention because
+    ``kv_cache`` is mandatory — use the streaming sampler instead.
+    """
+
+    _camctrl_cls_gdn: type = CachedChunkCausalGDNUCPESinglePathLiteLA
+    _camctrl_cls_softmax: type = CachedSoftmaxUCPESinglePathLiteLA
+
+    # ------------------------------------------------------------------ #
+    # AR KV-cache streaming forward
+    # ------------------------------------------------------------------ #
+
+    _SOFTMAX_OPTION_Y_TYPES: tuple = ()  # filled lazily; see _is_softmax_option_y_block
+
+    @staticmethod
+    def _is_softmax_option_y_block(block: nn.Module) -> bool:
+        """Return ``True`` iff ``block.attn`` is a softmax-attention camctrl
+        variant (``_SoftmaxUCPESinglePathLiteLA`` or registered aliases).
+
+        Detected by class name (rather than ``isinstance``) to avoid the
+        circular import that would result from importing the class here.
+        """
+        attn_cls_name = type(block.attn).__name__
+        return attn_cls_name in (
+            "_SoftmaxUCPESinglePathLiteLA",
+            "BidirectionalSoftmaxUCPESinglePathLiteLA",
+            "ChunkCausalSoftmaxUCPESinglePathLiteLA",
+            "SoftmaxUCPELiteLA",
+        )
+
+    def forward_long(self, x, timestep, y, mask=None, **kwargs):
+        """Forward pass for self-forcing / chunk-causal AR KV-cache inference.
+
+        Mirrors :meth:`forward` exactly with two streaming-specific differences:
+
+        1. Rotary positional embeddings (``casual_wan_rope``) are built over the
+           explicit window ``[start_f, end_f)`` (or an explicit ``frame_index``
+           tensor for sink + window layouts) rather than the full sequence.
+        2. Each block receives its per-block ``kv_cache`` slot (``kv_cache[i]``)
+           and may write back updated state when ``save_kv_cache=True``.  The
+           per-block returns are collected and the updated ``kv_cache`` list is
+           returned alongside the output tensor.
+
+        All camera-conditioning behaviour (UCPE absmap, Plucker embeddings,
+        ``raymats``, ``camera_conditions``) is identical to :meth:`forward`.
+
+        Args:
+            x: ``(N, C, T, H, W)`` latent inputs for the current chunk.
+            timestep: ``(N,)`` or ``(N, 1, F)`` diffusion timesteps.
+            y: ``(N, 1, L, C)`` text caption embeddings.
+            mask: Optional ``(N, L)`` text mask.
+            **kwargs: Same as :meth:`forward`, plus the following streaming-only
+                keys (all popped before delegating to blocks):
+
+                * ``start_f`` / ``end_f``: latent frame range for this call,
+                  in *unpatched* latent-frame units.  Converted to patch-frame
+                  units via ``patch_size[0]``.
+                * ``frame_index``: optional ``(F,)`` long tensor of explicit
+                  per-latent-frame indices (e.g. sink + sliding window).
+                  Takes precedence over ``(start_f, end_f)`` for RoPE.
+                * ``kv_cache``: ``list[Any]`` of length ``len(self.blocks)``.
+                  Required: each entry holds the cached state for one block.
+                * ``save_kv_cache``: ``bool``.  When ``True``, blocks update
+                  their cache slots in-place via the returned values.
+
+        Returns:
+            ``(x, kv_cache)``: the denoised latent tensor (same shape contract
+            as :meth:`forward`) and the (possibly updated) ``kv_cache`` list.
+        """
+        # --- Extract cached-inference parameters ---
+        start_f = kwargs.pop("start_f", None)
+        end_f = kwargs.pop("end_f", None)
+        frame_index = kwargs.pop("frame_index", None)
+        kv_cache = kwargs.pop("kv_cache", None)
+        save_kv_cache = kwargs.pop("save_kv_cache", False)
+        if start_f is not None and end_f is not None:
+            assert self.pos_embed_type == "casual_wan_rope", (
+                "forward_long requires pos_embed_type='casual_wan_rope' when "
+                f"start_f/end_f are provided; got '{self.pos_embed_type}'"
+            )
+            start_f = start_f // self.patch_size[0]
+            end_f = end_f // self.patch_size[0]
+        if frame_index is not None:
+            # Sampler builds frame_index in latent-frame units. Convert to
+            # patch-frame units the same way start_f / end_f are converted,
+            # while preserving length == patch-frames (one entry per patch
+            # frame, not per latent frame).  Assumes the sink / window ranges
+            # are patch-aligned.
+            ps_t = self.patch_size[0]
+            if ps_t > 1:
+                frame_index = frame_index[::ps_t] // ps_t
+
+        bs = x.shape[0]
+        x = x.to(self.dtype)
+        if self.timestep_norm_scale_factor != 1.0:
+            timestep = (timestep.float() / self.timestep_norm_scale_factor).to(torch.float32)
+        else:
+            timestep = timestep.long().to(torch.float32)
+        y = y.to(self.dtype)
+        self.f, self.h, self.w = (
+            x.shape[-3] // self.patch_size[0],
+            x.shape[-2] // self.patch_size[1],
+            x.shape[-1] // self.patch_size[2],
+        )
+
+        data_info = kwargs.get("data_info", {})
+        if data_info.get("image_vae_embeds", None) is not None:
+            x = torch.cat([x, data_info["image_vae_embeds"].to(self.dtype)], dim=1)
+        if data_info.get("image_embeds", None) is not None:
+            image_embeds = data_info["image_embeds"].to(self.dtype)
+            image_embeds = self.image_embedder(image_embeds)
+            kwargs["image_embeds"] = image_embeds
+
+        if self.save_qkv:
+            self.qkv_store_buffer[int(timestep[0].item())] = {}
+        if self.save_block_output:
+            self.inference_timestep = int(timestep[0].item())
+
+        cam_embeds = kwargs.get("camera_conditions", None)
+        cam_branch_drop_prob = kwargs.get("cam_branch_drop_prob", 0.0)
+        if cam_embeds is not None and cam_branch_drop_prob:
+            # Keep drop-path semantics consistent: when camera branch is
+            # dropped, skip both camera-attention branch and camera embedding
+            # injection.  (Drop is a no-op at inference; included for parity.)
+            cam_embeds = _maybe_drop_cam_branch(
+                cam_embeds,
+                cam_branch_drop_prob,
+                self.training,
+                x.device,
+            )
+            if cam_embeds is None:
+                kwargs["camera_conditions"] = None
+        if self.pack_latents:
+            x = self._pack_latents(x, bs, self.in_channels, self.h, self.w, self.f)
+            if cam_embeds is not None:
+                cam_embeds = cam_embeds.to(self.dtype)
+
+            self.h = self.h // 2
+            self.w = self.w // 2
+
+        if self.x_embedder.patch_size != self.x_embedder.kernel_size and self.x_embedder.kernel_size == (1, 2, 2):
+            x = F.pad(x, (0, 1, 0, 1, 0, 0))
+            if cam_embeds is not None:
+                cam_embeds = F.pad(cam_embeds, (0, 1, 0, 1, 0, 0))
+
+        x = self.x_embedder(x)
+        if cam_embeds is not None:
+            # All surviving camctrl variants are UCPE-style: build raymats +
+            # 3-channel absmap (up_map + lat_map) from the raw (B, F, 20)
+            # camera conditions.
+            raw_cam_conditions = cam_embeds
+            cam_pos_embeds = kwargs.get("cam_pos_embeds", None)
+            if cam_pos_embeds is not None and "absmap" in cam_pos_embeds:
+                cam_embeds = cam_pos_embeds["absmap"]
+                if "P" in cam_pos_embeds:
+                    kwargs["raymats"] = cam_pos_embeds["P"]
+            else:
+                raymats, cam_embeds = _process_camera_conditions_ucpe(
+                    raw_cam_conditions, bs, (self.f, self.h, self.w), self.patch_size
+                )
+                cam_embeds = cam_embeds.permute(0, 4, 1, 2, 3).to(self.dtype)
+                kwargs["raymats"] = raymats
+            _skip_absmap = getattr(self, "use_chunk_plucker_input", False) or getattr(
+                self, "use_chunk_plucker_post_attn", False
+            )
+            if not _skip_absmap:
+                cam_embeds = self.raymap_embedder(cam_embeds)
+                x = x + cam_embeds
+                kwargs["camera_embedding"] = cam_embeds
+                kwargs["camera_conditions"] = raw_cam_conditions
+
+        if getattr(self, "use_chunk_plucker_input", False) and "chunk_plucker" in kwargs:
+            plucker_input = kwargs["chunk_plucker"].to(self.dtype)
+            plucker_emb = self.plucker_embedder(plucker_input)
+            x = x + plucker_emb
+
+        if getattr(self, "use_chunk_plucker_post_attn", False) and "chunk_plucker" in kwargs:
+            plucker_input = kwargs["chunk_plucker"].to(self.dtype)
+            kwargs["plucker_emb"] = self.plucker_embedder(plucker_input)
+
+        image_pos_embed = kwargs.get("pos_embeds", None)
+        if self.use_pe and image_pos_embed is None:
+            if self.pos_embed_type == "sincos":
+                if self.pos_embed_ms is None or self.pos_embed_ms.shape[1:] != x.shape[1:]:
+                    self.pos_embed_ms = (
+                        torch.from_numpy(
+                            get_2d_sincos_pos_embed(
+                                self.pos_embed.shape[-1],
+                                (self.h, self.w),
+                                pe_interpolation=self.pe_interpolation,
+                                base_size=self.base_size,
+                            )
+                        )
+                        .unsqueeze(0)
+                        .to(x.device)
+                        .to(self.dtype)
+                    )
+                x += self.pos_embed_ms  # (N, T, D), where T = H * W / patch_size ** 2
+            elif self.pos_embed_type == "flux_rope":
+                self.pos_embed_ms = RopePosEmbed(theta=10000, axes_dim=[12, 10, 10])
+                latent_image_ids = self.pos_embed_ms._prepare_latent_image_ids(
+                    bs, self.h, self.w, x.device, x.dtype, frame=self.f
+                )
+                image_pos_embed = self.pos_embed_ms(latent_image_ids)
+            elif self.pos_embed_type == "wan_rope":
+                image_pos_embed = self._compute_rope_with_cp(x.device, self.h, self.w)
+            elif self.pos_embed_type == "casual_wan_rope":
+                if frame_index is not None:
+                    # Discontinuous positions (e.g. sink + sliding window):
+                    # rope is built from explicit per-frame indices instead of
+                    # a contiguous range.
+                    image_pos_embed = self.rope(
+                        ((0, int(frame_index.numel())), self.h, self.w),
+                        x.device,
+                        frame_index=frame_index,
+                    )
+                elif start_f is not None and end_f is not None:
+                    image_pos_embed = self.rope(((start_f, end_f), self.h, self.w), x.device)
+                else:
+                    image_pos_embed = self.rope(((0, self.f), self.h, self.w), x.device)
+            elif self.pos_embed_type == "wan_temporal_rope":
+                image_pos_embed = self._compute_rope_with_cp(x.device, self.h, self.w)
+            else:
+                raise ValueError(f"Unknown pos_embed_type: {self.pos_embed_type}")
+        elif image_pos_embed is not None:
+            image_pos_embed = image_pos_embed.to(x.device)
+            while image_pos_embed.ndim > 4:
+                image_pos_embed = image_pos_embed.squeeze(1)
+
+        t = self.t_embedder(timestep.flatten())  # (N, D)
+        t0 = self.t_block(t)
+        t = t.unflatten(dim=0, sizes=timestep.shape)
+        t0 = t0.unflatten(dim=0, sizes=timestep.shape)
+
+        # Compute delta embeddings for final_layer (stored separately, not
+        # touching t / t0).
+        _delta_t_emb = None
+        if getattr(self, "use_delta_actions", False) and "delta_actions" in kwargs:
+            da = kwargs["delta_actions"].to(self.dtype)
+            _delta_t_emb = self.delta_action_embedder(da)  # (B, T, D)
+
+        if getattr(self, "use_delta_translation", False) and kwargs.get("camera_conditions") is not None:
+            cam_cond = kwargs["camera_conditions"].to(self.dtype)
+            c2w = cam_cond[:, :, :16].view(cam_cond.shape[0], cam_cond.shape[1], 4, 4)
+            t_cam = c2w[:, :, :3, 3]  # (B, T, 3)
+            delta_t = t_cam[:, 1:, :] - t_cam[:, :-1, :]
+            delta_t = torch.cat([torch.zeros_like(delta_t[:, :1, :]), delta_t], dim=1)
+            dt_emb = self.delta_translation_embedder(delta_t)  # (B, T, D)
+            _delta_t_emb = dt_emb if _delta_t_emb is None else _delta_t_emb + dt_emb
+
+        if getattr(self, "use_delta_pose_additive", False) and "delta_actions" in kwargs:
+            da = kwargs["delta_actions"].to(self.dtype)
+            kwargs["delta_pose_emb"] = self.delta_pose_embedder(da)  # (B, T, D)
+
+        y = self.y_embedder(y, self.training, mask=mask)  # (N, D)
+        if self.y_norm:
+            y = self.attention_y_norm(y)
+
+        if mask is not None:
+            mask = mask.to(torch.int16)
+            mask = mask.repeat(y.shape[0] // mask.shape[0], 1) if mask.shape[0] != y.shape[0] else mask
+            mask = mask.squeeze(1).squeeze(1)
+            if _xformers_available:
+                y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+                y_lens = mask.sum(dim=1).tolist()
+            else:
+                y_lens = mask
+        elif _xformers_available:
+            y_lens = [y.shape[2]] * y.shape[0]
+            y = y.squeeze(1).view(1, -1, x.shape[-1])
+        else:
+            raise ValueError(f"Attention type is not available due to _xformers_available={_xformers_available}.")
+
+        if self.diagonal_mask is not None:
+            seq_len = x.shape[1]
+            self.diagonal_mask = self.diagonal_mask.to(x.device)
+
+            def mask_mod(b, h, q_idx, kv_idx):
+                return self.diagonal_mask[q_idx, kv_idx].bool()
+
+            block_mask = create_block_mask_cached(
+                mask_mod, None, None, seq_len, seq_len, device=x.device, _compile=False
+            )
+        else:
+            block_mask = None
+
+        if kwargs.get("camera_conditions") is not None:
+            # Pre-compute UCPE projection functions to share across blocks
+            # (all surviving camctrl variants are UCPE-style).
+            if self.attn_type in ["flash", "FlexLinearAttention", "flex"]:
+                head_dim = self.hidden_size // self.num_heads
+            else:
+                head_dim = self.linear_head_dim
+
+            cam_pos_embeds = kwargs.get("cam_pos_embeds", None)
+            if cam_pos_embeds is not None:
+                for k, v in cam_pos_embeds.items():
+                    if isinstance(v, torch.Tensor):
+                        v = v.to(x.device)
+                        if k == "absmap":
+                            while v.ndim > 5:
+                                v = v.squeeze(1)
+                        else:
+                            while v.ndim > 4:
+                                v = v.squeeze(1)
+                        cam_pos_embeds[k] = v
+
+            kwargs["prope_fns"] = prepare_prope_fns(
+                camctrl_type="UCPE",
+                head_dim=head_dim,
+                camera_conditions=kwargs["camera_conditions"],
+                HW=(self.f, self.h, self.w),
+                patch_size=self.patch_size,
+                rotary_emb=image_pos_embed,
+                raymats=kwargs.get("raymats"),
+                cam_pos_embeds=cam_pos_embeds,
+            )
+
+        assert kv_cache is not None and len(kv_cache) == len(
+            self.blocks
+        ), "kv_cache must be a list of the same length as the number of blocks"
+
+        # Pad cross-attention queries to the total sequence length so that
+        # xformers uses the same tiling as the baseline forward() path.
+        # ``end_f`` is the total latent frame count (already patch-divided).
+        if end_f is not None and self.f > 0:
+            per_frame_tokens = x.shape[1] // self.f
+            total_tokens = end_f * per_frame_tokens
+            if total_tokens > x.shape[1]:
+                kwargs["_cross_attn_pad_to"] = total_tokens
+
+        for i, block in enumerate(self.blocks):
+            if self.save_qkv:
+                block.attn.qkv_store_buffer = {}
+
+            x, kv_cache_i = torch.utils.checkpoint.checkpoint(
+                block,
+                x,
+                y,
+                t0,
+                y_lens,
+                (self.f, self.h, self.w),
+                image_pos_embed,
+                block_mask=block_mask if i > 1 else None,
+                kv_cache=kv_cache[i],
+                save_kv_cache=save_kv_cache,
+                **kwargs,
+                use_reentrant=False,
+            )
+            kv_cache[i] = kv_cache_i
+
+            if self.save_qkv:
+                self.qkv_store_buffer[int(timestep[0].item())][f"block_{i}"] = block.attn.qkv_store_buffer
+                block.attn.qkv_store_buffer = None
+
+        if _delta_t_emb is not None:
+            if t.ndim == 2:
+                t = t.unsqueeze(1).expand(-1, _delta_t_emb.shape[1], -1)
+            elif t.ndim == 4:
+                t = t.squeeze(1)
+            t = t + _delta_t_emb
+            t = t.unsqueeze(1)
+
+        x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
+        x = self.unpatchify(x)  # (N, out_channels, H, W)
+        if self.pack_latents:
+            x = self._unpack_latents(x, self.h * 2, self.w * 2, self.f)
+
+        if self.save_block_output:
+            block_output = self.get_block_output()
+            self.block_output_buffer[self.inference_timestep] = block_output
+        return x, kv_cache
+
+    def __call__(self, *args, **kwargs):
+        """Dispatch to :meth:`forward_long` for cached AR inference, else :meth:`forward`.
+
+        ``forward_long`` is selected iff the caller passes a non-``None``
+        ``start_f`` in kwargs (the streaming sampler always provides one).
+        """
+        if kwargs.get("start_f") is not None:
+            return self.forward_long(*args, **kwargs)
+        return self.forward(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        """Dispatch to :meth:`forward_long` when ``start_f`` is provided.
+
+        The self-forcing scheduler calls :meth:`forward_long` directly, but
+        the training-time longsana pipeline goes through ``__call__`` with
+        ``start_f`` set, so we keep this dispatch for backwards compat.
+        """
+        if kwargs.get("start_f") is not None:
+            return self.forward_long(*args, **kwargs)
+        return self.forward(*args, **kwargs)
+
+
+@MODELS.register_module()
+def SanaMSVideoCamCtrlStreaming_1600M_P1_D20(**kwargs):
+    # Streaming counterpart of SanaMSVideoCamCtrl_1600M_P1_D20.
+    return SanaMSVideoCamCtrlStreaming(depth=20, hidden_size=2240, patch_size=(1, 1, 1), num_heads=20, **kwargs)
 
 
 @MODELS.register_module()

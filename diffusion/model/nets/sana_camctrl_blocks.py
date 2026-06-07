@@ -482,29 +482,6 @@ def _apply_ray_projmat(
 
 
 @torch.compile(disable=_COMPILE_DISABLE)
-def _apply_tiled_projmat(
-    feats: torch.Tensor,  # (batch, num_heads, seqlen, feat_dim)
-    matrix: torch.Tensor,  # (batch, cameras, D, D)
-) -> torch.Tensor:
-    """Apply a per-camera projection matrix tiled across the spatial axis."""
-    (batch, num_heads, seqlen, feat_dim) = feats.shape
-    D = matrix.shape[-1]
-    assert feat_dim % D == 0, f"feat_dim={feat_dim} must be divisible by D={D}"
-    if matrix.shape[1] == seqlen:
-        feats_ = feats.view(batch, num_heads, seqlen, feat_dim // D, D)
-        out = torch.einsum("btij,bntpj->bntpi", matrix, feats_)
-        return out.reshape(feats.shape)
-
-    cameras = matrix.shape[1]
-    assert seqlen >= cameras and seqlen % cameras == 0
-    return torch.einsum(
-        "bcij,bncpkj->bncpki",
-        matrix,
-        feats.reshape((batch, num_heads, cameras, -1, feat_dim // D, D)),
-    ).reshape(feats.shape)
-
-
-@torch.compile(disable=_COMPILE_DISABLE)
 def _apply_complex_rope(
     hidden_states: torch.Tensor,
     freqs: torch.Tensor,

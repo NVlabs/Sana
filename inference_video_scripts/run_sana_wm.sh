@@ -6,17 +6,16 @@
 # point at local files instead.
 #
 # Camera trajectory: either pass --camera <(F,4,4).npy> or roll one out
-# from a WASD/IJKL DSL via --action. Intrinsics are optional — if you
-# don't pass --intrinsics, we estimate them with Pi3X (and abort if the
-# estimated FOV is outside [25°, 120°]).
+# from the action DSL via --action (w/s = forward/back, a/d = yaw, i/k = pitch,
+# j/l = strafe; held keys ease in/out with light inertia). Intrinsics are
+# optional — if you don't pass --intrinsics, we estimate them with Pi3X (and
+# abort if the estimated FOV is outside [25°, 120°]).
 set -euo pipefail
 
 python inference_video_scripts/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
-  --action     "w-80,jw-40,w-40,lw-60,w-100" \
-  --translation_speed 0.055 \
-  --rotation_speed_deg 1.2 \
+  --action     "w-100,dw-60,w-100,aw-60" \
   --output_dir results/sana_wm_demo \
   --name       demo_0 \
   --num_frames 321 \

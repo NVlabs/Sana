@@ -23,6 +23,7 @@ from timm.models.vision_transformer import Mlp
 
 from diffusion.model.act import build_act, get_act_name
 from diffusion.model.norms import build_norm, get_norm_name
+from diffusion.model.registry import FFN_BLOCKS
 from diffusion.model.utils import get_same_padding, val2tuple
 
 
@@ -338,6 +339,7 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
         return x_out
 
 
+@FFN_BLOCKS.register_module()
 class CachedGLUMBConvTemp(GLUMBConvTemp):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -356,15 +358,19 @@ class CachedGLUMBConvTemp(GLUMBConvTemp):
         padding_size = self.t_conv.kernel_size[0] // 2
         x_t_conv_in = x_reshaped
         padded_size = 0
-        # Use internal cache with the same logic as before
+        # Tconv state lives in the last slot of the per-block KV cache list.
+        # The streaming sampler's 10-slot layout uses indices 0-3 / 4-6 for
+        # main + camera attention state and the final slot (-1) for the
+        # temporal short conv left context written here.
         if kv_cache is not None:
-            if kv_cache[2] is not None:
-                # Use previous chunk's temporal convolution cache
-                x_t_conv_in = torch.cat([kv_cache[2], x_reshaped], dim=2)  # B,C,P+T,HW
-                padded_size = kv_cache[2].shape[2]
+            if kv_cache[-1] is not None:
+                # Slice to the actual conv padding window in case the cache
+                # spans multiple past chunks.
+                x_t_conv_in = torch.cat([kv_cache[-1][:, :, -padding_size:], x_reshaped], dim=2)  # B,C,P+T,HW
+                padded_size = x_t_conv_in.shape[2] - x_reshaped.shape[2]
 
             if save_kv_cache:  # Save current chunk's cache for next chunk
-                kv_cache[2] = x_reshaped[:, :, -padding_size:, :].detach().clone()
+                kv_cache[-1] = x_reshaped[:, :, -padding_size:, :].detach().clone()
 
         t_conv_out = self.t_conv(x_t_conv_in)[:, :, padded_size:]
         x_out = x_reshaped + t_conv_out

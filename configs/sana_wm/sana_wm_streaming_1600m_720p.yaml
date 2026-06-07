@@ -1,5 +1,5 @@
 model:
-  model: SanaMSVideoCamCtrl_1600M_P1_D20
+  model: SanaMSVideoCamCtrlStreaming_1600M_P1_D20
   image_size: 720
   aspect_ratio_type: ASPECT_RATIO_VIDEO_720_MS_DIV32
   mixed_precision: bf16
@@ -10,7 +10,7 @@ model:
   linear_head_dim: 112
   conv_kernel_size: 4
   k_conv_only: true
-  ffn_type: GLUMBConvTemp
+  ffn_type: CachedGLUMBConvTemp
   t_kernel_size: 3
   mlp_acts:
     - silu
@@ -18,10 +18,11 @@ model:
     -
   mlp_ratio: 3
   use_pe: true
-  pos_embed_type: wan_rope
+  pos_embed_type: casual_wan_rope
   qk_norm: true
   cross_norm: true
   class_dropout_prob: 0.0
+  chunk_size: 3
   chunk_split_strategy: first_chunk_plus_one
   cam_attn_compress: 1
   init_cam_from_base: true
@@ -29,8 +30,8 @@ model:
   chunk_plucker_channels: 48
   chunk_plucker_post_attn_blocks: 20
 vae:
-  vae_type: LTX2VAE_diffusers
-  vae_pretrained: Efficient-Large-Model/SANA-WM_bidirectional
+  vae_type: LTX2VAE_diffusers_causal
+  vae_pretrained: hf://Efficient-Large-Model/SANA-WM_streaming/ltx2_causal_vae
   weight_dtype: bfloat16
   vae_latent_dim: 128
   vae_downsample_rate: 32
@@ -58,5 +59,5 @@ scheduler:
   noise_schedule: linear_flow
   pred_sigma: false
   flow_shift: 9.95
-  inference_flow_shift: 9.8
-  vis_sampler: flow_dpm-solver
+  inference_flow_shift: 8.0
+  vis_sampler: self_forcing_flow_euler

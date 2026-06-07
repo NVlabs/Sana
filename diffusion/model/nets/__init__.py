@@ -35,6 +35,8 @@ from .sana_multi_scale_video import (
 from .sana_multi_scale_video_camctrl import (
     SanaMSVideoCamCtrl,
     SanaMSVideoCamCtrl_1600M_P1_D20,
+    SanaMSVideoCamCtrlStreaming,
+    SanaMSVideoCamCtrlStreaming_1600M_P1_D20,
 )
 from .sana_U_shape import (
     SanaU,

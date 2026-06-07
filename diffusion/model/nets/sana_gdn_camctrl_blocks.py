@@ -44,13 +44,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fla.modules import ShortConvolution
 
-from diffusion.utils.chunk_utils import is_chunk_causal_request, normalize_chunk_index
+from diffusion.model.registry import ATTENTION_BLOCKS
 
 from .sana_camctrl_blocks import _maybe_drop_cam_branch, prepare_prope_fns
 from .sana_gdn_blocks import (
     GDN,
     BidirectionalGDN,
+    ChunkCausalGDN,
     _forward_softmax_attn,
+    _sdpa_needs_head_pad,
     flip_and_shift,
 )
 
@@ -155,7 +157,7 @@ def _sdpa_unmasked_with_pad(
         ``(B, H, N_q, D)`` attention output.
     """
     D = q.shape[-1]
-    _need_pad = D not in (32, 64, 128, 256) and D < 256
+    _need_pad = _sdpa_needs_head_pad(D)
     if _need_pad:
         _pad_to = 128 if D <= 128 else 256
         _pad_size = _pad_to - D
@@ -171,143 +173,6 @@ def _sdpa_unmasked_with_pad(
 # ---------------------------------------------------------------------------
 # Base class
 # ---------------------------------------------------------------------------
-
-
-def torch_recurrent_cam_single_path_delta_rule(
-    q_rot: torch.Tensor,
-    k_rot: torch.Tensor,
-    v: torch.Tensor,
-    beta: torch.Tensor,
-    decay: torch.Tensor,
-) -> torch.Tensor:
-    """Numerator-only delta-rule recurrence for experimental camera ablations."""
-    B, H, D, N = q_rot.shape
-    T = beta.shape[2]
-    S = N // T
-
-    def to_frame_seq(x: torch.Tensor) -> torch.Tensor:
-        return x.view(B, H, D, T, S).permute(0, 1, 3, 2, 4)
-
-    q_rot_f = to_frame_seq(q_rot)
-    k_rot_f = to_frame_seq(k_rot)
-    v_f = to_frame_seq(v)
-
-    if beta.ndim == 4:
-        beta = beta.unsqueeze(3)
-    else:
-        beta = beta.view(B, H, T, 1, 1)
-    decay = decay.view(B, H, T, 1, 1)
-
-    state_kv = torch.zeros(B, H, D, D, device=q_rot.device, dtype=q_rot.dtype)
-    out_list: list[torch.Tensor] = []
-    for t in range(T):
-        qrt = q_rot_f[:, :, t]
-        krt = k_rot_f[:, :, t]
-        vt = v_f[:, :, t]
-        bt = beta[:, :, t]
-        gt = decay[:, :, t]
-
-        state_kv = state_kv * gt
-        v_pred = torch.matmul(state_kv, krt)
-        delta_v = (vt - v_pred) * bt
-        state_kv = state_kv + torch.matmul(delta_v, krt.transpose(-1, -2))
-        out_list.append(torch.matmul(state_kv, qrt))
-
-    out = torch.stack(out_list, dim=2)
-    return out.permute(0, 1, 3, 2, 4).reshape(B, H, D, N)
-
-
-@torch.compile(dynamic=True, disable=os.environ.get("GDN_DISABLE_COMPILE", "0") not in ("0", "false"))
-def torch_chunk_cam_single_path_delta_rule(
-    q_rot: torch.Tensor,
-    k_rot: torch.Tensor,
-    v: torch.Tensor,
-    beta: torch.Tensor,
-    decay: torch.Tensor,
-    chunk_size: int | None = 21,
-) -> torch.Tensor:
-    """Parallel chunk-scan version of the single-path delta-rule recurrence.
-
-    Algebraically equivalent to ``torch_recurrent_cam_single_path_delta_rule``
-    but restructured as a linear recurrence in D x D state space so that
-    Phases 1 (transition-matrix construction) and 3 (output projection) are
-    fully parallel over T, while Phase 2 (the D x D state scan) is chunked
-    and benefits from ``@torch.compile``.
-
-    The recurrence:
-        state[t] = state[t-1] * g[t] + delta_v[t] @ k_rot[t]^T
-    where delta_v[t] = (v[t] - state[t-1]*g[t] @ k_rot[t]) * beta[t]
-
-    is equivalent to:
-        state[t] = state[t-1] @ W[t] + U[t]
-    with:
-        W[t] = g[t] * (I - beta[t] * k_rot[t] @ k_rot[t]^T)
-        U[t] = beta[t] * v[t] @ k_rot[t]^T
-    """
-    B, H, D, N = q_rot.shape
-    if beta.ndim not in (3, 4):
-        raise ValueError(f"Expected beta.ndim in (3, 4), got {beta.ndim}.")
-    T = beta.shape[2]
-    if T <= 0:
-        raise ValueError(f"Expected T > 0, got T={T}.")
-    if N % T != 0:
-        raise ValueError(f"Expected N divisible by T, got N={N}, T={T}.")
-    S = N // T
-
-    def to_frame_seq(x: torch.Tensor) -> torch.Tensor:
-        return x.view(B, H, D, T, S).permute(0, 1, 3, 2, 4)
-
-    q_rot = to_frame_seq(q_rot)
-    k_rot = to_frame_seq(k_rot)
-    v = to_frame_seq(v)
-
-    if beta.ndim == 4:
-        beta = beta.unsqueeze(3)
-    else:
-        beta = beta.view(B, H, T, 1, 1)
-    decay = decay.view(B, H, T, 1, 1)
-
-    # =========================================================================
-    # Phase 1: PARALLEL PRE-PROCESSING  (fully parallel over T)
-    # =========================================================================
-    I = torch.eye(D, device=q_rot.device, dtype=q_rot.dtype).view(1, 1, 1, D, D)
-
-    k_rot_beta = k_rot * beta
-    W_kv = decay * (I - torch.matmul(k_rot_beta, k_rot.transpose(-1, -2)))
-    U_kv = torch.matmul(v * beta, k_rot.transpose(-1, -2))
-
-    # =========================================================================
-    # Phase 2: CHUNKED SCAN over D x D state space
-    # =========================================================================
-    valid_chunk_index, _ = normalize_chunk_index(None, T, chunk_size)
-    split_sizes = [valid_chunk_index[i + 1] - valid_chunk_index[i] for i in range(len(valid_chunk_index) - 1)]
-
-    W_kv_c = W_kv.split(split_sizes, dim=2)
-    U_kv_c = U_kv.split(split_sizes, dim=2)
-
-    S_kv = torch.zeros(B, H, D, D, device=q_rot.device, dtype=q_rot.dtype)
-    out_S_kv: list[torch.Tensor] = []
-
-    def _chunk_scan_kv(w_kv: torch.Tensor, u_kv: torch.Tensor, s_kv: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        c_len = w_kv.shape[2]
-        s_kv_list: list[torch.Tensor] = []
-        for t in range(c_len):
-            s_kv = torch.matmul(s_kv, w_kv[:, :, t]) + u_kv[:, :, t]
-            s_kv_list.append(s_kv)
-        return torch.stack(s_kv_list, dim=2), s_kv
-
-    for i in range(len(split_sizes)):
-        s_kv_all, S_kv = _chunk_scan_kv(W_kv_c[i], U_kv_c[i], S_kv)
-        out_S_kv.append(s_kv_all)
-
-    S_kv_all = torch.cat(out_S_kv, dim=2)
-
-    # =========================================================================
-    # Phase 3: PARALLEL OUTPUT PROJECTION  (no denominator)
-    # =========================================================================
-    out = torch.matmul(S_kv_all, q_rot)  # (B, H, T, D, S)
-
-    return out.permute(0, 1, 3, 2, 4).reshape(B, H, D, N)
 
 
 class _GDNUCPEBase(GDN):
@@ -327,9 +192,10 @@ class _GDNUCPEBase(GDN):
     Requires ``cam_dim == in_dim`` and ``cam_heads == heads`` so that
     all shared parameters have matching dimensions.
 
-    Subclasses only need to override ``_forward_cam_branch`` when the
-    camera branch requires a different recurrence pattern (e.g.
-    bidirectional or chunk-causal).
+    Subclasses provide their own ``_forward_cam_branch`` (e.g. the fused
+    Triton pipeline in :class:`BidirectionalGDNUCPESinglePathLiteLABothTriton`
+    or the cached streaming pipeline in
+    :class:`CachedChunkCausalGDNUCPESinglePathLiteLA`).
     """
 
     def __init__(
@@ -342,33 +208,16 @@ class _GDNUCPEBase(GDN):
         patch_size: tuple[int, int, int] = (1, 2, 2),
         **kwargs: object,
     ) -> None:
-        cam_debug_ratios = bool(kwargs.pop("cam_debug_ratios", False))
-        cam_debug_log_per_block = bool(kwargs.pop("cam_debug_log_per_block", False))
-        cam_update_rule_func: str = str(kwargs.pop("cam_update_rule_func", "torch_chunk"))
+        # Silently swallow legacy debug-stat kwargs so older configs/checkpoints
+        # don't blow up on construction.
+        kwargs.pop("cam_debug_ratios", None)
+        kwargs.pop("cam_debug_log_per_block", None)
         super().__init__(in_dim, out_dim, **kwargs)
 
         self.patch_size = patch_size
         self.cam_dim = cam_dim
         self.cam_heads = cam_heads
         self.cam_head_dim = cam_dim // cam_heads
-        self.cam_debug_ratios = cam_debug_ratios
-        self.cam_debug_log_per_block = cam_debug_log_per_block
-        self._cam_debug_stats: dict[str, float] = {}
-        self._cam_debug_step_counter: int = 0
-        self._cam_debug_log_interval: int = 50
-
-        from functools import partial
-
-        chunk_gdn_chunk_size = kwargs.get("chunk_gdn_chunk_size", 21)
-        if cam_update_rule_func == "torch_recurrent":
-            self._cam_single_path_fn = torch_recurrent_cam_single_path_delta_rule
-        elif cam_update_rule_func == "torch_chunk":
-            self._cam_single_path_fn = partial(
-                torch_chunk_cam_single_path_delta_rule,
-                chunk_size=chunk_gdn_chunk_size,
-            )
-        else:
-            raise ValueError(f"Unsupported cam_update_rule_func: {cam_update_rule_func}")
 
         if cam_dim != in_dim:
             raise ValueError(
@@ -478,875 +327,51 @@ class _GDNUCPEBase(GDN):
         if self.conv_v_cam is not None and self.conv_v is not None:
             self.conv_v_cam.load_state_dict(self.conv_v.state_dict())
 
-    @staticmethod
-    def _downscale_to_reference_rms(
-        ref: torch.Tensor,
-        transformed: torch.Tensor,
-        eps: float = 1e-6,
-    ) -> torch.Tensor:
-        """Downscale transformed tensor if its channel RMS exceeds reference.
-
-        Args:
-            ref: Reference tensor with target magnitude, shape (B, H, D, N).
-            transformed: Tensor to stabilize, shape (B, H, D, N).
-            eps: Numerical epsilon for RMS.
-
-        Returns:
-            Stabilized tensor with per-(B,H,N) channel RMS not larger than ref.
-        """
-        ref_rms = ref.square().mean(dim=2, keepdim=True).add(eps).sqrt()
-        tr_rms = transformed.square().mean(dim=2, keepdim=True).add(eps).sqrt()
-        scale = (ref_rms / tr_rms.clamp_min(eps)).clamp(max=1.0)
-        return transformed * scale
-
-    def reset_cam_debug_stats(self) -> None:
-        """Clear debug-only camera branch ratio summaries."""
-        self._cam_debug_stats = {}
-
-    def pop_cam_debug_stats(self) -> dict[str, float]:
-        """Return and clear debug-only camera branch ratio summaries."""
-        stats = dict(self._cam_debug_stats)
-        self._cam_debug_stats = {}
-        return stats
-
-    def _record_cam_debug_stat(self, name: str, value: float) -> None:
-        """Store one debug scalar when camera ratio logging is enabled."""
-        if not self.cam_debug_ratios:
-            return
-        self._cam_debug_stats[name] = float(value)
-
-    @staticmethod
-    def _compute_cam_ratio_summary(
-        ref: torch.Tensor,
-        transformed: torch.Tensor,
-        token_valid_mask: torch.Tensor | None = None,
-        eps: float = 1e-6,
-    ) -> tuple[float, float]:
-        """Compute mean/max channel-norm amplification ratios."""
-        ref_norm = torch.linalg.vector_norm(ref.float(), dim=2).clamp_min(eps)
-        transformed_norm = torch.linalg.vector_norm(transformed.float(), dim=2)
-        ratio = (transformed_norm / ref_norm).detach()
-        if token_valid_mask is not None:
-            valid = token_valid_mask.to(torch.bool).unsqueeze(1).expand_as(ratio)
-            ratio = ratio.masked_select(valid)
-            if ratio.numel() == 0:
-                return 0.0, 0.0
-        return float(ratio.mean().item()), float(ratio.max().item())
-
-    @staticmethod
-    def _compute_cam_norm_summary(
-        tensor: torch.Tensor,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> tuple[float, float]:
-        """Compute mean/max channel norms for debug-only logging."""
-        norms = torch.linalg.vector_norm(tensor.float(), dim=2).detach()
-        if token_valid_mask is not None:
-            valid = token_valid_mask.to(torch.bool).unsqueeze(1).expand_as(norms)
-            norms = norms.masked_select(valid)
-            if norms.numel() == 0:
-                return 0.0, 0.0
-        return float(norms.mean().item()), float(norms.max().item())
-
-    def _record_cam_inflation_stats(
-        self,
-        prefix: str,
-        k_cam: torch.Tensor,
-        k_cam_trans: torch.Tensor,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> None:
-        """Record squared key inflation statistics for one transform stage."""
-        k_ratio_sq = (
-            (
-                torch.linalg.vector_norm(k_cam_trans.float(), dim=2).clamp_min(1e-6)
-                / torch.linalg.vector_norm(k_cam.float(), dim=2).clamp_min(1e-6)
-            )
-            .pow(2)
-            .detach()
-        )
-        if token_valid_mask is not None:
-            valid = token_valid_mask.to(torch.bool).unsqueeze(1).expand_as(k_ratio_sq)
-            k_ratio_sq = k_ratio_sq.masked_select(valid)
-            if k_ratio_sq.numel() == 0:
-                self._record_cam_debug_stat(f"{prefix}_inflation_sq_mean", 0.0)
-                self._record_cam_debug_stat(f"{prefix}_inflation_sq_max", 0.0)
-                return
-        self._record_cam_debug_stat(f"{prefix}_inflation_sq_mean", float(k_ratio_sq.mean().item()))
-        self._record_cam_debug_stat(f"{prefix}_inflation_sq_max", float(k_ratio_sq.max().item()))
-
-    def _should_log_cam_debug(self) -> bool:
-        """Check whether cam debug stats should be recorded this step."""
-        if not self.cam_debug_ratios:
-            return False
-        return self._cam_debug_step_counter % self._cam_debug_log_interval == 0
-
-    def _record_cam_transform_stats(
-        self,
-        stage_prefix: str,
-        q_cam: torch.Tensor,
-        k_cam: torch.Tensor,
-        v_cam: torch.Tensor,
-        q_cam_trans: torch.Tensor,
-        k_cam_trans: torch.Tensor,
-        v_cam_trans: torch.Tensor,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> None:
-        """Record debug-only camera transform ratios for one transform stage."""
-        if not self._should_log_cam_debug():
-            return
-
-        for tensor_prefix, ref, transformed in (
-            ("q_cam", q_cam, q_cam_trans),
-            ("k_cam", k_cam, k_cam_trans),
-            ("v_cam", v_cam, v_cam_trans),
-        ):
-            ratio_mean, ratio_max = self._compute_cam_ratio_summary(
-                ref,
-                transformed,
-                token_valid_mask=token_valid_mask,
-            )
-            self._record_cam_debug_stat(f"{stage_prefix}_{tensor_prefix}_ratio_mean", ratio_mean)
-            self._record_cam_debug_stat(f"{stage_prefix}_{tensor_prefix}_ratio_max", ratio_max)
-
-        self._record_cam_inflation_stats(
-            stage_prefix,
-            k_cam,
-            k_cam_trans,
-            token_valid_mask=token_valid_mask,
-        )
-
-    def _maybe_record_cam_output_stats(
-        self,
-        pre_output_transform: torch.Tensor,
-        post_output_transform: torch.Tensor,
-        token_valid_mask: torch.Tensor | None = None,
-    ) -> None:
-        """Record inverse-UCPE output transform amplification ratios."""
-        if not self._should_log_cam_debug():
-            return
-
-        ratio_mean, ratio_max = self._compute_cam_ratio_summary(
-            pre_output_transform,
-            post_output_transform,
-            token_valid_mask=token_valid_mask,
-        )
-        self._record_cam_debug_stat("o_cam_ratio_mean", ratio_mean)
-        self._record_cam_debug_stat("o_cam_ratio_max", ratio_max)
-        pre_norm_mean, pre_norm_max = self._compute_cam_norm_summary(
-            pre_output_transform,
-            token_valid_mask=token_valid_mask,
-        )
-        post_norm_mean, post_norm_max = self._compute_cam_norm_summary(
-            post_output_transform,
-            token_valid_mask=token_valid_mask,
-        )
-        self._record_cam_debug_stat("o_cam_pre_norm_mean", pre_norm_mean)
-        self._record_cam_debug_stat("o_cam_pre_norm_max", pre_norm_max)
-        self._record_cam_debug_stat("o_cam_post_norm_mean", post_norm_mean)
-        self._record_cam_debug_stat("o_cam_post_norm_max", post_norm_max)
-
-    def _stabilize_cam_transforms(
-        self,
-        q_cam: torch.Tensor,
-        k_cam: torch.Tensor,
-        v_cam: torch.Tensor,
-        q_cam_trans: torch.Tensor,
-        k_cam_trans: torch.Tensor,
-        v_cam_trans: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Optional post-UCPE stabilization hook for experimental variants."""
-        del q_cam, k_cam, v_cam
-        return q_cam_trans, k_cam_trans, v_cam_trans
-
-    # ------------------------------------------------------------------
-    # Camera-branch building blocks
-    # ------------------------------------------------------------------
-
-    def _prepare_cam_qkv(
-        self,
-        x: torch.Tensor,
-        HW: tuple[int, int, int],
-        camera_conditions: torch.Tensor,
-        rotary_emb: torch.Tensor | None,
-        *,
-        token_valid_mask: torch.Tensor | None = None,
-        **kwargs: object,
-    ) -> tuple:
-        """Project camera QKV, apply short conv + QK norm + kernel + scaling + UCPE.
-
-        The processing order mirrors the base GDN branch:
-          project -> mask -> short_conv -> QK_norm -> kernel -> scale -> permute -> UCPE
-
-        Args:
-            token_valid_mask: Pre-computed mask of shape ``(B, N)`` from the
-                caller.  Avoids redundant ``_prepare_frame_valid_masks`` calls.
-
-        Returns:
-            (q_cam, k_cam, v_cam_trans, q_cam_trans, k_cam_trans, apply_fn_o, inflation_sq)
-
-        All tensors are shaped ``(B, cam_heads, cam_head_dim, N)``.
-        ``apply_fn_o`` is the UCPE inverse-output transform closure.
-        ``inflation_sq`` is the energy inflation factor of shape ``(B, cam_heads, 1, N)``.
-        """
-        B, N, C = x.shape
-        T, H, W = HW
-        S = H * W
-
-        # Pre-projection token masking (matching base branch).
-        if token_valid_mask is not None:
-            x = x * token_valid_mask.view(B, N, 1)
-
-        # Fused camera QKV projection (1 GEMM instead of 3 kernel launches).
-        qkv_w = torch.cat([self.q_proj_cam.weight, self.k_proj_cam.weight, self.v_proj_cam.weight])
-        qkv_b = torch.cat([self.q_proj_cam.bias, self.k_proj_cam.bias, self.v_proj_cam.bias])
-        qkv_cam = F.linear(x, qkv_w, qkv_b)
-        q_cam, k_cam, v_cam = qkv_cam.chunk(3, dim=-1)
-
-        # Post-projection token masking (before conv, matching base branch).
-        if token_valid_mask is not None:
-            token_mask = token_valid_mask.view(B, N, 1)
-            q_cam = q_cam * token_mask
-            k_cam = k_cam * token_mask
-            v_cam = v_cam * token_mask
-
-        # Short convolution along T (before norm / kernel activation).
-        if self.conv_q_cam is not None:
-            q_cam = self._apply_temporal_short_conv(q_cam, self.conv_q_cam, HW, **kwargs)
-        if self.conv_k_cam is not None:
-            k_cam = self._apply_temporal_short_conv(k_cam, self.conv_k_cam, HW, **kwargs)
-        if self.conv_v_cam is not None:
-            v_cam = self._apply_temporal_short_conv(v_cam, self.conv_v_cam, HW, **kwargs)
-
-        # Camera-specific QK normalization.
-        q_cam = self.q_norm_cam(q_cam).reshape(B, N, self.cam_heads, self.cam_head_dim)
-        k_cam = self.k_norm_cam(k_cam).reshape(B, N, self.cam_heads, self.cam_head_dim)
-        v_cam = v_cam.reshape(B, N, self.cam_heads, self.cam_head_dim)
-
-        # ReLU kernel (shared).
-        q_cam = self.kernel_func(q_cam)
-        k_cam = self.kernel_func(k_cam)
-
-        # FIXED: K scaling -- explicitly use ** for exponentiation!
-        k_scale = (self.cam_head_dim**-0.5) * (S**-0.5)
-        k_cam = k_cam * k_scale
-
-        # Permute to (B, H, D, N) for GDN processing.
-        q_cam = q_cam.permute(0, 2, 3, 1).contiguous()
-        k_cam = k_cam.permute(0, 2, 3, 1).contiguous()
-        v_cam = v_cam.permute(0, 2, 3, 1).contiguous()
-
-        # Measure safe geometric norm before UCPE applies translations
-        pre_ucpe_k_norm = torch.linalg.vector_norm(k_cam, dim=2, keepdim=True).clamp_min(1e-6)
-
-        # UCPE per-ray transforms — reuse model-level cache when available
-        # to avoid recomputing _process_camera_conditions_ucpe per block.
-        cached_fns = kwargs.get("prope_fns", None)
-        if cached_fns is not None:
-            apply_fn_q, apply_fn_kv, apply_fn_o = cached_fns
-        else:
-            apply_fn_q, apply_fn_kv, apply_fn_o = prepare_prope_fns(
-                camctrl_type="UCPE",
-                head_dim=self.cam_head_dim,
-                camera_conditions=camera_conditions,
-                HW=HW,
-                patch_size=self.patch_size,
-                rotary_emb=rotary_emb,
-            )
-
-        # UCPE expects (B, h, N, d); our tensors are (B, h, d, N).
-        # Avoid eager contiguous copies before transforms, and fuse K/V transform
-        # into one call (same apply_fn_kv), then split back.
-        q_cam_trans = apply_fn_q(q_cam.transpose(-1, -2)).transpose(-1, -2).contiguous()
-        kv_cam = torch.cat([k_cam, v_cam], dim=1)
-        kv_cam_trans = apply_fn_kv(kv_cam.transpose(-1, -2)).transpose(-1, -2).contiguous()
-        k_cam_trans, v_cam_trans = torch.chunk(kv_cam_trans, chunks=2, dim=1)
-
-        self._record_cam_transform_stats(
-            stage_prefix="raw",
-            q_cam=q_cam,
-            k_cam=k_cam,
-            v_cam=v_cam,
-            q_cam_trans=q_cam_trans,
-            k_cam_trans=k_cam_trans,
-            v_cam_trans=v_cam_trans,
-            token_valid_mask=token_valid_mask,
-        )
-        q_cam_trans, k_cam_trans, v_cam_trans = self._stabilize_cam_transforms(
-            q_cam=q_cam,
-            k_cam=k_cam,
-            v_cam=v_cam,
-            q_cam_trans=q_cam_trans,
-            k_cam_trans=k_cam_trans,
-            v_cam_trans=v_cam_trans,
-        )
-        self._record_cam_transform_stats(
-            stage_prefix="post_stab",
-            q_cam=q_cam,
-            k_cam=k_cam,
-            v_cam=v_cam,
-            q_cam_trans=q_cam_trans,
-            k_cam_trans=k_cam_trans,
-            v_cam_trans=v_cam_trans,
-            token_valid_mask=token_valid_mask,
-        )
-
-        # Measure inflated geometric norm after UCPE
-        post_ucpe_k_norm = torch.linalg.vector_norm(k_cam_trans, dim=2, keepdim=True).clamp_min(1e-6)
-
-        # Calculate the squared inflation factor for beta discounting
-        inflation_sq = (post_ucpe_k_norm / pre_ucpe_k_norm) ** 2
-
-        return q_cam, k_cam, v_cam_trans, q_cam_trans, k_cam_trans, apply_fn_o, inflation_sq
-
-    def _run_cam_gdn(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        q_rot: torch.Tensor,
-        k_rot: torch.Tensor,
-        beta: torch.Tensor,
-        decay: torch.Tensor,
-    ) -> torch.Tensor:
-        """Run the shared GDN kernel on camera-branch tensors.
-
-        Uses shared ``self.recall_gate``.  Handles FP32 casting.
-        Returns ``num / (den + eps)`` shaped ``(B, H, D, N)``.
-        """
-        recall_gate = self.recall_gate
-        if getattr(self, "fp32_attention", True):
-            q = q.float()
-            k = k.float()
-            v = v.float()
-            q_rot = q_rot.float()
-            k_rot = k_rot.float()
-            beta = beta.float()
-            decay = decay.float()
-            recall_gate = recall_gate.float()
-
-        return self.update_rule_func(
-            q,
-            k,
-            v,
-            q_rot,
-            k_rot,
-            beta,
-            decay,
-            recall_gate=recall_gate,
-            eps=self.eps,
-        )
-
-    def _run_cam_gdn_components(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        q_rot: torch.Tensor,
-        k_rot: torch.Tensor,
-        beta: torch.Tensor,
-        decay: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Like ``_run_cam_gdn`` but returns ``(num, den)`` components."""
-        recall_gate = self.recall_gate
-        if getattr(self, "fp32_attention", True):
-            q = q.float()
-            k = k.float()
-            v = v.float()
-            q_rot = q_rot.float()
-            k_rot = k_rot.float()
-            beta = beta.float()
-            decay = decay.float()
-            recall_gate = recall_gate.float()
-
-        return self.update_rule_func(
-            q,
-            k,
-            v,
-            q_rot,
-            k_rot,
-            beta,
-            decay,
-            recall_gate=recall_gate,
-            eps=self.eps,
-            return_components=True,
-        )
-
-    def _run_cam_single_path(
-        self,
-        q_rot: torch.Tensor,
-        k_rot: torch.Tensor,
-        v: torch.Tensor,
-        beta: torch.Tensor,
-        decay: torch.Tensor,
-    ) -> torch.Tensor:
-        """Run the numerator-only camera delta-rule recurrence.
-
-        Dispatches to either the recurrent reference or the parallel chunk
-        scan depending on ``cam_update_rule_func`` set at init time.
-        """
-        if getattr(self, "fp32_attention", True):
-            q_rot = q_rot.float()
-            k_rot = k_rot.float()
-            v = v.float()
-            beta = beta.float()
-            decay = decay.float()
-        return self._cam_single_path_fn(q_rot, k_rot, v, beta, decay)
-
-    # ------------------------------------------------------------------
-    # Camera-branch forward (forward-only causal -- default)
-    # ------------------------------------------------------------------
-
-    def _forward_cam_branch(
-        self,
-        x: torch.Tensor,
-        HW: tuple[int, int, int],
-        camera_conditions: torch.Tensor,
-        rotary_emb: torch.Tensor | None,
-        **kwargs: object,
-    ) -> torch.Tensor:
-        """Forward-only causal GDN camera branch with UCPE transforms.
-
-        Subclasses override this for bidirectional / chunk-causal variants.
-
-        Returns raw attention output ``(B, N, C)`` -- no output gate or
-        projection applied (those are shared and applied in ``forward()``).
-        """
-        B, N, _ = x.shape
-        T, H, W = HW
-        S = H * W
-        dtype_orig = x.dtype
-
-        # Compute masks once; pass token_valid_mask to _prepare_cam_qkv for
-        # pre-conv masking and reuse here for post-UCPE masking + gate masking.
-        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
-            kwargs.get("frame_valid_mask", None),
-            B=B,
-            T=T,
-            S=S,
-            device=x.device,
-            dtype=x.dtype,
-        )
-
-        q_cam, k_cam, v_cam_trans, q_cam_trans, k_cam_trans, apply_fn_o, inflation_sq = self._prepare_cam_qkv(
-            x,
-            HW,
-            camera_conditions,
-            rotary_emb,
-            token_valid_mask=token_valid_mask,
-            **kwargs,
-        )
-
-        # Re-mask after UCPE transforms (which can reintroduce non-zero values).
-        if token_valid_mask is not None:
-            token_mask_qkv = token_valid_mask.view(B, 1, 1, N)
-            q_cam = q_cam * token_mask_qkv
-            k_cam = k_cam * token_mask_qkv
-            v_cam_trans = v_cam_trans * token_mask_qkv
-            q_cam_trans = q_cam_trans * token_mask_qkv
-            k_cam_trans = k_cam_trans * token_mask_qkv
-
-        # Shared GDN gates (use pre-computed when available).
-        precomputed_gates = kwargs.get("precomputed_gates", None)
-        if precomputed_gates is not None:
-            beta, decay = precomputed_gates
-        else:
-            beta, decay = self._compute_frame_gates(x, HW)
-
-        # Dynamic Beta Discounting: scale beta by UCPE inflation factor.
-        inflation_sq_spatial = inflation_sq.view(B, self.cam_heads, T, S)
-        frame_inflation_sq = inflation_sq_spatial.mean(dim=-1)
-        if beta.ndim == 3:
-            beta = beta / frame_inflation_sq.clamp_min(1.0)
-        elif beta.ndim == 4:
-            beta = beta / frame_inflation_sq.unsqueeze(-1).clamp_min(1.0)
-
-        if beta_valid_mask is not None:
-            beta = beta * beta_valid_mask.to(beta.dtype)
-        if decay_valid_mask is not None:
-            decay_m = decay_valid_mask.to(decay.dtype)
-            decay = decay * decay_m + (1.0 - decay_m)
-
-        out = self._run_cam_gdn(
-            q_cam,
-            k_cam,
-            v_cam_trans,
-            q_cam_trans,
-            k_cam_trans,
-            beta,
-            decay,
-        )
-
-        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-            out = out.to(dtype_orig)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
-
-        # Inverse UCPE transform on output.
-        out_before_apply_fn_o = out
-        out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
-        self._maybe_record_cam_output_stats(out_before_apply_fn_o, out, token_valid_mask=token_valid_mask)
-        out = out.reshape(B, self.cam_dim, N).permute(0, 2, 1)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, N, 1).to(out.dtype)
-        return out
-
-    # ------------------------------------------------------------------
-    # Full forward
-    # ------------------------------------------------------------------
-
-    def forward(
-        self,
-        x: torch.Tensor,
-        mask: torch.Tensor | None = None,
-        HW: tuple[int, int, int] | None = None,
-        rotary_emb: torch.Tensor | None = None,
-        block_mask: torch.Tensor | None = None,
-        camera_conditions: torch.Tensor | None = None,
-        chunk_size: int | None = None,
-        **kwargs: object,
-    ) -> torch.Tensor:
-        """Dual-branch forward: GDN main + UCPE camera.
-
-        Flow:
-            1. main_raw = GDN attention (no gate/proj)
-            2. cam_raw  = GDN+UCPE attention (no gate/proj)
-            3. combined = main_raw + out_proj_cam(cam_raw)   [zero at init]
-            4. output   = proj(output_gate(combined))        [shared, once]
-        """
-        if self.cam_debug_ratios:
-            self.reset_cam_debug_stats()
-        if self.training:
-            self._cam_debug_step_counter += 1
-
-        # Pre-compute shared gates once for both branches.
-        if HW is not None:
-            precomputed_gates = self._compute_frame_gates(x, HW)
-        else:
-            precomputed_gates = None
-
-        # Main branch -- raw attention without gate/proj.
-        main_raw = super().forward(
-            x,
-            mask=mask,
-            HW=HW,
-            rotary_emb=rotary_emb,
-            block_mask=block_mask,
-            apply_output_gate=False,
-            chunk_size=chunk_size,
-            precomputed_gates=precomputed_gates,
-            **kwargs,
-        )
-
-        # Camera branch.
-        cam_contrib: torch.Tensor | int = 0
-        camera_conditions = _maybe_drop_cam_branch(
-            camera_conditions,
-            kwargs.get("cam_branch_drop_prob", 0.0),
-            self.training,
-            x.device,
-        )
-        if camera_conditions is not None:
-            if HW is None:
-                raise ValueError("HW (T, H, W) must be provided for UCPE camera branch.")
-            cam_raw = self._forward_cam_branch(
-                x,
-                HW,
-                camera_conditions,
-                rotary_emb,
-                chunk_size=chunk_size,
-                precomputed_gates=precomputed_gates,
-                **kwargs,
-            )
-            cam_contrib = self.out_proj_cam(cam_raw)
-
-        # Combine, then shared gate + projection (applied once).
-        combined = main_raw + cam_contrib
-        combined = self._apply_output_gate(combined, x)
-        return self.proj(combined.to(self.proj.weight.dtype))
-
-
-# ---------------------------------------------------------------------------
-# Concrete variants
-# ---------------------------------------------------------------------------
-
-
-class BidirectionalGDNUCPELiteLA(_GDNUCPEBase, BidirectionalGDN):
-    """Bidirectional GDN with UCPE camera conditioning.
-
-    Main branch: bidirectional GDN (inherited from ``BidirectionalGDN``).
-    Camera branch: bidirectional GDN with UCPE transforms.
+class BidirectionalGDNUCPESinglePathLiteLA(_GDNUCPEBase, BidirectionalGDN):
+    """Bidirectional GDN with UCPE camera conditioning (single-path delta rule).
+
+    Main branch: bidirectional GDN (inherited from :class:`BidirectionalGDN`).
+    Camera branch: numerator-only delta-rule recurrence over UCPE-transformed
+    camera tensors (RMSNorm + ReLU + UCPE 4x4 + RoPE, then a single-path scan).
+
+    This is the production base for both the bidir Triton variant
+    (:class:`BidirectionalGDNUCPESinglePathLiteLABothTriton`) and the streaming
+    chunk-causal variant (:class:`ChunkCausalGDNUCPESinglePathLiteLA`).
+    """
+class ChunkCausalGDNUCPESinglePathLiteLA(BidirectionalGDNUCPESinglePathLiteLA, ChunkCausalGDN):
+    """Chunk-causal variant of ``BidirectionalGDNUCPESinglePathLiteLA``.
+
+    Main branch: chunk-causal GDN (inherited via MRO from
+    :class:`ChunkCausalGDN`).  Camera branch: single-path (numerator-only)
+    delta rule with chunk-boundary isolation in the backward pass.
+
+    All parameter names match ``BidirectionalGDNUCPESinglePathLiteLA``
+    exactly, so checkpoints from bidirectional training load directly.
+    The only behavioral difference is that the backward recurrence in the
+    camera branch is isolated at chunk boundaries (decay and inputs
+    zeroed), preventing future chunk information from leaking into past
+    chunks.
     """
 
-    def _forward_cam_branch(
+    def _apply_temporal_short_conv(
         self,
         x: torch.Tensor,
+        conv: ShortConvolution,
         HW: tuple[int, int, int],
-        camera_conditions: torch.Tensor,
-        rotary_emb: torch.Tensor | None,
         **kwargs: object,
     ) -> torch.Tensor:
-        B, N, C = x.shape
-        T, H, W = HW
-        S = H * W
-        dtype_orig = x.dtype
+        """Route short conv: chunk-causal when chunk boundaries exist, else bidirectional.
 
-        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
-            kwargs.get("frame_valid_mask", None),
-            B=B,
-            T=T,
-            S=S,
-            device=x.device,
-            dtype=x.dtype,
-        )
-
-        q_cam, k_cam, v_cam_trans, q_cam_trans, k_cam_trans, apply_fn_o, inflation_sq = self._prepare_cam_qkv(
-            x,
-            HW,
-            camera_conditions,
-            rotary_emb,
-            token_valid_mask=token_valid_mask,
-            **kwargs,
-        )
-        if token_valid_mask is not None:
-            token_mask_qkv = token_valid_mask.view(B, 1, 1, N)
-            q_cam = q_cam * token_mask_qkv
-            k_cam = k_cam * token_mask_qkv
-            v_cam_trans = v_cam_trans * token_mask_qkv
-            q_cam_trans = q_cam_trans * token_mask_qkv
-            k_cam_trans = k_cam_trans * token_mask_qkv
-
-        # Shared GDN gates (use pre-computed when available).
-        precomputed_gates = kwargs.get("precomputed_gates", None)
-        if precomputed_gates is not None:
-            beta, decay = precomputed_gates
-        else:
-            beta, decay = self._compute_frame_gates(x, HW)
-
-        # Dynamic Beta Discounting: scale beta by UCPE inflation factor.
-        inflation_sq_spatial = inflation_sq.view(B, self.cam_heads, T, S)
-        frame_inflation_sq = inflation_sq_spatial.mean(dim=-1)
-        if beta.ndim == 3:
-            beta = beta / frame_inflation_sq.clamp_min(1.0)
-        elif beta.ndim == 4:
-            beta = beta / frame_inflation_sq.unsqueeze(-1).clamp_min(1.0)
-
-        if beta_valid_mask is not None:
-            beta = beta * beta_valid_mask.to(beta.dtype)
-        if decay_valid_mask is not None:
-            decay_m = decay_valid_mask.to(decay.dtype)
-            decay = decay * decay_m + (1.0 - decay_m)
-
-        H_heads = self.cam_heads
-        D_head = self.cam_head_dim
-
-        # -- Forward pass (inclusive 1..t) --
-        num_fwd, den_fwd = self._run_cam_gdn_components(
-            q_cam,
-            k_cam,
-            v_cam_trans,
-            q_cam_trans,
-            k_cam_trans,
-            beta,
-            decay,
-        )
-
-        # -- Backward pass (exclusive t+1..T) --
-        def to_time(t: torch.Tensor) -> torch.Tensor:
-            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
-
-        def from_time(t: torch.Tensor) -> torch.Tensor:
-            return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N)
-
-        q_T = to_time(q_cam)
-        k_T = to_time(k_cam)
-        v_T = to_time(v_cam_trans)
-        q_rot_T = to_time(q_cam_trans)
-        k_rot_T = to_time(k_cam_trans)
-
-        q_bwd = torch.flip(q_T, dims=[2])
-        q_rot_bwd = torch.flip(q_rot_T, dims=[2])
-        k_bwd = flip_and_shift(k_T, dim=2, shift_val=0.0)
-        v_bwd = flip_and_shift(v_T, dim=2, shift_val=0.0)
-        k_rot_bwd = flip_and_shift(k_rot_T, dim=2, shift_val=0.0)
-        beta_bwd = flip_and_shift(beta, dim=2, shift_val=0.0)
-        decay_bwd = flip_and_shift(decay, dim=2, shift_val=1.0)
-
-        num_bwd_f, den_bwd_f = self._run_cam_gdn_components(
-            from_time(q_bwd),
-            from_time(k_bwd),
-            from_time(v_bwd),
-            from_time(q_rot_bwd),
-            from_time(k_rot_bwd),
-            beta_bwd,
-            decay_bwd,
-        )
-
-        def flip_back(tensor: torch.Tensor) -> torch.Tensor:
-            d = tensor.shape[2]
-            return torch.flip(
-                tensor.view(B, H_heads, d, T, S),
-                dims=[3],
-            ).reshape(B, H_heads, d, N)
-
-        num_bwd = flip_back(num_bwd_f)
-        den_bwd = flip_back(den_bwd_f)
-        out = (num_fwd + num_bwd) / (den_fwd + den_bwd + self.eps)
-
-        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-            out = out.to(dtype_orig)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
-
-        out_before_apply_fn_o = out
-        out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
-        self._maybe_record_cam_output_stats(out_before_apply_fn_o, out, token_valid_mask=token_valid_mask)
-        out = out.reshape(B, self.cam_dim, N).permute(0, 2, 1)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, N, 1).to(out.dtype)
-        return out
-
-
-class BidirectionalGDNUCPELiteLAPostUCPERenorm(BidirectionalGDNUCPELiteLA):
-    """Bidirectional GDNUCPE with post-UCPE RMS downscaling.
-
-    The raw UCPE transforms are still measured for debug logging, but the
-    transformed camera tensors are downscaled back to their pre-UCPE RMS
-    envelope before they enter the recurrence.
-    """
-
-    def _stabilize_cam_transforms(
-        self,
-        q_cam: torch.Tensor,
-        k_cam: torch.Tensor,
-        v_cam: torch.Tensor,
-        q_cam_trans: torch.Tensor,
-        k_cam_trans: torch.Tensor,
-        v_cam_trans: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        q_cam_trans = self._downscale_to_reference_rms(q_cam, q_cam_trans)
-        k_cam_trans = self._downscale_to_reference_rms(k_cam, k_cam_trans)
-        v_cam_trans = self._downscale_to_reference_rms(v_cam, v_cam_trans)
-        return q_cam_trans, k_cam_trans, v_cam_trans
-
-
-class BidirectionalGDNUCPESinglePathLiteLA(BidirectionalGDNUCPELiteLAPostUCPERenorm):
-    """Bidirectional UCPE camera branch with numerator-only delta-rule updates.
-
-    This is an experimental ablation that keeps the main branch unchanged,
-    applies UCPE plus post-UCPE RMS downscaling on the camera tensors, and
-    replaces the camera branch's ``num / den`` recurrence with a single-path
-    delta rule over the transformed camera stream only.
-    """
-
-    def _forward_cam_branch(
-        self,
-        x: torch.Tensor,
-        HW: tuple[int, int, int],
-        camera_conditions: torch.Tensor,
-        rotary_emb: torch.Tensor | None,
-        **kwargs: object,
-    ) -> torch.Tensor:
-        B, N, _ = x.shape
-        T, H, W = HW
-        S = H * W
-        dtype_orig = x.dtype
-
-        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
-            kwargs.get("frame_valid_mask", None),
-            B=B,
-            T=T,
-            S=S,
-            device=x.device,
-            dtype=x.dtype,
-        )
-
-        q_cam, _, v_cam_trans, q_cam_trans, k_cam_trans, apply_fn_o, inflation_sq = self._prepare_cam_qkv(
-            x,
-            HW,
-            camera_conditions,
-            rotary_emb,
-            token_valid_mask=token_valid_mask,
-            **kwargs,
-        )
-        if token_valid_mask is not None:
-            token_mask_qkv = token_valid_mask.view(B, 1, 1, N)
-            q_cam = q_cam * token_mask_qkv
-            v_cam_trans = v_cam_trans * token_mask_qkv
-            q_cam_trans = q_cam_trans * token_mask_qkv
-            k_cam_trans = k_cam_trans * token_mask_qkv
-
-        precomputed_gates = kwargs.get("precomputed_gates", None)
-        if precomputed_gates is not None:
-            beta, decay = precomputed_gates
-        else:
-            beta, decay = self._compute_frame_gates(x, HW)
-
-        inflation_sq_spatial = inflation_sq.view(B, self.cam_heads, T, S)
-        frame_inflation_sq = inflation_sq_spatial.mean(dim=-1)
-        if beta.ndim == 3:
-            beta = beta / frame_inflation_sq.clamp_min(1.0)
-        elif beta.ndim == 4:
-            beta = beta / frame_inflation_sq.unsqueeze(-1).clamp_min(1.0)
-
-        if beta_valid_mask is not None:
-            beta = beta * beta_valid_mask.to(beta.dtype)
-        if decay_valid_mask is not None:
-            decay_m = decay_valid_mask.to(decay.dtype)
-            decay = decay * decay_m + (1.0 - decay_m)
-
-        H_heads = self.cam_heads
-        D_head = self.cam_head_dim
-        out_fwd = self._run_cam_single_path(
-            q_cam_trans,
-            k_cam_trans,
-            v_cam_trans,
-            beta,
-            decay,
-        )
-
-        def to_time(t: torch.Tensor) -> torch.Tensor:
-            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
-
-        def from_time(t: torch.Tensor) -> torch.Tensor:
-            return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, N)
-
-        q_rot_T = to_time(q_cam_trans)
-        k_rot_T = to_time(k_cam_trans)
-        v_T = to_time(v_cam_trans)
-
-        q_rot_bwd = torch.flip(q_rot_T, dims=[2])
-        k_rot_bwd = flip_and_shift(k_rot_T, dim=2, shift_val=0.0)
-        v_bwd = flip_and_shift(v_T, dim=2, shift_val=0.0)
-        beta_bwd = flip_and_shift(beta, dim=2, shift_val=0.0)
-        decay_bwd = flip_and_shift(decay, dim=2, shift_val=1.0)
-
-        out_bwd_f = self._run_cam_single_path(
-            from_time(q_rot_bwd),
-            from_time(k_rot_bwd),
-            from_time(v_bwd),
-            beta_bwd,
-            decay_bwd,
-        )
-
-        out_bwd = torch.flip(
-            out_bwd_f.view(B, H_heads, D_head, T, S),
-            dims=[3],
-        ).reshape(B, H_heads, D_head, N)
-        out = out_fwd + out_bwd
-
-        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
-            out = out.to(dtype_orig)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, 1, 1, N).to(out.dtype)
-
-        out_before_apply_fn_o = out
-        out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
-        self._maybe_record_cam_output_stats(out_before_apply_fn_o, out, token_valid_mask=token_valid_mask)
-        out = out.reshape(B, self.cam_dim, N).permute(0, 2, 1)
-        if token_valid_mask is not None:
-            out = out * token_valid_mask.view(B, N, 1).to(out.dtype)
-        return out
-
-
+        For single-chunk (``chunk_size >= T``) or no chunk_size, use the
+        bidirectional short conv (identical forward AND backward to the
+        parent class).  For multi-chunk, use chunk-causal short conv to
+        enforce causality.
+        """
+        chunk_size = kwargs.get("chunk_size", None)
+        T = HW[0]
+        if chunk_size is not None and chunk_size < T:
+            return ChunkCausalGDN._apply_temporal_short_conv(self, x, conv, HW, **kwargs)
+        return BidirectionalGDN._apply_temporal_short_conv(self, x, conv, HW, **kwargs)
 def _prepare_cam_qkv_softmax(
     self,
     x: torch.Tensor,
@@ -1409,15 +434,6 @@ def _prepare_cam_qkv_softmax(
     kv_cam = torch.cat([k_cam, v_cam], dim=1)
     kv_cam_trans = apply_fn_kv(kv_cam.transpose(-1, -2)).transpose(-1, -2).contiguous()
     k_cam_trans, v_cam_trans = torch.chunk(kv_cam_trans, chunks=2, dim=1)
-
-    q_cam_trans, k_cam_trans, v_cam_trans = self._stabilize_cam_transforms(
-        q_cam=q_cam,
-        k_cam=k_cam,
-        v_cam=v_cam,
-        q_cam_trans=q_cam_trans,
-        k_cam_trans=k_cam_trans,
-        v_cam_trans=v_cam_trans,
-    )
     return q_cam_trans, k_cam_trans, v_cam_trans, apply_fn_o
 
 
@@ -1534,11 +550,6 @@ class _SoftmaxUCPESinglePathLiteLA(
         chunk_size: int | None = None,
         **kwargs: object,
     ) -> torch.Tensor:
-        if self.cam_debug_ratios:
-            self.reset_cam_debug_stats()
-        if self.training:
-            self._cam_debug_step_counter += 1
-
         main_raw = _forward_softmax_attn(
             self,
             x,
@@ -1580,3 +591,256 @@ class _SoftmaxUCPESinglePathLiteLA(
 # Aliases for backward compatibility and clear intent in mappings.
 BidirectionalSoftmaxUCPESinglePathLiteLA = _SoftmaxUCPESinglePathLiteLA
 ChunkCausalSoftmaxUCPESinglePathLiteLA = _SoftmaxUCPESinglePathLiteLA
+
+
+# ===========================================================================
+# Cached streaming variants (camera-wrapped)
+# ===========================================================================
+#
+# Streaming-inference subclasses of the chunk-causal cam classes above.
+# GDN cam-wrapper dispatches main + cam branches through the fused Triton
+# kernels in :mod:`diffusion.model.ops.fused_streaming`; softmax cam-wrapper
+# prepends cached cam K, V to the current chunk and runs SDPA via the
+# unified ``_sdpa_maybe_chunk_causal`` helper in
+# :mod:`diffusion.model.nets.sana_gdn_blocks`.
+
+
+@ATTENTION_BLOCKS.register_module()
+class CachedChunkCausalGDNUCPESinglePathLiteLA(ChunkCausalGDNUCPESinglePathLiteLA):
+    """Cached variant of :class:`ChunkCausalGDNUCPESinglePathLiteLA`.
+
+    Main branch: :class:`CachedChunkCausalGDN` (state-based cache via
+    ``_cached_gdn_forward_triton``).
+    Camera branch: ``_cam_prep_triton`` + ``_cam_main_triton`` with
+    ``cam_S_kv`` state cached in slot 2.
+    """
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor | None = None,
+        HW: tuple[int, int, int] | None = None,
+        rotary_emb: torch.Tensor | None = None,
+        block_mask: torch.Tensor | None = None,
+        camera_conditions: torch.Tensor | None = None,
+        chunk_size: int | None = None,
+        **kwargs: object,
+    ) -> tuple[torch.Tensor, list]:
+        from .sana_gdn_blocks import CachedChunkCausalGDN
+
+        kv_cache = kwargs.pop("kv_cache", None)
+        save_kv_cache = kwargs.pop("save_kv_cache", False)
+        if kv_cache is None:
+            raise RuntimeError(
+                "CachedChunkCausalGDNUCPESinglePathLiteLA requires kv_cache "
+                "to be provided (streaming inference only)."
+            )
+        if HW is None:
+            raise ValueError("HW (T, H, W) must be provided.")
+
+        # Pre-compute shared gates once for main + cam branches.
+        precomputed_gates = self._compute_frame_gates(x, HW)
+
+        main_raw, kv_cache = CachedChunkCausalGDN.forward(
+            self,
+            x,
+            mask=mask,
+            HW=HW,
+            rotary_emb=rotary_emb,
+            block_mask=block_mask,
+            apply_output_gate=False,
+            chunk_size=chunk_size,
+            precomputed_gates=precomputed_gates,
+            kv_cache=kv_cache,
+            save_kv_cache=save_kv_cache,
+            **kwargs,
+        )
+
+        cam_contrib: torch.Tensor | int = 0
+        if camera_conditions is not None:
+            cam_raw = self._cached_cam_branch(
+                x, HW, camera_conditions, rotary_emb,
+                kv_cache, save_kv_cache, precomputed_gates,
+                chunk_size=chunk_size, **kwargs,
+            )
+            cam_contrib = self.out_proj_cam(cam_raw)
+
+        combined = main_raw + cam_contrib
+        combined = self._apply_output_gate(combined, x)
+        output = self.proj(combined.to(self.proj.weight.dtype))
+        return output, kv_cache
+
+    def _cached_cam_branch(
+        self,
+        x: torch.Tensor,
+        HW: tuple[int, int, int],
+        camera_conditions: torch.Tensor,
+        rotary_emb: torch.Tensor | None,
+        kv_cache: list,
+        save_kv_cache: bool,
+        precomputed_gates: tuple | None,
+        **kwargs: object,
+    ) -> torch.Tensor:
+        """Camera branch with cached delta-rule state."""
+        from diffusion.model.ops.fused_streaming import (
+            _SLOT_CAM,
+            _cam_main_triton,
+            _cam_prep_triton,
+        )
+
+        B, N, _ = x.shape
+        T, H_sp, W_sp = HW
+        S = H_sp * W_sp
+        dtype_orig = x.dtype
+
+        # Fused Triton cam prep: RMSNorm + ReLU + K-scale + UCPE 4x4 + RoPE.
+        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o = _cam_prep_triton(
+            self, x, HW, camera_conditions, rotary_emb, **kwargs
+        )
+
+        if precomputed_gates is not None:
+            beta, decay = precomputed_gates
+        else:
+            beta, decay = self._compute_frame_gates(x, HW)
+
+        # Dynamic beta discounting (UCPE inflation factor).
+        inflation_sq_spatial = inflation_sq.view(B, self.cam_heads, T, S)
+        frame_inflation_sq = inflation_sq_spatial.mean(dim=-1)
+        if beta.ndim == 3:
+            beta = beta / frame_inflation_sq.clamp_min(1.0)
+        elif beta.ndim == 4:
+            beta = beta / frame_inflation_sq.unsqueeze(-1).clamp_min(1.0)
+
+        out, cam_S_kv_final = _cam_main_triton(
+            q_cam_trans, k_cam_trans, v_cam_trans,
+            beta, decay,
+            kv_cache[_SLOT_CAM],
+            save_kv_cache, T, S,
+        )
+        if save_kv_cache:
+            kv_cache[_SLOT_CAM] = cam_S_kv_final.detach().clone()
+
+        if getattr(self, "fp32_attention", True) and dtype_orig != torch.float32:
+            out = out.to(dtype_orig)
+        out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
+        return out.reshape(B, self.cam_dim, N).permute(0, 2, 1)
+
+
+@ATTENTION_BLOCKS.register_module()
+class CachedSoftmaxUCPESinglePathLiteLA(_SoftmaxUCPESinglePathLiteLA):
+    """Cached softmax + UCPE camera attention for streaming inference.
+
+    Main branch: :class:`CachedChunkCausalSoftmaxAttn` (concatenate cached
+    post-RoPE K, V; SDPA).
+    Camera branch: concatenate cached post-UCPE cam K, V; SDPA on the unioned
+    sequence.  Falls back to the parent's non-cached forward when
+    ``kv_cache`` is absent.
+    """
+
+    def __init__(self, *args, conv_kernel_size: int = 0, **kwargs):
+        super().__init__(*args, conv_kernel_size=0, **kwargs)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor | None = None,
+        HW: tuple[int, int, int] | None = None,
+        rotary_emb: torch.Tensor | None = None,
+        block_mask: torch.Tensor | None = None,
+        camera_conditions: torch.Tensor | None = None,
+        chunk_size: int | None = None,
+        **kwargs: object,
+    ) -> torch.Tensor | tuple[torch.Tensor, list]:
+        from .sana_gdn_blocks import CachedChunkCausalSoftmaxAttn
+
+        kv_cache = kwargs.pop("kv_cache", None)
+        save_kv_cache = kwargs.pop("save_kv_cache", False)
+        if kv_cache is None:
+            return super().forward(
+                x,
+                mask=mask,
+                HW=HW,
+                rotary_emb=rotary_emb,
+                block_mask=block_mask,
+                camera_conditions=camera_conditions,
+                chunk_size=chunk_size,
+                **kwargs,
+            )
+        if HW is None:
+            raise ValueError("HW must be provided.")
+
+        main_raw, kv_cache = CachedChunkCausalSoftmaxAttn.forward(
+            self, x, mask=mask, HW=HW, rotary_emb=rotary_emb,
+            block_mask=block_mask, apply_output_gate=False,
+            chunk_size=chunk_size, kv_cache=kv_cache,
+            save_kv_cache=save_kv_cache, **kwargs,
+        )
+
+        cam_contrib: torch.Tensor | int = 0
+        if camera_conditions is not None:
+            cam_raw = self._cached_cam_branch_softmax(
+                x, HW, camera_conditions, rotary_emb,
+                kv_cache, save_kv_cache, chunk_size=chunk_size, **kwargs,
+            )
+            cam_contrib = self.out_proj_cam(cam_raw)
+
+        combined = main_raw + cam_contrib
+        combined = self._apply_output_gate(combined, x)
+        return self.proj(combined.to(x.dtype)), kv_cache
+
+    def _cached_cam_branch_softmax(
+        self,
+        x: torch.Tensor,
+        HW: tuple[int, int, int],
+        camera_conditions: torch.Tensor,
+        rotary_emb: torch.Tensor | None,
+        kv_cache: list,
+        save_kv_cache: bool,
+        **kwargs: object,
+    ) -> torch.Tensor:
+        """Camera branch: SDPA with cached UCPE-transformed K, V."""
+        from diffusion.model.ops.fused_streaming import _SLOT_CAM, _SLOT_CAM_AUX
+
+        from .sana_gdn_blocks import _sdpa_maybe_chunk_causal
+
+        B, N, _ = x.shape
+        T, H_sp, W_sp = HW
+        S = H_sp * W_sp
+
+        q_cam_trans, k_cam_trans, v_cam_trans, apply_fn_o = _prepare_cam_qkv_softmax(
+            self, x, HW, camera_conditions, rotary_emb, **kwargs
+        )
+
+        # (B, H, D, N) -> (B, H, N, D) for SDPA.
+        q_sdpa = q_cam_trans.transpose(-1, -2)
+        k_sdpa = k_cam_trans.transpose(-1, -2)
+        v_sdpa = v_cam_trans.transpose(-1, -2)
+
+        dtype_orig = x.dtype
+        if q_sdpa.dtype == torch.float32:
+            q_sdpa, k_sdpa, v_sdpa = q_sdpa.bfloat16(), k_sdpa.bfloat16(), v_sdpa.bfloat16()
+
+        cached_cam_k = kv_cache[_SLOT_CAM]
+        cached_cam_v = kv_cache[_SLOT_CAM_AUX]
+        if save_kv_cache:
+            kv_cache[_SLOT_CAM] = k_sdpa.detach().clone()
+            kv_cache[_SLOT_CAM_AUX] = v_sdpa.detach().clone()
+        if cached_cam_k is not None:
+            k_sdpa = torch.cat([cached_cam_k.to(k_sdpa.dtype), k_sdpa], dim=2)
+            v_sdpa = torch.cat([cached_cam_v.to(v_sdpa.dtype), v_sdpa], dim=2)
+
+        out = _sdpa_maybe_chunk_causal(
+            q_sdpa, k_sdpa, v_sdpa,
+            need_chunk_mask=False,
+            T=T, S=S,
+            chunk_size=kwargs.get("chunk_size", None),
+            chunk_index=kwargs.get("chunk_index", None),
+            chunk_split_strategy=kwargs.get("chunk_split_strategy", "uniform"),
+            device=x.device,
+        )
+
+        out = out.transpose(-1, -2)
+        if out.dtype != dtype_orig:
+            out = out.to(dtype_orig)
+        out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
+        return out.reshape(B, self.cam_dim, N).permute(0, 2, 1)

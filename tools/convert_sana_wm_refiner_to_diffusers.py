@@ -30,6 +30,13 @@ diffusers-style component folders:
 
 The video VAE and Gemma text encoder can stay in their existing diffusers /
 Transformers folders; this script focuses on the refiner checkpoint file.
+
+The LTX-2 refiner training pipeline trains the base model with a separate
+distilled-LoRA that turns it into a few-step student. Streaming inference
+uses the canonical 3-step distilled schedule, so the LoRA MUST be fused into
+the transformer weights — pass ``--distilled_lora_path`` to fold the LoRA
+delta in during conversion. Skipping this with a distilled schedule produces
+visibly broken outputs (the underlying base is a continuous-time FM model).
 """
 
 from __future__ import annotations
@@ -63,6 +70,21 @@ def parse_args() -> argparse.Namespace:
         "--dry_run",
         action="store_true",
         help="Only inspect key counts; do not load tensors or write output files.",
+    )
+    parser.add_argument(
+        "--distilled_lora_path",
+        default=None,
+        help="Optional path to the LTX-2 distilled LoRA safetensors. When set, the "
+        "LoRA delta is fused into the raw transformer weights ('W += (B @ A) * scale') "
+        "BEFORE the diffusers rename. Required for few-step (3-step distilled) inference; "
+        "without it the model behaves as the underlying non-distilled FM checkpoint.",
+    )
+    parser.add_argument(
+        "--distilled_lora_strength",
+        type=float,
+        default=1.0,
+        help="Scale applied to the LoRA delta. LTX vendor convention is alpha==rank so "
+        "the implicit factor is 1.0 (matches --distilled-lora-strength in tian's inference_reforcing).",
     )
     return parser.parse_args()
 
@@ -108,6 +130,52 @@ def is_transformer_key(key: str) -> bool:
     if not key.startswith("model.diffusion_model."):
         return False
     return "embeddings_connector" not in key
+
+
+def fuse_distilled_lora_inplace(
+    transformer_state: dict[str, object],
+    lora_path: Path,
+    strength: float,
+) -> int:
+    """Apply ``W += (B @ A) * strength`` for every LoRA pair into transformer_state.
+
+    LoRA key convention (LTX official distilled LoRA):
+        diffusion_model.<module>.lora_A.weight  [rank, in_features]
+        diffusion_model.<module>.lora_B.weight  [out_features, rank]
+    Base key convention (transformer_state, pre-rename):
+        model.diffusion_model.<module>.weight   [out_features, in_features]
+    """
+    import torch
+    from safetensors import safe_open
+
+    owners: dict[str, dict[str, str]] = {}
+    with safe_open(str(lora_path), framework="pt", device="cpu") as lf:
+        for k in lf.keys():
+            if k.endswith(".lora_A.weight"):
+                owners.setdefault(k[: -len(".lora_A.weight")], {})["A"] = k
+            elif k.endswith(".lora_B.weight"):
+                owners.setdefault(k[: -len(".lora_B.weight")], {})["B"] = k
+        bad = [o for o, ab in owners.items() if "A" not in ab or "B" not in ab]
+        if bad:
+            raise RuntimeError(f"Incomplete LoRA pairs (first 3): {bad[:3]}")
+        print(f"[lora] {len(owners)} LoRA modules, strength={strength}", flush=True)
+
+        fused = 0
+        for i, (owner, ab) in enumerate(owners.items(), start=1):
+            base_key = f"model.{owner}.weight"
+            if base_key not in transformer_state:
+                continue
+            a = lf.get_tensor(ab["A"]).to(torch.float32)
+            b = lf.get_tensor(ab["B"]).to(torch.float32)
+            w = transformer_state[base_key]
+            target_dtype = w.dtype
+            w_fp32 = w.to(torch.float32)
+            w_fp32.add_(b @ a, alpha=strength)
+            transformer_state[base_key] = w_fp32.to(target_dtype)
+            fused += 1
+            if i == len(owners) or i % 250 == 0:
+                print(f"[lora] fused {fused}/{i}/{len(owners)}", flush=True)
+    return fused
 
 
 def is_connector_key(key: str) -> bool:
@@ -201,6 +269,10 @@ def main() -> None:
     from diffusers.loaders.single_file_utils import convert_ltx2_transformer_to_diffusers
 
     transformer_state = load_selected_tensors(checkpoint, is_transformer_key, "transformer")
+    if args.distilled_lora_path is not None:
+        lora_path = Path(args.distilled_lora_path).expanduser().resolve()
+        print(f"fusing distilled LoRA: {lora_path}", flush=True)
+        fuse_distilled_lora_inplace(transformer_state, lora_path, args.distilled_lora_strength)
     print("converting transformer keys", flush=True)
     transformer_state = convert_ltx2_transformer_to_diffusers(transformer_state)
     print("writing transformer component", flush=True)

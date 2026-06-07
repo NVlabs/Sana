@@ -176,6 +176,19 @@ def get_vae(name, model_path, device="cuda", dtype=None, config=None):
             device=device,
         )
         return vae
+    elif "LTX2VAE_diffusers_causal" in name:
+        # Causal LTX-2 VAE (AutoencoderKLCausalLTX2Video) — encoder is causal (same
+        # latent contract as the bidirectional sibling) and the decoder is also
+        # causal, enabling chunk-by-chunk streaming decode with a persistent
+        # per-layer feature cache. vae_pretrained should point at a directory with
+        # config.json + diffusion_pytorch_model.safetensors (no "vae" subfolder).
+        from diffusion.model.ltx2.causal_vae import AutoencoderKLCausalLTX2Video
+
+        assert config is not None, "config.vae is required for LTX2VAE_diffusers_causal"
+        print(colored(f"[LTX2VAE_diffusers_causal] Loading model from {config.vae_pretrained}", attrs=["bold"]))
+        vae = AutoencoderKLCausalLTX2Video.from_pretrained(config.vae_pretrained, torch_dtype=dtype).to(device)
+        vae.eval()
+        return vae
     elif "LTX2VAE_diffusers" in name:
         # Use diffusers AutoencoderKLLTX2Video for LTX2
         assert config is not None, "config.vae is required for LTX2VAE_diffusers"
@@ -304,7 +317,9 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
         z = ae.encode(images.to(device))
         z = torch.stack(z, dim=0)
     elif "LTX2VAE_diffusers" in name:
-        # LTX2VAE_diffusers (diffusers AutoencoderKLLTX2Video) expects input shape (B, C, T, H, W) with value range [-1, 1]
+        # Covers both bidirectional ("LTX2VAE_diffusers") and causal
+        # ("LTX2VAE_diffusers_causal") variants — they share an identical
+        # encoder + latents_mean/std/scaling_factor contract.
         posterior = vae.encode(images.to(device=vae.device, dtype=vae.dtype)).latent_dist
         z = posterior.mode()
         # Normalize latents: z = (z - mean) / std * scaling_factor
@@ -356,13 +371,17 @@ def vae_decode(name, vae, latent):
     elif "Wan2_2_VAE" in name:
         samples = vae.decode(latent)
     elif "LTX2VAE_diffusers" in name:
-        # LTX2VAE_diffusers (diffusers AutoencoderKLLTX2Video)
-        # Denormalize latents: z = z * std / scaling_factor + mean
+        # Covers both bidirectional ("LTX2VAE_diffusers") and causal
+        # ("LTX2VAE_diffusers_causal") variants — they share the same
+        # latents_mean/std/scaling_factor and identical .decode() signature.
+        # For the causal variant, .decode() internally chunks via
+        # chunk_num_latent_frames (default 3) using the per-layer feature cache.
+        # The chunked streaming path (CausalVaeStreamingDecoder) bypasses
+        # this function and drives decode_with_cache directly.
         latents_mean = vae.latents_mean.view(1, -1, 1, 1, 1).to(latent.device, latent.dtype)
         latents_std = vae.latents_std.view(1, -1, 1, 1, 1).to(latent.device, latent.dtype)
         latent = latent * latents_std / vae.config.scaling_factor + latents_mean
         latent = latent.to(vae.dtype)
-        # Decode without timestep conditioning (set temb=None)
         samples = vae.decode(latent, temb=None, return_dict=False)[0]
     else:
         print(f"{name} decode error")

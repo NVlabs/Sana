@@ -25,9 +25,14 @@ Core contributions:
 - **Two-Stage Generation Pipeline** — a long-video refiner stitched on top of Stage-1 latents improves quality and temporal consistency.
 - **Robust Annotation Pipeline** — metric-scale 6-DoF camera poses extracted from public corpora yield spatiotemporally consistent action supervision.
 
-SANA-WM completes pre-training in 15 days on 64 H100s and generates a 60s 720p clip on a single GPU; the distilled variant runs on an RTX 5090 with NVFP4 quantisation.
+SANA-WM completes pre-training in 15 days on 64 H100s and generates a 60s 720p clip on a single GPU.
 
-> **Note** This is the initial release and currently ships **bidirectional inference only**. More variants are on the way — stay tuned.
+> **Note** Building on the original **bidirectional** pipeline (full-sequence
+> Stage 1 + sink-bidirectional refiner), this release adds a new **streaming**
+> pipeline: a chunk-causal distilled Stage 1 + chunk-causal refiner + causal-VAE
+> decoder, overlapped on three CUDA streams and written progressively to MP4 so
+> you can watch the clip as it generates. Streaming weights are released under
+> [`SANA-WM_streaming`](https://huggingface.co/Efficient-Large-Model/SANA-WM_streaming).
 
 ## ⚙️ Environment Setup
 
@@ -49,18 +54,27 @@ fetched on first use from
 python inference_video_scripts/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
-  --action     "w-80,jw-40,w-40,lw-60,w-100" \
-  --translation_speed 0.055 \
-  --rotation_speed_deg 1.2 \
+  --action     "w-100,dw-60,w-100,aw-60" \
   --num_frames 321 \
   --output_dir results/sana_wm_demo
 ```
 
-Action DSL: each segment is `<keys>-<frames>` joined by commas. Movement keys
-`w` (forward), `a` (strafe left), `s` (back), `d` (strafe right) translate
-on the world horizontal plane; rotation keys `i` (pitch up), `k` (pitch
-down), `j` (yaw left), `l` (yaw right) act in the camera's local frame.
-`none-N` holds the pose for `N` frames.
+Action DSL: each segment is `<keys>-<frames>` joined by commas. The control
+scheme is: `w` / `s` forward / back
+(translation along the heading), `a` / `d` yaw left / right (turn),
+`i` / `k` pitch up / down, `j` / `l` strafe left / right. `none-N` holds the
+pose for `N` frames. Held keys ease in/out with light inertia (instant on a
+fresh press, gentle coast on release); default speeds are gentle
+(`--translation_speed 0.025`, `--rotation_speed_deg 0.6`).
+
+> **⚠️ Mapping update (breaking change vs the first release).** The `--action`
+> keys were remapped so the demo and CLI share one control scheme: **`a` / `d`
+> now yaw** (previously strafe) and **`j` / `l` now strafe** (previously yaw);
+> `w` / `s` (forward/back) and `i` / `k` (pitch) are unchanged, and the old
+> implicit a/d→steer coupling is gone. Motion is also smoothed now and the
+> default speeds are gentler. **If you have action strings from the earlier
+> release, swap `a`/`d` ↔ `j`/`l`** to reproduce the same motion (the CLI also
+> prints this notice once when `--action` is used).
 
 ### Example 2 — image + prompt + camera trajectory (`.npy`)
 
@@ -80,6 +94,27 @@ matrices); `--intrinsics` is `.npy` of shape `(3, 3)`, `(F, 3, 3)`, or
 omitted we estimate it from `--image` with Pi3X and abort if the
 resulting FOV is outside `[25°, 120°]`.
 
+### Example gallery
+
+The release ships five first-frame + prompt + camera examples under
+`asset/sana_wm/` — `demo_{0..4}.{png,txt}`, each with a rolled-out `_pose.npy`
+trajectory and an `_intrinsics.npy`. Swap `demo_0` for any of them in the
+commands above (works for both the bidirectional and streaming scripts). The
+actions are gentle by design — slow forward drift with light left/right
+look-around.
+
+| Example | Scene | `--action` |
+|---------|-------|------------|
+| `demo_0` | salt-desert / black supercar | `w-100,dw-60,w-100,aw-60` |
+| `demo_1` | bioluminescent cave         | `w-35,aw-60,dw-100,aw-55,w-25,none-50` |
+| `demo_2` | mushroom forest / robot     | `w-25,aw-60,dw-100,aw-55,none-85` &nbsp;(+ `--translation_speed 0.015`) |
+| `demo_3` | salt flat / supercar        | `w-70,none-40,dw-35,w-70,aw-35,none-72` |
+| `demo_4` | ice plain / portal          | `w-95,aw-35,w-70,dw-35,none-87` |
+
+The `_pose.npy` files already bake in these actions (and `demo_2`'s slower
+speed), so `--camera asset/sana_wm/demo_N_pose.npy` reproduces the same motion
+as the matching `--action` string.
+
 ### Lower memory
 
 For tight VRAM budgets, opt in to lazy-load + CPU offload:
@@ -88,6 +123,61 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 ... --offload_vae --offload_refiner
 ```
 
+### Streaming inference
+
+The streaming pipeline replaces all three full-sequence stages with chunk-causal
+variants and emits one decoded chunk per AR block straight into a progressive
+MP4. Stage 1 runs the 4-step distilled student (CFG-baked-in, runs at
+`cfg_scale=1`), the refiner runs chunk-causal AR with a sliding KV window, and
+the causal LTX-2 VAE decodes chunk-by-chunk.
+
+All streaming weights (DiT, causal VAE, refiner, and the Gemma text encoder)
+are fetched on first use from
+[`SANA-WM_streaming`](https://huggingface.co/Efficient-Large-Model/SANA-WM_streaming)
+— no manual download required, exactly like the bidirectional path. The
+inference YAML ships in-repo under `configs/sana_wm/`. Just run:
+
+```bash
+python inference_video_scripts/inference_sana_wm_streaming.py \
+  --image       asset/sana_wm/demo_0.png \
+  --prompt      asset/sana_wm/demo_0.txt \
+  --action      "w-80,dw-40,w-80,aw-40" \
+  --num_frames  241 \
+  --output_dir  results/sana_wm_streaming
+```
+
+`--num_frames` defaults to **241 (~15s @ 16fps)**. It is snapped to
+`8·refiner_block_size·k + 1` so the VAE and refiner chunking divide evenly
+(241 = 24·10+1 needs no snap). Use a larger value (e.g. 961 for ~60s) for longer
+clips.
+
+Output lands at `results/sana_wm_streaming/<name>_streaming.mp4` and grows in
+place — you can watch it while inference continues. Reaches **~0.93× realtime
+on a single H100** after a one-time `torch.compile` warmup (~3 min cold, ~30 s
+warm cache; the warmup amortises across runs that reuse the same shapes).
+
+All speed-critical knobs are baked into the script as defaults — `torch.compile`
+on the **refiner transformer** (`max-autotune-no-cudagraphs` mode), flash-only
+SDPA, Inductor `coordinate_descent_tuning` + `epilogue_fusion`, cuDNN benchmark,
+and the expandable CUDA allocator. The causal VAE decoder is intentionally **not**
+compiled: `torch.compile` corrupts its cross-chunk causal cache (chunk 0 decodes
+fine but later chunks come out blank/gray), so it runs eager. There is no
+slow/fast toggle; the script is the fast config.
+
+Overrides for advanced use:
+
+- `--streaming_root <path>` — optional LOCAL bundle dir holding `sana_dit/`,
+  `ltx2_causal_vae/`, `refiner_diffusers/`, `gemma3_12b/`. Unset by default, in
+  which case each artefact is pulled from `hf://Efficient-Large-Model/SANA-WM_streaming`.
+- `--config / --model_path / --causal_vae_path / --refiner_root /
+  --refiner_gemma_root` — point at non-default weight paths (local path or
+  `hf://` URI). `--config` defaults to the in-repo
+  `configs/sana_wm/sana_wm_streaming_1600m_720p.yaml`.
+- `--num_frame_per_block` (default 3, must match the checkpoint's
+  `chunk_size`), `--denoising_step_list` (default
+  `"1000,960,889,727,0"`), `--refiner_block_size` (3), `--refiner_kv_max_frames`
+  (11) — change the canonical recipe at your own quality risk.
+
 ## 🎛️ Argument Reference
 
 | Argument | Format / Default |
@@ -95,9 +185,9 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 | `--image` | First-frame RGB image. Aspect-preserving resized + center-cropped to 704×1280. |
 | `--prompt` | UTF-8 text file with the conditioning prompt. |
 | `--camera` | `(F, 4, 4)` `.npy` camera-to-world matrices. Mutually exclusive with `--action`. |
-| `--action` | WASD/IJKL DSL. Rolled out via `action_string_to_c2w` to a `(F+1, 4, 4)` trajectory. |
-| `--translation_speed` | Per-frame translation magnitude (default `0.05`). |
-| `--rotation_speed_deg` | Per-frame rotation magnitude in degrees (default `1.2`). |
+| `--action` | Control DSL (`w/s` move, `a/d` yaw, `i/k` pitch, `j/l` strafe). Rolled out via `action_string_to_c2w` (smoothed) to a `(F+1, 4, 4)` trajectory. |
+| `--translation_speed` | Per-frame translation magnitude (default `0.025`). |
+| `--rotation_speed_deg` | Per-frame rotation magnitude in degrees (default `0.6`). |
 | `--intrinsics` | Optional `.npy` of shape `(3, 3)`, `(F, 3, 3)`, or `(4,)`. Pi3X-estimated if omitted. |
 | `--num_frames` | Total frames to generate (default `161`; the demos above use `321`). |
 | `--fps` | Output mp4 frame rate (default `16`). |
@@ -109,6 +199,7 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 | `--no_action_overlay` | Skip the WASD + joystick overlay on the output video. |
 | `--offload_vae` | Move the VAE to CPU between encode / decode steps. |
 | `--offload_refiner` | Lazy-load the LTX-2 refiner only when needed; release afterwards. |
+| `--sampling_algo` | `flow_euler_ltx` (default, bidirectional). For streaming use the dedicated `inference_sana_wm_streaming.py`. |
 
 ## 📁 HF Repository Layout
 
@@ -121,6 +212,18 @@ For tight VRAM budgets, opt in to lazy-load + CPU offload:
 | LTX-2 refiner (Stage 2) | `refiner/{transformer,connectors}/` | 38 GB |
 | Gemma text encoder for the refiner | `refiner/text_encoder/` | 46 GB |
 | Inference config | `config.yaml` | — |
+
+`Efficient-Large-Model/SANA-WM_streaming` (streaming variant):
+
+| Component | Path |
+|------------------------------------|----------------------------------------------|
+| Chunk-causal Sana DiT (distilled) | `sana_dit/model.pt` |
+| Causal LTX-2 VAE | `ltx2_causal_vae/` |
+| Chunk-causal LTX-2 refiner | `refiner_diffusers/{transformer,connectors}/` |
+| Gemma-3-12B text encoder (refiner) | `gemma3_12b/` |
+
+The inference config ships in-repo at
+`configs/sana_wm/sana_wm_streaming_1600m_720p.yaml` (not in the weights repo).
 
 The Sana text encoder (`gemma-2-2b-it`) is fetched separately from
 `Efficient-Large-Model/gemma-2-2b-it`.

@@ -91,7 +91,7 @@ class MultiHeadCrossAttention(nn.Module):
             x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
             x = x.transpose(1, 2)
 
-        x = x.view(B, -1, C)
+        x = x.reshape(B, -1, C)
         x = self.proj(x)
         x = self.proj_drop(x)
 
@@ -149,7 +149,7 @@ class MultiHeadCrossAttentionImageEmbed(nn.Module):
         x = x + F.scaled_dot_product_attention(q, image_k, image_v, dropout_p=0.0, is_causal=False)
         x = x.transpose(1, 2)
 
-        x = x.view(B, -1, C)
+        x = x.reshape(B, -1, C)
         x = self.proj(x)
         x = self.proj_drop(x)
 
@@ -201,7 +201,7 @@ class MultiHeadCrossVallinaAttention(MultiHeadCrossAttention):
         x = x.to(dtype)
         x = x.transpose(1, 2).contiguous()
 
-        x = x.view(B, -1, C)
+        x = x.reshape(B, -1, C)
         x = self.proj(x)
         x = self.proj_drop(x)
 
@@ -1411,7 +1411,12 @@ class WanRotaryPosEmbed(nn.Module):
 
 
 class CausalWanRotaryPosEmbed(WanRotaryPosEmbed):
-    def forward(self, fhw: torch.Tensor, device: torch.device) -> torch.Tensor:
+    def forward(
+        self,
+        fhw: torch.Tensor,
+        device: torch.device,
+        frame_index: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         (f_start, f_end), pph, ppw = fhw
 
         self.freqs = self.freqs.to(device)
@@ -1423,8 +1428,16 @@ class CausalWanRotaryPosEmbed(WanRotaryPosEmbed):
             ],
             dim=1,
         )
-        ppf = f_end - f_start
-        freqs_f = freqs[0][f_start:f_end].view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
+        # When ``frame_index`` is provided (e.g. sink + current window in
+        # self-forcing AR sampling), use the explicit per-frame positions
+        # instead of the contiguous ``[f_start, f_end)`` range.
+        if frame_index is not None:
+            freqs_f_idx = freqs[0].index_select(0, frame_index.to(device=device, dtype=torch.long))
+            ppf = freqs_f_idx.shape[0]
+            freqs_f = freqs_f_idx.view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
+        else:
+            ppf = f_end - f_start
+            freqs_f = freqs[0][f_start:f_end].view(ppf, 1, 1, -1).expand(ppf, pph, ppw, -1)
         freqs_h = freqs[1][:pph].view(1, pph, 1, -1).expand(ppf, pph, ppw, -1)
         freqs_w = freqs[2][:ppw].view(1, 1, ppw, -1).expand(ppf, pph, ppw, -1)
         freqs = torch.cat([freqs_f, freqs_h, freqs_w], dim=-1).reshape(1, 1, ppf * pph * ppw, -1)

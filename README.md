@@ -4,7 +4,7 @@
 
 <h3 align="center">
 <a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
-  
+
 <a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
 
 </h3>
@@ -274,7 +274,6 @@ Thanks go to these wonderful contributors:
 
 ```
 
-
 <details>
 <summary>Click to expand all BibTeX citations</summary>
 
@@ -320,12 +319,12 @@ Thanks go to these wonderful contributors:
 }
 
 @misc{zhu2026sanawm,
-      title={SANA-WM: Efficient Minute-Scale World Modeling with Hybrid Linear Diffusion Transformer}, 
+      title={SANA-WM: Efficient Minute-Scale World Modeling with Hybrid Linear Diffusion Transformer},
       author={Haoyi Zhu and Haozhe Liu and Yuyang Zhao and Tian Ye and Junsong Chen and Jincheng Yu and Tong He and Song Han and Enze Xie},
       year={2026},
       eprint={2605.15178},
       archivePrefix={arXiv},
       primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2605.15178}, 
+      url={https://arxiv.org/abs/2605.15178},
 }
 ```

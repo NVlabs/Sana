@@ -221,7 +221,7 @@ python app/sana_video_refiner_pipeline_diffusers.py \
     <p style="margin-top: 8px; font-size: 14px; color: #666;"><strong>Stage 1:</strong> SANA-Video Base (720p)</p>
   </div>
   <div style="flex: 1; min-width: 0; text-align: center;">
-    <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/refiner/sana_refiner.mp4" autoplay muted loop playsinline style="width: 100%; border-radius: 8px; display: block;"></video>
+    <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/refiner/sana_ltx2_refined.mp4" autoplay muted loop playsinline style="width: 100%; border-radius: 8px; display: block;"></video>
     <p style="margin-top: 8px; font-size: 14px; color: #666;"><strong>Stage 2:</strong> LTX2 Refined (2K)</p>
   </div>
 </div>

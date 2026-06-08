@@ -31,7 +31,6 @@ This module provides the streaming Sana-WM inference samplers:
 
 from __future__ import annotations
 
-import copy
 import importlib
 import os
 import sys
@@ -563,11 +562,15 @@ class SelfForcingFlowEulerCamCtrl(SelfForcingFlowEuler):
                     per_token_timesteps = t_dev.expand(batch_size, chunk_frames * spatial_tokens)
                 else:
                     timestep_frames = (1.0 - condition_frame_mask) * t_dev
-                    per_token_timesteps = timestep_frames[:, :, None].expand(
-                        batch_size,
-                        chunk_frames,
-                        spatial_tokens,
-                    ).reshape(batch_size, -1)
+                    per_token_timesteps = (
+                        timestep_frames[:, :, None]
+                        .expand(
+                            batch_size,
+                            chunk_frames,
+                            spatial_tokens,
+                        )
+                        .reshape(batch_size, -1)
+                    )
 
                 timestep_tensor_model = timestep_frames[:, None, :]
                 if do_classifier_free_guidance:
@@ -629,9 +632,7 @@ class SelfForcingFlowEulerCamCtrl(SelfForcingFlowEuler):
             # KV cache save pass — populates the chunk's clean-sigma K/V for
             # future chunks' self-attention. A stride >1 is an experimental
             # Stage-1-only approximation; stage 2 still refines every chunk.
-            do_kv_save = kv_save_stride == 1 or (
-                kv_save_stride > 1 and chunk_idx % kv_save_stride == 0
-            )
+            do_kv_save = kv_save_stride == 1 or (kv_save_stride > 1 and chunk_idx % kv_save_stride == 0)
             if kv_save_stride == 0:
                 do_kv_save = bool(self.sink_token and chunk_idx == 0)
             if do_kv_save:

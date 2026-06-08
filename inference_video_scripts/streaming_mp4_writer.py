@@ -169,9 +169,7 @@ class StreamingMp4Writer:
         if frames_uint8.ndim != 4 or frames_uint8.shape[-1] != 3:
             raise ValueError(f"frames must have shape (T,H,W,3); got {frames_uint8.shape}.")
         if frames_uint8.shape[1] != self._H or frames_uint8.shape[2] != self._W:
-            raise ValueError(
-                f"frame H,W = {frames_uint8.shape[1:3]} but writer expects {(self._H, self._W)}."
-            )
+            raise ValueError(f"frame H,W = {frames_uint8.shape[1:3]} but writer expects {(self._H, self._W)}.")
         if not frames_uint8.flags["C_CONTIGUOUS"]:
             frames_uint8 = np.ascontiguousarray(frames_uint8)
 
@@ -218,7 +216,7 @@ class StreamingMp4Writer:
             )
         return self._path
 
-    def __enter__(self) -> "StreamingMp4Writer":
+    def __enter__(self) -> StreamingMp4Writer:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:

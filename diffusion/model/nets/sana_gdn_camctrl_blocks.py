@@ -36,7 +36,6 @@ pick up the improvement automatically.
 
 from __future__ import annotations
 
-import os
 from copy import deepcopy
 
 import torch
@@ -327,6 +326,7 @@ class _GDNUCPEBase(GDN):
         if self.conv_v_cam is not None and self.conv_v is not None:
             self.conv_v_cam.load_state_dict(self.conv_v.state_dict())
 
+
 class BidirectionalGDNUCPESinglePathLiteLA(_GDNUCPEBase, BidirectionalGDN):
     """Bidirectional GDN with UCPE camera conditioning (single-path delta rule).
 
@@ -338,6 +338,8 @@ class BidirectionalGDNUCPESinglePathLiteLA(_GDNUCPEBase, BidirectionalGDN):
     (:class:`BidirectionalGDNUCPESinglePathLiteLABothTriton`) and the streaming
     chunk-causal variant (:class:`ChunkCausalGDNUCPESinglePathLiteLA`).
     """
+
+
 class ChunkCausalGDNUCPESinglePathLiteLA(BidirectionalGDNUCPESinglePathLiteLA, ChunkCausalGDN):
     """Chunk-causal variant of ``BidirectionalGDNUCPESinglePathLiteLA``.
 
@@ -372,6 +374,8 @@ class ChunkCausalGDNUCPESinglePathLiteLA(BidirectionalGDNUCPESinglePathLiteLA, C
         if chunk_size is not None and chunk_size < T:
             return ChunkCausalGDN._apply_temporal_short_conv(self, x, conv, HW, **kwargs)
         return BidirectionalGDN._apply_temporal_short_conv(self, x, conv, HW, **kwargs)
+
+
 def _prepare_cam_qkv_softmax(
     self,
     x: torch.Tensor,
@@ -659,9 +663,15 @@ class CachedChunkCausalGDNUCPESinglePathLiteLA(ChunkCausalGDNUCPESinglePathLiteL
         cam_contrib: torch.Tensor | int = 0
         if camera_conditions is not None:
             cam_raw = self._cached_cam_branch(
-                x, HW, camera_conditions, rotary_emb,
-                kv_cache, save_kv_cache, precomputed_gates,
-                chunk_size=chunk_size, **kwargs,
+                x,
+                HW,
+                camera_conditions,
+                rotary_emb,
+                kv_cache,
+                save_kv_cache,
+                precomputed_gates,
+                chunk_size=chunk_size,
+                **kwargs,
             )
             cam_contrib = self.out_proj_cam(cam_raw)
 
@@ -712,10 +722,15 @@ class CachedChunkCausalGDNUCPESinglePathLiteLA(ChunkCausalGDNUCPESinglePathLiteL
             beta = beta / frame_inflation_sq.unsqueeze(-1).clamp_min(1.0)
 
         out, cam_S_kv_final = _cam_main_triton(
-            q_cam_trans, k_cam_trans, v_cam_trans,
-            beta, decay,
+            q_cam_trans,
+            k_cam_trans,
+            v_cam_trans,
+            beta,
+            decay,
             kv_cache[_SLOT_CAM],
-            save_kv_cache, T, S,
+            save_kv_cache,
+            T,
+            S,
         )
         if save_kv_cache:
             kv_cache[_SLOT_CAM] = cam_S_kv_final.detach().clone()
@@ -770,17 +785,30 @@ class CachedSoftmaxUCPESinglePathLiteLA(_SoftmaxUCPESinglePathLiteLA):
             raise ValueError("HW must be provided.")
 
         main_raw, kv_cache = CachedChunkCausalSoftmaxAttn.forward(
-            self, x, mask=mask, HW=HW, rotary_emb=rotary_emb,
-            block_mask=block_mask, apply_output_gate=False,
-            chunk_size=chunk_size, kv_cache=kv_cache,
-            save_kv_cache=save_kv_cache, **kwargs,
+            self,
+            x,
+            mask=mask,
+            HW=HW,
+            rotary_emb=rotary_emb,
+            block_mask=block_mask,
+            apply_output_gate=False,
+            chunk_size=chunk_size,
+            kv_cache=kv_cache,
+            save_kv_cache=save_kv_cache,
+            **kwargs,
         )
 
         cam_contrib: torch.Tensor | int = 0
         if camera_conditions is not None:
             cam_raw = self._cached_cam_branch_softmax(
-                x, HW, camera_conditions, rotary_emb,
-                kv_cache, save_kv_cache, chunk_size=chunk_size, **kwargs,
+                x,
+                HW,
+                camera_conditions,
+                rotary_emb,
+                kv_cache,
+                save_kv_cache,
+                chunk_size=chunk_size,
+                **kwargs,
             )
             cam_contrib = self.out_proj_cam(cam_raw)
 
@@ -830,9 +858,12 @@ class CachedSoftmaxUCPESinglePathLiteLA(_SoftmaxUCPESinglePathLiteLA):
             v_sdpa = torch.cat([cached_cam_v.to(v_sdpa.dtype), v_sdpa], dim=2)
 
         out = _sdpa_maybe_chunk_causal(
-            q_sdpa, k_sdpa, v_sdpa,
+            q_sdpa,
+            k_sdpa,
+            v_sdpa,
             need_chunk_mask=False,
-            T=T, S=S,
+            T=T,
+            S=S,
             chunk_size=kwargs.get("chunk_size", None),
             chunk_index=kwargs.get("chunk_index", None),
             chunk_split_strategy=kwargs.get("chunk_split_strategy", "uniform"),

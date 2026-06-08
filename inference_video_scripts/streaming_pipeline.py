@@ -19,13 +19,13 @@ chunk ``k``; decode chunk ``k`` depends on refiner block ``k``.
 
 from __future__ import annotations
 
+import os
+import time
 from collections import deque
 from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
-import os
-import time
 
 import numpy as np
 import torch
@@ -143,7 +143,7 @@ def run_streaming_inference(
     Returns:
         :class:`StreamingPipelineResult` describing the produced MP4.
     """
-    log = (logger.info if logger is not None else print)
+    log = logger.info if logger is not None else print
 
     sink_size = int(config.sink_size)
     block_size = int(config.block_size)
@@ -163,8 +163,7 @@ def run_streaming_inference(
     if stage1_chunk_ends:
         if len(stage1_chunk_ends) != n_stage1_chunks:
             raise ValueError(
-                f"stage1_chunk_ends has {len(stage1_chunk_ends)} entries, "
-                f"but n_stage1_chunks={n_stage1_chunks}."
+                f"stage1_chunk_ends has {len(stage1_chunk_ends)} entries, " f"but n_stage1_chunks={n_stage1_chunks}."
             )
     elif n_stage1_chunks == n_refiner:
         stage1_chunk_ends = tuple(sink_size + (i + 1) * block_size for i in range(n_stage1_chunks))
@@ -179,8 +178,7 @@ def run_streaming_inference(
             next_stage_idx += 1
         if next_stage_idx >= len(stage1_chunk_ends):
             raise ValueError(
-                f"Refiner block {k_ref} ends at latent frame {block_end}, "
-                "but no Stage-1 chunk produces that frame."
+                f"Refiner block {k_ref} ends at latent frame {block_end}, " "but no Stage-1 chunk produces that frame."
             )
         refiner_ready_stage_idx.append(next_stage_idx)
 
@@ -343,7 +341,9 @@ def run_streaming_inference(
         )
         selected = pixel_chunk.index_select(2, src_indices)
         pixel_uint8 = (selected.float() * 127.5 + 127.5).clamp(0, 255).to(torch.uint8)
-        pixel_np = pixel_uint8.permute(0, 2, 3, 4, 1).contiguous().to("cpu").numpy()[0]  # blocking: .numpy() reads immediately
+        pixel_np = (
+            pixel_uint8.permute(0, 2, 3, 4, 1).contiguous().to("cpu").numpy()[0]
+        )  # blocking: .numpy() reads immediately
         for frame, local_idx in zip(pixel_np, local_indices, strict=True):
             sample_frames.append(frame.copy())
             sample_frame_indices.append(int(frame_base + local_idx))
@@ -457,9 +457,7 @@ def run_streaming_inference(
             elif k_dec == 0:
                 z_slice = refined_full[:, :, : sink_size + block_size]
             else:
-                z_slice = refined_full[
-                    :, :, sink_size + k_dec * block_size : sink_size + (k_dec + 1) * block_size
-                ]
+                z_slice = refined_full[:, :, sink_size + k_dec * block_size : sink_size + (k_dec + 1) * block_size]
             with _on(decode_stream):
                 timing_start = _new_timing_event()
                 timing_end = _new_timing_event()
@@ -721,7 +719,7 @@ def _run_streaming_inference_sequential(
     logger=None,
 ) -> StreamingPipelineResult:
     """Memory-first path: finish stage-1, offload it, then refine/decode."""
-    log = (logger.info if logger is not None else print)
+    log = logger.info if logger is not None else print
 
     sink_size = int(config.sink_size)
     block_size = int(config.block_size)
@@ -794,7 +792,9 @@ def _run_streaming_inference_sequential(
         )
         selected = pixel_chunk.index_select(2, src_indices)
         pixel_uint8 = (selected.float() * 127.5 + 127.5).clamp(0, 255).to(torch.uint8)
-        pixel_np = pixel_uint8.permute(0, 2, 3, 4, 1).contiguous().to("cpu").numpy()[0]  # blocking: .numpy() reads immediately
+        pixel_np = (
+            pixel_uint8.permute(0, 2, 3, 4, 1).contiguous().to("cpu").numpy()[0]
+        )  # blocking: .numpy() reads immediately
         for frame, local_idx in zip(pixel_np, local_indices, strict=True):
             sample_frames.append(frame.copy())
             sample_frame_indices.append(int(frame_base + local_idx))
@@ -881,9 +881,7 @@ def _run_streaming_inference_sequential(
             if k_dec == 0:
                 z_slice = refined_full[:, :, : sink_size + block_size]
             else:
-                z_slice = refined_full[
-                    :, :, sink_size + k_dec * block_size : sink_size + (k_dec + 1) * block_size
-                ]
+                z_slice = refined_full[:, :, sink_size + k_dec * block_size : sink_size + (k_dec + 1) * block_size]
             if _env_flag("SANA_WM_CUDAGRAPH_MARK_STEP"):
                 mark_fn = getattr(getattr(torch, "compiler", None), "cudagraph_mark_step_begin", None)
                 if mark_fn is not None:

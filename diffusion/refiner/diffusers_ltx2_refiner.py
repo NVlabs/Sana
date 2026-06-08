@@ -30,19 +30,19 @@ without materializing the full sequence-by-sequence mask.
 
 from __future__ import annotations
 
-from contextlib import nullcontext
 import gc
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import time
 import types
+from contextlib import nullcontext
+from pathlib import Path
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 STAGE_2_DISTILLED_SIGMA_VALUES: tuple[float, ...] = (0.909375, 0.725, 0.421875, 0.0)
 
@@ -70,9 +70,7 @@ class DiffusersLTX2Refiner(nn.Module):
         self._te_nvfp4_converted = False
         self._self_qkv_fused = False
         self._attention_backend = os.environ.get("SANA_WM_REFINER_ATTN_BACKEND", "").strip()
-        self._uniform_timestep_cache: dict[
-            tuple[int, int, float, str], tuple[torch.Tensor, torch.Tensor]
-        ] = {}
+        self._uniform_timestep_cache: dict[tuple[int, int, float, str], tuple[torch.Tensor, torch.Tensor]] = {}
 
         self.transformer, self.connectors = self._load_diffusers_components()
 
@@ -103,10 +101,12 @@ class DiffusersLTX2Refiner(nn.Module):
                 subfolder="transformer",
                 torch_dtype=self.dtype,
             ).eval()
-        if (
-            not self._te_nvfp4_requested
-            and os.environ.get("SANA_WM_REFINER_FP8_STORAGE", "").lower() in {"1", "true", "yes", "on"}
-        ):
+        if not self._te_nvfp4_requested and os.environ.get("SANA_WM_REFINER_FP8_STORAGE", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
             skip_patterns = None
             extra_skip_patterns = _env_tuple("SANA_WM_REFINER_FP8_SKIP_PATTERNS")
             if extra_skip_patterns:
@@ -473,7 +473,7 @@ class DiffusersLTX2Refiner(nn.Module):
     def _predict_x0_active_block(
         self,
         *,
-        active: torch.Tensor,                  # (B, C, N_active, H, W) at σ_cur
+        active: torch.Tensor,  # (B, C, N_active, H, W) at σ_cur
         active_positions: list[int],
         sigma_cur: float,
         prompt_embeds: torch.Tensor,
@@ -557,12 +557,12 @@ class DiffusersLTX2Refiner(nn.Module):
     def _capture_block_kv(
         self,
         *,
-        clean_block: torch.Tensor,         # (B, C, N, H, W) treated as σ=0 (clean) input
+        clean_block: torch.Tensor,  # (B, C, N, H, W) treated as σ=0 (clean) input
         frame_positions: list[int],
         prompt_embeds: torch.Tensor,
         prompt_attention_mask: torch.Tensor,
         fps: float,
-        capture_mode: str,                 # "pre_rope" or "post_rope"
+        capture_mode: str,  # "pre_rope" or "post_rope"
         kv_prefix_per_layer: list[dict[str, object]] | None,
         capture_layer_mask: list[bool] | None = None,
         video_rotary_emb: tuple[torch.Tensor, torch.Tensor] | None = None,
@@ -773,9 +773,8 @@ class DiffusersLTX2Refiner(nn.Module):
 
         with self._attention_backend_context(), self._nvfp4_autocast():
             for layer_idx, block in enumerate(transformer.transformer_blocks):
-                capture_kv_only = (
-                    stop_after_capture_kv_layer is not None
-                    and layer_idx >= int(stop_after_capture_kv_layer)
+                capture_kv_only = stop_after_capture_kv_layer is not None and layer_idx >= int(
+                    stop_after_capture_kv_layer
                 )
                 hidden_states = _forward_video_block(
                     block=block,
@@ -911,7 +910,7 @@ class RefinerChunkRunner:
 
     def __init__(
         self,
-        refiner: "DiffusersLTX2Refiner",
+        refiner: DiffusersLTX2Refiner,
         *,
         prompt_embeds: torch.Tensor,
         prompt_attention_mask: torch.Tensor,
@@ -1086,10 +1085,7 @@ class RefinerChunkRunner:
         if self._sink_kv_pre is None:
             with profiler.section("sink_capture"):
                 if sink_seed_frames is None:
-                    raise ValueError(
-                        "First refine_block call requires sink_seed_frames "
-                        "(raw stage-1 sink latents)."
-                    )
+                    raise ValueError("First refine_block call requires sink_seed_frames " "(raw stage-1 sink latents).")
                 if sink_seed_frames.shape[2] != self._source_sink_frames:
                     raise ValueError(
                         f"sink_seed_frames has {sink_seed_frames.shape[2]} frames "
@@ -1192,7 +1188,9 @@ class RefinerChunkRunner:
         n_sigma_pairs = len(self._sigma_pairs)
         for step_idx, (sigma_cur, sigma_next) in enumerate(self._sigma_pairs):
             with profiler.section(f"denoise_step{step_idx}"):
-                capture_predict_kv = bool((reuse_final_predict_kv or fill_missing_predict_kv) and step_idx == n_sigma_pairs - 1)
+                capture_predict_kv = bool(
+                    (reuse_final_predict_kv or fill_missing_predict_kv) and step_idx == n_sigma_pairs - 1
+                )
                 pred_result = refiner._predict_x0_active_block(
                     active=x_t,
                     active_positions=active_positions,
@@ -1209,12 +1207,10 @@ class RefinerChunkRunner:
                     pred_x0, captured_kv_post = pred_result
                     if fill_missing_predict_kv and captured_kv_post is not None:
                         captured_kv_post = [
-                            None
-                            if self._exact_capture_layer_mask[layer_idx]
-                            else (
-                                _store_kv_pair(pair, self._kv_cache_storage_dtype)
-                                if pair is not None
-                                else None
+                            (
+                                None
+                                if self._exact_capture_layer_mask[layer_idx]
+                                else (_store_kv_pair(pair, self._kv_cache_storage_dtype) if pair is not None else None)
                             )
                             for layer_idx, pair in enumerate(captured_kv_post)
                         ]
@@ -1333,7 +1329,7 @@ def _build_rotary_emb_for_absolute_positions(
     if patch_size_t > 1:
         # Each patch covers ``patch_size_t`` latent frames; pick the start of each patch.
         f_positions = f_positions[::patch_size_t]
-    n_f = int(f_positions.shape[0])
+    int(f_positions.shape[0])
     grid_h = torch.arange(start=0, end=height, step=patch_size, dtype=torch.float32, device=device)
     grid_w = torch.arange(start=0, end=width, step=patch_size, dtype=torch.float32, device=device)
     grid = torch.meshgrid(f_positions, grid_h, grid_w, indexing="ij")
@@ -1873,9 +1869,7 @@ def _collect_captured_kv_from_blocks(
             continue
         cached = getattr(block.attn1, attr, None)
         if cached is None:
-            raise RuntimeError(
-                f"Expected {attr!r} on attn1 after capture forward, but found None."
-            )
+            raise RuntimeError(f"Expected {attr!r} on attn1 after capture forward, but found None.")
         out.append(cached)
         # Release the reference so the orchestrator owns the only handle.
         setattr(block.attn1, attr, None)
@@ -2184,7 +2178,7 @@ def _current_refiner_prefix_tokens(transformer: nn.Module) -> int:
     return total
 
 
-def _profile_section(profiler: "_RefinerLayerCudaProfiler | None", name: str):
+def _profile_section(profiler: _RefinerLayerCudaProfiler | None, name: str):
     if profiler is None:
         return nullcontext()
     return profiler.section(name)

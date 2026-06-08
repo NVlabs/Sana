@@ -73,9 +73,11 @@ from diffusion.model.utils import get_weight_dtype
 from diffusion.refiner.diffusers_ltx2_refiner import (
     STAGE_2_DISTILLED_SIGMA_VALUES,
     DiffusersLTX2Refiner,
-    _env_flag as _te_env_flag,
-    _env_flag_default_true as _te_env_flag_default_true,
-    _env_tuple as _te_env_tuple,
+)
+from diffusion.refiner.diffusers_ltx2_refiner import _env_flag as _te_env_flag
+from diffusion.refiner.diffusers_ltx2_refiner import _env_flag_default_true as _te_env_flag_default_true
+from diffusion.refiner.diffusers_ltx2_refiner import _env_tuple as _te_env_tuple
+from diffusion.refiner.diffusers_ltx2_refiner import (
     _replace_linear_with_te_nvfp4,
 )
 from diffusion.scheduler.self_forcing_flow_euler_sampler import SelfForcingFlowEulerCamCtrl
@@ -85,18 +87,20 @@ from diffusion.utils.camctrl_config import ModelVideoCamCtrlConfig, model_video_
 from diffusion.utils.chunk_utils import get_chunk_index_from_config
 from diffusion.utils.config import AEConfig, SchedulerConfig, TextEncoderConfig
 from diffusion.utils.logger import get_root_logger
-from sana.tools import resolve_hf_path
-from tools.download import find_model
-from inference_video_scripts.camera_control import (  # shared camera-control core (demo + inference)
-    FPS as _CAM_FPS,
-    CameraPoseIntegrator,
+from inference_video_scripts.camera_control import (
     DEFAULT_PITCH_LIMIT_DEG,
     DEFAULT_ROTATION_SPEED_DEG,
     DEFAULT_TRANSLATION_SPEED,
     DSL_KEY_TO_CONTROL,
+)
+from inference_video_scripts.camera_control import FPS as _CAM_FPS  # shared camera-control core (demo + inference)
+from inference_video_scripts.camera_control import (
+    CameraPoseIntegrator,
     VelocityState,
     controls_to_target_velocity,
 )
+from sana.tools import resolve_hf_path
+from tools.download import find_model
 
 SamplingAlgo = Literal["flow_euler_ltx", "flow_euler", "flow_dpm-solver", "self_forcing"]
 
@@ -453,6 +457,7 @@ def _linearize_stage1_ffn_for_nvfp4(module: nn.Module, *, prefix: str = "") -> t
         converted += child_converted
         skipped += child_skipped
     return converted, skipped
+
 
 # DEFAULT_TRANSLATION_SPEED / DEFAULT_ROTATION_SPEED_DEG / DEFAULT_PITCH_LIMIT_DEG
 # come from camera_control (shared with the interactive demo so the two never drift).
@@ -1054,14 +1059,11 @@ class SanaWMPipeline:
         if model is None or getattr(model, "_sana_wm_stage1_nvfp4_converted", False):
             return
 
-        if _te_env_flag("SANA_WM_STAGE1_LINEARIZE_FFN") and not getattr(
-            model, "_sana_wm_stage1_ffn_linearized", False
-        ):
+        if _te_env_flag("SANA_WM_STAGE1_LINEARIZE_FFN") and not getattr(model, "_sana_wm_stage1_ffn_linearized", False):
             converted_ffn, skipped_ffn = _linearize_stage1_ffn_for_nvfp4(model)
             if converted_ffn <= 0:
                 raise RuntimeError(
-                    "SANA_WM_STAGE1_LINEARIZE_FFN=1 converted no CachedGLUMBConvTemp blocks; "
-                    f"skipped={skipped_ffn}."
+                    "SANA_WM_STAGE1_LINEARIZE_FFN=1 converted no CachedGLUMBConvTemp blocks; " f"skipped={skipped_ffn}."
                 )
             model._sana_wm_stage1_ffn_linearized = True
             self.logger.info(
@@ -1372,7 +1374,7 @@ class SanaWMPipeline:
         if stage1_text_encoder is not None:
             stage1_text_encoder.to("cpu")
         if getattr(self.model, "_sana_wm_stage1_nvfp4_converted", False):
-            model = self.model
+            self.model
             self.model = None
             del model
             dropped_stage1 = True
@@ -1380,7 +1382,7 @@ class SanaWMPipeline:
             self.model.to("cpu")
         self._move_vae_decoder_for_streaming("cpu")
         if getattr(self.refiner, "_te_nvfp4_converted", False):
-            transformer = self.refiner.transformer
+            self.refiner.transformer
             self.refiner.transformer = None
             del transformer
             dropped_refiner = True
@@ -1483,8 +1485,9 @@ class SanaWMPipeline:
         )
         if torch.cuda.is_available():
             torch.cuda.synchronize()
-        self.logger.info(f"[timing] stage1 sample: {time.perf_counter() - t0:.3f}s "
-                         f"(latent shape {tuple(samples.shape)})")
+        self.logger.info(
+            f"[timing] stage1 sample: {time.perf_counter() - t0:.3f}s " f"(latent shape {tuple(samples.shape)})"
+        )
         torch.cuda.empty_cache()
         return samples.detach()
 
@@ -1575,8 +1578,10 @@ class SanaWMPipeline:
         decoded = vae_decode(self.config.vae.vae_type, self.vae, samples)
         if torch.cuda.is_available():
             torch.cuda.synchronize()
-        self.logger.info(f"[timing] vae decode: {time.perf_counter() - t0:.3f}s "
-                         f"(latent T={sana_latent.shape[2]} -> pixels {tuple(decoded.shape)})")
+        self.logger.info(
+            f"[timing] vae decode: {time.perf_counter() - t0:.3f}s "
+            f"(latent T={sana_latent.shape[2]} -> pixels {tuple(decoded.shape)})"
+        )
         if isinstance(decoded, list):
             decoded = torch.stack(decoded, dim=0)
         video = (
@@ -1659,14 +1664,14 @@ class SanaWMPipeline:
         Returns a dict with ``output_path``, ``n_pixel_frames``, and ``c2w``
         aligned with the emitted frames (first frame dropped).
         """
+        from diffusion.model.ltx2 import CausalVaeStreamingDecoder
+        from diffusion.refiner.diffusers_ltx2_refiner import (
+            STAGE_2_DISTILLED_SIGMA_VALUES,
+            RefinerChunkRunner,
+        )
         from inference_video_scripts.streaming_pipeline import (
             StreamingPipelineConfig,
             run_streaming_inference,
-        )
-        from diffusion.model.ltx2 import CausalVaeStreamingDecoder
-        from diffusion.refiner.diffusers_ltx2_refiner import (
-            RefinerChunkRunner,
-            STAGE_2_DISTILLED_SIGMA_VALUES,
         )
 
         if "LTX2VAE_diffusers_causal" not in self.config.vae.vae_type:
@@ -1715,12 +1720,10 @@ class SanaWMPipeline:
         if _te_env_flag("SANA_WM_REFINER_NVFP4"):
             _progress("preparing refiner NVFP4")
             cpu_stage_nvfp4 = _te_env_flag("SANA_WM_TE_NVFP4_CPU_STAGING")
-            offload_stage1_for_refiner_nvfp4 = (
-                (not cpu_stage_nvfp4) and _te_env_flag("SANA_WM_REFINER_NVFP4_OFFLOAD_STAGE1")
+            offload_stage1_for_refiner_nvfp4 = (not cpu_stage_nvfp4) and _te_env_flag(
+                "SANA_WM_REFINER_NVFP4_OFFLOAD_STAGE1"
             )
-            offload_vae_for_refiner_nvfp4 = (
-                (not cpu_stage_nvfp4) and _te_env_flag("SANA_WM_REFINER_NVFP4_OFFLOAD_VAE")
-            )
+            offload_vae_for_refiner_nvfp4 = (not cpu_stage_nvfp4) and _te_env_flag("SANA_WM_REFINER_NVFP4_OFFLOAD_VAE")
             if offload_stage1_for_refiner_nvfp4:
                 self.model.to("cpu")
                 torch.cuda.empty_cache()

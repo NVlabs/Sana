@@ -57,7 +57,7 @@ import torch  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from diffusion.utils.logger import get_root_logger  # noqa: E402
-from sana.tools import resolve_hf_path  # noqa: E402
+from inference_video_scripts.inference_sana_wm import action_string_to_c2w  # noqa: F401  (re-export)
 from inference_video_scripts.inference_sana_wm import (  # noqa: E402
     GenerationParams,
     InferenceConfig,
@@ -65,12 +65,12 @@ from inference_video_scripts.inference_sana_wm import (  # noqa: E402
     SanaWMPipeline,
     _resolve_trajectory,
     _snap_num_frames,
-    action_string_to_c2w,  # noqa: F401  (re-export)
     estimate_intrinsics_with_pi3x,
     load_intrinsics,
     resize_and_center_crop,
     transform_intrinsics_for_crop,
 )
+from sana.tools import resolve_hf_path  # noqa: E402
 
 # Canonical 4-step distilled-student schedule.
 DEFAULT_DENOISING_STEP_LIST = "1000,960,889,727,0"
@@ -94,12 +94,7 @@ HF_STREAMING_DEFAULTS = {
 }
 
 # The inference YAML ships in-repo (configs/sana_wm/), not in the weights repo.
-DEFAULT_CONFIG = (
-    Path(__file__).resolve().parents[1]
-    / "configs"
-    / "sana_wm"
-    / "sana_wm_streaming_1600m_720p.yaml"
-)
+DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "sana_wm" / "sana_wm_streaming_1600m_720p.yaml"
 
 # Optional LOCAL bundle dir (``--streaming_root``). Unset by default so the
 # hf:// defaults above drive a first-use download.
@@ -123,15 +118,28 @@ def _build_parser() -> argparse.ArgumentParser:
         "--action", type=str, help="Action DSL string, e.g. 'w-120,lw-80,...'. Rolled out internally."
     )
 
-    p.add_argument("--translation_speed", type=float, default=0.025,
-                   help="Per-frame translation magnitude when --action is used.")
-    p.add_argument("--rotation_speed_deg", type=float, default=0.6,
-                   help="Per-frame rotation magnitude (degrees) when --action is used.")
-    p.add_argument("--intrinsics", type=Path, default=None,
-                   help="(3,3), (F,3,3), or (4,) intrinsics .npy. Pi3X-estimated if omitted.")
-    p.add_argument("--num_frames", type=int, default=241,
-                   help="Total pixel frames (~15s @16fps; 241 = 24*10+1). Snapped to "
-                        "8*refiner_block_size*k+1 so the VAE and refiner chunking divide evenly.")
+    p.add_argument(
+        "--translation_speed", type=float, default=0.025, help="Per-frame translation magnitude when --action is used."
+    )
+    p.add_argument(
+        "--rotation_speed_deg",
+        type=float,
+        default=0.6,
+        help="Per-frame rotation magnitude (degrees) when --action is used.",
+    )
+    p.add_argument(
+        "--intrinsics",
+        type=Path,
+        default=None,
+        help="(3,3), (F,3,3), or (4,) intrinsics .npy. Pi3X-estimated if omitted.",
+    )
+    p.add_argument(
+        "--num_frames",
+        type=int,
+        default=241,
+        help="Total pixel frames (~15s @16fps; 241 = 24*10+1). Snapped to "
+        "8*refiner_block_size*k+1 so the VAE and refiner chunking divide evenly.",
+    )
     p.add_argument("--fps", type=int, default=16)
     p.add_argument("--cfg_scale", type=float, default=1.0)
     p.add_argument("--flow_shift", type=float, default=8.0)
@@ -141,63 +149,124 @@ def _build_parser() -> argparse.ArgumentParser:
     # Streaming-only knobs. By default every weight is fetched from the Hub
     # (hf://Efficient-Large-Model/SANA-WM_streaming) on first use; pass a local
     # path / bundle to any of these to override.
-    p.add_argument("--streaming_root", type=Path, default=DEFAULT_STREAMING_ROOT,
-                   help="Optional LOCAL bundle dir holding sana_dit/, ltx2_causal_vae/, refiner_diffusers/, gemma3_12b/. "
-                        f"If unset, each artefact is fetched from hf://{HF_REPO}.")
-    p.add_argument("--config", type=str, default=None,
-                   help="Streaming YAML (local path or hf:// URI). Default: in-repo configs/sana_wm/sana_wm_streaming_1600m_720p.yaml "
-                        "(or <streaming_root>/sana_wm_streaming_1600m_720p.yaml when --streaming_root is set).")
-    p.add_argument("--model_path", type=str, default=None,
-                   help=f"Override the streaming DiT checkpoint (local path or hf:// URI). Default: hf://{HF_REPO}/sana_dit/model.pt.")
-    p.add_argument("--causal_vae_path", type=str, default=None,
-                   help=f"Override the causal LTX-2 VAE (local path or hf:// URI). Default: hf://{HF_REPO}/ltx2_causal_vae.")
-    p.add_argument("--refiner_root", type=str, default=None,
-                   help=f"Override the chunk-causal refiner (local path or hf:// URI). Default: hf://{HF_REPO}/refiner_diffusers.")
-    p.add_argument("--refiner_gemma_root", type=str, default=None,
-                   help=f"Override the Gemma diffusers root (local path or hf:// URI). Default: hf://{HF_REPO}/gemma3_12b.")
-    p.add_argument("--denoising_step_list", default=DEFAULT_DENOISING_STEP_LIST,
-                   help="Comma-separated distilled-student timestep schedule (must end with 0).")
-    p.add_argument("--num_frame_per_block", type=int, default=3,
-                   help="Latent frames per stage-1 AR chunk (must match the model's chunk_size).")
-    p.add_argument("--refiner_block_size", type=int, default=3,
-                   help="Refiner latent frames per AR block.")
-    p.add_argument("--refiner_kv_max_frames", type=int, default=DEFAULT_REFINER_KV_MAX_FRAMES,
-                   help="Refiner KV sliding-window size (sink + history + active).")
+    p.add_argument(
+        "--streaming_root",
+        type=Path,
+        default=DEFAULT_STREAMING_ROOT,
+        help="Optional LOCAL bundle dir holding sana_dit/, ltx2_causal_vae/, refiner_diffusers/, gemma3_12b/. "
+        f"If unset, each artefact is fetched from hf://{HF_REPO}.",
+    )
+    p.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Streaming YAML (local path or hf:// URI). Default: in-repo configs/sana_wm/sana_wm_streaming_1600m_720p.yaml "
+        "(or <streaming_root>/sana_wm_streaming_1600m_720p.yaml when --streaming_root is set).",
+    )
+    p.add_argument(
+        "--model_path",
+        type=str,
+        default=None,
+        help=f"Override the streaming DiT checkpoint (local path or hf:// URI). Default: hf://{HF_REPO}/sana_dit/model.pt.",
+    )
+    p.add_argument(
+        "--causal_vae_path",
+        type=str,
+        default=None,
+        help=f"Override the causal LTX-2 VAE (local path or hf:// URI). Default: hf://{HF_REPO}/ltx2_causal_vae.",
+    )
+    p.add_argument(
+        "--refiner_root",
+        type=str,
+        default=None,
+        help=f"Override the chunk-causal refiner (local path or hf:// URI). Default: hf://{HF_REPO}/refiner_diffusers.",
+    )
+    p.add_argument(
+        "--refiner_gemma_root",
+        type=str,
+        default=None,
+        help=f"Override the Gemma diffusers root (local path or hf:// URI). Default: hf://{HF_REPO}/gemma3_12b.",
+    )
+    p.add_argument(
+        "--denoising_step_list",
+        default=DEFAULT_DENOISING_STEP_LIST,
+        help="Comma-separated distilled-student timestep schedule (must end with 0).",
+    )
+    p.add_argument(
+        "--num_frame_per_block",
+        type=int,
+        default=3,
+        help="Latent frames per stage-1 AR chunk (must match the model's chunk_size).",
+    )
+    p.add_argument("--refiner_block_size", type=int, default=3, help="Refiner latent frames per AR block.")
+    p.add_argument(
+        "--refiner_kv_max_frames",
+        type=int,
+        default=DEFAULT_REFINER_KV_MAX_FRAMES,
+        help="Refiner KV sliding-window size (sink + history + active).",
+    )
     p.add_argument("--refiner_seed", type=int, default=42)
     p.add_argument("--sink_size", type=int, default=1)
-    p.add_argument("--no_sink_token", action="store_true",
-                   help="Disable the stage-1 sink token (default: enabled).")
-    p.add_argument("--num_cached_blocks", type=int, default=2,
-                   help="Stage-1 KV sliding-window size (-1 keeps all past chunks).")
-    p.add_argument("--streaming_crf", type=int, default=18,
-                   help="ffmpeg CRF for the progressive MP4 (lower = higher quality).")
-    p.add_argument("--streaming_preset", default="medium",
-                   help="ffmpeg libx264 preset for the progressive MP4 writer.")
-    p.add_argument("--streaming_encoder", default=os.environ.get("SANA_WM_STREAMING_MP4_ENCODER", "libx264"),
-                   help="MP4 encoder: libx264 or h264_nvenc.")
-    p.add_argument("--output_mode", choices=["mp4", "cpu", "discard"], default="mp4",
-                   help="mp4 writes H.264, cpu copies decoded uint8 frames to host without writing, discard decodes on GPU and drops frames after synchronization.")
-    p.add_argument("--no_mp4", action="store_true",
-                   help="Alias for --output_mode=discard; excludes uint8 CPU transfer and MP4 encoding from timings.")
-    p.add_argument("--benchmark_json", type=Path, default=None,
-                   help="Optional JSON file with wall-clock throughput metrics.")
-    p.add_argument("--benchmark_repeats", type=int, default=1,
-                   help="Run generation this many times in one process; useful for warm/steady benchmark separation.")
-    p.add_argument("--profile_cuda", action="store_true",
-                   help="Record per-stage CUDA event timings; useful for bottleneck breakdown but disabled by default for pure throughput.")
-    p.add_argument("--sample_frames_npz", type=Path, default=None,
-                   help="Optional .npz path for sampled decoded uint8 frames.")
-    p.add_argument("--sample_frame_stride", type=int, default=16,
-                   help="Save every Nth output frame when --sample_frames_npz is set.")
-    p.add_argument("--no_compile", action="store_true",
-                   help="Disable torch.compile for smoke/debug runs.")
+    p.add_argument("--no_sink_token", action="store_true", help="Disable the stage-1 sink token (default: enabled).")
+    p.add_argument(
+        "--num_cached_blocks", type=int, default=2, help="Stage-1 KV sliding-window size (-1 keeps all past chunks)."
+    )
+    p.add_argument(
+        "--streaming_crf", type=int, default=18, help="ffmpeg CRF for the progressive MP4 (lower = higher quality)."
+    )
+    p.add_argument("--streaming_preset", default="medium", help="ffmpeg libx264 preset for the progressive MP4 writer.")
+    p.add_argument(
+        "--streaming_encoder",
+        default=os.environ.get("SANA_WM_STREAMING_MP4_ENCODER", "libx264"),
+        help="MP4 encoder: libx264 or h264_nvenc.",
+    )
+    p.add_argument(
+        "--output_mode",
+        choices=["mp4", "cpu", "discard"],
+        default="mp4",
+        help="mp4 writes H.264, cpu copies decoded uint8 frames to host without writing, discard decodes on GPU and drops frames after synchronization.",
+    )
+    p.add_argument(
+        "--no_mp4",
+        action="store_true",
+        help="Alias for --output_mode=discard; excludes uint8 CPU transfer and MP4 encoding from timings.",
+    )
+    p.add_argument(
+        "--benchmark_json", type=Path, default=None, help="Optional JSON file with wall-clock throughput metrics."
+    )
+    p.add_argument(
+        "--benchmark_repeats",
+        type=int,
+        default=1,
+        help="Run generation this many times in one process; useful for warm/steady benchmark separation.",
+    )
+    p.add_argument(
+        "--profile_cuda",
+        action="store_true",
+        help="Record per-stage CUDA event timings; useful for bottleneck breakdown but disabled by default for pure throughput.",
+    )
+    p.add_argument(
+        "--sample_frames_npz", type=Path, default=None, help="Optional .npz path for sampled decoded uint8 frames."
+    )
+    p.add_argument(
+        "--sample_frame_stride",
+        type=int,
+        default=16,
+        help="Save every Nth output frame when --sample_frames_npz is set.",
+    )
+    p.add_argument("--no_compile", action="store_true", help="Disable torch.compile for smoke/debug runs.")
 
-    p.add_argument("--offload_vae", action="store_true",
-                   help="Move the VAE to CPU between encode/decode steps.")
-    p.add_argument("--offload_refiner", action="store_true",
-                   help="Lazy-load the LTX-2 refiner only when needed; release afterwards.")
-    p.add_argument("--offload_text_encoder", action="store_true",
-                   help="Move the stage-1 text encoder to CPU after prompt encoding to save GPU memory.")
+    p.add_argument("--offload_vae", action="store_true", help="Move the VAE to CPU between encode/decode steps.")
+    p.add_argument(
+        "--offload_refiner",
+        action="store_true",
+        help="Lazy-load the LTX-2 refiner only when needed; release afterwards.",
+    )
+    p.add_argument(
+        "--offload_text_encoder",
+        action="store_true",
+        help="Move the stage-1 text encoder to CPU after prompt encoding to save GPU memory.",
+    )
     return p
 
 
@@ -257,6 +326,7 @@ def _apply_fast_defaults() -> None:
     torch.backends.cuda.enable_mem_efficient_sdp(False)
     torch.backends.cuda.enable_cudnn_sdp(True)
     import torch._inductor.config as _ic
+
     _ic.coordinate_descent_tuning = True
     _ic.epilogue_fusion = True
 
@@ -299,9 +369,7 @@ def main() -> None:
     intrinsics_vec4 = transform_intrinsics_for_crop(intr_src, src_size, resized_size, crop_offset)
 
     config_path, model_path, causal_vae_path, refiner_root, gemma_root = _resolve_streaming_paths(args)
-    config: InferenceConfig = pyrallis.parse(
-        config_class=InferenceConfig, config_path=str(config_path), args=[]
-    )
+    config: InferenceConfig = pyrallis.parse(config_class=InferenceConfig, config_path=str(config_path), args=[])
     config.vae.vae_type = "LTX2VAE_diffusers_causal"
     config.vae.vae_pretrained = str(causal_vae_path)
     logger.info(f"[causal-vae] vae_pretrained -> {config.vae.vae_pretrained}")
@@ -335,9 +403,7 @@ def main() -> None:
         compile_dynamic = compile_dynamic_raw not in {"0", "false", "no", "off"}
         compile_targets_raw = os.environ.get("SANA_WM_TORCH_COMPILE_TARGETS", "refiner")
         compile_targets = {
-            item.strip().lower()
-            for item in compile_targets_raw.replace("+", ",").split(",")
-            if item.strip()
+            item.strip().lower() for item in compile_targets_raw.replace("+", ",").split(",") if item.strip()
         }
         unsupported_targets = compile_targets - {"vae", "refiner"}
         if unsupported_targets:
@@ -533,7 +599,9 @@ def main() -> None:
             "stage1_cuda_seconds": result["stage1_cuda_seconds"],
             "refiner_cuda_seconds": result["refiner_cuda_seconds"],
             "decode_cuda_seconds": result["decode_cuda_seconds"],
-            "sample_frames_path": str(result["sample_frames_path"]) if result["sample_frames_path"] is not None else None,
+            "sample_frames_path": (
+                str(result["sample_frames_path"]) if result["sample_frames_path"] is not None else None
+            ),
             "sampled_frame_count": int(result["sampled_frame_count"]),
             "sampled_frame_indices": result["sampled_frame_indices"],
             "n_refiner_blocks": int(result["n_refiner_blocks"]),

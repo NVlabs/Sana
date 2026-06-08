@@ -106,10 +106,10 @@ look-around.
 | Example | Scene | `--action` |
 |---------|-------|------------|
 | `demo_0` | salt-desert / black supercar | `w-100,dw-60,w-100,aw-60` |
-| `demo_1` | bioluminescent cave         | `w-35,aw-60,dw-100,aw-55,w-25,none-50` |
-| `demo_2` | mushroom forest / robot     | `w-25,aw-60,dw-100,aw-55,none-85` &nbsp;(+ `--translation_speed 0.015`) |
-| `demo_3` | salt flat / supercar        | `w-70,none-40,dw-35,w-70,aw-35,none-72` |
-| `demo_4` | ice plain / portal          | `w-95,aw-35,w-70,dw-35,none-87` |
+| `demo_1` | bioluminescent cave | `w-35,aw-60,dw-100,aw-55,w-25,none-50` |
+| `demo_2` | mushroom forest / robot | `w-25,aw-60,dw-100,aw-55,none-85`  (+ `--translation_speed 0.015`) |
+| `demo_3` | salt flat / supercar | `w-70,none-40,dw-35,w-70,aw-35,none-72` |
+| `demo_4` | ice plain / portal | `w-95,aw-35,w-70,dw-35,none-87` |
 
 The `_pose.npy` files already bake in these actions (and `demo_2`'s slower
 speed), so `--camera asset/sana_wm/demo_N_pose.npy` reproduces the same motion
@@ -169,8 +169,7 @@ Overrides for advanced use:
 - `--streaming_root <path>` — optional LOCAL bundle dir holding `sana_dit/`,
   `ltx2_causal_vae/`, `refiner_diffusers/`, `gemma3_12b/`. Unset by default, in
   which case each artefact is pulled from `hf://Efficient-Large-Model/SANA-WM_streaming`.
-- `--config / --model_path / --causal_vae_path / --refiner_root /
-  --refiner_gemma_root` — point at non-default weight paths (local path or
+- `--config / --model_path / --causal_vae_path / --refiner_root / --refiner_gemma_root` — point at non-default weight paths (local path or
   `hf://` URI). `--config` defaults to the in-repo
   `configs/sana_wm/sana_wm_streaming_1600m_720p.yaml`.
 - `--num_frame_per_block` (default 3, must match the checkpoint's

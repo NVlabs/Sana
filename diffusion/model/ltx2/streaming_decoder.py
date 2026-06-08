@@ -41,9 +41,7 @@ class CausalVaeStreamingDecoder:
                 f"(got decoder.is_causal={getattr(vae.decoder, 'is_causal', None)})."
             )
         self._vae = vae
-        self._scaling_factor = float(
-            scaling_factor if scaling_factor is not None else vae.config.scaling_factor
-        )
+        self._scaling_factor = float(scaling_factor if scaling_factor is not None else vae.config.scaling_factor)
         self._first_chunk = True
 
     @property

@@ -509,6 +509,8 @@ class GDN(Attention_):
         beta_valid_mask = m.view(B, 1, T, 1)
         decay_valid_mask = m.view(B, 1, T)
         return token_valid_mask, beta_valid_mask, decay_valid_mask
+
+
 @ATTENTION_BLOCKS.register_module()
 class BidirectionalGDN(GDN):
     """Bidirectional GDN attention with forward/backward fusion."""
@@ -540,6 +542,8 @@ class BidirectionalGDN(GDN):
         x, B, S, T = self._reshape_to_temporal(x, HW)
         x = self._bidirectional_causal_conv_1d(x, conv)
         return self._reshape_from_temporal(x, B, S, T)
+
+
 @ATTENTION_BLOCKS.register_module()
 class ChunkCausalGDN(GDN):
     """Chunk-causal GDN attention.
@@ -718,6 +722,8 @@ class ChunkCausalGDN(GDN):
             y = y.to(dtype_in)
 
         return self._reshape_from_temporal(y, B, S, T)
+
+
 _frame_causal_mask_cache: dict[tuple[int, int, torch.device], torch.Tensor] = {}
 
 
@@ -1149,16 +1155,12 @@ def _sdpa_maybe_chunk_causal(
     fallback.
     """
     if need_chunk_mask:
-        chunk_boundaries, _ = normalize_chunk_index(
-            chunk_index, T, chunk_size, chunk_split_strategy
-        )
+        chunk_boundaries, _ = normalize_chunk_index(chunk_index, T, chunk_size, chunk_split_strategy)
         q_len = T * S
         kv_len = T * S
 
         if _HAS_FLEX_ATTENTION:
-            block_mask = _get_chunk_causal_block_mask(
-                chunk_boundaries, S, q_len, kv_len, 0, device
-            )
+            block_mask = _get_chunk_causal_block_mask(chunk_boundaries, S, q_len, kv_len, 0, device)
             q_pad = (128 - q_len % 128) % 128
             kv_pad = (128 - kv_len % 128) % 128
             if q_pad > 0:
@@ -1236,10 +1238,7 @@ class CachedChunkCausalGDN(ChunkCausalGDN):
         from diffusion.model.ops.fused_streaming import _cached_gdn_forward_triton
 
         if kwargs.get("kv_cache", None) is None:
-            raise RuntimeError(
-                "CachedChunkCausalGDN requires kv_cache to be provided "
-                "(streaming inference only)."
-            )
+            raise RuntimeError("CachedChunkCausalGDN requires kv_cache to be provided " "(streaming inference only).")
         del mask, block_mask, chunk_split_strategy, chunk_index
         return _cached_gdn_forward_triton(
             self,
@@ -1345,9 +1344,12 @@ class CachedChunkCausalSoftmaxAttn(ChunkCausalSoftmaxAttn):
 
         # Cache enforces chunk causality; no in-forward mask needed.
         out = _sdpa_maybe_chunk_causal(
-            q, k, v,
+            q,
+            k,
+            v,
             need_chunk_mask=False,
-            T=T, S=S,
+            T=T,
+            S=S,
             chunk_size=chunk_size,
             chunk_index=chunk_index,
             chunk_split_strategy=chunk_split_strategy,

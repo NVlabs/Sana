@@ -47,16 +47,24 @@ CONTROL_TOKENS = frozenset(
 # Input-surface mappings -> canonical controls (the ONLY thing that differs
 # between the two entry points).
 DSL_KEY_TO_CONTROL: dict[str, str] = {
-    "w": "forward", "s": "back",
-    "a": "yaw_left", "d": "yaw_right",
-    "i": "pitch_up", "k": "pitch_down",
-    "j": "strafe_left", "l": "strafe_right",
+    "w": "forward",
+    "s": "back",
+    "a": "yaw_left",
+    "d": "yaw_right",
+    "i": "pitch_up",
+    "k": "pitch_down",
+    "j": "strafe_left",
+    "l": "strafe_right",
 }
 DEMO_KEY_TO_CONTROL: dict[str, str] = {
-    "w": "forward", "s": "back",
-    "a": "yaw_left", "d": "yaw_right",
-    "up": "pitch_up", "down": "pitch_down",
-    "left": "strafe_left", "right": "strafe_right",
+    "w": "forward",
+    "s": "back",
+    "a": "yaw_left",
+    "d": "yaw_right",
+    "up": "pitch_up",
+    "down": "pitch_down",
+    "left": "strafe_left",
+    "right": "strafe_right",
 }
 
 
@@ -80,10 +88,10 @@ class VelocityState:
     yaw: float = 0.0
     pitch: float = 0.0
 
-    def snap_to(self, target: "VelocityState") -> None:
+    def snap_to(self, target: VelocityState) -> None:
         self.tx, self.sx, self.yaw, self.pitch = target.tx, target.sx, target.yaw, target.pitch
 
-    def step_toward(self, target: "VelocityState", dt: float) -> None:
+    def step_toward(self, target: VelocityState, dt: float) -> None:
         for attr in ("tx", "sx", "yaw", "pitch"):
             cur = getattr(self, attr)
             tgt = getattr(target, attr)

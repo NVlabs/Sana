@@ -103,8 +103,7 @@ def _slice_rope_to_current_chunk(rotary_emb: torch.Tensor, current_n: int) -> to
         return rotary_emb
     if rope_n < current_n:
         raise RuntimeError(
-            f"rotary_emb has {rope_n} positions, smaller than current chunk's "
-            f"{current_n}; cannot slice."
+            f"rotary_emb has {rope_n} positions, smaller than current chunk's " f"{current_n}; cannot slice."
         )
     return rotary_emb[..., -current_n:, :]
 
@@ -434,9 +433,18 @@ def _cam_main_triton(
         (fwd + per-chunk bwd combined) and ``cam_S_kv_new`` shaped
         ``(B, H, D, D)`` fp32 (or ``None`` when not saving).
     """
+    import os as _os
+
     import triton
 
-    from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
+    # CUDA cam scan on by default; set SANA_GDN_CUDA=0 to force Triton.
+    if _os.environ.get("SANA_GDN_CUDA", "1") != "0":
+        try:
+            from diffusion.model.ops.fused_gdn_chunkwise_cuda import cam_scan_chunkwise_cuda as cam_scan_chunkwise
+        except Exception:
+            from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
+    else:
+        from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
 
     B, H, D, N = q_cam_trans.shape
     assert N == T * S, f"N={N} != T*S={T * S}"
@@ -469,14 +477,22 @@ def _cam_main_triton(
     # ---- Forward scan with state ----
     if save_kv_cache:
         out_fwd, final_state = cam_scan_chunkwise(
-            q32, k32, v32, beta_c, decay_c,
+            q32,
+            k32,
+            v32,
+            beta_c,
+            decay_c,
             reverse=False,
             init_state=init_state,
             save_final_state=True,
         )
     else:
         out_fwd = cam_scan_chunkwise(
-            q32, k32, v32, beta_c, decay_c,
+            q32,
+            k32,
+            v32,
+            beta_c,
+            decay_c,
             reverse=False,
             init_state=init_state,
             save_final_state=False,
@@ -485,7 +501,11 @@ def _cam_main_triton(
 
     # ---- Backward scan (per-chunk isolated; no state) ----
     out_bwd = cam_scan_chunkwise(
-        q32, k32, v32, beta_c, decay_c,
+        q32,
+        k32,
+        v32,
+        beta_c,
+        decay_c,
         reverse=True,
         init_state=None,
         save_final_state=False,
@@ -548,8 +568,7 @@ def _cam_prep_triton(
 
     if layer.conv_q_cam is not None or layer.conv_v_cam is not None:
         raise NotImplementedError(
-            "Triton cam-prep requires k_conv_only=True on the camera branch "
-            "(conv_q_cam / conv_v_cam must be None)."
+            "Triton cam-prep requires k_conv_only=True on the camera branch " "(conv_q_cam / conv_v_cam must be None)."
         )
 
     B, N, _ = x.shape
@@ -608,9 +627,7 @@ def _cam_prep_triton(
     q_norm_w = layer.q_norm_cam.weight.float().contiguous()
     k_norm_w = layer.k_norm_cam.weight.float().contiguous()
     k_scale = (D_head**-0.5) * (S**-0.5)
-    norm_eps_val = float(
-        getattr(layer.q_norm_cam, "eps", getattr(layer.q_norm_cam, "variance_epsilon", 1e-6))
-    )
+    norm_eps_val = float(getattr(layer.q_norm_cam, "eps", getattr(layer.q_norm_cam, "variance_epsilon", 1e-6)))
     q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = cam_prep_func(
         q_raw,
         k_raw,
@@ -627,9 +644,7 @@ def _cam_prep_triton(
     inflation_sq = inflation_sq.view(B, H_heads, 1, N)
 
     # ---- 5. Inverse-UCPE closure for the scan output ----
-    _, _, apply_fn_o = _prepare_ray_apply_fns(
-        head_dim=D_head, P=P, P_T=P_T, P_inv=P_inv, rotary_emb=rotary_emb_cam
-    )
+    _, _, apply_fn_o = _prepare_ray_apply_fns(head_dim=D_head, P=P, P_T=P_T, P_inv=P_inv, rotary_emb=rotary_emb_cam)
 
     return q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o
 
@@ -667,8 +682,7 @@ def _cached_gdn_forward_triton(
         raise ValueError("HW (T, H, W) must be provided.")
     if layer.conv_q is not None or layer.conv_v is not None:
         raise NotImplementedError(
-            "Triton chunk-causal scan requires k_conv_only=True; "
-            "got conv_q / conv_v not None."
+            "Triton chunk-causal scan requires k_conv_only=True; " "got conv_q / conv_v not None."
         )
 
     kv_cache = kwargs["kv_cache"]

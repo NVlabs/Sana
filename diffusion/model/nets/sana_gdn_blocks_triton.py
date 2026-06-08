@@ -33,6 +33,8 @@ raise ``NotImplementedError``:
 
 from __future__ import annotations
 
+import os
+
 import torch
 import torch.nn as nn
 
@@ -56,6 +58,17 @@ from diffusion.model.ops.fused_gdn import (
     prepare_rope_tables,
 )
 from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_bidi_chunkwise
+
+# CUDA chunkwise cam scan (on by default; set SANA_GDN_CUDA=0 to disable): bf16
+# CUDA kernels that read q/k/v [B,H,D,N] directly + write the transposed output
+# directly (no packing/transpose glue) -> ~38x less cam transient VRAM. The
+# drop-in falls back to Triton for unsupported shapes/dtype and, if the CUDA
+# extension can't build (no nvcc/toolkit), latches off to Triton at runtime.
+if os.environ.get("SANA_GDN_CUDA", "1") != "0":
+    try:
+        from diffusion.model.ops.fused_gdn_chunkwise_cuda import cam_scan_bidi_chunkwise_cuda as cam_scan_bidi_chunkwise
+    except Exception as _e:
+        print(f"[SANA_GDN_CUDA] CUDA cam path unavailable ({_e}); using Triton")
 from diffusion.model.registry import ATTENTION_BLOCKS
 
 
@@ -271,8 +284,6 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
         combined = main_raw + cam_contrib
         combined = self._apply_output_gate(combined, x)
         return self.proj(combined.to(self.proj.weight.dtype))
-
-
 
     def _forward_cam_branch(
         self,

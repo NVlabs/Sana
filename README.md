@@ -34,7 +34,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
-- 🔥 [2026/05] 🌍 **SANA-WM: 2.6B Controllable World Model** is released! Supports 720p, 1-min video generation with 6-DoF camera control. A new baseline for World Modeling and Embodied AI. See [Project](https://nvlabs.github.io/Sana/WM/) | [Paper](https://huggingface.co/papers/2605.15178).
+- 🔥 [2026/05] 🌍 **SANA-WM: 2.6B Controllable World Model** is released! Supports 720p, 1-min video generation with 6-DoF camera control. A new baseline for World Modeling and Embodied AI. See [Project](https://nvlabs.github.io/Sana/WM/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/) | [Paper](https://huggingface.co/papers/2605.15178).
 - 🔥 [2026/04] ⚡ **Sol-RL: NVFP4 Rollout, BF16 Training RL** is available! All training recipes for **SANA**, **FLUX.1**, and **SD3.5-L**, together with bundled post-training datasets, are released. See [Sol-RL doc](https://nvlabs.github.io/Sana/docs/sol_rl/) | [Page](https://nvlabs.github.io/Sana/Sol-RL/) | [Paper](https://arxiv.org/abs/2604.06916).
 - 🔥 [2026/03] 📺 **SANA-Video 720p model with LTX-VAE** is released. Use it with LTX2 Refiner to upscale the videos to 2K resolution! See [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video), [SANA-Video doc](https://nvlabs.github.io/Sana/docs/sana_video/) and [Blog about refiner](https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html).
 - 🔥 [2026/03] 💪 **Post Training Infra: SANA × Cosmos-RL** — We partner with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl) to provide a complete RL infrastructure for SANA. You can now post-train (SFT/RL) SANA-Image and SANA-Video with state-of-the-art algorithms (e.g. Diffusion-NFT, Flow-GRPO), preset configs, reward services, and flexible datasets. See [SANA on Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md) and our [Cosmos-RL integration doc](https://nvlabs.github.io/Sana/docs/sana_cosmos_rl/).
@@ -165,7 +165,7 @@ image[0].save("sana.png")
 - [SANA-Sprint](https://nvlabs.github.io/Sana/docs/sana_sprint/)
 - [SANA-Video](https://nvlabs.github.io/Sana/docs/sana_video/)
 - [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/)
-- [SANA-WM(coming soon)](https://nvlabs.github.io/Sana/docs/world-model/)
+- [SANA-WM](https://nvlabs.github.io/Sana/docs/sana_wm/)
 - [ControlNet](https://nvlabs.github.io/Sana/docs/sana_controlnet/)
 - [LoRA / DreamBooth](https://nvlabs.github.io/Sana/docs/sana_lora_dreambooth/)
 - [Sol-RL Post-Training](https://nvlabs.github.io/Sana/docs/sol_rl/)
@@ -218,7 +218,7 @@ We will try our best to achieve
 - [✅] Better re-construction F32/F64 [VAEs](https://github.com/dc-ai-projects/DC-Gen)
 - [✅] SANA-Video: Linear DiT Video model, and real-time minute-length video generation
 - [✅] RL Post-training: collaborate with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
-- [] SANA World Model
+- [✅] SANA World Model
 - [] SANA Streaming Video-to-Video Editing
 - [🚀] See you in the future
 
@@ -236,6 +236,7 @@ Thanks to the following open-sourced projects:
 - [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku)
 - [Open-Sora](https://github.com/hpcaitech/Open-Sora)
 - [Wan](https://github.com/Wan-Video/Wan2.1)
+- [LTX-2](https://github.com/Lightricks/LTX-2)
 - [LongLive](https://github.com/NVlabs/LongLive)
 - [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
 

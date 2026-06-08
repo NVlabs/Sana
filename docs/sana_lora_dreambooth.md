@@ -132,13 +132,13 @@ Refer to the [official documentation](https://huggingface.co/docs/diffusers/main
 We show some samples during Sana-LoRA fine-tuning process below.
 
 <p align="center" border-raduis="10px">
-  <img src="https://nvlabs.github.io/Sana/asset/content/dreambooth/step0.jpg" width="90%" alt="sana-lora-step0"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/dreambooth/step0.jpg" width="90%" alt="sana-lora-step0"/>
   <br>
   <em> training samples at step=0 </em>
 </p>
 
 <p align="center" border-raduis="10px">
-  <img src="https://nvlabs.github.io/Sana/asset/content/dreambooth/step500.jpg" width="90%" alt="sana-lora-step500"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/dreambooth/step500.jpg" width="90%" alt="sana-lora-step500"/>
   <br>
   <em> training samples at step=500 </em>
 </p>

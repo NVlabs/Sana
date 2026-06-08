@@ -25,16 +25,16 @@ python main.py
 
 [Sana workflow](Sana_FlowEuler.json)
 
-![Sana](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/sana.jpg)
+![Sana](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/comfyui/sana.jpg)
 
 ### A sample for T2I(Sana) + I2V(CogVideoX)
 
 [Sana + CogVideoX workflow](Sana_CogVideoX.json)
 
-[![Sample T2I + I2V](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/sana-cogvideox.jpg)](https://nvlabs.github.io/Sana/asset/content/comfyui/Sana_CogVideoX_Fun.mp4)
+[![Sample T2I + I2V](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/comfyui/sana-cogvideox.jpg)](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/comfyui/Sana_CogVideoX_Fun.mp4)
 
 ### A sample workflow for Sana 4096x4096 image (18GB GPU is needed)
 
 [Sana workflow](Sana_FlowEuler_4K.json)
 
-![Sana](https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/comfyui/Sana_4K_workflow.jpg)
+![Sana](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/comfyui/Sana_4K_workflow.jpg)

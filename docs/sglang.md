@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/logo.png" width="40%" alt="Sana Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/logo.png" width="40%" alt="Sana Logo"/>
 </p>
 
 # 🚀 SGLang: High-Performance Serving for SANA

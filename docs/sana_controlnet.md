@@ -19,7 +19,7 @@ SPDX-License-Identifier: Apache-2.0 -->
 We incorporate a ControlNet-like(https://github.com/lllyasviel/ControlNet) module enables fine-grained control over text-to-image diffusion models. We implement a ControlNet-Transformer architecture, specifically tailored for Transformers, achieving explicit controllability alongside high-quality image generation.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/page/asset/content/controlnet/sana_controlnet.jpg"  height=480>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/controlnet/sana_controlnet.jpg"  height=480>
 </p>
 
 ## Inference of `Sana + ControlNet`
@@ -33,7 +33,7 @@ python app/app_sana_controlnet_hed.py \
 ```
 
 <p align="center" border-raduis="10px">
-  <img src="https://nvlabs.github.io/Sana/asset/content/controlnet/controlnet_app.jpg" width="90%" alt="teaser_page2"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/controlnet/controlnet_app.jpg" width="90%" alt="teaser_page2"/>
 </p>
 
 ### 2). Inference with JSON file

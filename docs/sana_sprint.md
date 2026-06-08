@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://nvlabs.github.io/Sana/Sprint/asset/SANA-Sprint.png" width="60%" alt="SANA-Sprint Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/SANA-Sprint.png" width="60%" alt="SANA-Sprint Logo"/>
 </p>
 
 # 🏃SANA-Sprint: One-Step Diffusion with Continuous-Time Consistency Distillation

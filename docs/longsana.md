@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://nvlabs.github.io/Sana/Video/logo.svg" width="70%" alt="SANA-Sprint Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/logo.svg" width="70%" alt="SANA-Sprint Logo"/>
 </p>
 
 # 🎬 LongSANA: SANA-Video + [LongLive](https://github.com/NVlabs/LongLive)

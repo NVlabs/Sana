@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://nvlabs.github.io/Sana/assets/cosmos-rl/sana-cosmos-rl-logo.png" width="90%" alt="SANA × Cosmos-RL Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/assets/cosmos-rl/sana-cosmos-rl-logo.png" width="90%" alt="SANA × Cosmos-RL Logo"/>
 </p>
 
 # SANA × Cosmos-RL: Post-Training (SFT/RL) for Image & Video Diffusion Models
@@ -12,7 +12,7 @@
 We have partnered with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl) to provide a complete RL infrastructure for SANA. This document summarizes how to post-train (SFT/RL) SANA-Image or SANA-Video on Cosmos-RL.
 
 <p align="center" style="border-radius: 10px">
-  <img src="https://nvlabs.github.io/Sana/assets/cosmos-rl/teaser.png" width="90%" alt="SANA × Cosmos-RL Teaser"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/assets/cosmos-rl/teaser.png" width="90%" alt="SANA × Cosmos-RL Teaser"/>
 </p>
 
 ## Overview

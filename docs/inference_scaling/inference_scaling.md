@@ -1,10 +1,10 @@
 ## Inference Time Scaling for SANA-1.5
 
-![results](results.jpg)
+![results](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/docs/inference_scaling/results.jpg)
 
 We trained a specialized [NVILA-2B](https://huggingface.co/Efficient-Large-Model/NVILA-Lite-2B-Verifier) model to score images, which we named VISA (VIla as SAna verifier). By selecting the top 4 images from 2,048 candidates, we enhanced the GenEval performance of SD1.5 and SANA-1.5-4.8B v2, increasing their scores from 42 to 87 and 81 to 96, respectively.
 
-![curve](scaling_curve.jpg)
+![curve](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/docs/inference_scaling/scaling_curve.jpg)
 
 Even for smaller number of candidates, like 32, we can also push the performance over 90% for SANA-1.5-4.8B v2 in the GenEval.
 

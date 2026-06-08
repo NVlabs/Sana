@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://raw.githubusercontent.com/NVlabs/Sana/refs/heads/main/asset/sana-wm-logo.png" width="70%" alt="SANA-WM Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/sana-wm-logo.png" width="70%" alt="SANA-WM Logo"/>
 </p>
 
 # 🌍 SANA-WM: Efficient Minute-Scale World Modeling with Hybrid Linear Diffusion Transformer
@@ -11,7 +11,7 @@
 </div>
 
 <div align="center">
-  <video src="https://nvlabs.github.io/Sana/WM/media/videos/hero_reel_v9.mp4#t=1" autoplay playsinline controls muted loop width="90%" onloadedmetadata="this.currentTime=1;this.playbackRate=2"></video>
+  <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/WM/media/videos/hero_reel_v9.mp4#t=1" autoplay playsinline controls muted loop width="90%" onloadedmetadata="this.currentTime=1;this.playbackRate=2"></video>
 </div>
 
 ## 📽️ About SANA-WM

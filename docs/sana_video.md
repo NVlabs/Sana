@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://nvlabs.github.io/Sana/Video/logo.svg" width="70%" alt="SANA-Sprint Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/logo.svg" width="70%" alt="SANA-Sprint Logo"/>
 </p>
 
 # 🎬 SANA-Video: Efficient Video Generation with Block Linear Diffusion Transformer
@@ -116,7 +116,7 @@ negative_prompt = "A chaotic sequence with misshapen, deformed limbs eavy motion
 motion_prompt = f" motion score: {motion_score}."
 prompt = prompt + motion_prompt
 
-image = load_image("https://raw.githubusercontent.com/NVlabs/Sana//heads/main/asset/samples/i2v-1.png")
+image = load_image("https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/i2v-1.png")
 
 output = pipe(
     image=image,
@@ -221,7 +221,7 @@ python app/sana_video_refiner_pipeline_diffusers.py \
     <p style="margin-top: 8px; font-size: 14px; color: #666;"><strong>Stage 1:</strong> SANA-Video Base (720p)</p>
   </div>
   <div style="flex: 1; min-width: 0; text-align: center;">
-    <video src="https://nvlabs.github.io/Sana/Video/refiner/sana_refiner.mp4" autoplay muted loop playsinline style="width: 100%; border-radius: 8px; display: block;"></video>
+    <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/refiner/sana_refiner.mp4" autoplay muted loop playsinline style="width: 100%; border-radius: 8px; display: block;"></video>
     <p style="margin-top: 8px; font-size: 14px; color: #666;"><strong>Stage 2:</strong> LTX2 Refined (2K)</p>
   </div>
 </div>

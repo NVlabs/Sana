@@ -1,5 +1,5 @@
 <p align="center" style="border-radius: 10px">
-  <img src="https://nvlabs.github.io/Sana/Sol-RL/asset/sol-rl_logo.png" width="82%" alt="Sol-RL Logo"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/sol-rl_logo.png" width="82%" alt="Sol-RL Logo"/>
 </p>
 
 # Sol-RL: FP4 Explore, BF16 Train for SANA, FLUX.1, and SD3.5-L

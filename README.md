@@ -20,7 +20,7 @@
 <p align="center">
   <a href="https://replicate.com/chenxwh/sana"><img src="https://img.shields.io/static/v1?label=API:H100&message=Replicate&color=pink"></a> &ensp;
   <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
-  <a href="https://sana-wm.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Demo&message=SANA-WM&color=yellow"></a> &ensp;
+  <a href="https://sana-wm.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-WM&color=yellow"></a> &ensp;
 </p>
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
@@ -35,7 +35,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
-- 🔥 [2026/05] 🌍 **SANA-WM: 2.6B Controllable World Model** is released! Supports 720p, 1-min video generation with 6-DoF camera control. A new baseline for World Modeling and Embodied AI. See [Project](https://nvlabs.github.io/Sana/WM/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/) | [Paper](https://huggingface.co/papers/2605.15178) | [Demo](https://sana-wm.reactor.inc/).
+- 🔥 [2026/05] 🌍 **SANA-WM: 2.6B Controllable World Model** is released! Supports 720p, 1-min video generation with 6-DoF camera control. A new baseline for World Modeling and Embodied AI. See [Project](https://nvlabs.github.io/Sana/WM/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/) | [Paper](https://huggingface.co/papers/2605.15178) | [Reactor Demo](https://sana-wm.reactor.inc/).
 - 🔥 [2026/04] ⚡ **Sol-RL: NVFP4 Rollout, BF16 Training RL** is available! All training recipes for **SANA**, **FLUX.1**, and **SD3.5-L**, together with bundled post-training datasets, are released. See [Sol-RL doc](https://nvlabs.github.io/Sana/docs/sol_rl/) | [Page](https://nvlabs.github.io/Sana/Sol-RL/) | [Paper](https://arxiv.org/abs/2604.06916).
 - 🔥 [2026/03] 📺 **SANA-Video 720p model with LTX-VAE** is released. Use it with LTX2 Refiner to upscale the videos to 2K resolution! See [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video), [SANA-Video doc](https://nvlabs.github.io/Sana/docs/sana_video/) and [Blog about refiner](https://nvlabs.github.io/Sana/Video/bet-small-win-big/blog.html).
 - 🔥 [2026/03] 💪 **Post Training Infra: SANA × Cosmos-RL** — We partner with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl) to provide a complete RL infrastructure for SANA. You can now post-train (SFT/RL) SANA-Image and SANA-Video with state-of-the-art algorithms (e.g. Diffusion-NFT, Flow-GRPO), preset configs, reward services, and flexible datasets. See [SANA on Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md) and our [Cosmos-RL integration doc](https://nvlabs.github.io/Sana/docs/sana_cosmos_rl/).

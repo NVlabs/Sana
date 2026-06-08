@@ -2,10 +2,6 @@
   <img src="asset/logo.png" width="35%" alt="logo"/>
 </p>
 
-<p align="center">
-  <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/refiner/sana_ori.mp4">SANA refiner sample video hosted on Hugging Face</a>
-</p>
-
 <h3 align="center">
 <a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
 
@@ -33,7 +29,7 @@
 Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with the community! If you have any questions, run into issues, or are interested in contributing, don't hesitate to reach out!
 
 <p align="center" border-radius="10px">
-  <img src="asset/Sana.jpg" width="90%" alt="teaser_page1"/>
+  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/Sana.jpg" width="90%" alt="teaser_page1"/>
 </p>
 
 ## News

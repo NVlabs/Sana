@@ -1,3 +1,13 @@
+# Copyright 2024 NVIDIA CORPORATION & AFFILIATES
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Chunk-pipelined orchestrator for streaming Sana-WM inference.
 
 Drives three CUDA streams (stage-1 DiT, LTX-2 refiner, causal LTX-2 VAE) so
@@ -32,7 +42,7 @@ import torch
 
 from diffusion.model.ltx2 import CausalVaeStreamingDecoder
 from diffusion.refiner.diffusers_ltx2_refiner import RefinerChunkRunner
-from inference_video_scripts.streaming_mp4_writer import StreamingMp4Writer
+from inference_video_scripts.wm.streaming_mp4_writer import StreamingMp4Writer
 
 
 def _env_flag(name: str) -> bool:

@@ -51,7 +51,7 @@ fetched on first use from
 ### Example 1 — image + prompt + action string
 
 ```bash
-python inference_video_scripts/inference_sana_wm.py \
+python inference_video_scripts/wm/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
   --action     "w-100,dw-60,w-100,aw-60" \
@@ -79,7 +79,7 @@ fresh press, gentle coast on release); default speeds are gentle
 ### Example 2 — image + prompt + camera trajectory (`.npy`)
 
 ```bash
-python inference_video_scripts/inference_sana_wm.py \
+python inference_video_scripts/wm/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
   --camera     asset/sana_wm/demo_0_pose.npy \
@@ -138,7 +138,7 @@ are fetched on first use from
 inference YAML ships in-repo under `configs/sana_wm/`. Just run:
 
 ```bash
-python inference_video_scripts/inference_sana_wm_streaming.py \
+python inference_video_scripts/wm/inference_sana_wm_streaming.py \
   --image       asset/sana_wm/demo_0.png \
   --prompt      asset/sana_wm/demo_0.txt \
   --action      "w-80,dw-40,w-80,aw-40" \
@@ -198,7 +198,7 @@ Overrides for advanced use:
 | `--no_action_overlay` | Skip the WASD + joystick overlay on the output video. |
 | `--offload_vae` | Move the VAE to CPU between encode / decode steps. |
 | `--offload_refiner` | Lazy-load the LTX-2 refiner only when needed; release afterwards. |
-| `--sampling_algo` | `flow_euler_ltx` (default, bidirectional). For streaming use the dedicated `inference_sana_wm_streaming.py`. |
+| `--sampling_algo` | `flow_euler_ltx` (default, bidirectional). For streaming use the dedicated `wm/inference_sana_wm_streaming.py`. |
 
 ## 📁 HF Repository Layout
 

@@ -12,7 +12,7 @@
 # abort if the estimated FOV is outside [25°, 120°]).
 set -euo pipefail
 
-python inference_video_scripts/inference_sana_wm.py \
+python inference_video_scripts/wm/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
   --action     "w-100,dw-60,w-100,aw-60" \

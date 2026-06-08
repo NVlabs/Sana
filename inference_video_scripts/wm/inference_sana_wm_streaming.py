@@ -57,8 +57,8 @@ import torch  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from diffusion.utils.logger import get_root_logger  # noqa: E402
-from inference_video_scripts.inference_sana_wm import action_string_to_c2w  # noqa: F401  (re-export)
-from inference_video_scripts.inference_sana_wm import (  # noqa: E402
+from inference_video_scripts.wm.inference_sana_wm import action_string_to_c2w  # noqa: F401  (re-export)
+from inference_video_scripts.wm.inference_sana_wm import (  # noqa: E402
     GenerationParams,
     InferenceConfig,
     RefinerSettings,
@@ -94,7 +94,7 @@ HF_STREAMING_DEFAULTS = {
 }
 
 # The inference YAML ships in-repo (configs/sana_wm/), not in the weights repo.
-DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "sana_wm" / "sana_wm_streaming_1600m_720p.yaml"
+DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "sana_wm" / "sana_wm_streaming_1600m_720p.yaml"
 
 # Optional LOCAL bundle dir (``--streaming_root``). Unset by default so the
 # hf:// defaults above drive a first-use download.

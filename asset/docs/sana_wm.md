@@ -46,7 +46,7 @@ fetched on first use from
 ### Example 1 — image + prompt + action string
 
 ```bash
-python inference_video_scripts/inference_sana_wm.py \
+python inference_video_scripts/wm/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
   --action     "w-80,jw-40,w-40,lw-60,w-100" \
@@ -65,7 +65,7 @@ down), `j` (yaw left), `l` (yaw right) act in the camera's local frame.
 ### Example 2 — image + prompt + camera trajectory (`.npy`)
 
 ```bash
-python inference_video_scripts/inference_sana_wm.py \
+python inference_video_scripts/wm/inference_sana_wm.py \
   --image      asset/sana_wm/demo_0.png \
   --prompt     asset/sana_wm/demo_0.txt \
   --camera     asset/sana_wm/demo_0_pose.npy \

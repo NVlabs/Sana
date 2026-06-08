@@ -29,7 +29,7 @@ python inference_video_scripts/inference_sana_video.py \
     --model_path=hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth \
     --cfg_scale=1.0 --debug=true
 
-python inference_video_scripts/inference_sana_wm.py \
+python inference_video_scripts/wm/inference_sana_wm.py \
     --image=asset/sana_wm/demo_0.png \
     --prompt=asset/sana_wm/demo_0.txt \
     --action=w-641 \
@@ -37,3 +37,14 @@ python inference_video_scripts/inference_sana_wm.py \
     --name=demo_0 \
     --num_frames=641 \
     --step=4
+
+python inference_video_scripts/wm/inference_sana_wm_streaming.py \
+    --image=asset/sana_wm/demo_0.png \
+    --prompt=asset/sana_wm/demo_0.txt \
+    --action=w-25 \
+    --intrinsics=asset/sana_wm/demo_0_intrinsics.npy \
+    --output_dir=results/sana_wm_streaming_ci \
+    --name=demo_0_streaming \
+    --num_frames=25 \
+    --no_compile \
+    --streaming_preset=ultrafast

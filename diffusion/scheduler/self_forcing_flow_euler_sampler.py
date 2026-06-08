@@ -92,8 +92,8 @@ def _inject_sliced_extras(
         if k in kwargs:
             continue
         if isinstance(v, torch.Tensor):
-            if v.ndim == 5 and v.shape[2] > num_chunk_frames:
-                kwargs[k] = v[:, :, begin_f:end_f]
+            if v.ndim == 5:
+                kwargs[k] = v[:, :, begin_f:end_f] if v.shape[2] > num_chunk_frames else v
             elif v.ndim >= 3 and v.shape[1] > num_chunk_frames:
                 kwargs[k] = v[:, begin_f:end_f]
             else:

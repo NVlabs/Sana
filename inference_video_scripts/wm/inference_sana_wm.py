@@ -87,14 +87,14 @@ from diffusion.utils.camctrl_config import ModelVideoCamCtrlConfig, model_video_
 from diffusion.utils.chunk_utils import get_chunk_index_from_config
 from diffusion.utils.config import AEConfig, SchedulerConfig, TextEncoderConfig
 from diffusion.utils.logger import get_root_logger
-from inference_video_scripts.camera_control import (
+from inference_video_scripts.wm.camera_control import (
     DEFAULT_PITCH_LIMIT_DEG,
     DEFAULT_ROTATION_SPEED_DEG,
     DEFAULT_TRANSLATION_SPEED,
     DSL_KEY_TO_CONTROL,
 )
-from inference_video_scripts.camera_control import FPS as _CAM_FPS  # shared camera-control core (demo + inference)
-from inference_video_scripts.camera_control import (
+from inference_video_scripts.wm.camera_control import FPS as _CAM_FPS  # shared camera-control core (demo + inference)
+from inference_video_scripts.wm.camera_control import (
     CameraPoseIntegrator,
     VelocityState,
     controls_to_target_velocity,
@@ -323,6 +323,9 @@ def _stage1_forward_long_nvfp4(_self, *args, **kwargs):
     import transformer_engine.pytorch as te
 
     with te.fp8_autocast(enabled=True, fp8_recipe=_self._sana_wm_stage1_nvfp4_recipe):
+        forward_long_impl = getattr(_self, "_sana_wm_stage1_forward_long_impl", None)
+        if forward_long_impl is not None:
+            return forward_long_impl(*args, **kwargs)
         return type(_self).forward_long(_self, *args, **kwargs)
 
 
@@ -1096,6 +1099,10 @@ class SanaWMPipeline:
 
         model._sana_wm_stage1_nvfp4_converted = True
         model._sana_wm_stage1_nvfp4_recipe = recipe
+        forward_long = getattr(model, "forward_long", None)
+        forward_long_func = getattr(forward_long, "__func__", forward_long)
+        if forward_long_func is not getattr(type(model), "forward_long", None):
+            model._sana_wm_stage1_forward_long_impl = forward_long
         model.forward_long = types.MethodType(_stage1_forward_long_nvfp4, model)
         self.logger.info(
             "[stage1-nvfp4] mode=%s converted %d Linear layers (skipped %d)",
@@ -1374,17 +1381,13 @@ class SanaWMPipeline:
         if stage1_text_encoder is not None:
             stage1_text_encoder.to("cpu")
         if getattr(self.model, "_sana_wm_stage1_nvfp4_converted", False):
-            self.model
             self.model = None
-            del model
             dropped_stage1 = True
         else:
             self.model.to("cpu")
         self._move_vae_decoder_for_streaming("cpu")
         if getattr(self.refiner, "_te_nvfp4_converted", False):
-            self.refiner.transformer
             self.refiner.transformer = None
-            del transformer
             dropped_refiner = True
         else:
             self.refiner.move_video_modules("cpu")
@@ -1656,7 +1659,7 @@ class SanaWMPipeline:
         Runs stage-1 sampling, refiner AR blocks, and causal-VAE decode on
         three CUDA streams, emitting one decoded chunk per AR block to a
         progressive MP4. Called from
-        :mod:`inference_video_scripts.inference_sana_wm_streaming`, which
+        :mod:`inference_video_scripts.wm.inference_sana_wm_streaming`, which
         is the canonical entrypoint. Requires the pipeline to be built
         with the causal LTX-2 VAE and a refiner with ``block_size`` set,
         and ``params.sampling_algo == 'self_forcing'``.
@@ -1669,7 +1672,7 @@ class SanaWMPipeline:
             STAGE_2_DISTILLED_SIGMA_VALUES,
             RefinerChunkRunner,
         )
-        from inference_video_scripts.streaming_pipeline import (
+        from inference_video_scripts.wm.streaming_pipeline import (
             StreamingPipelineConfig,
             run_streaming_inference,
         )

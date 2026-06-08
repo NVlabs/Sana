@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/refiner/sana_ori.mp4" controls muted width="50%"></video>
+  <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video/refiner/sana_ori.mp4">SANA refiner sample video hosted on Hugging Face</a>
 </p>
 
 <h3 align="center">

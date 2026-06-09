@@ -1,6 +1,6 @@
 const root = document.getElementById("app");
 
-const base = "./assets/media/";
+const base = "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Streaming/assets/media/";
 
 const authors = [
   { name: "Yuyang Zhao", href: "https://yuyangzhao.com/", equal: true },

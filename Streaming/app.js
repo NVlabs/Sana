@@ -425,7 +425,7 @@ function render() {
         <a href="#streaming">Minute</a>
         <a href="#short-video">Short</a>
         <a href="#physical-ai">Physical AI</a>
-        <a href="#cg2real">CG2Real</a>
+        <!-- <a href="#cg2real">CG2Real</a> -->
       </div>
     </nav>
 
@@ -547,6 +547,7 @@ function render() {
       </div>
     </section>
 
+    ${/*
     <section class="section results-section" id="cg2real">
       <p class="eyebrow">CG2Real</p>
       <div class="result-stack">
@@ -555,6 +556,7 @@ function render() {
         </div>
       </div>
     </section>
+    */ ""}
 
     <section class="section citation-section" id="citation">
       <p class="eyebrow">Citation</p>

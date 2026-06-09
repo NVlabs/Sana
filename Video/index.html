@@ -1538,11 +1538,21 @@
     <script src="videoData.js"></script>
     
     <script>
+        const HF_VIDEO_BASE = 'https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video';
+
+        function resolveVideoSrc(prefix, src) {
+            const rawSrc = String(src);
+            if (/^(?:https?:)?\/\//.test(rawSrc) || rawSrc.startsWith('data:')) {
+                return rawSrc;
+            }
+            const encodedSrc = rawSrc.split('/').map(part => encodeURIComponent(part)).join('/');
+            return `${HF_VIDEO_BASE}/${prefix}/${encodedSrc}`;
+        }
 
         // Function to create video item (T2V or I2V)
         function createVideoItem(videoData, prefix) {
             const titleHtml = videoData.title ? `<h3 class="video-title">${videoData.title}</h3>` : '';
-            const videoSrc = `${prefix}/${videoData.videoSrc}`;
+            const videoSrc = resolveVideoSrc(prefix, videoData.videoSrc);
             const videoWidth = videoData.width;
             const videoHeight = videoData.height;
             
@@ -1588,7 +1598,7 @@
         // Function to create FP4 item (comparison style with 1x2 layout)
         function createFP4Item(fp4Data) {
             const videosHtml = fp4Data.videos.map(video => {
-                const videoSrc = `fp4/${video.videoSrc}`;
+                const videoSrc = resolveVideoSrc('fp4', video.videoSrc);
                 const videoWidth = fp4Data.width;
                 const videoHeight = fp4Data.height;
                 const modelName = video.model;
@@ -1628,7 +1638,7 @@
         // Function to create Long Video item
         function createLongVideoItem(videoData) {
             const titleHtml = videoData.title ? `<h3 class="video-title">${videoData.title}</h3>` : '';
-            const videoSrc = `long-video/${videoData.videoSrc}`;
+            const videoSrc = resolveVideoSrc('long-video', videoData.videoSrc);
             const videoWidth = videoData.width;
             const videoHeight = videoData.height;
             
@@ -1655,7 +1665,7 @@
         function createComparisonItem(comparisonData, prefix) {
             const isApplication = prefix === 'application';
             const videosHtml = comparisonData.videos.map(video => {
-                const videoSrc = `${prefix}/${video.videoSrc}`;
+                const videoSrc = resolveVideoSrc(prefix, video.videoSrc);
                 const videoWidth = comparisonData.width;
                 const videoHeight = comparisonData.height;
                 const modelName = video.model;
@@ -1942,5 +1952,4 @@
     </script>
 </body>
 </html>
-
 

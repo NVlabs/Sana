@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sol-RL: FP4 Explore, BF16 Train</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #f7f7f8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafafa;
+  --bg-sidebar: #ffffff;
+  --green: #76b900;
+  --green-dim: #5a8f00;
+  --green-glow: rgba(118, 185, 0, 0.15);
+  --text-primary: #1d1d1f;
+  --text-secondary: #444;
+  --text-muted: #888;
+  --border: rgba(0, 0, 0, 0.08);
+  --sidebar-w: 220px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo .logo-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -0.5px;
+}
+
+.sidebar-logo .logo-sub {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.sidebar nav { padding: 16px 0; flex: 1; }
+
+.sidebar nav a {
+  display: block;
+  padding: 11px 24px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.sidebar nav a:hover {
+  color: var(--text-primary);
+  background: rgba(118, 185, 0, 0.06);
+}
+
+.sidebar nav a.active {
+  color: var(--green);
+  border-left-color: var(--green);
+  background: rgba(118, 185, 0, 0.08);
+}
+
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 14px; left: 14px;
+  z-index: 200;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ── Main Content ── */
+.main {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+}
+
+.hero {
+  text-align: center;
+  padding: 80px 40px 50px;
+  background: linear-gradient(180deg, #fff 0%, var(--bg-deep) 100%);
+}
+
+.hero-nvidia-logo {
+  height: 36px;
+  margin-bottom: 20px;
+  opacity: 1;
+}
+
+.hero h1 {
+  font-size: 4rem;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.hero .subtitle {
+  font-size: 2.2rem;
+  color: var(--text-primary);
+  max-width: 1000px;
+  margin: 0 auto 14px;
+  font-weight: 600;
+}
+
+.hero .tagline {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  max-width: 900px;
+  margin: 0 auto 22px;
+  white-space: nowrap;
+  font-style: italic;
+}
+
+.hero .authors {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.hero .authors a {
+  color: var(--green);
+  text-decoration: none;
+}
+
+.hero .authors a:hover { text-decoration: underline; }
+
+.institution-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.institution-logos a { display: inline-flex; align-items: center; }
+.institution-logos img { display: block; width: auto; }
+
+.hero .venue {
+  font-size: 0.8rem;
+  color: var(--green-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 28px;
+}
+
+.badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 22px;
+  border-radius: 50px;
+  border: 1.5px solid var(--green);
+  color: var(--green);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.25s;
+}
+
+.badge:hover {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(118, 185, 0, 0.25);
+}
+
+.badge-icon { font-size: 0.95rem; line-height: 1; }
+.badge svg { width: 16px; height: 16px; fill: currentColor; }
+
+/* ── Sections ── */
+.content { max-width: 960px; margin: 0 auto; padding: 0 40px 80px; }
+
+section { padding-top: 60px; }
+
+.section-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 48px; height: 3px;
+  background: var(--green);
+  border-radius: 2px;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 24px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.card:hover { border-color: rgba(118, 185, 0, 0.25); box-shadow: 0 2px 12px rgba(118,185,0,0.06); }
+
+.placeholder {
+  background: #fafafa;
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.section-img {
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  margin: 16px 0;
+}
+
+.caption {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ── Metric Cards ── */
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+
+.metric-card {
+  background: linear-gradient(135deg, #f9fff0, #eef7e0);
+  border: 1px solid rgba(118,185,0,0.15);
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 16px rgba(118, 185, 0, 0.12);
+}
+
+.metric-val {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--green);
+  line-height: 1.1;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* ── Bullet list ── */
+.method-list { list-style: none; padding: 0; }
+
+.method-list li {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  position: relative;
+  padding-left: 48px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.method-list li::before {
+  content: '';
+  position: absolute;
+  left: 20px; top: 24px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.method-list li strong { color: var(--text-primary); }
+
+/* ── Analysis Grid ── */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.analysis-cell { text-align: center; }
+
+.analysis-cell img {
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.analysis-cell .caption { margin-top: 8px; }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; border: 1px solid var(--border); background: #fff; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1.0rem;
+}
+
+thead th {
+  background: #f5f7f0;
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 14px 28px;
+  text-align: center;
+  white-space: nowrap;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+thead th:first-child { text-align: left; }
+
+tbody td {
+  padding: 12px 28px;
+  border-bottom: 1px solid #f0f0f0;
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+tbody td:first-child { text-align: left; }
+
+tbody tr:nth-child(even) { background: #fafafa; }
+tbody tr:hover { background: rgba(118, 185, 0, 0.05); }
+
+td.best {
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* ── Ablation side-by-side ── */
+.ablation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ── BibTeX ── */
+.bibtex-block {
+  background: #f5f5f5;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  position: relative;
+}
+
+.bibtex-block pre {
+  margin: 0;
+  white-space: pre;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover { color: var(--green); border-color: var(--green); }
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 40px 20px;
+  border-top: 1px solid #e8e8e8;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  background: #fafafa;
+}
+
+footer a { color: var(--green-dim); text-decoration: none; }
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 240px;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-toggle { display: flex; }
+  .main { margin-left: 0; }
+  .hero { padding-top: 70px; }
+  .hero h1 { font-size: 2rem; }
+  .content { padding: 0 20px 60px; }
+  .metrics { grid-template-columns: 1fr; }
+  .analysis-grid { grid-template-columns: 1fr; }
+  .ablation-grid { grid-template-columns: 1fr; }
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 90;
+}
+
+.overlay.show { display: block; }
+
+/* ── Gallery 1: Static Grid ── */
+#g1-wrap .g1-tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+#g1-wrap .g1-tab { padding: 8px 24px; border: 2px solid #d4d4d4; border-radius: 8px; background: #fff; color: #555; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+#g1-wrap .g1-tab:hover { border-color: var(--green); color: var(--green); }
+#g1-wrap .g1-tab.active { background: var(--green); border-color: var(--green); color: #fff; }
+#g1-wrap .g1-headers { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 6px; }
+#g1-wrap .g1-hdr { font-size: 12px; font-weight: 600; text-align: center; color: #666; padding: 4px 0; }
+#g1-wrap .g1-hdr.ours { color: var(--green); }
+#g1-wrap .g1-panel { display: none; }
+#g1-wrap .g1-panel.active { display: block; }
+#g1-wrap .g1-row { margin-bottom: 24px; }
+#g1-wrap .g1-caption { font-size: 12px; color: #888; text-align: center; margin-bottom: 8px; font-style: italic; line-height: 1.5; }
+#g1-wrap .g1-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+#g1-wrap .g1-cell { border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer; transition: transform 0.25s, box-shadow 0.25s; aspect-ratio: 1/1; }
+#g1-wrap .g1-cell:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(0,0,0,0.12); z-index: 2; }
+#g1-wrap .g1-cell.ours { box-shadow: 0 0 0 2.5px var(--green), 0 1px 4px rgba(0,0,0,0.08); }
+#g1-wrap .g1-cell.ours:hover { box-shadow: 0 0 0 2.5px var(--green), 0 6px 20px rgba(0,0,0,0.12); }
+#g1-wrap .g1-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 820px) { #g1-wrap .g1-headers, #g1-wrap .g1-grid { grid-template-columns: repeat(2,1fr); } }
+#g1-wrap .g1-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; cursor: zoom-out; padding: 24px; }
+#g1-wrap .g1-modal.open { display: flex; }
+#g1-wrap .g1-modal img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); object-fit: contain; }
+#g1-wrap .g1-modal-close { position: fixed; top: 20px; right: 28px; background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; z-index: 1001; opacity: 0.8; }
+#g1-wrap .g1-modal-close:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/sol-rl_logo.png" alt="Sol-RL" style="height: 40px;">
+    <div class="logo-sub">NVIDIA &middot; HKU &middot; MIT</div>
+  </div>
+  <nav>
+    <a href="#top" class="active">Home</a>
+    <a href="#video">Video</a>
+    <a href="#about">About</a>
+    <a href="#gallery">Gallery</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#bibtex">BibTeX</a>
+  </nav>
+</aside>
+
+<div class="main">
+
+  <header class="hero" id="top">
+    <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/sol-rl_logo.png" alt="Sol-RL" style="height: 100px; margin-bottom: 12px;">
+    <p class="subtitle">FP4 Explore, BF16 Train: Diffusion Reinforcement Learning via Efficient Rollout Scaling</p>
+    <p class="tagline">Unlocking Massive Rollout Scaling for Diffusion RL at a Fraction of the Cost</p>
+    <p class="authors">
+      <a href="https://scholar.google.com/citations?user=xfp2Zv8AAAAJ&hl=zh-CN" target="_blank" rel="noopener">Yitong Li</a><sup>1,2*</sup>, <a href="https://lawrence-cj.github.io/" target="_blank" rel="noopener">Junsong Chen</a><sup>1,2*</sup>, <a href="https://scholar.google.com/citations?user=aA70TOwAAAAJ&hl=en" target="_blank" rel="noopener">Shuchen Xue</a><sup>1*</sup>, <a href="#top">Pengcuo Zeren</a><sup>1</sup>, <a href="https://www.linkedin.com/in/siyuan-fu-b47b67238" target="_blank" rel="noopener">Siyuan Fu</a><sup>1</sup>, <a href="https://dinghow.site/" target="_blank" rel="noopener">Dinghao Yang</a><sup>1</sup>, <a href="https://www.linkedin.com/in/yangyang-tang-a81b06ab" target="_blank" rel="noopener">Yangyang Tang</a><sup>1</sup>,<br>
+      <a href="https://scholar.google.com/citations?user=gSB8_64AAAAJ&hl=en" target="_blank" rel="noopener">Junjie Bai</a><sup>1</sup>, <a href="http://luoping.me/" target="_blank" rel="noopener">Ping Luo</a><sup>2</sup>, <a href="https://hanlab.mit.edu/songhan/" target="_blank" rel="noopener">Song Han</a><sup>1,3</sup>, <a href="https://xieenze.github.io/" target="_blank" rel="noopener">Enze Xie</a><sup>1</sup>
+    </p>
+    <p style="font-size: 1rem; color: var(--text-muted); margin-bottom: 4px;">
+      <sup>1</sup>NVIDIA &nbsp; <sup>2</sup>HKU &nbsp; <sup>3</sup>MIT
+    </p>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; font-style: italic;">
+      *Equal contribution
+    </p>
+    <div class="institution-logos">
+      <a href="https://www.nvidia.com/" target="_blank" rel="noopener">
+        <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/nvidia_stacked.png" alt="NVIDIA" style="height: 120px;">
+      </a>
+      <a href="https://www.hku.hk/" target="_blank" rel="noopener">
+        <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/hku_logo.jpg" alt="HKU" style="height: 120px;">
+      </a>
+      <a href="https://hanlab.mit.edu/" target="_blank" rel="noopener">
+        <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/mit_han_stacked.png" alt="MIT Han Lab" style="height: 120px;">
+      </a>
+    </div>
+    <div class="badges">
+      <a href="https://arxiv.org/abs/2604.06916" class="badge" target="_blank" rel="noopener">
+        <span class="badge-icon">📄</span>
+        arXiv
+      </a>
+      <a href="https://github.com/NVlabs/Sana" class="badge" target="_blank" rel="noopener">
+        <span class="badge-icon">💻</span>
+        Code
+      </a>
+      <a href="https://nvlabs.github.io/Sana/docs/" class="badge" target="_blank" rel="noopener">
+        <span class="badge-icon">📖</span>
+        Docs
+      </a>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Video -->
+    <section id="video">
+      <h2 class="section-title">Demo Video</h2>
+      <video controls playsinline style="width: 100%; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.10);">
+        <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/video/Sol-RL_Full_music.mp4" type="video/mp4">
+      </video>
+    </section>
+
+    <!-- About -->
+    <section id="about">
+      <h2 class="section-title">About</h2>
+      <div class="card">
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+          RL-based post-training is a promising paradigm for aligning diffusion models with human preferences, and scaling rollout group size yields clear gains — but at prohibitive cost on large models like FLUX.1-12B. We propose <strong style="color: var(--green);">Sol-RL</strong> (Speed-of-light RL), an FP4-empowered two-stage RL framework that decouples exploration from optimization: high-throughput NVFP4 rollouts generate a massive candidate pool, from which only the most contrastive subset is regenerated in BF16 for policy updates. This algorithm-hardware co-design accelerates rollouts while preserving training integrity. Experiments across SANA, FLUX.1, and SD3.5-L show superior alignment with up to <strong style="color: var(--green);">4.64×</strong> faster convergence.
+        </p>
+      </div>
+      <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/head_figure.png" alt="Sol-RL head figure" class="section-img">
+      <p class="caption">Sol-RL enables efficient and high-fidelity text-to-image alignment.</p>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-val">4.64×</div>
+          <div class="metric-label">Convergence Speedup</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">~1%</div>
+          <div class="metric-label">Performance Gap vs. BF16</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">3×4</div>
+          <div class="metric-label">Foundation Models & Rewards Validated</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gallery -->
+    <section id="gallery">
+      <h2 class="section-title">Qualitative Results</h2>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 16px;">
+        All methods side by side. Click any image to view fullscreen.
+      </p>
+      <div id="g1-wrap"></div>
+    </section>
+
+    <!-- Pipeline -->
+    <section id="pipeline">
+      <h2 class="section-title">Core Design: Decoupled Two-Stage Pipeline</h2>
+      <div class="card">
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+          We decouple high-throughput FP4 exploration from selective BF16 training, achieving up to 2.4× rollout acceleration with merely 2% computational overhead while avoiding quantization-induced corruption.
+        </p>
+      </div>
+      <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/teaser.png" alt="Pipeline overview" class="section-img" style="margin: 28px 0; padding: 16px; background: #fff; border: 1px solid var(--border);">
+    </section>
+
+    <!-- Methodology -->
+    <section id="method">
+      <h2 class="section-title">Methodology</h2>
+      <div class="card">
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+          Scaling rollouts improves alignment but creates an inference bottleneck, and naive FP4 quantization compromises visual fidelity. Sol-RL introduces a <strong style="color: var(--green);">decoupled two-stage architecture</strong> that uses FP4 exclusively for exploration while preserving BF16 for optimization.
+        </p>
+      </div>
+
+      <h3 style="color: var(--text-primary); font-size: 1.1rem; margin: 32px 0 16px; font-weight: 600;">Rollout Scaling: Promise and Bottleneck</h3>
+      <div class="card">
+        <p style="color: var(--text-secondary); font-size: 0.93rem;">
+          Under <em>selective training</em>, only the best-K and worst-K samples drive gradient updates, so larger rollout groups yield better learning signals at fixed training cost. However, the vast majority of generated candidates are discarded — revealing massive redundancy in computing the full pool at high precision.
+        </p>
+      </div>
+
+      <h3 style="color: var(--text-primary); font-size: 1.1rem; margin: 32px 0 16px; font-weight: 600;">Key Insight: Proxy Reward Ranking via FP4</h3>
+      <div class="card">
+        <p style="color: var(--text-secondary); font-size: 0.93rem;">
+          In ODE-style diffusion sampling, the semantic outcome is dictated by the initial noise seed. NVFP4 preserves this structure despite pixel-level deviations, so <strong style="color: var(--green);">FP4 rollouts serve as reliable proxies for reward ranking</strong> — enabling us to identify the most informative seeds cheaply, then regenerate only those in BF16.
+        </p>
+      </div>
+
+      <h3 style="color: var(--text-primary); font-size: 1.1rem; margin: 32px 0 16px; font-weight: 600;">Two-Stage Pipeline</h3>
+      <ul class="method-list">
+        <li>
+          <strong>Stage 1: FP4 Explore</strong> — Sample N=96 noises and generate candidates via the NVFP4-quantized solver (up to 4× TFLOPs vs. BF16) to compute proxy rewards. Filter to isolate the top/bottom-K most contrastive seeds.
+        </li>
+        <li>
+          <strong>Stage 2: BF16 Train</strong> — Regenerate the selected K=24 seeds in BF16 with the full step budget. Optimize the policy on these high-fidelity samples, then re-quantize weights to NVFP4 for the next iteration.
+        </li>
+      </ul>
+
+      <div class="card" style="background: linear-gradient(135deg, #f9fff0, #eef7e0); border-color: rgba(118,185,0,0.2);">
+        <p style="color: var(--text-secondary); font-size: 0.93rem;">
+          <strong style="color: var(--green);">In summary</strong>, Sol-RL harnesses FP4 throughput for massive-scale exploration and reserves BF16 compute strictly for the K samples that dictate the policy update — introducing merely ~2% overhead.
+        </p>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="results">
+      <h2 class="section-title">Overall Performance</h2>
+
+      <h3 style="color: var(--text-primary); font-size: 1.1rem; margin-bottom: 12px; font-weight: 600;">Main Results on FLUX.1</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" style="vertical-align: bottom;">Method</th>
+              <th colspan="2">ImageReward<br><span style="font-weight: 400; font-size: 0.8rem; color: var(--text-muted);">(Base w/o CFG: 0.455)</span></th>
+              <th colspan="2">CLIPScore<br><span style="font-weight: 400; font-size: 0.8rem; color: var(--text-muted);">(Base w/o CFG: 0.2630)</span></th>
+              <th colspan="2">PickScore<br><span style="font-weight: 400; font-size: 0.8rem; color: var(--text-muted);">(Base w/o CFG: 0.8096)</span></th>
+              <th colspan="2">HPSv2<br><span style="font-weight: 400; font-size: 0.8rem; color: var(--text-muted);">(Base w/o CFG: 0.2566)</span></th>
+            </tr>
+            <tr>
+              <th>Score</th><th>Δ (↑)</th>
+              <th>Score</th><th>Δ (↑)</th>
+              <th>Score</th><th>Δ (↑)</th>
+              <th>Score</th><th>Δ (↑)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DanceGRPO</td>
+              <td>1.4937</td><td>+1.0387</td>
+              <td>0.2898</td><td>+0.0268</td>
+              <td>0.8807</td><td>+0.0711</td>
+              <td>0.3552</td><td>+0.0986</td>
+            </tr>
+            <tr>
+              <td>FlowGRPO</td>
+              <td>1.5331</td><td>+1.0781</td>
+              <td>0.2884</td><td>+0.0254</td>
+              <td>0.8743</td><td>+0.0647</td>
+              <td>0.3501</td><td>+0.0935</td>
+            </tr>
+            <tr>
+              <td>AWM</td>
+              <td>1.6693</td><td>+1.2143</td>
+              <td>0.3039</td><td>+0.0409</td>
+              <td>0.8842</td><td>+0.0746</td>
+              <td>0.3664</td><td>+0.1098</td>
+            </tr>
+            <tr>
+              <td>DiffusionNFT</td>
+              <td>1.6707</td><td>+1.2157</td>
+              <td>0.2991</td><td>+0.0361</td>
+              <td>0.8852</td><td>+0.0756</td>
+              <td>0.3613</td><td>+0.1047</td>
+            </tr>
+            <tr style="background: rgba(118, 185, 0, 0.08);">
+              <td><strong style="color: var(--green);">Sol-RL (Ours)</strong></td>
+              <td class="best"><strong>1.7636</strong></td><td class="best"><strong>+1.3086</strong></td>
+              <td class="best"><strong>0.3089</strong></td><td class="best"><strong>+0.0459</strong></td>
+              <td class="best"><strong>0.8932</strong></td><td class="best"><strong>+0.0836</strong></td>
+              <td class="best"><strong>0.3688</strong></td><td class="best"><strong>+0.1122</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-RL/asset/grid_3x3.png" alt="Learning curves" class="section-img">
+      <p class="caption">Learning curves across metrics and models.</p>
+
+      <h3 style="color: var(--text-primary); font-size: 1.1rem; margin: 32px 0 12px; font-weight: 600;">Efficiency Comparison (seconds/iteration)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Base Model</th>
+              <th>Rollout Naive</th>
+              <th>Rollout Ours</th>
+              <th>Speedup</th>
+              <th>E2E Naive</th>
+              <th>E2E Ours</th>
+              <th>Speedup</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>FLUX.1</td>
+              <td>184</td>
+              <td>79</td>
+              <td class="best">2.33×</td>
+              <td>274</td>
+              <td>169</td>
+              <td class="best">1.62×</td>
+            </tr>
+            <tr>
+              <td>SD3.5-Large</td>
+              <td>451</td>
+              <td>187</td>
+              <td class="best">2.41×</td>
+              <td>691</td>
+              <td>427</td>
+              <td class="best">1.61×</td>
+            </tr>
+            <tr>
+              <td>SANA</td>
+              <td>65</td>
+              <td>46</td>
+              <td class="best">1.41×</td>
+              <td>95</td>
+              <td>76</td>
+              <td class="best">1.25×</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BibTeX -->
+    <section id="bibtex">
+      <h2 class="section-title">BibTeX</h2>
+      <div class="bibtex-block">
+        <button class="copy-btn" onclick="copyBibtex()">Copy</button>
+<pre>@misc{li2026fp4explorebf16train,
+  title={FP4 Explore, BF16 Train: Diffusion Reinforcement Learning via Efficient Rollout Scaling},
+  author={Yitong Li and Junsong Chen and Shuchen Xue and Pengcuo Zeren and Siyuan Fu and Dinghao Yang and Yangyang Tang and Junjie Bai and Ping Luo and Song Han and Enze Xie},
+  year={2026},
+  eprint={2604.06916},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG},
+  url={https://arxiv.org/abs/2604.06916},
+}</pre></div>
+    </section>
+
+  </div>
+
+  <footer>
+    This website is licensed under a <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">Creative Commons Attribution-ShareAlike 4.0 International License</a> (CC BY-SA 4.0).
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.getElementById('mobileToggle');
+  const overlay = document.getElementById('overlay');
+  const navLinks = sidebar.querySelectorAll('nav a');
+  const sections = [];
+
+  navLinks.forEach(link => {
+    const id = link.getAttribute('href').substring(1);
+    const el = document.getElementById(id);
+    if (el) sections.push({ id, el, link });
+  });
+
+  toggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('show');
+  });
+
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  });
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    });
+  });
+
+  function updateActive() {
+    const scrollY = window.scrollY + 120;
+    let current = sections[0];
+
+    for (const sec of sections) {
+      if (sec.el.offsetTop <= scrollY) current = sec;
+    }
+
+    navLinks.forEach(l => l.classList.remove('active'));
+    if (current) current.link.classList.add('active');
+  }
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => { updateActive(); ticking = false; });
+      ticking = true;
+    }
+  });
+
+  updateActive();
+})();
+
+function copyBibtex() {
+  const text = document.querySelector('.bibtex-block pre').textContent.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  });
+}
+
+/* ── Shared Gallery Data ── */
+const GALLERY_PROMPTS = {
+  hpv2: [
+    "A dog catching a frisbee mid-jump at the beach, sand kicked up, tongue out, joyful energy, action pet photography, sharp focus",
+    "A snowboarder launching off a halfpipe, snow spraying, bright blue sky, frozen at apex, extreme sports photography",
+    "Cinematic photograph of a train crossing a massive stone viaduct in a mountain valley, autumn colors, misty atmosphere, wide shot",
+    "A cat with black and white fur drinking from a cup of coffee next to Ernest Hemingway",
+    "Charming Watercolor Painting of a fairy holding a magic wand that is sitting on a mushroom in a forest in Ireland at sunrise",
+    "A couple dancing tango in a Buenos Aires alley, dramatic shadows, warm amber streetlight, motion captured in flowing dress",
+    "A cowboy on horseback galloping through shallow water, spray flying, golden dust, Western cinematic style, dramatic wide shot",
+    "A cowboy on horseback galloping through shallow water, spray flying, golden dust, Western cinematic style, dramatic wide shot"
+  ],
+  imagereward: [
+    "A barista pouring latte art, extreme closeup of milk swirling into espresso, steam rising, warm cafe lighting, macro lens",
+    "A fisherman casting his line at dawn, mist on the water, silhouette with golden backlight, rod bending, peaceful yet dynamic",
+    "A photo of a man wearing a suit and sunglasses standing next to a vintage car in front of a neon sign that says 'Welcome to Las Vegas'",
+    "A surfer riding inside a barrel wave, water curling overhead, sunset light filtering through the wave, GoPro perspective, dynamic",
+    "A weathered wooden dock extending into a still mountain lake at dawn, mirror-like reflections, mist, shot on Hasselblad medium format",
+    "Photograph of an ancient stone bridge over a misty river gorge, autumn foliage, soft morning light, shot on Hasselblad",
+    "An elephant balancing on a tightrope over Niagara Falls, circus poster style",
+    "A yak sherpa carrying luggage for tourist penguins visiting the Himalayas"
+  ],
+  pickscore: [
+    "A blacksmith hammering red-hot metal on an anvil, sparks flying",
+    "A boy finding ancient ruins in an alien jungle, futuristic illumination",
+    "A cartoon mascot helicopter with arms and legs",
+    "A cat leaping from one rooftop to another, frozen mid-flight, urban backdrop",
+    "A whale flying through clouds above a medieval castle",
+    "An octopus playing eight different musical instruments simultaneously on a stage",
+    "Two cats playing poker on a velvet table, one wearing sunglasses, one smoking a cigar",
+    "A koala bartending at a tiki bar serving coconut drinks to flamingos"
+  ]
+};
+const GALLERY_ROWS = ['row_00','row_01','row_02','row_03','row_04','row_05','row_06','row_07'];
+const GALLERY_BASE = 'asset/flux_reward_extracted';
+function gImgPath(reward, row, file) { return GALLERY_BASE + '/' + reward + '/' + row + '/' + file; }
+
+/* ── Gallery 1: Static Grid ── */
+function initG1() {
+  var root = document.getElementById('g1-wrap');
+  if (!root) return;
+
+  var G1_REWARDS = [
+    { id: 'hpv2', label: 'HPSv2' },
+    { id: 'imagereward', label: 'ImageReward' },
+    { id: 'pickscore', label: 'PickScore' }
+  ];
+  var G1_METHODS = [
+    { file: 'FLUX1.png', alt: 'FLUX.1', ours: false },
+    { file: 'FlowGRPO.jpeg', alt: 'FlowGRPO', ours: false },
+    { file: 'DiffusionNFT.png', alt: 'DiffusionNFT', ours: false },
+    { file: 'Sol-RL.png', alt: 'Sol-RL', ours: true }
+  ];
+
+  var tabsEl = document.createElement('div');
+  tabsEl.className = 'g1-tabs';
+  root.appendChild(tabsEl);
+
+  var hdrs = document.createElement('div');
+  hdrs.className = 'g1-headers';
+  ['FLUX.1', 'FlowGRPO', 'DiffusionNFT', 'Sol-RL (Ours)'].forEach(function(n, i) {
+    var h = document.createElement('div');
+    h.className = 'g1-hdr' + (i === 3 ? ' ours' : '');
+    h.textContent = n;
+    hdrs.appendChild(h);
+  });
+  root.appendChild(hdrs);
+
+  var panelsEl = document.createElement('div');
+  root.appendChild(panelsEl);
+
+  var modal = document.createElement('div');
+  modal.className = 'g1-modal';
+  modal.innerHTML = '<button class="g1-modal-close">&times;</button><img src="" alt="Full size">';
+  root.appendChild(modal);
+
+  function buildTabs() {
+    tabsEl.innerHTML = '';
+    G1_REWARDS.forEach(function(r, i) {
+      var btn = document.createElement('button');
+      btn.className = 'g1-tab' + (i === 0 ? ' active' : '');
+      btn.textContent = r.label;
+      btn.addEventListener('click', function() {
+        tabsEl.querySelectorAll('.g1-tab').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        panelsEl.querySelectorAll('.g1-panel').forEach(function(p) { p.classList.remove('active'); });
+        var el = document.getElementById('g1p-' + r.id);
+        if (el) el.classList.add('active');
+      });
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  function buildPanels() {
+    panelsEl.innerHTML = '';
+    G1_REWARDS.forEach(function(r, i) {
+      var panel = document.createElement('div');
+      panel.id = 'g1p-' + r.id;
+      panel.className = 'g1-panel' + (i === 0 ? ' active' : '');
+
+      GALLERY_ROWS.forEach(function(row, ri) {
+        var rd = document.createElement('div');
+        rd.className = 'g1-row';
+        var cap = document.createElement('p');
+        cap.className = 'g1-caption';
+        cap.textContent = '\u201C' + GALLERY_PROMPTS[r.id][ri] + '\u201D';
+        rd.appendChild(cap);
+
+        var grid = document.createElement('div');
+        grid.className = 'g1-grid';
+        G1_METHODS.forEach(function(m) {
+          var cell = document.createElement('div');
+          cell.className = 'g1-cell' + (m.ours ? ' ours' : '');
+          var img = document.createElement('img');
+          img.src = gImgPath(r.id, row, m.file);
+          img.alt = m.alt; img.loading = 'lazy';
+          cell.appendChild(img);
+          cell.addEventListener('click', function() { openModal(img.src, img.alt); });
+          grid.appendChild(cell);
+        });
+        rd.appendChild(grid);
+        panel.appendChild(rd);
+      });
+      panelsEl.appendChild(panel);
+    });
+  }
+
+  function openModal(src, alt) {
+    modal.querySelector('img').src = src;
+    modal.querySelector('img').alt = alt || 'Full size';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  modal.addEventListener('click', closeModal);
+  modal.querySelector('.g1-modal-close').addEventListener('click', function(e) { e.stopPropagation(); closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+  buildTabs();
+  buildPanels();
+}
+
+initG1();
+</script>
+</body>
+</html>

@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/png" href="https://www.nvidia.com/favicon.ico">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANA-1.5</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.5; /* Adjust this value to make the spacing larger */
+            margin: 0;
+            padding: 0;
+            color: black;
+            background-image: url('https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/pexels-photo-28821825.jpeg'); /* Background image */
+            background-size: contain; /* Cover the entire viewport */
+            background-attachment: fixed; /* Fixed background */
+            background-position: center;
+            direction: ltr;
+        }
+        .hero {
+            text-align: center;
+            padding: 50px 0;
+            background-color: #fff;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+        .hero h1 {
+            font-size: 5em;
+            margin: 0.2em 0;
+        }
+        .hero h2 {
+            font-size: 2.8em;
+            margin: 0.2em 0;
+            font-weight: normal;
+            line-height: 1.4; /* Adjust this value to make the spacing larger */
+        }
+        .hero p {
+            font-size: 1.4em;
+            margin-bottom: 1em;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 0.9em;
+            color: white;
+            background-color: black;
+            border-radius: 30px;
+            text-decoration: none;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #90caf9;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+
+        .badge:hover {
+            transform: translateY(-1px);
+            border-color: #64b5f6;
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.1);
+        }
+
+        .badge.paper {
+            border-color: #ef9a9a;
+        }
+
+        .badge.paper:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        .badge.code {
+            border-color: #90caf9;
+        }
+
+        .badge.code:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+            background: rgba(25, 118, 210, 0.1);
+        }
+
+        .badge.demo {
+            border-color: #a5d6a7;
+            background: transparent;
+            margin-top: 0;
+            text-align: left;
+        }
+
+        .badge.demo:hover {
+            border-color: #388e3c;
+            color: #388e3c;
+            background: rgba(56, 142, 60, 0.1);
+        }
+
+        .badge-icon {
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+
+        .gallery-container {
+            max-width: 77%; /* Limit the width of the gallery */
+            margin: 0 auto; /* Center the gallery */
+            padding: 20px 0; /* Add some padding on top and bottom */
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr); /* 12 columns grid */
+            grid-auto-rows: 150px; /* Adjust row height */
+            gap: 10px;
+        }
+        .gallery-item {
+            overflow: hidden;
+            /*aspect-ratio: 1/1; !* Keep the aspect ratio of the images *!*/
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer; /* Cursor change on hover */
+            border-radius: 10px; /* Rounded corners */
+            transition: transform 0.3s ease; /* Add smooth transition */
+        }
+        /* Image scaling on hover */
+        .gallery-item img:hover {
+            transform: scale(1.2); /* Scale the image to 1.2 times its original size */
+        }
+        /* Define specific grid item placements */
+        .item1 { grid-column: span 4; grid-row: span 3; } /* Large image */
+        .item2 { grid-column: span 4; grid-row: span 3; } /* Smaller image */
+        .item3 { grid-column: span 4; grid-row: span 3; } /* Horizontal image */
+
+        .item4 { grid-column: span 3; grid-row: span 5; } /* Wide image */
+        .item5 { grid-column: span 3; grid-row: span 5; } /* Wide image */
+        .item6 { grid-column: span 3; grid-row: span 5; } /* Wide image */
+        .item7 { grid-column: span 3; grid-row: span 5; } /* Wide image */
+
+        .item8 { grid-column: span 3; grid-row: span 3; } /* Vertical image */
+        .item9 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item10 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item11 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+
+        .item12 { grid-column: span 6; grid-row: span 4; } /* Another larger image */
+        .item13 { grid-column: span 6; grid-row: span 4; } /* Another larger image */
+
+        /* Modal styling */
+        #modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.9); /* Black w/ opacity */
+            justify-content: center; /* Horizontally center the image */
+            flex-direction: column;
+            align-items: center; /* Center align items vertically */
+        }
+        #modal img {
+            margin: auto;
+            display: block;
+            max-width: 77%;
+            max-height: 77%; /* Ensure the image doesn't overflow vertically */
+            object-fit: contain; /* Make sure the aspect ratio is preserved */
+        }
+        #modal-description {
+            color: white;
+            text-align: center;
+            margin-top: 10px; /* Adjust this value to move text closer to the image */
+            font-size: 1.2em;
+        }
+        .description {
+            font-family: Arial, sans-serif;
+            font-style: normal;
+            font-size: 17px;
+            line-height: 1.47;
+            color: #333;
+            /*color: black; !* Text color *!*/
+            letter-spacing: -0.022em;
+            font-weight: 400;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            padding: 20px 0; /* Add vertical padding */
+            text-align: center; /* Center align text */
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 2px 4px 12px #00000054;
+        }
+        .description_noborder {
+            font-family: Arial, sans-serif;
+            font-style: normal;
+            font-size: 17px;
+            line-height: 1.47;
+            color: #333;
+            /*color: black; !* Text color *!*/
+            letter-spacing: -0.022em;
+            font-weight: 400;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            padding: 20px 0; /* Add vertical padding */
+            text-align: center; /* Center align text */
+        }
+        .description-content {
+            /*background-color: rgba(255, 255, 255, 0.1); !* Semi-transparent background inside the section *!*/
+            /*border: 2px solid #555; !* Adding a lighter border *!*/
+            max-width: 65%; /* Limit the width to 80% of the screen */
+            margin: 0 auto; /* Center the content horizontally */
+            padding: 20px; /* Padding inside the border */
+            font-style: normal;
+            border-radius: 18px;
+            /*box-shadow: 2px 4px 12px #00000014;*/
+        }
+        .description-content h2 {
+            display: block;
+            color: black;
+            font-size: 1.5em;
+            line-height: 1.125;
+            letter-spacing: .004em;
+            font-weight: 600;
+            text-align: left; /* Center-align the h2 */
+            margin-block-start: 0.83em;
+            margin-block-end: 0.83em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-style: normal;
+        }
+        .description-content p {
+            font-size: 1.1em;
+            text-align: left; /* Left-align the p */
+            font-weight: normal;
+        }
+        .citation {
+            /*background-color: #333; !* Solid background color that spans the entire width *!*/
+            font-family: Arial, sans-serif;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            color: black;
+            padding: 10px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .citation-content {
+            text-align: left;
+            border-radius: 15px; /* Rounded corners */
+            font-size: 0.8em;
+            max-width: 80%; /* Limit the width to 80% of the screen */
+            margin: 0 auto; /* Center the content horizontally */
+            margin-top: -30px;
+            padding: 0; /* Padding inside the border */
+            background-color: #f5f5f5; /* Semi-transparent background inside the section */
+            overflow-x: auto; /* Horizontal scrolling */
+            overflow-y: hidden; /* Prevent vertical scrolling */
+            white-space: nowrap; /* Prevent line breaks */
+        }
+        .citation-content h2 {
+            font-size: 2em;
+            text-align: left;
+            font-weight: normal;
+        }
+        .citation pre {
+            border-radius: 15px; /* Rounded corners */
+            max-width: 90%; /* Limit the width to 80% of the screen */
+            text-align: left;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            box-shadow: 2px 4px 12px #00000054;
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            margin-top: -20px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+        .footer a {
+            color: dodgerblue;
+            text-decoration: none;
+        }
+        .inserted-image {
+            max-width: 80%;  /* Set the maximum width for the image */
+            height: auto;    /* Ensure the height adjusts automatically to maintain aspect ratio */
+            margin: 30px;  /* Add space above and below the image */
+            margin-top: 10px;
+            display: block;  /* Make sure the image is treated as a block-level element */
+            margin-left: auto; /* Center the image horizontally */
+            margin-right: auto;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px 3px #00000030;
+        }
+        .inserted-image-noshadow {
+            max-width: 30%;  /* Set the maximum width for the image */
+            margin-left: auto; /* Center the image horizontally */
+            margin-right: auto;
+            border-radius: 10px;
+        }
+        .video-container {
+            text-align: center;  /* Center the video horizontally */
+            margin: 20px 0;  /* Add some vertical margin around the video */
+        }
+        video {
+            max-width: 80%;  /* The video will scale to fit the container */
+            height: auto;  /* Maintain the video's aspect ratio */
+            border-radius: 10px;  /* Rounded corners for the video */
+            box-shadow: 2px 2px 10px 3px #00000054;
+        }
+        .logo {
+            color: black;
+            display: flex;
+            justify-content: center;
+            /*justify-content: left;*/
+            align-items: center;
+            text-align: center;
+            gap: 60px;
+        }
+        .logo-sup {
+            position: absolute;
+            top: -5px; /* Adjust this value to position it closer to the top */
+            right: -10px; /* Adjust this value to move it horizontally */
+            font-size: 14px; /* Increase the size of the superscript */
+            color: black; /* Change the color if needed */
+          }
+        /* Image comparison container */
+        .image-comparison-container {
+            background-color: #fff; /* Solid background color that spans the entire width */
+        }
+        .image-comparison-content {
+            position: relative;
+            width: 580px;  /* Adjust the width as needed */
+            height: 402px; /* Adjust the height as needed */
+            overflow: hidden; /* Make sure overflow isn't hiding any part of the images */
+            margin: 0 auto;
+            margin-top: -20px;
+            cursor: ew-resize;
+            border-radius: 10px;
+        }
+        .image-comparison-content img {
+            position: absolute;
+            width: 100%;
+            height: 99%;
+            background-color: #fff;
+            object-fit: contain; /* Use contain to ensure the whole image is visible */
+        }
+        .image-comparison-content .slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: #fff;
+            z-index: 10;
+        }
+        .image-comparison-content .slider-black {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: black;
+            z-index: 10;
+        }
+        .demo {
+            margin-top: -20px;
+            background-color: #fff;
+            text-align: center;
+        }
+        .demo iframe {
+            width: 50%;
+        }
+        .image-comparison-content .image-2 {
+            clip-path: inset(0 0 0 50%);
+        }
+        .image-comparison-content .image-4 {
+            clip-path: inset(0 0 0 50%);
+        }
+        @media (max-width: 4096px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 100px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 200px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 800px;
+            }
+        }
+        @media (max-width: 2048px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 60px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 90px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 800px;
+            }
+        }
+        @media (min-width: 2048px) {
+            .description-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 1024px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 384px; /* Limit the width to 80% of the screen */
+            }
+            video {
+                max-width: 1024px;  /* The video will scale to fit the container */
+            }
+        }
+        @media (max-width: 1024px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 40px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 70px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 80%;
+            }
+        }
+        @media (min-width: 1024px) {
+            .description-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 826px; /* Limit the width to 80% of the screen */
+                padding: 5px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 384px; /* Limit the width to 80% of the screen */
+            }
+            video {
+                max-width: 728px;  /* The video will scale to fit the container */
+            }
+        }
+        @media (max-width: 768px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 20px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 30px; /* Set a fixed height for the grid items */
+                gap: 5px;
+            }
+            .gallery-container {
+                max-width: 85%; /* Limit the width of the gallery */
+                padding: 10px 0; /* Add some padding on top and bottom */
+            }
+            .hero h1 {
+                font-size: 3em;
+            }
+            .hero h2 {
+                font-size: 2em;
+            }
+            .hero p {
+                font-size: 1em;
+            }
+            .description-content {
+                max-width: 92%; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 92%; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 95%; /* Limit the width to 80% of the screen */
+                padding: 5px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 50%; /* Limit the width to 80% of the screen */
+                margin-left: auto; /* Center the image horizontally */
+                margin-right: auto;
+            }
+            .image-comparison-content {
+                max-height: 300px; /* Limit the width to 80% of the screen */
+                max-width: 92%;
+            }
+            video {
+                max-width: 92%;  /* The video will scale to fit the container */
+            }
+            .logo {
+                gap: 10px;
+            }
+            .demo iframe {
+                width: 95%;
+            }
+        }
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
+            .description {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description_noborder {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description_noborder h2{
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description-content h2 {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .citation {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .citation-content {
+                background-color: #555; /* Dark color for dark mode */
+            }
+            .citation-content h2 {
+                background-color: #555; /* Dark color for dark mode */
+            }
+            .footer {
+                background-color: #222; /* Dark color for dark mode */
+                color: white;
+            }
+            .image-comparison-container {
+                background-color: #333; /* Dark color for dark mode */
+            }
+            .demo {
+                background-color: #333;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div style="display: flex; justify-content: center; align-items: center; margin-left: -40px;">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/logo.jpg" alt="Logo" style="width: 50px; height: auto; margin-right: 5px;">
+            <h1 style="margin: 0;">SANA-1.5</h1>
+        </div>
+        <h2>Efficient Scaling of Training-Time and <br>
+            Inference-Time Compute in Linear Diffusion Transformer</h2>
+        <p>Exploring the Frontiers of Efficient Generative Foundation Models</p>
+        <p>ICML 2025</p>
+
+        <!-- Add author and institution information -->
+        <div style="margin-top: 20px; text-align: center;">
+            <p style="font-size: 1.3em; margin-bottom: 5px;">
+                <a href="https://xieenze.github.io/" target="_blank" style="color: #76b900;">Enze Xie</a><sup>1*</sup>,
+                <a href="https://lawrence-cj.github.io/" target="_blank" style="color: #76b900;">Junsong Chen</a><sup>1*</sup>,
+                <a href="https://yuyangzhao.com/" target="_blank" style="color: #76b900;">Yuyang Zhao</a><sup>1&dagger;</sup>,
+                <a href="https://github.com/yujincheng08" target="_blank" style="color: #76b900;">Jincheng Yu</a><sup>1&dagger;</sup>,
+                <a href="https://lzhu.me//" target="_blank" style="color: #76b900;">Ligeng Zhu</a><sup>1&dagger;</sup>,
+                <a href="https://hills-code.github.io/" target="_blank" style="color: #76b900;">Chengyue We</a><sup>6</sup>,
+                <a href="https://yujunlin.com//" target="_blank" style="color: #76b900;">Yujun Lin</a><sup>2</sup>,<br>
+                <a href="https://hanlab.mit.edu/team/zhekai-zhang/" target="_blank" style="color: #76b900;">Zhekai Zhang</a><sup>2</sup>,
+                <a href="https://lmxyy.me//" target="_blank" style="color: #76b900;">Muyang Li</a><sup>2</sup>,
+                <a href="https://scholar.google.com.hk/citations?hl=zh-CN&user=mWdYMZ8AAAAJ" target="_blank" style="color: #76b900;">Junyu Chen</a><sup>3</sup>,
+                <a href="https://han-cai.github.io//" target="_blank" style="color: #76b900;">Han Cai</a><sup>1</sup>,
+                <a href="https://scholar.google.com/citations?user=uKdv6SUAAAAJ&hl=en" target="_blank" style="color: #76b900;">Bingchen Liu</a><sup>4</sup>,
+                <a href="https://zhoudaquan.github.io/homepage.io/index.html" target="_blank" style="color: #76b900;">Daquan Zhou</a><sup>5</sup>,
+                <a href="https://hanlab.mit.edu/songhan/" target="_blank" style="color: #76b900;">Song Han</a><sup>1,2</sup>
+            </p>
+            <p style="font-size: 1.2em; color: #888;">
+                <sup>1</sup>NVIDIA,&nbsp <sup>2</sup>MIT,&nbsp <sup>3</sup>Tsinghua University,&nbsp <sup>4</sup>Playground,&nbsp <sup>5</sup> Peking University <sup>6</sup> HKU
+                <br>
+                *Equal contribution&nbsp;&nbsp;   &dagger;Core contributor&nbsp;&nbsp;
+            </p>
+        </div>
+<!--        <div style="overflow: hidden; background-color: #6699cc;">-->
+        <div style="overflow: hidden; background-color: #fff;">
+          <div class="logo" style="padding: 12px;">
+            <a href="https://www.nvidia.com/" style="text-decoration: none; font-size: 16px;">
+              <img src="https://nv-tlabs.github.io/3DStyleNet/assets/nvidia.svg" alt="NVIDIA Logo" style="width: auto; height: 30px;">
+            </a>
+            <a href="https://hanlab.mit.edu/" style="text-decoration: none; font-size: 16px;">
+              <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/mit_han.png" alt="MIT Logo" style="width: auto; height: 30px;">
+            </a>
+          </div>
+        </div>
+
+        <div class="badges">
+            <a href="https://arxiv.org/abs/2501.18427" target="_blank" class="badge paper">
+                <span class="badge-icon">📄</span>
+                Paper
+            </a>
+            <a href="https://github.com/NVlabs/Sana" target="_blank" class="badge code">
+                <span class="badge-icon">💻</span>
+                Code
+            </a>
+            <a href="https://nvlabs.github.io/Sana/docs/sana/" target="_blank" class="badge code">
+                <span class="badge-icon">📖</span>
+                Docs
+            </a>
+            <a href="https://sana.hanlab.ai/" target="_blank" class="badge demo">
+                <span class="badge-icon">🚀</span>
+                Demo
+            </a>
+        </div>
+    </div>
+
+    <div class="gallery-container">
+        <section class="gallery" id="gallery">
+        <div class="gallery-item item1"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/11.png" alt="Image 1" data-description='A 3D rendering of a red and gold "2025" number with dragon head decoration, adorned with Chinese New Year elements, with a pure white background, studio lighting, soft lighting, and bright colors. This high-resolution photography style adopts minimalist design, with simple lines and details.'></div>
+        <div class="gallery-item item2"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/12.jpg" alt="Image 2" data-description='A smirking Shiba Inu (doge meme) wearing nerdy tech glasses, standing on its hind legs and holding a glowing holographic sign that reads \"NVDA 1000\".The doge has that characteristic knowing grin and raised eyebrows. The scene is set against a background of floating stock charts and red/green candles. The doge wears a simple tech company t-shirt, giving a thumbs up with its free paw. The composition has a meme-like quality with clean, vibrant colors and slight depth of field blur in the background. The holographic sign emits a subtle green glow, matching NVIDIA`s brand color.'></div>
+        <div class="gallery-item item3"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/13.png" alt="Image 3" data-description="surreal digital art of giant croissant as hot air balloon, person in blue winter jacket riding in woven wicker basket, majestic snow-capped mountain peaks background, soft morning light, crisp pastry details with golden-brown flaky layers, whimsical transportation concept, dreamy winter landscape, ethereal atmosphere, cinematic composition, photorealistic pastry texture, adventure mood, clean blue sky with wispy clouds, high-end food photography meets landscape, magical realism style."></div>
+
+        <div class="gallery-item item4"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/15.jpg" alt="Image 4" data-description="ultra-detailed 3D render of premium semiconductor chip, prominent glowing 'AI' text embossed in center, cyberpunk blue illuminated letters against dark metallic surface, futuristic circuit board patterns radiating from text, floating holographic AI letters with light scatter effect, premium macro photography, clean white wave background, depth of field blur, advanced technological aesthetics with precise circuit traces, volumetric lighting around text, ray-traced reflections."></div>
+        <div class="gallery-item item5"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/16.jpg" alt="Image 5" data-description="ace of spades playing card engulfed in dramatic flames, black card with glowing golden symbols, intense fire effects surrounding card edges, burning ember particles, dark background, realistic fire texture, cinematic lighting, high contrast photography, floating sparks and ash, mystical atmosphere, detailed flame tendrils, casino noir aesthetic, high-end 3D render quality, dramatic composition."></div>
+        <div class="gallery-item item6"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/17.png" alt="Image 6" data-description="hyper realistic 3D render of a stylized cartoon chicken in basketball uniform, dynamic slam dunk pose, jumping high with basketball, urban street court background, dramatic action shot, motion blur effects, neon lights at dusk, streetball atmosphere, detailed feather texture, glowing court lines, floating movement, cinematic sports photography style, vibrant complementary colors."></div>
+        <div class="gallery-item item7"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/18.png" alt="Image 7" data-description="A highly detailed and realistic scene of human-like robots exploring the surface of Mars. The robots have advanced humanoid designs with metallic bodies, glowing sensors, and flexible joints. They are examining the Martian landscape with futuristic equipment, such as scanning devices and holographic displays. The Martian environment includes red rocky terrain, towering cliffs, and a hazy orange sky, with Earth visible faintly in the background. The image captures a sense of discovery and technological advancement, emphasizing the robots' human-like features. Designed in a cinematic, futuristic style."></div>
+
+        <div class="gallery-item item8"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/6.jpg" alt="Image 8" data-description="A charming 3D-rendered cartoon toucan with exaggerated features, styled in a whimsical yet detailed manner. The character features a disproportionately large, bright orange beak that dominates its face, complemented by a single oversized expressive brown eye. Its plumage combines classic black and white coloring - a fluffy white chest and belly area contrasts beautifully with sleek black feathers covering its back and wings. The bird sports a distinctive messy crest of navy blue feathers on top of its head, giving it a playful, disheveled appearance. The texturing is remarkably detailed, showing individual feathers and subtle variations in the plumage. The character stands on thin, sturdy legs with detailed scaled texture. The lighting setup creates depth and dimension, casting soft shadows that emphasize the bird's round, appealing form against a neutral gradient background. The overall design strikes a perfect balance between cartoon stylization and realistic texturing, making it suitable for animation or game character design."></div>
+        <div class="gallery-item item9"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/3.png" alt="Image 9" data-description="A whimsical illustration of the Smirking Cat (the mischievous meme cat) sitting atop a retro-style red and white rocket with text 'TO THE MOON'. The cat appears with its iconic sly grin and playful expression, giving a knowing smirk that perfectly matches the optimistic message. The rocket design is reminiscent of 1950s space age artwork, featuring stylized flame trails in orange and yellow. The entire image has a sticker-like quality with white borders and a minimalist color palette. The composition captures the cat's cheeky, self-satisfied expression, creating a perfect blend of humor and crypto-culture optimism."></div>
+        <div class="gallery-item item10"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/9.jpg" alt="Image 10" data-description="still life photography of two porcelain cherries with blue and white floral pattern, Chinese pottery style decoration, one cherry stem has a glowing sparkler, magical sparks against turquoise background, high-end product photography, soft diffused lighting, clean composition, delicate ceramic texture, fine detailed Ming-style floral prints, crisp shadows, glossy ceramic surface reflections, festive celebratory mood, studio lighting setup, sharp focus, luxury product aesthetic."></div>
+        <div class="gallery-item item11"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/10.png" alt="Image 11" data-description='poster design with huge text "AGI IS COMING" rendered in glitch art style, digital distortion effects, fragmented typography, corrupted data aesthetics, black ink base with RGB channel splits, cyberpunk graffiti elements, scattered binary code, broken pixel artifacts, CRT scan lines, datamosh effects, quantum computing visual motifs.'></div>
+
+        <div class="gallery-item item12"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/14.png" alt="Image 12" data-description="Magical realism style product photography of Nike sneaker constructed entirely from building blocks, vibrant color blocks in blue, yellow, red and black, floating above scattered toy bricks, intricate brick texture details, modern sneaker silhouette, precise brick construction, macro photography style, shallow depth of field, soft studio lighting, floating brick pieces in background, crisp focus on shoe details, playful toy aesthetic meets product design, dynamic floating composition."></div>
+        <div class="gallery-item item13"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/samples/5.png" alt="Image 13" data-description="surreal art of landscape morphing into a cat's head silhouette, intricate nature elements forming feline features, mountains create pointed ears, rolling hills shape the face curves, forests and meadows texture the fur pattern, rivers flow as whiskers, lakes form the eyes with sunset reflection, clouds define soft fur edges, minimal white background highlighting the cat head shape, dreamlike composition, delicate details, organic flowing lines, nature meets feline anatomy, soft muted color palette, ethereal atmosphere, conceptual illustration style, fine art quality."></div>
+
+        </section>
+    </div>
+
+<!--     The Modal-->
+    <div id="modal" onclick="this.style.display='none'">
+      <img id="modal-img" src="">
+      <div id="modal-description"></div> <!-- Text for description -->
+    </div>
+
+    <section class="description">
+
+        <div class="description-content">
+          <h2>About SANA-1.5</h2>
+          <p>This paper presents SANA-1.5, a linear Diffusion Transformer for efficient scaling in text-to-image generation.
+              Building upon SANA-1.0, we introduce three key innovations:<br>
+               <strong style="font-size: 18px;">(1) Efficient Training Scaling:</strong>  A depth-growth paradigm that enables scaling from 1.6B to 4.8B parameters with significantly reduced computational resources,
+              combined with a memory-efficient 8-bit optimizer.
+              <strong style="font-size: 18px;">(2) Model Depth Pruning:</strong> A block importance analysis technique for efficient model compression to arbitrary sizes with minimal quality loss.
+              <strong style="font-size: 18px;">(3) Inference-time Scaling:</strong>  A repeated sampling strategy that trades computation for model capacity,
+              enabling smaller models to match larger model quality at inference time. Through these strategies,
+              SANA-1.5 achieves a text-image alignment score of <strong style="font-size: 18px; color: red">0.81</strong> on GenEval,
+              which can be further improved to <strong style="font-size: 18px; color: red">0.96</strong> through inference scaling,
+              establishing a new SoTA on GenEval benchmark. These innovations enable efficient model scaling across different compute budgets while maintaining high quality,
+              making high-quality image generation more accessible. Our code and pre-trained models will be released.
+          </p>
+        </div>
+
+        <!-- Insert your image here -->
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/pipeline.png" alt="Pipeline for SANA-1.5" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <h2>Several Core Design Details for Efficiency</h2>
+          <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;  <strong style="font-size: 18px;">Efficient Training Scaling: </strong>
+              We scale the model size of Linear DiT by initializing the first 18 layers of the 4.8B Sana-1.5 model using the 1.6B Sana-1.0 pre-trained model,
+              leveraging a Partial Preservation initialization strategy. This approach allows the 4.8B model to achieve superior GenEval performance while reducing training time by 60% compared to training from scratch.
+              Additionally, we introduce the first 8-bit CAME optimizers, which significantly reduce GPU memory usage, enabling efficient scaling for larger diffusion models.
+              <br>
+          </p>
+        </div>
+    </section>
+
+    <section class="description_noborder">
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/geneval_comparison.png" alt="model growth performance on GenEval" class="inserted-image"
+                 style="max-width: 400px; height: auto; display: inline-block;">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/optimizer_loss_comparison_with_ema.png" alt="8-bit optimizer" class="inserted-image"
+                 style="max-width: 415px; height: auto; display: inline-block;">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/model-init.png" alt="model growth strategy for SANA-1.5" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Model Depth Pruning: </strong>
+               We employ Block Importance Analysis (Figure (a)) to guide the pruning of model depth.
+              By removing less important layers, the model retains most of its semantic capabilities while temporarily losing its ability to generate high-frequency details.
+              This loss, however, can be effectively restored through a brief retraining process (typically with 100 iterations on a single GPU).
+              <br>
+          </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/bi-scores.png" alt="main techs" class="inserted-image">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/viz-prune-sft-together.png" alt="main techs" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+            <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Inference-time Scaling: </strong>
+                <a rel="license" href="https://github.com/NVlabs/VILA" target="_blank" style="color: dodgerblue">
+                    NVILA-2B
+                </a> as the judge: With fine-tuned NVILA-2B to automatically compare and judge generated images,
+                we run a tournament-style comparison several rounds until we determine the top-N candidates, as illustrated in the below Figure (a).
+                We demonstrate that with inference scaling: <br>
+                1. Sana-1.5 (4.8B) achieves a <strong style="font-size: 18px; color: red">SoTA 0.96 GenEval score</strong>, as shown in Figure (b). <br>
+                2. Smaller models can outperform larger ones, with performance improvements observed consistently across all model sizes, shown in Figure (c).
+            </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/scaling_teaser.png" alt="main techs" class="inserted-image">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/scaling_curve.png" alt="main techs" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <h2>Overall Performance</h2>
+        </div>
+        <div class="description-content"dd>
+            <p>
+                SANA-1.5 is an efficient model with scaling of training-time and inference time techniques.
+                SANA delivers: efficient model growth from 1.6B Sana-1.0 model to 4.8B, achieving similar or better performance than training from scratch and saving 60% training cost;
+                efficient model depth pruning, slimming any model size as you want; powerful VLM selection based inference scaling,
+                smaller model+inference scaling > larger model; Top-notch GenEval & DPGBench results. Detailed results are shown in the below table.
+
+            </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/main_table.jpg" alt="Sana performance" class="inserted-image">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/content/inference_scaling_table.jpg" alt="Sana performance" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+            <h2>Our Mission</h2>
+            <p>Our mission is to develop <strong>efficient, lightweight, and accelerated</strong>
+                AI technologies that address practical challenges and deliver fast, open-source solutions.</p>
+        </div>
+
+        <!--BibTex citation -->
+        <div class="description-content">
+            <h2 class="title">BibTeX</h2>
+        </div>
+        <section class="citation" id="BibTeX">
+            <div class="citation-content">
+                <pre><code>@misc{xie2025sana,
+      title={SANA 1.5: Efficient Scaling of Training-Time and Inference-Time Compute in Linear Diffusion Transformer},
+      author={Xie, Enze and Chen, Junsong and Zhao, Yuyang and Yu, Jincheng and Zhu, Ligeng and Wu, Chengyue and Lin, Yujun and Zhang, Zhekai and Li, Muyang and Chen, Junyu and Cai, Han and others},
+      year={2025},
+      eprint={2501.18427},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2501.18427},
+    }</code></pre>
+            </div>
+        </section>
+    </section>
+    <!--End BibTex citation -->
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-8">
+                    <div class="content">
+                        <p>
+                            This website is licensed under a <a
+                                rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+                                Commons Attribution-ShareAlike 4.0 International License</a>.
+                        </p>
+                        <span id="busuanzi_container_site_pv">Total clicks: <span id="busuanzi_value_site_pv"></span></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- End Footer -->
+
+    <script>
+      // Function to open the modal and display the clicked image and description
+      function openModal(img) {
+          var modal = document.getElementById("modal");
+          var modalImg = document.getElementById("modal-img");
+          var modalDescription = document.getElementById("modal-description");
+
+          modal.style.display = "flex";
+          modalImg.src = img.src;
+          modalDescription.textContent = img.getAttribute('data-description'); // Get description from data-description attribute
+      }
+
+      // Add click event listeners to all images in the gallery with their descriptions
+      const images = document.querySelectorAll('.gallery-item img');
+      images.forEach((img) => {
+        img.addEventListener('click', () => openModal(img));
+      });
+    </script>
+
+    <script>
+        const container = document.querySelector('.image-comparison-content');
+        const slider = document.querySelector('.slider');
+        // const slider_black = document.querySelector('.slider-black');
+        const image2 = document.querySelector('.image-2');
+        // const image4 = document.querySelector('.image-4');
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            let xPos = e.clientX - rect.left;
+
+            if (xPos < 0) xPos = 0;
+            if (xPos > rect.width) xPos = rect.width;
+
+            const percentage = (xPos / rect.width) * 100;
+
+            slider.style.left = `${percentage}%`;
+            // slider_black.style.left = `${percentage}%`;
+            image2.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+            // image4.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+        });
+    </script>
+</body>
+</html>

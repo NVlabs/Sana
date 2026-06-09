@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/png" href="https://www.nvidia.com/favicon.ico">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANA-Sprint</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.5; /* Adjust this value to make the spacing larger */
+            margin: 0;
+            padding: 0;
+            color: black;
+            background-image: url('https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/pexels-photo-28821825.jpeg'); /* Background image */
+            background-size: contain; /* Cover the entire viewport */
+            background-attachment: fixed; /* Fixed background */
+            background-position: center;
+            direction: ltr;
+        }
+        .hero {
+            text-align: center;
+            padding: 50px 0;
+            background-color: #fff;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+        .hero h1 {
+            font-size: 5em;
+            margin: 0.2em 0;
+        }
+        .hero h2 {
+            font-size: 2.8em;
+            margin: 0.2em 0;
+            font-weight: normal;
+            line-height: 1.4; /* Adjust this value to make the spacing larger */
+        }
+        .hero p {
+            font-size: 1.4em;
+            margin-bottom: 1em;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 0.9em;
+            color: white;
+            background-color: black;
+            border-radius: 30px;
+            text-decoration: none;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #90caf9;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+
+        .badge:hover {
+            transform: translateY(-1px);
+            border-color: #64b5f6;
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.1);
+        }
+
+        .badge.paper {
+            border-color: #ef9a9a;
+        }
+
+        .badge.paper:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        .badge.code {
+            border-color: #90caf9;
+        }
+
+        .badge.code:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+            background: rgba(25, 118, 210, 0.1);
+        }
+
+        .badge.demo {
+            border-color: #a5d6a7;
+            background: transparent;
+            margin-top: 0;
+            text-align: left;
+        }
+
+        .badge.demo:hover {
+            border-color: #388e3c;
+            color: #388e3c;
+            background: rgba(56, 142, 60, 0.1);
+        }
+
+        .badge-icon {
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+        .gallery-container {
+            max-width: 77%; /* Limit the width of the gallery */
+            margin: 0 auto; /* Center the gallery */
+            padding: 20px 0; /* Add some padding on top and bottom */
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr); /* 12 columns grid */
+            grid-auto-rows: 150px; /* Adjust row height */
+            gap: 10px;
+        }
+        .gallery-item {
+            overflow: hidden;
+            /*aspect-ratio: 1/1; !* Keep the aspect ratio of the images *!*/
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer; /* Cursor change on hover */
+            border-radius: 10px; /* Rounded corners */
+            transition: transform 0.3s ease; /* Add smooth transition */
+        }
+        /* Image scaling on hover */
+        .gallery-item img:hover {
+            transform: scale(1.2); /* Scale the image to 1.2 times its original size */
+        }
+        /* Define specific grid item placements */
+        .item1 { grid-column: span 2; grid-row: span 5; } /* Large image */
+        .item2 { grid-column: span 4; grid-row: span 5; } /* Smaller image */
+        .item3 { grid-column: span 4; grid-row: span 5; } /* Horizontal image */
+        .item4 { grid-column: span 2; grid-row: span 5; } /* Wide image */
+
+        .item9 { grid-column: span 3; grid-row: span 3; } /* Vertical image */
+        .item10 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item11 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item12 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+
+        .item5 { grid-column: span 2; grid-row: span 5; } /* Wide image */
+        .item6 { grid-column: span 4; grid-row: span 5; } /* Wide image */
+        .item7 { grid-column: span 4; grid-row: span 5; } /* Wide image */
+        .item8 { grid-column: span 2; grid-row: span 5; } /* Wide image */
+
+        .item13 { grid-column: span 6; grid-row: span 4; } /* Another larger image */
+        /*.item14 { grid-column: span 2; grid-row: span 4; } !* Another larger image *!*/
+        .item15 { grid-column: span 6; grid-row: span 4; } /* Another larger image */
+
+        .item16 { grid-column: span 4; grid-row: span 4; } /* Another larger image */
+        .item17 { grid-column: span 2; grid-row: span 4; } /* Another larger image */
+        .item18 { grid-column: span 2; grid-row: span 4; } /* Another larger image */
+
+        .item19 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item20 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item21 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item22 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+
+        .item23 { grid-column: span 6; grid-row: span 4; } /* Another larger image */
+        .item24 { grid-column: span 3; grid-row: span 4; } /* Another larger image */
+        .item25 { grid-column: span 3; grid-row: span 4; } /* Another larger image */
+
+        .item26 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item27 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item28 { grid-column: span 6; grid-row: span 5; } /* Another larger image */
+
+        .item29 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item30 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item31 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item32 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+
+
+        /* Modal styling */
+        #modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.9); /* Black w/ opacity */
+            justify-content: center; /* Horizontally center the image */
+            flex-direction: column;
+            align-items: center; /* Center align items vertically */
+        }
+        #modal img {
+            margin: auto;
+            display: block;
+            max-width: 77%;
+            max-height: 77%; /* Ensure the image doesn't overflow vertically */
+            object-fit: contain; /* Make sure the aspect ratio is preserved */
+        }
+        #modal-description {
+            color: white;
+            text-align: center;
+            margin-top: 10px; /* Adjust this value to move text closer to the image */
+            font-size: 1.2em;
+        }
+        .description {
+            font-family: Arial, sans-serif;
+            font-style: normal;
+            font-size: 17px;
+            line-height: 1.47;
+            color: #333;
+            /*color: black; !* Text color *!*/
+            letter-spacing: -0.022em;
+            font-weight: 400;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            padding: 20px 0; /* Add vertical padding */
+            text-align: center; /* Center align text */
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 2px 4px 12px #00000054;
+        }
+        .description_noborder {
+            font-family: Arial, sans-serif;
+            font-style: normal;
+            font-size: 17px;
+            line-height: 1.47;
+            color: #333;
+            /*color: black; !* Text color *!*/
+            letter-spacing: -0.022em;
+            font-weight: 400;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            padding: 20px 0; /* Add vertical padding */
+            text-align: center; /* Center align text */
+        }
+        .description-content {
+            /*background-color: rgba(255, 255, 255, 0.1); !* Semi-transparent background inside the section *!*/
+            /*border: 2px solid #555; !* Adding a lighter border *!*/
+            max-width: 65%; /* Limit the width to 80% of the screen */
+            margin: 0 auto; /* Center the content horizontally */
+            padding: 20px; /* Padding inside the border */
+            font-style: normal;
+            border-radius: 18px;
+            /*box-shadow: 2px 4px 12px #00000014;*/
+        }
+        .description-content h2 {
+            display: block;
+            color: black;
+            font-size: 1.5em;
+            line-height: 1.125;
+            letter-spacing: .004em;
+            font-weight: 600;
+            text-align: left; /* Center-align the h2 */
+            margin-block-start: 0.83em;
+            margin-block-end: 0.83em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-style: normal;
+        }
+        .description-content p {
+            font-size: 1.1em;
+            text-align: left; /* Left-align the p */
+            font-weight: normal;
+        }
+        .citation {
+            /*background-color: #333; !* Solid background color that spans the entire width *!*/
+            font-family: Arial, sans-serif;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            color: black;
+            padding: 10px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .citation-content {
+            text-align: left;
+            border-radius: 15px; /* Rounded corners */
+            font-size: 0.8em;
+            max-width: 80%; /* Limit the width to 80% of the screen */
+            margin: 0 auto; /* Center the content horizontally */
+            margin-top: -30px;
+            padding: 0; /* Padding inside the border */
+            background-color: #f5f5f5; /* Semi-transparent background inside the section */
+            overflow-x: auto; /* Horizontal scrolling */
+            overflow-y: hidden; /* Prevent vertical scrolling */
+            white-space: nowrap; /* Prevent line breaks */
+        }
+        .citation-content h2 {
+            font-size: 2em;
+            text-align: left;
+            font-weight: normal;
+        }
+        .citation pre {
+            border-radius: 15px; /* Rounded corners */
+            max-width: 90%; /* Limit the width to 80% of the screen */
+            text-align: left;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            box-shadow: 2px 4px 12px #00000054;
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            margin-top: -20px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+        .footer a {
+            color: dodgerblue;
+            text-decoration: none;
+        }
+        .inserted-image {
+            max-width: 80%;  /* Set the maximum width for the image */
+            height: auto;    /* Ensure the height adjusts automatically to maintain aspect ratio */
+            margin: 30px;  /* Add space above and below the image */
+            margin-top: 10px;
+            display: block;  /* Make sure the image is treated as a block-level element */
+            margin-left: auto; /* Center the image horizontally */
+            margin-right: auto;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px 3px #00000030;
+        }
+        .inserted-image-noshadow {
+            max-width: 30%;  /* Set the maximum width for the image */
+            margin-left: auto; /* Center the image horizontally */
+            margin-right: auto;
+            border-radius: 10px;
+        }
+        .video-container {
+            text-align: center;  /* Center the video horizontally */
+            margin: 20px 0;  /* Add some vertical margin around the video */
+        }
+        video {
+            max-width: 90%;  /* The video will scale to fit the container */
+            height: auto;  /* Maintain the video's aspect ratio */
+            border-radius: 10px;  /* Rounded corners for the video */
+            box-shadow: 2px 2px 10px 3px #00000054;
+        }
+        .logo {
+            color: black;
+            display: flex;
+            justify-content: center;
+            /*justify-content: left;*/
+            align-items: center;
+            text-align: center;
+            gap: 60px;
+        }
+        .logo-sup {
+            position: absolute;
+            top: -5px; /* Adjust this value to position it closer to the top */
+            right: -10px; /* Adjust this value to move it horizontally */
+            font-size: 14px; /* Increase the size of the superscript */
+            color: black; /* Change the color if needed */
+          }
+        /* Image comparison container */
+        .image-comparison-container {
+            background-color: #fff; /* Solid background color that spans the entire width */
+        }
+        .image-comparison-content {
+            position: relative;
+            width: 580px;  /* Adjust the width as needed */
+            height: 402px; /* Adjust the height as needed */
+            overflow: hidden; /* Make sure overflow isn't hiding any part of the images */
+            margin: 0 auto;
+            margin-top: -20px;
+            cursor: ew-resize;
+            border-radius: 10px;
+        }
+        .image-comparison-content img {
+            position: absolute;
+            width: 100%;
+            height: 99%;
+            background-color: #fff;
+            object-fit: contain; /* Use contain to ensure the whole image is visible */
+        }
+        .image-comparison-content .slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: #fff;
+            z-index: 10;
+        }
+        .image-comparison-content .slider-black {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: black;
+            z-index: 10;
+        }
+        .demo {
+            margin-top: -20px;
+            background-color: #fff;
+            text-align: center;
+        }
+        .demo iframe {
+            width: 50%;
+        }
+        .image-comparison-content .image-2 {
+            clip-path: inset(0 0 0 50%);
+        }
+        .image-comparison-content .image-4 {
+            clip-path: inset(0 0 0 50%);
+        }
+        @media (max-width: 4096px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 100px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 200px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 800px;
+            }
+        }
+        @media (max-width: 2048px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 60px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 90px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 800px;
+            }
+        }
+        @media (min-width: 2048px) {
+            .description-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 1024px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 384px; /* Limit the width to 80% of the screen */
+            }
+            video {
+                max-width: 1024px;  /* The video will scale to fit the container */
+            }
+        }
+        @media (max-width: 1024px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 40px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 70px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 80%;
+            }
+        }
+        @media (min-width: 1024px) {
+            .description-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 826px; /* Limit the width to 80% of the screen */
+                padding: 5px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 384px; /* Limit the width to 80% of the screen */
+            }
+            video {
+                max-width: 60%;  /* The video will scale to fit the container */
+            }
+        }
+        @media (max-width: 768px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 20px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 30px; /* Set a fixed height for the grid items */
+                gap: 5px;
+            }
+            .gallery-container {
+                max-width: 85%; /* Limit the width of the gallery */
+                padding: 10px 0; /* Add some padding on top and bottom */
+            }
+            .hero h1 {
+                font-size: 3em;
+            }
+            .hero h2 {
+                font-size: 2em;
+            }
+            .hero p {
+                font-size: 1em;
+            }
+            .description-content {
+                max-width: 92%; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 92%; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 95%; /* Limit the width to 80% of the screen */
+                padding: 5px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 50%; /* Limit the width to 80% of the screen */
+                margin-left: auto; /* Center the image horizontally */
+                margin-right: auto;
+            }
+            .image-comparison-content {
+                max-height: 300px; /* Limit the width to 80% of the screen */
+                max-width: 92%;
+            }
+            video {
+                max-width: 92%;  /* The video will scale to fit the container */
+            }
+            .logo {
+                gap: 10px;
+            }
+            .demo iframe {
+                width: 95%;
+            }
+        }
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
+            .description {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description_noborder {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description_noborder h2{
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description-content h2 {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .citation {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .citation-content {
+                background-color: #555; /* Dark color for dark mode */
+            }
+            .citation-content h2 {
+                background-color: #555; /* Dark color for dark mode */
+            }
+            .footer {
+                background-color: #222; /* Dark color for dark mode */
+                color: white;
+            }
+            .image-comparison-container {
+                background-color: #333; /* Dark color for dark mode */
+            }
+            .demo {
+                background-color: #333;
+            }
+        }
+    </style>
+</head>
+<body>
+<!--    <div style="overflow: hidden; background-color: #6699cc;">-->
+<!--      <div class="container">-->
+<!--        <a href="https://www.nvidia.com/" style="float: left; color: black; text-align: center; padding: 12px 16px; text-decoration: none; font-size: 16px;"><img width="100%" src="https://nv-tlabs.github.io/3DStyleNet/assets/nvidia.svg"></a>-->
+<!--        <a href="https://efficient-large-model.github.io" style="float: left; color: black; text-align: center; padding: 14px 16px; text-decoration: none; font-size: 16px;"><strong>Efficient AI Group</strong></a>-->
+<!--      </div>-->
+<!--    </div>-->
+    <div  style="text-align: center; margin-top: 50px; margin-bottom: -10px;">
+<!--        <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/SANA-Sprint.png" alt="Sana-logo" class="inserted-image-noshadow" style="width: 1000px; height: auto;">-->
+        <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/SANA-Sprint.png" alt="Sana-logo" class="inserted-image-noshadow" style="max-width: 30%; height: auto;">
+    </div>
+    <div class="hero">
+<!--        <div style="display: flex; justify-content: center; align-items: center; margin-left: -40px;">-->
+<!--            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sana-1.5/asset/logo.jpg" alt="Logo" style="width: 50px; height: auto; margin-right: 5px;">-->
+<!--            <h1 style="margin: 0;">Sana</h1>-->
+<!--        </div>-->
+        <h2>SANA-Sprint: One-Step Diffusion with Continuous-Time <br>
+            Consistency Distillation</h2>
+        <p>Exploring the Frontiers of Efficient Generative Foundation Models</p>
+
+        <!-- Add author and institution information -->
+        <div style="margin-top: 20px; text-align: center;">
+            <p style="font-size: 1.3em; margin-bottom: 5px;">
+                <a href="https://lawrence-cj.github.io/" target="_blank" style="color: #76b900;">Junsong Chen</a><sup>1*</sup>,
+                <a href="https://scholar.google.com/citations?user=aA70TOwAAAAJ&hl=en" target="_blank" style="color: #76b900;">Shuchen Xue</a><sup>5*</sup>,
+                <a href="https://yuyangzhao.com/" target="_blank" style="color: #76b900;">Yuyang Zhao</a><sup>1&dagger;</sup>,
+                <a href="https://github.com/yujincheng08" target="_blank" style="color: #76b900;">Jincheng Yu</a><sup>1&dagger;</sup>,
+                <a href="https://sayak.dev/" target="_blank" style="color: #76b900;">Sayak Paul</a><sup>4</sup>,
+                <a href="https://scholar.google.com.hk/citations?hl=zh-CN&user=mWdYMZ8AAAAJ" target="_blank" style="color: #76b900;">Junyu Chen</a><sup>3</sup>,
+                <a href="https://scholar.google.com/citations?user=m2JEUksAAAAJ&hl=zh-CN" target="_blank" style="color: #76b900;">Dongyun Zou</a><sup>3</sup>,
+                <a href="https://han-cai.github.io//" target="_blank" style="color: #76b900;">Han Cai</a><sup>1</sup>,
+                <a href="https://hanlab.mit.edu/songhan/" target="_blank" style="color: #76b900;">Song Han</a><sup>1,2</sup>,
+                <a href="https://xieenze.github.io/" target="_blank" style="color: #76b900;">Enze Xie</a><sup>1</sup>
+            </p>
+            <p style="font-size: 1.2em; color: #888;">
+                {junsongc,enzex,songh}@nvidia.com,
+                xueshuchen.acad@gmail.com
+                <br>
+                <sup>1</sup>NVIDIA,&nbsp <sup>2</sup>MIT,&nbsp <sup>3</sup>Tsinghua University,&nbsp <sup>4</sup>Huggingface,&nbsp <sup>5</sup>Independent Researcher
+                <br>
+                *Equal contribution&nbsp;&nbsp;   &dagger;Core contributor&nbsp;&nbsp;
+            </p>
+        </div>
+<!--        <div style="overflow: hidden; background-color: #6699cc;">-->
+        <div style="overflow: hidden; background-color: #fff;">
+          <div class="logo" style="padding: 12px;">
+            <a href="https://www.nvidia.com/" style="text-decoration: none; font-size: 16px;">
+              <img src="https://nv-tlabs.github.io/3DStyleNet/assets/nvidia.svg" alt="NVIDIA Logo" style="width: auto; height: 30px;">
+            </a>
+            <a href="https://hanlab.mit.edu/" style="text-decoration: none; font-size: 16px;">
+              <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/mit_han.png" alt="MIT Logo" style="width: auto; height: 30px;">
+            </a>
+          </div>
+        </div>
+
+        <div class="badges">
+            <a href="https://arxiv.org/pdf/2503.09641" target="_blank" class="badge paper">
+                <span class="badge-icon">📄</span>
+                Paper
+            </a>
+            <a href="https://github.com/NVlabs/Sana" target="_blank" class="badge code">
+                <span class="badge-icon">💻</span>
+                Code
+            </a>
+            <a href="https://nvlabs.github.io/Sana/docs/sana_sprint/" target="_blank" class="badge code">
+                <span class="badge-icon">📖</span>
+                Docs
+            </a>
+            <a href="https://sana.hanlab.ai/sprint" target="_blank" class="badge demo">
+                <span class="badge-icon">🚀</span>
+                Self Demo
+            </a>
+            <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint" target="_blank" class="badge demo">
+                <span class="badge-icon">🤗</span>
+                HF Demo
+            </a>
+        </div>
+    </div>
+
+    <!-- Video Section -->
+    <figure class="video-container">
+        <video controls autoplay muted loop>
+            <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/video/sana-sprint-speed-video-4images.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <figcaption>
+            Real speed on H100 GPU for generating 1024 ×1024 images.
+        </figcaption>
+    </figure>
+    <!-- End Video Section -->
+
+    <!-- Video Section -->
+    <figure class="video-container">
+        <video controls autoplay muted loop>
+            <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/video/sana-sprint-speed.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <figcaption>
+        Compare the speed of 1-step, 4-step Sana-Sprint and 20-step teacher model Sana.
+        </figcaption>
+    </figure>
+    <!-- End Video Section -->
+
+    <div class="gallery-container">
+        <section class="gallery" id="gallery">
+        <div class="gallery-item item1"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/3.jpg" alt="Image 1" data-description="Close-up of the top peak of Aconcagua, a snow-covered mountain in the Himalayas at sunrise during the golden hour. Award-winning photography, shot on a Canon EOS R5 in the style of Ansel Adams."></div>
+        <div class="gallery-item item2"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/13.jpg" alt="Image 2" data-description="An astronaut lying in the middle of white ROSES, in the style of Unsplash photography."></div>
+        <div class="gallery-item item6"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/8.jpg" alt="Image 6" data-description="Peach-faced lovebird with a slick pompadour."></div>
+        <div class="gallery-item item4"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/5.jpg" alt="Image 4" data-description="A protagonist, at the beginning of their story, about to embark on their journey."></div>
+
+        <div class="gallery-item item5"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/6.jpg" alt="Image 5" data-description="A close-up photo of a juicy gourmet cheeseburger with caramelized onions, melted cheese, and a perfectly toasted beef patty, served in a soft golden bun. The cheeseburger has a slight steam rising from it, adding a sense of freshness and warmth. Natural light highlights the rich textures and glossy sauces, enhancing the mouth-watering look. The background is slightly blurred, creating a cozy atmosphere for food advertising or restaurant promotions."></div>
+        <div class="gallery-item item3"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/16.jpg" alt="Image 3" data-description="A hyper-realistic advertising image of a young snowboarder entirely sculpted from snow, exuding an edgy, dynamic energy akin to Dragon Alliance's bold aesthetic. The snowboarder is caught mid-trick, twisting through the air with incredible detail showing the texture of packed snow forming their body, icy contours, and sharp features. Their snowboard, sleek and modern, glistens with frost and ice particles trailing behind. The background features a moody mountain scene with stormy clouds and shards of sunlight breaking through, adding drama and intensity to the shot. The lighting is sharp and high-contrast, with deep shadows emphasizing the snowboarder's angular snow-built form, creating an avant-garde, adrenaline-filled vibe. The image feels raw, rebellious, and unapologetically bold, perfect for high-impact winter sports advertising."></div>
+        <div class="gallery-item item7"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/4.jpg" alt="Image 7" data-description='an old porsche 911 in turkis color parking at malibu beach. Shoot from the front low level with kodak portra 160. Ultra realistic, muted tones. intercooler inlet, modern front lips.'></div>
+        <div class="gallery-item item8"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/9.jpg" alt="Image 8" data-description="Art illustration, sports minimalism style, fuzzy form, black cat and white cat, solid color background, close-up, pure flat illustration, extreme high-definition picture, cat's eyes depict clear and meticulous, high aesthetic feeling, graphic, fuzzy, felt, minimalism, blank space, artistic conception, advanced, masterpiece, minimalism, fuzzy fur texture."></div>
+
+        <div class="gallery-item item9"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/18.jpg" alt="Image 9" data-description='A sunny beach resort with golden sand and turquoise water. In the center of the scene, a large wooden sign displays the word "SPRINT" in bold, blue and white letters, blending naturally into the environment. The text is sleek and modern, with sharp edges and a faint shadow effect. The atmosphere is relaxed and cheerful, with a sense of energy and fun.'></div>
+        <div class="gallery-item item10"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/10.jpg" alt="Image 10" data-description="The image shows a young woman, possibly in her late teens or early twenties, with long blonde hair and bangs. She appears to be alone in a brightly lit room with a plain background. The woman is the focus of the image, in the foreground, wearing a light pink pajama top. The woman seems to be of Caucasian race, with a potentially upper-middle-class income, possibly between $50,000 and $100,000 per year. Her religious beliefs and political affiliations are difficult to ascertain from just an image. She appears calm and content, possibly slightly playful, in the image. Her clothing suggests a relaxed and comfortable demeanor, although her makeup is rather precise and suggests an interest in beauty and style. Some potential interests include fashion, makeup, and photography, and, potentially, online gaming or social media, shopping, and excessive screen time. She seems serene and stylish, radiating an aura of quiet confidence. We can target her with beauty products, luxury items and subscription boxes, such as Sephora collections, Glossier skincare, and Stitch Fix styling services, and other similar premium goods. with both hands on her head gathering her hair"></div>
+        <div class="gallery-item item11"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/1.jpg" alt="Image 11" data-description="Two mugs with steam forming heart shapes."></div>
+        <div class="gallery-item item12"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/12.jpg" alt="Image 12" data-description="An aristocratic man in a vintage equestrian outfit standing beside a horse in front of a grand countryside mansion. The man has a refined and confident expression, wearing a tailored tweed jacket with a high-collar shirt and gloves, exuding timeless elegance. The background features lush green hills and a stately manor in soft, muted tones, evoking a classic old money aesthetic. The scene captures a sophisticated equestrian vibe with natural outdoor lighting and a warm, heritage color palette."></div>
+
+        <div class="gallery-item item13"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/14.jpg" alt="Image 13" data-description="A wormhole opens in the vastness of space, its swirling vortex of colors drawing the viewer's eye. The event horizon is a maelstrom of blues and purples, with hints of the unknown universe beyond its edges."></div>
+<!--        <div class="gallery-item item14"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/7.jpg" alt="Image 14" data-description='create name "SANA" standing in the seaside area with sunrise and flowers the letters is whitesand made, vibrant, graffiti, photo, typography, 3d render'></div>-->
+        <div class="gallery-item item15"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/samples/15.jpg" alt="Image 15" data-description='extreme full shot, cute baby mouse with blue fur and blue eyes and pink cheek, chubby, plump, wearing a hat with "SANA" written on it with the letters clearly visible, happy expression, white background, felted art, Diseny studio, 3d rendering, rendered in blender'></div>
+
+        </section>
+    </div>
+
+<!--     The Modal-->
+    <div id="modal" onclick="this.style.display='none'">
+      <img id="modal-img" src="">
+      <div id="modal-description"></div> <!-- Text for description -->
+    </div>
+
+    <section class="description">
+
+        <div class="description-content">
+          <h2>About Sana</h2>
+          <p>This paper presents SANA-Sprint, an efficient diffusion model for ultra-fast text-to-image (T2I) generation.
+              SANA-Sprint is built on a pre-trained foundation model and augmented with hybrid distillation,
+              dramatically reducing inference steps from 20 to 1-4. We introduce three key innovations:
+              <strong style="font-size: 18px;">(1)</strong> We propose a training-free approach that transforms a pre-trained flow-matching model for continuous-time consistency distillation (sCM),
+              eliminating costly training from scratch and achieving high training efficiency. Our hybrid distillation strategy combines sCM with latent adversarial distillation (LADD): sCM ensures alignment with the teacher model,
+              while LADD enhances single-step generation fidelity.
+              <strong style="font-size: 18px;">(2)</strong> SANA-Sprint is a unified step-adaptive model that achieves high-quality generation in 1-4 steps,
+              eliminating step-specific training and improving efficiency.
+              <strong style="font-size: 18px;">(3)</strong> We integrate ControlNet with SANA-Sprint for real-time interactive image generation,
+              enabling instant visual feedback for user interaction. SANA-Sprint establishes a new Pareto frontier in speed-quality tradeoffs,
+              achieving state-of-the-art performance with 7.59 FID and 0.74 GenEval in only 1 step — outperforming FLUX-schnell (7.94 FID / 0.71 GenEval) while being 10× faster (0.1s vs 1.1s on H100).
+              It also achieves 0.1s (T2I) and 0.25s (ControlNet) latency for 1024×1024 images on H100, and 0.31s (T2I) on an RTX 4090,
+              showcasing its exceptional efficiency and potential for AI-powered consumer applications (AIPC). Code and pre-trained models will be open-sourced.
+          </p>
+        </div>
+
+        <!-- Insert your image here -->
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/teaser.png" alt="inference speed for generating 1024 ×1024 images"
+                 class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <h2>Several Core Design Details for Efficiency</h2>
+          <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;  <strong style="font-size: 18px;">Training-Free Transformation to TrigFlow: </strong>
+              We propose a training-free approach that transforms a pre-trained flow-matching model for continuous-time consistency distillation (sCM),
+              eliminating costly training from scratch and achieving high training efficiency.
+              Our hybrid distillation strategy combines sCM with latent adversarial distillation (LADD): sCM ensures alignment with the teacher model,
+              while LADD enhances single-step generation fidelity.
+              <br>
+          </p>
+        </div>
+    </section>
+
+    <section class="description_noborder">
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/paradigm.png" alt="pipeline for Sana" class="inserted-image">
+        </div>
+        <div class="description-content">
+          <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Stabilizing Continuous-Time Distillation: </strong>
+              To stabilize continuous-time consistency distillation, we address two key challenges:
+              training instabilities and excessively large gradient norms that occur when scaling up the model size and increasing resolution,
+              leading to model collapse. We achieve this by refining <strong style="font-size: 18px;">dense time-embedding</strong> and integrating <strong style="font-size: 18px;">QK-Normalization</strong> into self- and cross-attention mechanisms.
+              These modifications enable efficient training and improve stability, allowing for robust performance at higher resolutions and larger model sizes.
+              <br>
+          </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/timestep_qknorm_grad_schedule.png" alt="main techs" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+            <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Improving Continuous-Time CMs with GAN: </strong>
+              CTM analyzes that CMs distill teacher information in a local manner, where at each iteration, the student model learns from local time intervals.
+              This leads the model to learn cross timestep information under the implicit extrapolation, which can slow the convergence speed.
+              To address this limitation, we introduce an additional adversarial loss to provide direct global supervision across different timesteps,
+              improving both the convergence speed and the output quality.
+            </p>
+        </div>
+
+        <div class="description-content">
+          <h2>Overall Performance</h2>
+        </div>
+        <div class="description-content"dd>
+            <p>
+                Our SANA-Sprint models focus on timestep distillation, achieving high-quality generation with 1-4
+                inference steps. We compare SANA-Sprint with SoTA text-to-image timestep distillation methods in the Figure below.
+            </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/compare-other-methods.png" alt="flow-dpms vs flow-euler" class="inserted-image">
+        </div>
+
+        <div class="description-content"dd>
+            <p>
+                We compare SANA-Sprint with SoTA text-to-image diffusion and timestep distillation methods in Table 2.
+                Specifically, with 4 steps, SANA-Sprint 0.6B achieves <strong style="font-size: 18px;">5.34 samples/s</strong> throughput and <strong style="font-size: 18px;">0.32s</strong> latency,
+                with an <strong style="font-size: 18px;">FID of 6.48 and GenEval of 0.76</strong>.
+                SANA-Sprint 1.6B has slightly lower throughput ( <strong style="font-size: 18px;">5.20 samples/s</strong>) but improves  <strong style="font-size: 18px;">GenEval to 0.77</strong>, outperforming larger models like FLUX-schnell (12B),
+                which achieves only 0.5 samples/s with 2.10s latency. At 2 steps, SANA-Sprint models remain efficient:
+                SANA-Sprint 0.6B reaches 6.46 samples/s with 0.25s latency (FID: 6.54), while SANA-Sprint 1.6B achieves  <strong style="font-size: 18px;">5.68 samples/s</strong> with  <strong style="font-size: 18px;">0.24s latency (FID: 6.76)</strong>.
+                In single-step mode, SANA-Sprint 0.6B achieves  <strong style="font-size: 18px;">7.22 samples/s</strong> throughput and  <strong style="font-size: 18px;">0.21s latency</strong>, maintaining an  <strong style="font-size: 18px;">FID of 7.04 and GenEval of 0.72</strong>,
+                comparable to FLUX-schnell but with significantly higher efficiency.
+            </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/main_table.jpg" alt="Sana performance" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <h2>SANA-Sprint ControlNet</h2>
+            <p>
+            We implement a ControlNet-Transformer architecture,
+                specifically tailored for Transformers, achieving explicit controllability alongside high-quality image generation.
+<!--                Try our-->
+<!--                <a rel="license" href="https://sana.hanlab.ai/ctrlnet/" target="_blank" style="color: dodgerblue">-->
+<!--                    Demo-->
+                </a>
+            </p>
+        </div>
+
+        <figure>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/contronet_vis.png" alt="Sana-Sprint-Controlnet model" class="inserted-image">
+            <figcaption>
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/sana_controlnet.md" target="_blank" style="color: dodgerblue">
+                    Sana-ControlNet architecture
+                </a>
+            </figcaption>
+        </figure>
+
+        <figure>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sprint/asset/content/contronet_demo.png" alt="Sana-Sprint-Controlnet demo" class="inserted-image">
+            <figcaption>
+                <a rel="license" href="" target="_blank" style="color: dodgerblue">
+                    Sana-ControlNet online demo layout
+                </a>
+            </figcaption>
+        </figure>
+
+        <div class="description-content">
+            <h2>Our Mission</h2>
+            <p>Our mission is to develop <strong>efficient, lightweight, and accelerated</strong>
+                AI technologies that address practical challenges and deliver fast, open-source solutions.</p>
+        </div>
+
+        <!--BibTex citation -->
+        <div class="description-content">
+            <h2 class="title">BibTeX</h2>
+        </div>
+        <section class="citation" id="BibTeX">
+            <div class="citation-content">
+                <pre><code>@misc{chen2025sana-sprint,
+      title={SANA-Sprint: One-Step Diffusion with Continuous-Time Consistency Distillation},
+      author={Junsong Chen and Shuchen Xue and Yuyang Zhao and Jincheng Yu and Sayak Paul and Junyu Chen and Han Cai and Song Han and Enze Xie},
+      year={2025},
+      eprint={2503.09641},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2503.09641},
+    }</code></pre>
+            </div>
+        </section>
+    </section>
+    <!--End BibTex citation -->
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-8">
+                    <div class="content">
+                        <p>
+                            This website is licensed under a <a
+                                rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+                                Commons Attribution-ShareAlike 4.0 International License</a>.
+                        </p>
+                        <span id="busuanzi_container_site_pv">Total clicks: <span id="busuanzi_value_site_pv"></span></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- End Footer -->
+
+    <script>
+      // Function to open the modal and display the clicked image and description
+      function openModal(img) {
+          var modal = document.getElementById("modal");
+          var modalImg = document.getElementById("modal-img");
+          var modalDescription = document.getElementById("modal-description");
+
+          modal.style.display = "flex";
+          modalImg.src = img.src;
+          modalDescription.textContent = img.getAttribute('data-description'); // Get description from data-description attribute
+      }
+
+      // Add click event listeners to all images in the gallery with their descriptions
+      const images = document.querySelectorAll('.gallery-item img');
+      images.forEach((img) => {
+        img.addEventListener('click', () => openModal(img));
+      });
+    </script>
+
+    <script>
+        const container = document.querySelector('.image-comparison-content');
+        const slider = document.querySelector('.slider');
+        // const slider_black = document.querySelector('.slider-black');
+        const image2 = document.querySelector('.image-2');
+        // const image4 = document.querySelector('.image-4');
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            let xPos = e.clientX - rect.left;
+
+            if (xPos < 0) xPos = 0;
+            if (xPos > rect.width) xPos = rect.width;
+
+            const percentage = (xPos / rect.width) * 100;
+
+            slider.style.left = `${percentage}%`;
+            // slider_black.style.left = `${percentage}%`;
+            image2.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+            // image4.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+        });
+    </script>
+</body>
+</html>

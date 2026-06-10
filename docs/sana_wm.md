@@ -209,11 +209,18 @@ runs unless `--no_refiner` is passed.
 `chunk_flow_euler` uses `interval_k = 1 / num_chunks` by default. Override it
 with `--chunk_interval_k` only for ablations.
 
-## Stage-1 Training on Sekai-Game
+## Chunk-Causal Stage-1 Training on Sekai-Game
 
-The chunk-causal Stage-1 training example can run directly from the public HF dataset
+This repo includes the minimal chunk-causal Stage-1 training path:
+
+- training script: `train_video_scripts/train_sana_wm_stage1.py`
+- training config: `configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml`
+- latent dataset loader: `diffusion/data/datasets/video/sana_wm_zip_latent_data.py`
+- CP/FSDP2 tests: `tests/test_context_parallel*.py`
+
+The example can run directly from the public HF dataset
 [`Efficient-Large-Model/SANA-WM-example-training-dataset`](https://huggingface.co/datasets/Efficient-Large-Model/SANA-WM-example-training-dataset).
-The config downloads the dataset on the main rank, waits for all ranks, then
+The config downloads the dataset on the main rank, waits for all ranks, and
 trains from the chunk-causal Stage-1 teacher checkpoint with FSDP2 and CP2:
 
 ```bash
@@ -234,6 +241,12 @@ data:
   vae_cache_dir: data/vae_cache/LTX2VAE_diffusers_704x1280/sekai_game_train_961frames_16fps_ovl640
 model:
   load_from: hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors
+  attn_type: ChunkCausalGDNTriton
+  camctrl_type: ChunkCausalGDNUCPESinglePathLiteLABothTriton
+train:
+  use_fsdp: true
+  fsdp_version: 2
+  cp_size: 2
 ```
 
 Set `data.hf_dataset_local_dir` to a shared filesystem path if you do not want

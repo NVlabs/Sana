@@ -235,6 +235,8 @@ class TrainingConfig(BaseConfig):
     ema_rate: float = 0.9999
     eval_batch_size: int = 16
     use_fsdp: bool = False
+    fsdp_version: int = 1
+    cp_size: int = 0
     use_flash_attn: bool = False
     eval_sampling_steps: int = 250
     lora_rank: int = 4

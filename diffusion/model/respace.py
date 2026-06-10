@@ -94,7 +94,6 @@ def truncated_normal_icdf_sample(n, mu, sigma, a, b, device, dtype):
 
 
 def stretched_logit_normal(n, mu, sigma, p_low, p_high, device, dtype):
-    # print(f"stretched_logit_normal: p_low={p_low}, p_high={p_high}, mu={mu}, sigma={sigma}")
     std_normal = th.distributions.normal.Normal(0.0, 1.0)
     # draw z from a truncated normal between the desired quantiles
     z_lo = mu + sigma * std_normal.icdf(th.tensor(p_low, device=device, dtype=dtype))
@@ -147,7 +146,7 @@ def compute_density_for_timestep_sampling(
     elif weighting_scheme == "logit_normal_trigflow":
         sigma = th.randn(batch_size, device="cpu")
         sigma = (sigma * logit_std + logit_mean).exp()
-        u = th.atan(sigma / 0.5)  # TODO: 0.5 should be a hyper-parameter
+        u = th.atan(sigma / 0.5)
     else:
         u = th.rand(size=(batch_size,), device="cpu")
     return u
@@ -317,6 +316,121 @@ class IncrementalTimesteps:
         return ts
 
 
+def _expand_chunk_to_frames(chunk_timesteps: th.Tensor, chunk_sizes: list[int]) -> th.Tensor:
+    frame_chunks = [
+        chunk_timesteps[:, i : i + 1].unsqueeze(1).repeat(1, 1, chunk_sizes[i])
+        for i in range(len(chunk_sizes))
+    ]
+    return th.cat(frame_chunks, dim=-1).long()
+
+
+def _sample_logit_timesteps(
+    weighting_scheme: str | None,
+    train_sampling_steps: int,
+    batch_size: int,
+    device: th.device,
+    **kwargs,
+) -> th.Tensor:
+    u = compute_density_for_timestep_sampling(
+        weighting_scheme=weighting_scheme,
+        batch_size=batch_size,
+        logit_mean=kwargs.get("logit_mean", 0),
+        logit_std=kwargs.get("logit_std", 1),
+        p_low=kwargs.get("p_low", None),
+        p_high=kwargs.get("p_high", None),
+        mode_scale=None,
+    )
+    return (u * train_sampling_steps).long().to(device)
+
+
+def _sample_incremental_chunk_timesteps(
+    base_timesteps: th.Tensor,
+    num_chunks: int,
+    anchor_curf: Optional[th.Tensor],
+    time_sampler,
+    train_sampling_steps: int,
+    device: th.device,
+) -> th.Tensor:
+    batch_size = base_timesteps.shape[0]
+    if time_sampler is not None:
+        sampled = time_sampler.sample(batch_size, curf=anchor_curf, cur_timestep=base_timesteps)
+        return sampled[:, :num_chunks].contiguous()
+
+    timesteps_list = [base_timesteps]
+    for _ in range(num_chunks - 1):
+        max_timestep = timesteps_list[-1]
+        timesteps_list.append((th.rand(batch_size, device=device) * max_timestep.float()).long())
+    return th.stack(timesteps_list[::-1], dim=1)
+
+
+def _apply_teacher_forcing_clean_chunks(chunk_timesteps: th.Tensor, sample_mask: th.Tensor) -> th.Tensor:
+    if not sample_mask.any() or chunk_timesteps.shape[1] < 2:
+        return chunk_timesteps
+    batch_size, num_chunks = chunk_timesteps.shape
+    device = chunk_timesteps.device
+    prefix_len = th.randint(1, num_chunks, (batch_size,), device=device)
+    prefix_len = th.where(sample_mask, prefix_len, th.zeros_like(prefix_len))
+    clean_mask = th.arange(num_chunks, device=device).unsqueeze(0) < prefix_len.unsqueeze(1)
+    return th.where(clean_mask, th.zeros_like(chunk_timesteps), chunk_timesteps)
+
+
+def _resolve_chunk_mixture_probs(raw: Optional[dict]) -> Optional[dict[str, float]]:
+    if raw is None:
+        return None
+    keys = ("same_t", "incremental", "last_chunk_anchor", "teacher_forcing_clean")
+    unknown = set(raw) - set(keys)
+    if unknown:
+        raise ValueError(f"Unknown chunk_mixture_probs keys: {sorted(unknown)}")
+    probs = {key: float(raw.get(key, 0.0)) for key in keys}
+    total = sum(probs.values())
+    if total <= 0 or any(value < 0 for value in probs.values()):
+        raise ValueError(f"chunk_mixture_probs must be non-negative and sum to > 0, got {raw}")
+    return {key: value / total for key, value in probs.items()}
+
+
+def _sample_chunk_timesteps_mixture(
+    probs: dict[str, float],
+    weighting_scheme: str | None,
+    train_sampling_steps: int,
+    batch_size: int,
+    num_chunks: int,
+    time_sampler,
+    device: th.device,
+    **kwargs,
+) -> th.Tensor:
+    p = th.tensor(
+        [probs["same_t"], probs["incremental"], probs["last_chunk_anchor"], probs["teacher_forcing_clean"]],
+        device=device,
+        dtype=th.float32,
+    )
+    mode = th.bucketize(th.rand(batch_size, device=device), th.cumsum(p, dim=0)[:-1])
+    base_timesteps = _sample_logit_timesteps(
+        weighting_scheme, train_sampling_steps, batch_size, device, **kwargs
+    )
+
+    use_last_anchor = (mode == 2) | (mode == 3)
+    random_curf = th.randint(0, num_chunks, (batch_size,), device=device)
+    last_curf = th.full((batch_size,), num_chunks - 1, device=device, dtype=th.long)
+    anchor_curf = th.where(use_last_anchor, last_curf, random_curf)
+    chunk_timesteps = _sample_incremental_chunk_timesteps(
+        base_timesteps=base_timesteps,
+        num_chunks=num_chunks,
+        anchor_curf=anchor_curf,
+        time_sampler=time_sampler,
+        train_sampling_steps=train_sampling_steps,
+        device=device,
+    )
+
+    same_t_mask = mode == 0
+    if same_t_mask.any():
+        chunk_timesteps = th.where(
+            same_t_mask.unsqueeze(1),
+            base_timesteps.unsqueeze(1).expand(-1, num_chunks),
+            chunk_timesteps,
+        )
+    return _apply_teacher_forcing_clean_chunks(chunk_timesteps, mode == 3)
+
+
 def process_timesteps(
     weighting_scheme: str | None,
     train_sampling_steps: int,
@@ -345,46 +459,42 @@ def process_timesteps(
         raise ValueError(f"Invalid weighting scheme: {weighting_scheme}")
 
     if kwargs.get("chunk_index", None) is not None:
-        if random.random() < same_timestep_prob:
-            timesteps = timesteps[..., None, None].repeat(1, 1, kwargs.get("num_frames", 1))
+        if not kwargs.get("chunk_mixture_probs", None) and random.random() < same_timestep_prob:
+            timesteps = timesteps.reshape(size[0], -1)[:, :1]
+            timesteps = timesteps[:, :, None].repeat(1, 1, kwargs.get("num_frames", 1))
             return timesteps
 
-        # do chunk causal sampling
-        # sample bxlen(chunk_size) timesteps
         chunk_index = kwargs.get("chunk_index")[:]  # start index of each chunk, copy the list
         chunk_index.append(kwargs.get("num_frames", 1))
         chunk_sizes = th.diff(th.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
         num_chunks = len(chunk_sizes)
         strategy = kwargs.get("chunk_sampling_strategy", "uniform")
-        if strategy == "uniform":
-            u = compute_density_for_timestep_sampling(
+
+        def _sample_base(batch_size: int) -> th.Tensor:
+            return _sample_logit_timesteps(weighting_scheme, train_sampling_steps, batch_size, device, **kwargs)
+
+        def _expand_chunk_timesteps(chunk_timesteps: th.Tensor) -> th.Tensor:
+            return _expand_chunk_to_frames(chunk_timesteps.squeeze(1), chunk_sizes)
+
+        mixture_probs = kwargs.get("chunk_mixture_probs", None)
+        if mixture_probs:
+            forwarded = {key: value for key, value in kwargs.items() if key != "time_sampler"}
+            chunk_timesteps = _sample_chunk_timesteps_mixture(
+                probs=_resolve_chunk_mixture_probs(mixture_probs),
                 weighting_scheme=weighting_scheme,
-                batch_size=size[0] * num_chunks,
-                logit_mean=kwargs.get("logit_mean", 0),
-                logit_std=kwargs.get("logit_std", 1),
-                p_low=kwargs.get("p_low", None),
-                p_high=kwargs.get("p_high", None),
-                mode_scale=None,  # not used
-            )
-            timesteps = (u * train_sampling_steps).long().to(device)
-            timesteps = timesteps.reshape(size[0], 1, num_chunks)  # b,1,num_chunks
-            # repeat each value in timesteps chunk_sizes times
-            frame_timesteps = [
-                timesteps[:, :, i : i + 1].repeat_interleave(chunk_sizes[i], dim=-1) for i in range(num_chunks)
-            ]
-            timesteps = th.cat(frame_timesteps, dim=-1)  # b,1,num_frames
-            timesteps = timesteps.long()
-        elif strategy == "incremental":
-            u = compute_density_for_timestep_sampling(
-                weighting_scheme=weighting_scheme,
+                train_sampling_steps=train_sampling_steps,
                 batch_size=size[0],
-                logit_mean=kwargs.get("logit_mean", 0),
-                logit_std=kwargs.get("logit_std", 1),
-                p_low=kwargs.get("p_low", None),
-                p_high=kwargs.get("p_high", None),
-                mode_scale=None,  # not used
+                num_chunks=num_chunks,
+                time_sampler=kwargs.get("time_sampler", None),
+                device=device,
+                **forwarded,
             )
-            base_timesteps = (u * train_sampling_steps).long().to(device)  # b
+            timesteps = _expand_chunk_to_frames(chunk_timesteps, chunk_sizes)
+        elif strategy == "uniform":
+            timesteps = _sample_base(size[0] * num_chunks).reshape(size[0], 1, num_chunks)
+            timesteps = _expand_chunk_timesteps(timesteps)
+        elif strategy == "incremental":
+            base_timesteps = _sample_base(size[0])
             if kwargs.get("time_sampler", None) is not None:
                 timesteps_list = kwargs.get("time_sampler").sample(
                     size[0], curf=None, cur_timestep=base_timesteps

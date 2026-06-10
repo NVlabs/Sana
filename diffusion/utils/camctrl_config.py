@@ -29,6 +29,10 @@ from diffusion.utils.config import (
 @dataclass
 class VideoDataCamCtrlConfig(VideoDataConfig):
     caption_proportion: Dict[str, Any] = field(default_factory=lambda: {"prompt": 1})
+    hf_dataset_repo: Optional[str] = None
+    hf_dataset_revision: Optional[str] = None
+    hf_dataset_local_dir: str = "."
+    hf_dataset_allow_patterns: Optional[List[str]] = None
     # Training-mixture fields; harmless at inference time but required so
     # pyrallis can deserialise the YAML.
     data_repeat: Optional[Dict[str, int]] = None
@@ -81,15 +85,8 @@ class ModelVideoCamCtrlConfig(ModelVideoConfig):
 class TrainVideoCamCtrlConfig(TrainVideoConfig):
     only_train_self_attn: bool = False
     only_train_cam_attn: bool = False
-    # Per-sample mixture for chunk timestep sampling (incremental strategy only).
-    # Keys must sum to 1.0. When None, the legacy `same_timestep_prob` +
-    # `last_chunk_anchor_prob` paths run instead. See respace.py docs for semantics.
+    # Per-sample mixture for chunk timestep sampling.
     chunk_mixture_probs: Optional[Dict[str, float]] = None
-    # Probability of forcing the LAST chunk as the anchor in the legacy
-    # incremental sampler (applies only when `chunk_mixture_probs` is None).
-    last_chunk_anchor_prob: float = 0.0
-    # Print per-step mixture-mode counts for the first N training steps for debugging.
-    chunk_mixture_debug_steps: int = 0
     mixed_finetune: bool = False
     main_lora_target_modules: Optional[List[str]] = None
     main_lora_include: List[str] = field(default_factory=lambda: [".attn.", ".mlp.", ".ffn."])
@@ -122,10 +119,6 @@ class TrainVideoCamCtrlConfig(TrainVideoConfig):
     camctrl_val_steps: int = 40  # Number of sampling steps for validation
     camctrl_val_wandb_scale: float = 1.5  # Upscale factor for wandb videos
     val_only: bool = False  # Run validation only and exit
-
-    # When > 0, log model_kwargs shapes and isolated forward/backward times
-    # for the first N AR steps on rank 0. Default 0 = no logging.
-    ar_debug_shapes_n: int = 0
 
     # Synchronize AR ``K`` (and the ``T_lat`` clamp) across data-parallel ranks
     # before sampling so every rank uses the same ``T_active = K + G``.

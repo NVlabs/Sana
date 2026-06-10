@@ -14,8 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List
-
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import torch
 import torch.nn as nn
@@ -237,6 +235,7 @@ class GLUMBConvTemp(GLUMBConv):
         nn.init.zeros_(self.t_conv.weight)
 
     def forward(self, x: torch.Tensor, HW=None, **kwargs) -> torch.Tensor:
+        del kwargs
         B, N, C = x.shape
 
         assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
@@ -247,7 +246,21 @@ class GLUMBConvTemp(GLUMBConv):
 
         # Temporal aggregation
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)
-        x_out = x_reshaped + self.t_conv(x_reshaped)
+        try:
+            from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
+            from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
+        except Exception:
+            cp_active = False
+        else:
+            cp_active = cp_enabled() and get_cp_group() is not None
+
+        if cp_active and self.t_conv.padding[0] > 0:
+            halo = int(self.t_conv.padding[0])
+            x_halo = cp_halo_exchange(x_reshaped, left_size=halo, right_size=halo, dim=2, group=get_cp_group())
+            t_out = self.t_conv(x_halo)[:, :, halo : halo + T, :]
+        else:
+            t_out = self.t_conv(x_reshaped)
+        x_out = x_reshaped + t_out
 
         x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
 
@@ -255,7 +268,10 @@ class GLUMBConvTemp(GLUMBConv):
 
 
 class ChunkGLUMBConvTemp(GLUMBConvTemp):
-    def forward(self, x: torch.Tensor, HW=None, chunk_index: List[int] = [0]) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, HW=None, chunk_index=None, **kwargs) -> torch.Tensor:
+        del kwargs
+        if chunk_index is None:
+            chunk_index = [0]
         B, N, C = x.shape
 
         assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
@@ -264,34 +280,25 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
 
         x = self._apply_spatial_autochunked(x)
 
-        # Temporal aggregation
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)  # B, C, T, H*W
         padding_size = self.t_conv.kernel_size[0] // 2
-        # add the last chunk index
-        chunk_index = chunk_index[:]
-        chunk_index.append(T)
-        chunk_sizes = torch.diff(torch.tensor(chunk_index)).tolist()  # [f1, f2-f1, f3-f2, ...]
+        chunk_boundaries = [int(idx) for idx in chunk_index] + [T]
+        chunk_sizes = [end - start for start, end in zip(chunk_boundaries, chunk_boundaries[1:])]
         x_reshaped_list = x_reshaped.split(chunk_sizes, dim=-2)
-        # for the first chunk, padding padding_size zero to the right
-        # for the other chunks, padding padding_size zero to the right, padding the padding_size items in the last chunk to the left
+
         padded_x_reshaped_list = []
         padded_x_reshaped_list.append(
-            torch.cat(
-                [x_reshaped_list[0], torch.zeros(B, C, padding_size, H * W).to(x_reshaped.device, x_reshaped.dtype)],
-                dim=-2,
-            )
+            torch.cat([x_reshaped_list[0], x_reshaped.new_zeros(B, C, padding_size, H * W)], dim=-2)
         )
         for i in range(1, len(x_reshaped_list)):
-            prev_chunk = x_reshaped_list[i - 1][
-                :, :, -padding_size:, :
-            ]  # .detach() seems not necessary, since we will drop it
+            prev_chunk = x_reshaped_list[i - 1][:, :, -padding_size:, :]
             cur_chunk = x_reshaped_list[i]
             padded_x_reshaped_list.append(
                 torch.cat(
                     [
                         prev_chunk,
                         cur_chunk,
-                        torch.zeros(B, C, padding_size, H * W).to(x_reshaped.device, x_reshaped.dtype),
+                        x_reshaped.new_zeros(B, C, padding_size, H * W),
                     ],
                     dim=-2,
                 )
@@ -299,37 +306,22 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
         x_reshaped_t_conv = torch.cat(padded_x_reshaped_list, dim=-2)
         t_conv_out = self.t_conv(x_reshaped_t_conv)
 
-        # Remove padding from the output
-        # Calculate the expected output size after convolution
-        padded_chunk_sizes = []
-        padded_chunk_sizes.append(chunk_sizes[0] + padding_size)  # First chunk: original + right padding
-        for i in range(1, len(chunk_sizes)):
-            padded_chunk_sizes.append(
-                padding_size + chunk_sizes[i] + padding_size
-            )  # Other chunks: left + original + right padding
-
-        # After convolution, the output size depends on the convolution parameters
-        # For typical temporal convolution with same padding, output size should match input size
-        # Split the convolved output back into chunks
+        padded_chunk_sizes = [chunk_sizes[0] + padding_size] + [
+            padding_size + chunk_size + padding_size for chunk_size in chunk_sizes[1:]
+        ]
         t_conv_out_list = t_conv_out.split(padded_chunk_sizes, dim=-2)
 
-        # Remove padding from each chunk
         unpadded_chunks = []
         for i, chunk in enumerate(t_conv_out_list):
             if i == 0:
-                # First chunk: remove right padding
                 unpadded_chunk = chunk[:, :, : chunk_sizes[i], :]
             else:
-                # Other chunks: remove left and right padding
                 start_idx = padding_size
                 end_idx = start_idx + chunk_sizes[i]
                 unpadded_chunk = chunk[:, :, start_idx:end_idx, :]
             unpadded_chunks.append(unpadded_chunk)
 
-        # Concatenate the unpadded chunks
         t_conv_out_final = torch.cat(unpadded_chunks, dim=-2)
-
-        # Verify the output has the correct temporal dimension
         assert t_conv_out_final.shape[-2] == T, f"Expected temporal dimension {T}, got {t_conv_out_final.shape[-2]}"
 
         x_out = x_reshaped + t_conv_out_final

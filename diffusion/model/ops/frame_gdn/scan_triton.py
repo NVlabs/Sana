@@ -1,0 +1,325 @@
+"""Triton kernels for the D x D state scan in frame-wise GDN.
+
+Forward scan:
+    S_kv[t] = S_kv[t-1] @ W_kv[t] + U_kv[t]     (KV state, D x D)
+    S_z[t]  = W_z[t] @ S_z[t-1] + U_z[t]          (Z state,  D x 1)
+
+Backward scan (reverse):
+    ds_kv[t] = dS_kv_all[t] + ds_kv[t+1] @ W_kv[t+1]^T
+    dW_kv[t] = S_kv[t-1]^T @ ds_kv[t]
+    dU_kv[t] = ds_kv[t]
+    (analogous for Z state with left-multiply convention)
+"""
+
+from __future__ import annotations
+
+import torch
+import triton
+import triton.language as tl
+
+# ---------------------------------------------------------------------------
+# Forward kernel
+# ---------------------------------------------------------------------------
+
+
+@triton.jit(do_not_specialize=["T"])
+def frame_gdn_scan_fwd_kernel(
+    W_kv_ptr,
+    U_kv_ptr,
+    W_z_ptr,
+    U_z_ptr,
+    S_kv_all_ptr,
+    S_z_all_ptr,
+    T,
+    D: tl.constexpr,
+    BD: tl.constexpr,
+):
+    """Scan forward: one program per (batch, head) pair."""
+    i_bh = tl.program_id(0)
+
+    stride_dd = D * D
+    base_dd = i_bh.to(tl.int64) * T * stride_dd
+    base_d = i_bh.to(tl.int64) * T * D
+
+    o_d = tl.arange(0, BD)
+    mask_d = o_d < D
+    mask_dd = mask_d[:, None] & mask_d[None, :]
+
+    state_kv = tl.zeros([BD, BD], dtype=tl.float32)
+    state_z = tl.zeros([BD], dtype=tl.float32)
+
+    for t in range(0, T):
+        t_off_dd = base_dd + t * stride_dd
+        t_off_d = base_d + t * D
+
+        # --- KV state: S_kv = S_kv @ W_kv[t] + U_kv[t] ---
+        p_W = W_kv_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        p_U = U_kv_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        W_t = tl.load(p_W, mask=mask_dd, other=0.0).to(tl.float32)
+        U_t = tl.load(p_U, mask=mask_dd, other=0.0).to(tl.float32)
+
+        state_kv = tl.dot(state_kv, W_t, allow_tf32=False) + U_t
+
+        p_S = S_kv_all_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        tl.store(p_S, state_kv.to(p_S.dtype.element_ty), mask=mask_dd)
+
+        # --- Z state: S_z = W_z[t] @ S_z + U_z[t] ---
+        p_Wz = W_z_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        Wz_t = tl.load(p_Wz, mask=mask_dd, other=0.0).to(tl.float32)
+        p_Uz = U_z_ptr + t_off_d + o_d
+        Uz_t = tl.load(p_Uz, mask=mask_d, other=0.0).to(tl.float32)
+
+        # Matrix-vector: result[i] = sum_j Wz[i,j] * sz[j]
+        state_z = tl.sum(Wz_t * state_z[None, :], axis=1) + Uz_t
+
+        p_Sz = S_z_all_ptr + t_off_d + o_d
+        tl.store(p_Sz, state_z.to(p_Sz.dtype.element_ty), mask=mask_d)
+
+
+# ---------------------------------------------------------------------------
+# Backward kernel
+# ---------------------------------------------------------------------------
+
+
+@triton.jit(do_not_specialize=["T"])
+def frame_gdn_scan_bwd_kernel(
+    # Saved from forward
+    W_kv_ptr,
+    S_kv_all_ptr,
+    W_z_ptr,
+    S_z_all_ptr,
+    # Upstream gradients
+    dS_kv_all_ptr,
+    dS_z_all_ptr,
+    # Output gradients
+    dW_kv_ptr,
+    dU_kv_ptr,
+    dW_z_ptr,
+    dU_z_ptr,
+    T,
+    D: tl.constexpr,
+    BD: tl.constexpr,
+):
+    """Scan backward (reverse): one program per (batch, head) pair."""
+    i_bh = tl.program_id(0)
+
+    stride_dd = D * D
+    base_dd = i_bh.to(tl.int64) * T * stride_dd
+    base_d = i_bh.to(tl.int64) * T * D
+
+    o_d = tl.arange(0, BD)
+    mask_d = o_d < D
+    mask_dd = mask_d[:, None] & mask_d[None, :]
+
+    ds_kv = tl.zeros([BD, BD], dtype=tl.float32)
+    ds_z = tl.zeros([BD], dtype=tl.float32)
+
+    for t_idx in range(0, T):
+        t = T - 1 - t_idx
+        t_off_dd = base_dd + t * stride_dd
+        t_off_d = base_d + t * D
+
+        # --- KV backward ---
+        # Accumulate: ds_kv += dS_kv_all[t]
+        p_dS = dS_kv_all_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        dS_t = tl.load(p_dS, mask=mask_dd, other=0.0).to(tl.float32)
+        ds_kv = ds_kv + dS_t
+
+        # dU_kv[t] = ds_kv
+        p_dU = dU_kv_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        tl.store(p_dU, ds_kv.to(p_dU.dtype.element_ty), mask=mask_dd)
+
+        # dW_kv[t] = S_kv[t-1]^T @ ds_kv   (zero when t == 0)
+        prev_off_dd = base_dd + tl.maximum(t - 1, 0) * stride_dd
+        p_Sp = S_kv_all_ptr + prev_off_dd + o_d[:, None] * D + o_d[None, :]
+        s_prev = tl.load(p_Sp, mask=mask_dd & (t > 0), other=0.0).to(tl.float32)
+        dW = tl.dot(tl.trans(s_prev), ds_kv, allow_tf32=False)
+        p_dW = dW_kv_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        tl.store(p_dW, dW.to(p_dW.dtype.element_ty), mask=mask_dd)
+
+        # Propagate: ds_kv = ds_kv @ W_kv[t]^T
+        p_W = W_kv_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        W_t = tl.load(p_W, mask=mask_dd, other=0.0).to(tl.float32)
+        ds_kv = tl.dot(ds_kv, tl.trans(W_t), allow_tf32=False)
+
+        # --- Z backward ---
+        # Accumulate: ds_z += dS_z_all[t]
+        p_dSz = dS_z_all_ptr + t_off_d + o_d
+        dSz_t = tl.load(p_dSz, mask=mask_d, other=0.0).to(tl.float32)
+        ds_z = ds_z + dSz_t
+
+        # dU_z[t] = ds_z
+        p_dUz = dU_z_ptr + t_off_d + o_d
+        tl.store(p_dUz, ds_z.to(p_dUz.dtype.element_ty), mask=mask_d)
+
+        # dW_z[t] = ds_z @ S_z[t-1]^T   (outer product, zero when t == 0)
+        prev_off_d = base_d + tl.maximum(t - 1, 0) * D
+        p_SzP = S_z_all_ptr + prev_off_d + o_d
+        sz_prev = tl.load(p_SzP, mask=mask_d & (t > 0), other=0.0).to(tl.float32)
+        dWz = ds_z[:, None] * sz_prev[None, :]  # outer product (BD, BD)
+        p_dWz = dW_z_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        tl.store(p_dWz, dWz.to(p_dWz.dtype.element_ty), mask=mask_dd)
+
+        # Propagate: ds_z = W_z[t]^T @ ds_z
+        p_Wz = W_z_ptr + t_off_dd + o_d[:, None] * D + o_d[None, :]
+        Wz_t = tl.load(p_Wz, mask=mask_dd, other=0.0).to(tl.float32)
+        # result[i] = sum_j W_z[j,i] * ds_z[j]
+        ds_z = tl.sum(Wz_t * ds_z[:, None], axis=0)
+
+
+# ---------------------------------------------------------------------------
+# Python wrappers
+# ---------------------------------------------------------------------------
+
+
+def _select_bd(D: int) -> int:
+    bd = max(16, triton.next_power_of_2(D))
+    if bd > 128:
+        raise ValueError(
+            f"Head dim D={D} (BD={bd}) exceeds the max supported size 128. " "Fall back to the PyTorch implementation."
+        )
+    return bd
+
+
+def _select_num_warps(BD: int) -> int:
+    if BD <= 16:
+        return 1
+    if BD <= 32:
+        return 2
+    return 4
+
+
+def frame_gdn_scan_fwd(
+    W_kv: torch.Tensor,
+    U_kv: torch.Tensor,
+    W_z: torch.Tensor,
+    U_z: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Run the forward scan producing all intermediate states.
+
+    Args:
+        W_kv: Transition matrices, shape ``(B*H, T, D, D)``.
+        U_kv: Input matrices,     shape ``(B*H, T, D, D)``.
+        W_z:  Z transition,       shape ``(B*H, T, D, D)``.
+        U_z:  Z input,            shape ``(B*H, T, D)``.
+
+    Returns:
+        S_kv_all: ``(B*H, T, D, D)`` -- all intermediate KV states.
+        S_z_all:  ``(B*H, T, D)``    -- all intermediate Z states.
+    """
+    BH, T, D, _ = W_kv.shape
+    BD = _select_bd(D)
+
+    S_kv_all = torch.empty_like(W_kv)
+    S_z_all = torch.empty_like(U_z)
+
+    grid = (BH,)
+    frame_gdn_scan_fwd_kernel[grid](
+        W_kv,
+        U_kv,
+        W_z,
+        U_z,
+        S_kv_all,
+        S_z_all,
+        T=T,
+        D=D,
+        BD=BD,
+        num_warps=_select_num_warps(BD),
+        num_stages=1,
+    )
+    return S_kv_all, S_z_all
+
+
+def frame_gdn_scan_bwd(
+    W_kv: torch.Tensor,
+    S_kv_all: torch.Tensor,
+    dS_kv_all: torch.Tensor,
+    W_z: torch.Tensor,
+    S_z_all: torch.Tensor,
+    dS_z_all: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Run the backward scan computing gradients for W and U.
+
+    Returns:
+        dW_kv, dU_kv: ``(B*H, T, D, D)`` each.
+        dW_z, dU_z:   ``(B*H, T, D, D)`` and ``(B*H, T, D)``.
+    """
+    BH, T, D, _ = W_kv.shape
+    BD = _select_bd(D)
+
+    dW_kv = torch.empty_like(W_kv)
+    dU_kv = torch.empty_like(W_kv)
+    dW_z = torch.empty_like(W_z)
+    dU_z = torch.empty_like(S_z_all)
+
+    grid = (BH,)
+    frame_gdn_scan_bwd_kernel[grid](
+        W_kv,
+        S_kv_all,
+        W_z,
+        S_z_all,
+        dS_kv_all,
+        dS_z_all,
+        dW_kv,
+        dU_kv,
+        dW_z,
+        dU_z,
+        T=T,
+        D=D,
+        BD=BD,
+        num_warps=_select_num_warps(BD),
+        num_stages=1,
+    )
+    return dW_kv, dU_kv, dW_z, dU_z
+
+
+# ---------------------------------------------------------------------------
+# Autograd wrapper
+# ---------------------------------------------------------------------------
+
+
+class FrameGDNScan(torch.autograd.Function):
+    """Differentiable wrapper around the Triton forward/backward scan kernels.
+
+    Saves only the transition matrices and computed states for the backward
+    pass -- the D x D tensors are tiny relative to the full q/k/v inputs.
+    """
+
+    @staticmethod
+    def forward(
+        ctx,
+        W_kv: torch.Tensor,
+        U_kv: torch.Tensor,
+        W_z: torch.Tensor,
+        U_z: torch.Tensor,
+        S_init_kv: torch.Tensor | None = None,
+        S_init_z: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if S_init_kv is not None or S_init_z is not None:
+            raise NotImplementedError("Triton scan with S_init is not implemented yet. Use torch backend.")
+
+        S_kv_all, S_z_all = frame_gdn_scan_fwd(
+            W_kv.detach(),
+            U_kv.detach(),
+            W_z.detach(),
+            U_z.detach(),
+        )
+        ctx.save_for_backward(W_kv, S_kv_all, W_z, S_z_all)
+        return S_kv_all, S_z_all
+
+    @staticmethod
+    def backward(
+        ctx,
+        dS_kv_all: torch.Tensor,
+        dS_z_all: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, None, None]:
+        W_kv, S_kv_all, W_z, S_z_all = ctx.saved_tensors
+        dW_kv, dU_kv, dW_z, dU_z = frame_gdn_scan_bwd(
+            W_kv,
+            S_kv_all,
+            dS_kv_all.contiguous(),
+            W_z,
+            S_z_all,
+            dS_z_all.contiguous(),
+        )
+        return dW_kv, dU_kv, dW_z, dU_z

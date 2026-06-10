@@ -46,6 +46,7 @@ def save_checkpoint(
         return save_checkpoint_fsdp(
             work_dir=work_dir,
             epoch=epoch,
+            model=model,
             accelerator=accelerator,
             lr_scheduler=lr_scheduler,
             generator=generator,
@@ -137,6 +138,7 @@ def save_checkpoint_ddp(
 def save_checkpoint_fsdp(
     work_dir,
     epoch,
+    model=None,
     accelerator=None,
     lr_scheduler=None,
     generator=torch.Generator(device="cpu").manual_seed(42),
@@ -160,6 +162,13 @@ def save_checkpoint_fsdp(
     os.makedirs(model_dir, exist_ok=True)
 
     accelerator.save_state(model_dir)
+
+    merged_state_dict = None
+    if model is not None:
+        try:
+            merged_state_dict = accelerator.get_state_dict(model)
+        except Exception as exc:
+            logger.warning(f"Unable to export merged FSDP checkpoint for inference: {exc}")
 
     if accelerator.is_main_process:
         metadata = dict()
@@ -205,10 +214,14 @@ def save_checkpoint_fsdp(
 
         logger.info(f"Saved checkpoint to {checkpoint_dir}")
 
-        # add model symlink
         model_link_path = checkpoint_dir + ".pth"
-        state_dict = torch.load(os.path.join(model_dir, "pytorch_model_fsdp.bin"), map_location="cpu")
-        torch.save({"state_dict": state_dict}, model_link_path)
+        if merged_state_dict is not None:
+            torch.save({"state_dict": merged_state_dict}, model_link_path)
+        else:
+            fsdp_model_path = os.path.join(model_dir, "pytorch_model_fsdp.bin")
+            if os.path.exists(fsdp_model_path):
+                state_dict = torch.load(fsdp_model_path, map_location="cpu")
+                torch.save({"state_dict": state_dict}, model_link_path)
 
     accelerator.wait_for_everyone()
     return checkpoint_dir

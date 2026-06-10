@@ -61,7 +61,7 @@ from torchvision import transforms as T
 
 # Importing diffusion.model.nets registers all Sana / Sana-WM blocks.
 import diffusion.model.nets  # noqa: F401
-from diffusion import DPMS, FlowEuler, LTXFlowEuler
+from diffusion import ChunkFlowEuler, DPMS, FlowEuler, LTXFlowEuler
 from diffusion.model.builder import (
     build_model,
     get_tokenizer_and_text_encoder,
@@ -102,7 +102,7 @@ from inference_video_scripts.wm.camera_control import (
 from sana.tools import resolve_hf_path
 from tools.download import find_model
 
-SamplingAlgo = Literal["flow_euler_ltx", "flow_euler", "flow_dpm-solver", "self_forcing"]
+SamplingAlgo = Literal["flow_euler_ltx", "flow_euler", "flow_dpm-solver", "chunk_flow_euler", "self_forcing"]
 
 # Sana-WM is trained at this single resolution.
 TARGET_HEIGHT = 704
@@ -115,8 +115,8 @@ MAX_FOV_DEG = 120.0
 # Public release on Hugging Face. Override on the CLI for local files.
 # NOTE: The default HF checkpoint is bidirectional and is incompatible with
 # ``--sampling_algo=self_forcing``. Self-forcing requires a chunk-causal trained
-# checkpoint (HF release pending) — pass ``--model_path`` and a matching
-# ``--config`` pointing to a chunk-causal model when using that algorithm.
+# checkpoint; pass ``--model_path`` and a matching ``--config`` pointing to a
+# chunk-causal model when using that algorithm.
 HF_REPO = "Efficient-Large-Model/SANA-WM_bidirectional"
 HF_DEFAULTS = {
     "model_path": f"hf://{HF_REPO}/dit/sana_wm_1600m_720p.safetensors",
@@ -499,6 +499,8 @@ class GenerationParams:
     seed: int = 42
     negative_prompt: str = ""
     sampling_algo: SamplingAlgo = "flow_euler_ltx"
+    # Chunk-causal teacher sampler. ``None`` means 1 / num_chunks.
+    chunk_interval_k: float | None = None
     # Self-forcing autoregressive sampler knobs (only used when
     # ``sampling_algo == "self_forcing"``).
     num_cached_blocks: int = 2
@@ -1535,6 +1537,25 @@ class SanaWMPipeline:
                 model_kwargs=model_kwargs,
                 schedule="FLOW",
             ).sample(z, steps=steps, order=2, skip_type="time_uniform_flow", method="multistep", flow_shift=flow_shift)
+        if algo == "chunk_flow_euler":
+            if chunk_index is None:
+                raise ValueError(
+                    "--sampling_algo=chunk_flow_euler requires a chunk-causal config with "
+                    "model.chunk_size or model.chunk_index."
+                )
+            interval_k = (
+                float(params.chunk_interval_k)
+                if params.chunk_interval_k is not None
+                else 1.0 / len(ChunkFlowEuler.create_temporal_chunks(z.shape[2], chunk_index))
+            )
+            self.logger.info("ChunkFlowEuler: chunk_index=%s interval_k=%.6f", chunk_index, interval_k)
+            return ChunkFlowEuler(self.model, **base).sample(
+                z,
+                steps=steps,
+                generator=generator,
+                chunk_index=chunk_index,
+                interval_k=interval_k,
+            )
         if algo == "self_forcing":
             if chunk_index is None:
                 raise ValueError(
@@ -1996,8 +2017,14 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--flow_shift", type=float, default=None, help="Override the scheduler's inference flow_shift.")
     p.add_argument(
         "--sampling_algo",
-        default="flow_euler_ltx",
-        choices=["flow_euler_ltx", "flow_euler", "flow_dpm-solver", "self_forcing"],
+        default="auto",
+        choices=["auto", "flow_euler_ltx", "flow_euler", "flow_dpm-solver", "chunk_flow_euler", "self_forcing"],
+    )
+    p.add_argument(
+        "--chunk_interval_k",
+        type=float,
+        default=None,
+        help="ChunkFlowEuler interval ratio. Defaults to 1 / num_chunks.",
     )
     p.add_argument(
         "--num_cached_blocks",
@@ -2049,9 +2076,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--model_path", default=HF_DEFAULTS["model_path"], help="Stage-1 Sana DiT checkpoint (local path or hf:// URI)."
     )
 
-    # Refiner: ON by default; pass --no_refiner to use Sana VAE decode.
+    # Refiner: ON by default; pass --no_refiner only for fast Stage-1 previews.
     p.add_argument(
-        "--no_refiner", action="store_true", help="Skip the LTX-2 refiner; decode stage-1 latents with the Sana VAE."
+        "--no_refiner",
+        action="store_true",
+        help="Skip the LTX-2 refiner; decode Stage-1 latents with the Sana VAE for fast, lower-quality debugging.",
     )
     p.add_argument(
         "--refiner_root",
@@ -2189,6 +2218,14 @@ def main() -> None:
         if not denoising_step_list or denoising_step_list[-1] != 0:
             raise SystemExit("--denoising_step_list must be a comma-separated list ending with 0.")
 
+    sampling_algo = args.sampling_algo
+    if sampling_algo == "auto":
+        sampling_algo = (
+            config.scheduler.vis_sampler
+            if config.scheduler.vis_sampler in {"chunk_flow_euler", "self_forcing"}
+            else "flow_euler_ltx"
+        )
+
     params = GenerationParams(
         num_frames=num_frames,
         fps=args.fps,
@@ -2197,7 +2234,8 @@ def main() -> None:
         flow_shift=args.flow_shift,
         seed=args.seed,
         negative_prompt=args.negative_prompt,
-        sampling_algo=args.sampling_algo,
+        sampling_algo=sampling_algo,
+        chunk_interval_k=args.chunk_interval_k,
         num_cached_blocks=args.num_cached_blocks,
         sink_token=args.sink_token,
         num_frame_per_block=args.num_frame_per_block,

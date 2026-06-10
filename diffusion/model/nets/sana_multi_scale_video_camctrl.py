@@ -17,6 +17,7 @@
 
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import os
+import warnings
 from typing import Optional
 
 import torch
@@ -25,7 +26,7 @@ import torch.nn.functional as F
 from timm.models.layers import DropPath
 
 from diffusion.model.builder import MODELS
-from diffusion.model.nets.basic_modules import GLUMBConv, GLUMBConvTemp, Mlp
+from diffusion.model.nets.basic_modules import ChunkGLUMBConvTemp, GLUMBConv, GLUMBConvTemp, Mlp
 from diffusion.model.nets.sana_blocks import (
     CaptionEmbedder,
     CausalWanRotaryPosEmbed,
@@ -55,6 +56,7 @@ from .sana_camctrl_blocks import (
 )
 from .sana_gdn_blocks_triton import (
     BidirectionalGDNUCPESinglePathLiteLABothTriton,
+    ChunkCausalGDNUCPESinglePathLiteLABothTriton,
 )
 from .sana_gdn_camctrl_blocks import (
     BidirectionalSoftmaxUCPESinglePathLiteLA,
@@ -237,6 +239,15 @@ class SanaVideoMSCamCtrlBlock(nn.Module):
             )
         elif ffn_type == "GLUMBConvTemp":
             self.mlp = GLUMBConvTemp(
+                in_features=hidden_size,
+                hidden_features=int(hidden_size * mlp_ratio),
+                use_bias=(True, True, False),
+                norm=(None, None, None),
+                act=mlp_acts,
+                t_kernel_size=t_kernel_size,
+            )
+        elif ffn_type == "ChunkGLUMBConvTemp":
+            self.mlp = ChunkGLUMBConvTemp(
                 in_features=hidden_size,
                 hidden_features=int(hidden_size * mlp_ratio),
                 use_bias=(True, True, False),
@@ -606,9 +617,9 @@ def _build_camctrl_cls_list(
 
 
 class SanaMSVideoCamCtrl(Sana):
-    """Bidirectional camera-controlled video Sana DiT.
+    """Camera-controlled video Sana DiT.
 
-    Uses the fully-fused Triton UCPE GDN camera branch
+    By default, uses the fully-fused Triton UCPE GDN camera branch
     (:class:`BidirectionalGDNUCPESinglePathLiteLABothTriton`), with every
     ``softmax_every_n``-th block swapped to the softmax-attention sibling
     (:class:`BidirectionalSoftmaxUCPESinglePathLiteLA`).
@@ -681,10 +692,7 @@ class SanaMSVideoCamCtrl(Sana):
         use_autograd_kernel: bool = False,
         **kwargs,
     ):
-        # Older YAML configs still set ``camctrl_type``; the class now picks
-        # the camera attention via class-level ``_camctrl_cls_gdn`` /
-        # ``_camctrl_cls_softmax``, so silently drop the legacy kwarg.
-        kwargs.pop("camctrl_type", None)
+        camctrl_type = kwargs.pop("camctrl_type", None)
         super().__init__(
             input_size=input_size,
             patch_size=patch_size,
@@ -716,6 +724,8 @@ class SanaMSVideoCamCtrl(Sana):
             pos_embed_type=pos_embed_type,
             **kwargs,
         )
+        if "ChunkCausal" in str(camctrl_type or ""):
+            self._camctrl_cls_gdn = ChunkCausalGDNUCPESinglePathLiteLABothTriton
         self.chunk_size = chunk_size
         self.chunk_split_strategy = chunk_split_strategy
         self.patch_size = patch_size
@@ -918,8 +928,26 @@ class SanaMSVideoCamCtrl(Sana):
         return latents
 
     def _compute_rope_with_cp(self, device: torch.device, h: int, w: int) -> torch.Tensor:
-        """Compute RoPE frequencies for the local frame window."""
-        return self.rope((self.f, h, w), device)
+        """Compute RoPE frequencies with correct global positions under CP."""
+        from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
+
+        if not cp_enabled():
+            return self.rope((self.f, h, w), device)
+
+        import torch.distributed as dist
+
+        cp_group = get_cp_group()
+        if cp_group is None:
+            return self.rope((self.f, h, w), device)
+
+        cp_rank = dist.get_rank(cp_group)
+        cp_world = dist.get_world_size(cp_group)
+        global_f = self.f * cp_world
+        full_rope = self.rope((global_f, h, w), device)
+        hw = h * w
+        full_rope = full_rope.view(1, 1, global_f, hw, -1)
+        local_rope = full_rope[:, :, cp_rank * self.f : (cp_rank + 1) * self.f, :, :]
+        return local_rope.reshape(1, 1, self.f * hw, -1)
 
     def forward(self, x, timestep, y, mask=None, **kwargs):
         """
@@ -1502,7 +1530,7 @@ class SanaMSVideoCamCtrl(Sana):
                     raise KeyError(f"Unhandled key: {key}")
 
             except Exception as e:
-                print(f"Error loading {key}: {e}")
+                warnings.warn(f"Error loading {key}: {e}", stacklevel=2)
                 new_param = checkpoint_param
 
             new_state_dict[key] = new_param
@@ -1916,16 +1944,6 @@ class SanaMSVideoCamCtrlStreaming(SanaMSVideoCamCtrl):
             block_output = self.get_block_output()
             self.block_output_buffer[self.inference_timestep] = block_output
         return x, kv_cache
-
-    def __call__(self, *args, **kwargs):
-        """Dispatch to :meth:`forward_long` for cached AR inference, else :meth:`forward`.
-
-        ``forward_long`` is selected iff the caller passes a non-``None``
-        ``start_f`` in kwargs (the streaming sampler always provides one).
-        """
-        if kwargs.get("start_f") is not None:
-            return self.forward_long(*args, **kwargs)
-        return self.forward(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
         """Dispatch to :meth:`forward_long` when ``start_f`` is provided.

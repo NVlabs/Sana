@@ -115,6 +115,12 @@ The `_pose.npy` files already bake in these actions (and `demo_2`'s slower
 speed), so `--camera asset/sana_wm/demo_N_pose.npy` reproduces the same motion
 as the matching `--action` string.
 
+### 80-scene benchmark
+
+For the fixed 80-scene, 60s SANA-WM benchmark release and reproducible
+bidirectional inference/evaluation workflow, see
+[`docs/sana-wm-bench.md`](sana-wm-bench.md).
+
 ### Lower memory
 
 For tight VRAM budgets, opt in to lazy-load + CPU offload:

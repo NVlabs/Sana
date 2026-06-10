@@ -263,10 +263,8 @@ class SelfForcingFlowEuler:
     # camctrl ``forward_long`` path.  The base class keeps ``__init__``,
     # ``create_autoregressive_segments`` and ``get_cached_modules_by_block``
     # only — the inherited entry points for CamCtrl.  The non-camctrl
-    # streaming path (6-slot softmax + 3-slot linear caches) is not shipped
-    # in this repo; see Efficient-Large-Model/Sana@8edeceee
-    # ``dev/haozhu/diffusion/scheduler/ar_flow_euler_sampler.py`` for that
-    # reference implementation.
+    # streaming path (6-slot softmax + 3-slot linear caches) is intentionally
+    # not shipped in this repo.
 
 
 # ---------------------------------------------------------------------------

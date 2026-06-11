@@ -183,6 +183,70 @@ Overrides for advanced use:
   `"1000,960,889,727,0"`), `--refiner_block_size` (3), `--refiner_kv_max_frames`
   (11) — change the canonical recipe at your own quality risk.
 
+### ⚡ Quantized inference (fp8 / fp4)
+
+Streaming supports **per-component** low-precision compute to cut peak VRAM, set
+independently for the stage-1 DiT and the LTX-2 refiner:
+
+```bash
+python inference_video_scripts/wm/inference_sana_wm_streaming.py \
+  --image       asset/sana_wm/demo_0.png \
+  --prompt      asset/sana_wm/demo_0.txt \
+  --action      "w-80,dw-40,w-80,aw-40" \
+  --num_frames  241 \
+  --stage1_precision  fp4 \
+  --refiner_precision fp4 \
+  --output_dir  results/sana_wm_streaming
+```
+
+`--stage1_precision` / `--refiner_precision` each take `bf16` (default, any GPU),
+`fp8` (FP8 W8A8, Hopper **and** Blackwell), or `fp4` (NVFP4 W4A4, **Blackwell
+only** — sm_100/sm_120). Quantization touches only the linear GEMMs (self-attn,
+cross-attn, FFN), scoped **per transformer block** so the camera/action
+conditioning math stays in native precision and action-following is preserved.
+
+**Requirements.** fp8/fp4 need [NVIDIA Transformer Engine](https://github.com/NVIDIA/TransformerEngine)
+≥ 2.0, which `environment_setup.sh` installs by default. If you skipped it
+(`SANA_SKIP_TE=1`) the script exits with an install hint; bf16 needs nothing
+extra. fp4 additionally requires a Blackwell GPU (GB200, B200, RTX 50-series).
+
+Quantization is primarily a **memory** optimization — the GEMMs are
+latency-bound at these chunk sizes, so bf16 is already near the compute roofline
+and lower precision mainly buys VRAM headroom (and a modest GB200 speedup).
+
+Steady-state throughput and peak VRAM, **SANA-WM stages only** (excludes the
+one-time Pi3X intrinsics estimate and first-chunk `torch.compile` warmup),
+default `--refiner_kv_max_frames 11`:
+
+| stage-1 / refiner | peak VRAM | H100 (×realtime) | GB200 (×realtime) |
+|---|---|---|---|
+| bf16 / bf16 | 47.3 GB | 1.09× | 1.27× |
+| fp8  / fp8  | 35.4 GB | ~1.00× *(est.)* | 1.16× |
+| fp4  / fp4  | 29.4 GB | — (Blackwell only) | 1.16× |
+
+> 🎯 **Runs on a 32 GB RTX 5090:** `--stage1_precision fp4 --refiner_precision
+> fp4` fits in **29.4 GB** (the bf16 default needs 47 GB). fp4 requires Blackwell,
+> which the 5090 is; the ×realtime figures above are measured on GB200/B200.
+
+A tighter KV window (`--refiner_kv_max_frames 2`) drops VRAM further and is
+faster, at a **quality cost** (more temporal flicker / drift — not recommended
+for final renders):
+
+| stage-1 / refiner | peak VRAM | H100 (×realtime) | GB200 (×realtime) |
+|---|---|---|---|
+| bf16 / bf16 | 37.4 GB | 1.26× | 1.57× |
+| fp8  / fp8  | 25.4 GB | — | 1.32× |
+| fp4  / fp4  | 25.0 GB | — | 1.25× |
+
+**Picking a precision:** bf16 for best quality on any GPU; **fp8** for Hopper
+(H100) users who want lower VRAM with no Blackwell requirement; **fp4** for
+Blackwell, the only setting that fits the 47 GB bf16 model onto a 32 GB card. You
+can mix (e.g. `--stage1_precision bf16 --refiner_precision fp8`).
+
+> **Note:** quantization does not change the intrinsic long-rollout drift of the
+> AR stage-1 backbone — very long clips slowly lose scene consistency regardless
+> of precision. This is a property of the autoregressive teacher, not the quant.
+
 ## Chunk-Causal Stage-1 Teacher
 
 The chunk-causal Stage-1 teacher is an intermediate research checkpoint: only
@@ -284,6 +348,8 @@ before training or redistributing derivatives.
 | `--no_action_overlay` | Skip the WASD + joystick overlay on the output video. |
 | `--offload_vae` | Move the VAE to CPU between encode / decode steps. |
 | `--offload_refiner` | Lazy-load the LTX-2 refiner only when needed; release afterwards. |
+| `--stage1_precision` | Streaming only. Stage-1 DiT compute precision: `bf16` (default), `fp8` (Hopper+/Blackwell), `fp4` (Blackwell only). fp8/fp4 need Transformer Engine. |
+| `--refiner_precision` | Streaming only. LTX-2 refiner compute precision: `bf16` (default), `fp8`, `fp4`. See [Quantized inference](#-quantized-inference-fp8--fp4). |
 | `--sampling_algo` | `auto` (default). Uses `chunk_flow_euler` for chunk-causal teacher configs and `flow_euler_ltx` otherwise. For streaming use the dedicated `wm/inference_sana_wm_streaming.py`. |
 | `--chunk_interval_k` | Optional `chunk_flow_euler` interval override. Defaults to `1 / num_chunks`. |
 

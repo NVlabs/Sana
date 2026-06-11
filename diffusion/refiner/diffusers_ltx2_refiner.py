@@ -126,8 +126,14 @@ class DiffusersLTX2Refiner(nn.Module):
         return transformer, connectors
 
     def _make_nvfp4_recipe(self):
+        """Build the refiner quant recipe. Default NVFP4 (W4A4, Blackwell);
+        ``SANA_WM_REFINER_QUANT=fp8block`` selects FP8 block scaling (W8A8), which
+        also runs on Hopper."""
         import transformer_engine.common.recipe as te_recipe
 
+        quant = os.environ.get("SANA_WM_REFINER_QUANT", "nvfp4").strip().lower()
+        if quant in {"fp8block", "fp8", "float8block"}:
+            return te_recipe.Float8BlockScaling()
         return te_recipe.NVFP4BlockScaling(
             disable_rht=True,
             disable_stochastic_rounding=True,
@@ -143,6 +149,7 @@ class DiffusersLTX2Refiner(nn.Module):
             "dtype": str(self.dtype),
             "torch": torch.__version__,
             "refiner_nvfp4": os.environ.get("SANA_WM_REFINER_NVFP4", ""),
+            "refiner_quant": os.environ.get("SANA_WM_REFINER_QUANT", ""),
             "refiner_nvfp4_skip_patterns": os.environ.get("SANA_WM_REFINER_NVFP4_SKIP_PATTERNS", ""),
             "refiner_fuse_self_qkv": os.environ.get("SANA_WM_REFINER_FUSE_SELF_QKV", ""),
             "te_cpu_staging": os.environ.get("SANA_WM_TE_NVFP4_CPU_STAGING", ""),

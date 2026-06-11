@@ -70,5 +70,18 @@ pip install git+https://github.com/yyfz/Pi3.git --no-deps
 MAX_JOBS=${MAX_JOBS:-8} NVCC_THREADS=${NVCC_THREADS:-2} \
     pip install --no-build-isolation "flash-attn>=2.7.0"
 
+# NVIDIA Transformer Engine: enables fp8 / fp4 quantized SANA-WM streaming
+# inference (--stage1_precision / --refiner_precision). Built from source against
+# the env's CUDA toolkit; best-effort -- a build failure here does not abort the
+# install (bf16 inference works without it). Skip explicitly with SANA_SKIP_TE=1.
+if [ "${SANA_SKIP_TE:-0}" != "1" ]; then
+    echo "[sana] Installing Transformer Engine (fp8/fp4 inference); set SANA_SKIP_TE=1 to skip."
+    if ! MAX_JOBS=${MAX_JOBS:-8} NVCC_THREADS=${NVCC_THREADS:-2} \
+        pip install --no-build-isolation "transformer_engine[pytorch]>=2.0"; then
+        echo "[sana] WARNING: Transformer Engine install failed; bf16 inference still works."
+        echo "[sana]          fp8/fp4 need it -- retry with: pip install --no-build-isolation 'transformer_engine[pytorch]>=2.0'"
+    fi
+fi
+
 echo
 echo "[sana] Done. Activate with:  conda activate ${CONDA_ENV:-<your-env>}"

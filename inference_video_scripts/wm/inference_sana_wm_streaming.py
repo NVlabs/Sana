@@ -267,6 +267,24 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Move the stage-1 text encoder to CPU after prompt encoding to save GPU memory.",
     )
+
+    # --- Quantized inference (per-component precision) ---
+    p.add_argument(
+        "--stage1_precision",
+        choices=["bf16", "fp8", "fp4"],
+        default="bf16",
+        help="Stage-1 DiT compute precision. bf16 (default, any GPU); "
+        "fp8 = FP8 W8A8 (Hopper+ / Blackwell); fp4 = NVFP4 W4A4 (Blackwell only). "
+        "Quantizes self-attn + cross-attn + FFN, per-block scoped. Needs Transformer Engine.",
+    )
+    p.add_argument(
+        "--refiner_precision",
+        choices=["bf16", "fp8", "fp4"],
+        default="bf16",
+        help="LTX-2 refiner compute precision. bf16 (default, any GPU); "
+        "fp8 = FP8 W8A8 (Hopper+ / Blackwell); fp4 = NVFP4 W4A4 (Blackwell only). "
+        "Needs Transformer Engine.",
+    )
     return p
 
 
@@ -331,6 +349,55 @@ def _apply_fast_defaults() -> None:
     _ic.epilogue_fusion = True
 
 
+def _apply_precision_args(args: argparse.Namespace, logger: logging.Logger) -> None:
+    """Translate the user-facing --stage1_precision/--refiner_precision flags into
+    the internal TE quant env knobs, BEFORE the model is built. bf16 = no quant;
+    fp8/fp4 quantize the same layers (self-attn + cross-attn + FFN, per-block
+    scoped) and differ only in the TE recipe (FP8 block scaling vs NVFP4)."""
+    if args.stage1_precision == "bf16":
+        os.environ.pop("SANA_WM_STAGE1_NVFP4", None)
+    else:
+        os.environ["SANA_WM_STAGE1_NVFP4"] = "self_attn+cross+ffn"
+        os.environ["SANA_WM_STAGE1_NVFP4_SCOPE"] = "block"
+        os.environ["SANA_WM_STAGE1_LINEARIZE_FFN"] = "1"
+        os.environ["SANA_WM_STAGE1_QUANT"] = "fp8block" if args.stage1_precision == "fp8" else "nvfp4"
+
+    if args.refiner_precision == "bf16":
+        os.environ.pop("SANA_WM_REFINER_NVFP4", None)
+    else:
+        os.environ["SANA_WM_REFINER_NVFP4"] = "1"
+        os.environ["SANA_WM_REFINER_QUANT"] = "fp8block" if args.refiner_precision == "fp8" else "nvfp4"
+
+    # fp8/fp4 need NVIDIA Transformer Engine (NOT in the default install). Fail fast
+    # with an actionable message instead of a deep ImportError at model-build time.
+    if args.stage1_precision != "bf16" or args.refiner_precision != "bf16":
+        need = "NVFP4BlockScaling" if "fp4" in (args.stage1_precision, args.refiner_precision) else "Float8BlockScaling"
+        try:
+            import transformer_engine.pytorch  # noqa: F401
+            import transformer_engine.common.recipe as _te_recipe
+
+            if not hasattr(_te_recipe, need):
+                raise ImportError(f"installed Transformer Engine lacks {need}")
+        except Exception as exc:  # ImportError or version too old
+            raise SystemExit(
+                f"--stage1_precision/--refiner_precision fp8/fp4 require NVIDIA Transformer "
+                f"Engine >= 2.x (for {need}), which is NOT part of the default SANA-WM install "
+                f"({exc}). Install it with:\n"
+                f"    pip install --no-build-isolation 'transformer_engine[pytorch]'\n"
+                f"(the CUDA toolkit from environment_setup.sh is required to build it), or run "
+                f"with bf16 (the default)."
+            )
+
+    if "fp4" in (args.stage1_precision, args.refiner_precision) and torch.cuda.is_available():
+        if torch.cuda.get_device_capability()[0] < 10:  # NVFP4 needs Blackwell (sm_100/sm_120)
+            logger.warning(
+                "fp4 (NVFP4) requires a Blackwell GPU (sm_100/sm_120); detected sm_%d%d. "
+                "Use fp8 on Hopper.",
+                *torch.cuda.get_device_capability(),
+            )
+    logger.info("[precision] stage1=%s refiner=%s", args.stage1_precision, args.refiner_precision)
+
+
 def main() -> None:
     args = _build_parser().parse_args()
     if args.benchmark_repeats < 1:
@@ -338,6 +405,7 @@ def main() -> None:
     logger: logging.Logger = get_root_logger()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     _apply_fast_defaults()
+    _apply_precision_args(args, logger)
 
     image = Image.open(args.image).convert("RGB")
     prompt = args.prompt.read_text(encoding="utf-8", errors="replace").strip()
@@ -475,6 +543,8 @@ def main() -> None:
             f"run={run_idx}/{args.benchmark_repeats - 1} "
             f"output_mode={output_mode} -> {streaming_path}"
         )
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
         wall_start = time.perf_counter()
         result = pipeline.generate_streaming(
             cropped,
@@ -492,15 +562,20 @@ def main() -> None:
             sample_frame_stride=args.sample_frame_stride,
         )
         end_to_end_seconds = time.perf_counter() - wall_start
+        peak_mem_gb = (
+            torch.cuda.max_memory_allocated() / (1024**3) if torch.cuda.is_available() else 0.0
+        )
         logger.info(
             f"[streaming] done: run={run_idx} mode={result['output_mode']} "
             f"frames={result['n_pixel_frames']} stream_wall={result['wall_seconds']:.3f}s "
             f"e2e={end_to_end_seconds:.3f}s fps={result['frames_per_second']:.3f} "
-            f"realtime={result['realtime_factor']:.3f}x path={result['output_path']}"
+            f"realtime={result['realtime_factor']:.3f}x peak_mem={peak_mem_gb:.1f}GB "
+            f"path={result['output_path']}"
         )
         run_payloads.append(
             {
                 "run_index": int(run_idx),
+                "peak_mem_gb": float(peak_mem_gb),
                 "output_mode": result["output_mode"],
                 "output_path": str(result["output_path"]) if result["output_path"] is not None else None,
                 "n_pixel_frames": int(result["n_pixel_frames"]),

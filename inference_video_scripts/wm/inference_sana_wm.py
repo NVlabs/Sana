@@ -319,19 +319,87 @@ def _stage1_nvfp4_uses_cross_attention() -> bool:
     return any("cross_attn" in pattern for pattern in _te_env_tuple("SANA_WM_STAGE1_NVFP4_INCLUDE_PATTERNS"))
 
 
-def _stage1_forward_long_nvfp4(_self, *args, **kwargs):
+def _stage1_nvfp4_scope() -> str:
+    """How tightly to scope the fp8_autocast context around the GEMMs.
+
+    * ``block`` (default): wrap each transformer block's forward. The camera /
+      action conditioning built in ``forward_long`` (raymats, UCPE absmap, RoPE)
+      stays in native precision, which is what preserves action-following. Few
+      context enter/exits -> low overhead.
+    * ``linear``: wrap each converted ``te.Linear`` forward individually. Tightest
+      isolation (only the GEMM sees the autocast) but many enter/exits -> slower.
+
+    Note: scoping the autocast (rather than wrapping the whole ``forward_long``)
+    is required -- a single autocast over the full call bleeds onto the fp32 RoPE /
+    camera math and kills action-following.
+    """
+    return (os.environ.get("SANA_WM_STAGE1_NVFP4_SCOPE", "block").strip().lower() or "block")
+
+
+def _fp8_scoped_forward(self, *args, **kwargs):
+    """Bound replacement forward that enters fp8_autocast around the original
+    forward only. Picklable (module-level fn + attributes), unlike a closure."""
     import transformer_engine.pytorch as te
 
-    with te.fp8_autocast(enabled=True, fp8_recipe=_self._sana_wm_stage1_nvfp4_recipe):
-        forward_long_impl = getattr(_self, "_sana_wm_stage1_forward_long_impl", None)
-        if forward_long_impl is not None:
-            return forward_long_impl(*args, **kwargs)
-        return type(_self).forward_long(_self, *args, **kwargs)
+    with te.fp8_autocast(enabled=True, fp8_recipe=self._sana_wm_fp8_recipe):
+        return self._sana_wm_fp8_orig_forward(*args, **kwargs)
+
+
+def _wrap_forward_fp8(module: nn.Module, recipe) -> bool:
+    """Scope an fp8_autocast(recipe) context to ``module.forward`` only."""
+    if getattr(module, "_sana_wm_fp8_wrapped", False):
+        return False
+    module._sana_wm_fp8_recipe = recipe
+    module._sana_wm_fp8_orig_forward = module.forward
+    module.forward = types.MethodType(_fp8_scoped_forward, module)
+    module._sana_wm_fp8_wrapped = True
+    return True
+
+
+def _apply_stage1_nvfp4_scoped(model: nn.Module, recipe, scope: str) -> int:
+    """Apply the chosen fp8 scoping. Returns the number of wrapped modules."""
+    import transformer_engine.pytorch as te
+
+    if scope == "block":
+        blocks = getattr(model, "blocks", None)
+        if blocks is None:
+            raise RuntimeError("SANA_WM_STAGE1_NVFP4_SCOPE=block requires model.blocks")
+        return sum(_wrap_forward_fp8(blk, recipe) for blk in blocks)
+    if scope == "linear":
+        return sum(
+            _wrap_forward_fp8(m, recipe)
+            for m in model.modules()
+            if isinstance(m, te.Linear)
+        )
+    raise ValueError(
+        f"Unsupported SANA_WM_STAGE1_NVFP4_SCOPE={scope!r}; expected block|linear"
+    )
+
+
+def _unwrap_stage1_nvfp4_scoped(model: nn.Module) -> bool:
+    """Strip the runtime fp8_autocast wrap so the model pickles cleanly; it is
+    re-applied fresh (from the current recipe) on load by
+    _restore_stage1_nvfp4_runtime. Mirrors the forward_long strip in the save path."""
+    found = False
+    for m in model.modules():
+        if getattr(m, "_sana_wm_fp8_wrapped", False):
+            m.__dict__.pop("forward", None)
+            m.__dict__.pop("_sana_wm_fp8_orig_forward", None)
+            m.__dict__.pop("_sana_wm_fp8_recipe", None)
+            m.__dict__.pop("_sana_wm_fp8_wrapped", None)
+            found = True
+    return found
 
 
 def _make_stage1_nvfp4_recipe():
+    """Build the stage-1 quant recipe. Default NVFP4 (W4A4, Blackwell);
+    ``SANA_WM_STAGE1_QUANT=fp8block`` selects FP8 block scaling (W8A8), which also
+    runs on Hopper and has less temporal flicker than NVFP4 on the stage-1 backbone."""
     import transformer_engine.common.recipe as te_recipe
 
+    quant = os.environ.get("SANA_WM_STAGE1_QUANT", "nvfp4").strip().lower()
+    if quant in {"fp8block", "fp8", "float8block"}:
+        return te_recipe.Float8BlockScaling()
     # RHT (random Hadamard transform) spreads outliers so a small signal in a
     # block isn't rounded to zero by a scale set by the large entries; with it
     # off, the low-magnitude camera-control residual is quantized away and the
@@ -344,8 +412,9 @@ def _make_stage1_nvfp4_recipe():
 
 
 def _restore_stage1_nvfp4_runtime(model: nn.Module) -> None:
-    model._sana_wm_stage1_nvfp4_recipe = _make_stage1_nvfp4_recipe()
-    model.forward_long = types.MethodType(_stage1_forward_long_nvfp4, model)
+    recipe = _make_stage1_nvfp4_recipe()
+    model._sana_wm_stage1_nvfp4_recipe = recipe
+    _apply_stage1_nvfp4_scoped(model, recipe, _stage1_nvfp4_scope())
 
 
 class _LinearizedPointwiseConv(nn.Module):
@@ -1036,6 +1105,7 @@ class SanaWMPipeline:
         t0 = time.perf_counter()
         self.logger.info("[stage1-cache] saving prepared Stage-1 model to %s", cache_path)
         forward_long = model.__dict__.pop("forward_long", None)
+        scoped = _unwrap_stage1_nvfp4_scoped(model)
         restore = _strip_local_callables_for_pickle(model)
         if restore:
             self.logger.info("[stage1-cache] stripped %d init-only callables before save", len(restore))
@@ -1046,6 +1116,10 @@ class SanaWMPipeline:
             self.logger.warning("[stage1-cache] failed to save %s: %s", cache_path, exc)
         finally:
             _restore_stripped_pickle_values(restore)
+            if scoped:
+                _apply_stage1_nvfp4_scoped(
+                    model, model._sana_wm_stage1_nvfp4_recipe, _stage1_nvfp4_scope()
+                )
             if forward_long is not None:
                 model.forward_long = forward_long
             try:
@@ -1101,16 +1175,15 @@ class SanaWMPipeline:
 
         model._sana_wm_stage1_nvfp4_converted = True
         model._sana_wm_stage1_nvfp4_recipe = recipe
-        forward_long = getattr(model, "forward_long", None)
-        forward_long_func = getattr(forward_long, "__func__", forward_long)
-        if forward_long_func is not getattr(type(model), "forward_long", None):
-            model._sana_wm_stage1_forward_long_impl = forward_long
-        model.forward_long = types.MethodType(_stage1_forward_long_nvfp4, model)
+        scope = _stage1_nvfp4_scope()
+        n_wrapped = _apply_stage1_nvfp4_scoped(model, recipe, scope)
         self.logger.info(
-            "[stage1-nvfp4] mode=%s converted %d Linear layers (skipped %d)",
+            "[stage1-nvfp4] mode=%s scope=%s converted %d Linear layers (skipped %d), wrapped %d modules",
             mode,
+            scope,
             converted,
             skipped,
+            n_wrapped,
         )
         torch.cuda.empty_cache()
         if hasattr(self, "_model_path"):

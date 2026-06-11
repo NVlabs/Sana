@@ -40,12 +40,12 @@ from diffusion.model.ops.fused_gdn import (
     prepare_rope_tables,
 )
 from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_bidi_chunkwise, cam_scan_pair_chunkwise
+from diffusion.model.registry import ATTENTION_BLOCKS
 from diffusion.utils.chunk_utils import (
     is_chunk_causal_request,
     normalize_chunk_index,
     size1_chunk_position_indices,
 )
-from diffusion.model.registry import ATTENTION_BLOCKS
 
 
 def _mask_reverse_gates_for_chunk_boundaries(
@@ -900,8 +900,8 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         """
         import torch.distributed as dist
 
-        from diffusion.distributed.context_parallel.distributed_scan import get_local_scan_cls
         from diffusion.distributed.context_parallel.config import get_cp_group
+        from diffusion.distributed.context_parallel.distributed_scan import get_local_scan_cls
         from diffusion.model.nets.sana_gdn_blocks import flip_and_shift
         from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
         from diffusion.model.ops.fused_gdn_cp import cp_fused_cam_gdn_num_autograd

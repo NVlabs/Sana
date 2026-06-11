@@ -61,7 +61,7 @@ from torchvision import transforms as T
 
 # Importing diffusion.model.nets registers all Sana / Sana-WM blocks.
 import diffusion.model.nets  # noqa: F401
-from diffusion import ChunkFlowEuler, DPMS, FlowEuler, LTXFlowEuler
+from diffusion import DPMS, ChunkFlowEuler, FlowEuler, LTXFlowEuler
 from diffusion.model.builder import (
     build_model,
     get_tokenizer_and_text_encoder,

@@ -252,7 +252,6 @@ def _slice_frames(tensor: torch.Tensor, rank: int, world: int, *, frame_dim: int
     assert frames_total % world == 0
     local_frames = frames_total // world
     start = rank * local_frames
-    end = (rank + 1) * local_frames
     return tensor.narrow(frame_dim, start, local_frames).contiguous()
 
 
@@ -310,7 +309,9 @@ def _run_raw_forward_case(rank: int, world: int, group: dist.ProcessGroup) -> di
 
     cp_qkv = _slice_raw_tokens(raw["qkv"], rank, world, spatial_tokens=S).detach().clone().requires_grad_(True)
     cp_beta = _slice_frames(raw["beta"], rank, world, frame_dim=2, frames_total=T).detach().clone().requires_grad_(True)
-    cp_decay = _slice_frames(raw["decay"], rank, world, frame_dim=2, frames_total=T).detach().clone().requires_grad_(True)
+    cp_decay = (
+        _slice_frames(raw["decay"], rank, world, frame_dim=2, frames_total=T).detach().clone().requires_grad_(True)
+    )
     cp_q_norm_weight = raw["q_norm_weight"].detach().clone().requires_grad_(True)
     cp_k_norm_weight = raw["k_norm_weight"].detach().clone().requires_grad_(True)
 
@@ -358,7 +359,9 @@ def _run_raw_forward_case(rank: int, world: int, group: dist.ProcessGroup) -> di
     den_abs, den_rel = _assert_close(cp_den_full, ref_den.detach(), name="raw_forward_training_autograd:den")
 
     local_weight_num = _slice_raw_tokens(raw["weight_num"], rank, world, spatial_tokens=S)
-    local_weight_den = _slice_raw_tokens(raw["weight_den"].transpose(1, 2), rank, world, spatial_tokens=S).transpose(1, 2)
+    local_weight_den = _slice_raw_tokens(raw["weight_den"].transpose(1, 2), rank, world, spatial_tokens=S).transpose(
+        1, 2
+    )
     ref_loss = (ref_num * raw["weight_num"]).sum() + (ref_den * raw["weight_den"]).sum()
     cp_loss = (cp_res.num * local_weight_num).sum() + (cp_res.den * local_weight_den).sum()
     ref_loss.backward()
@@ -451,7 +454,9 @@ def _run_raw_reverse_case(rank: int, world: int, group: dist.ProcessGroup) -> di
 
     cp_qkv = _slice_raw_tokens(raw["qkv"], rank, world, spatial_tokens=S).detach().clone().requires_grad_(True)
     cp_beta = _slice_frames(raw["beta"], rank, world, frame_dim=2, frames_total=T).detach().clone().requires_grad_(True)
-    cp_decay = _slice_frames(raw["decay"], rank, world, frame_dim=2, frames_total=T).detach().clone().requires_grad_(True)
+    cp_decay = (
+        _slice_frames(raw["decay"], rank, world, frame_dim=2, frames_total=T).detach().clone().requires_grad_(True)
+    )
     cp_q_norm_weight = raw["q_norm_weight"].detach().clone().requires_grad_(True)
     cp_k_norm_weight = raw["k_norm_weight"].detach().clone().requires_grad_(True)
 
@@ -561,7 +566,9 @@ def _run_raw_reverse_case(rank: int, world: int, group: dist.ProcessGroup) -> di
     den_abs, den_rel = _assert_close(cp_den_full, ref_den.detach(), name="raw_reverse_training_autograd:den")
 
     local_weight_num = _slice_raw_tokens(raw["weight_num"], rank, world, spatial_tokens=S)
-    local_weight_den = _slice_raw_tokens(raw["weight_den"].transpose(1, 2), rank, world, spatial_tokens=S).transpose(1, 2)
+    local_weight_den = _slice_raw_tokens(raw["weight_den"].transpose(1, 2), rank, world, spatial_tokens=S).transpose(
+        1, 2
+    )
     ref_loss = (ref_num * raw["weight_num"]).sum() + (ref_den * raw["weight_den"]).sum()
     cp_loss = (cp_num * local_weight_num).sum() + (cp_den * local_weight_den).sum()
     ref_loss.backward()
@@ -746,7 +753,9 @@ def _worker(
             dist.destroy_process_group()
 
 
-def _run_distributed_gpu(*, world: int = 2, case_names: tuple[str, ...] | None = None) -> list[tuple[str, dict[str, float]]]:
+def _run_distributed_gpu(
+    *, world: int = 2, case_names: tuple[str, ...] | None = None
+) -> list[tuple[str, dict[str, float]]]:
     if not torch.cuda.is_available():
         raise unittest.SkipTest("CUDA is required for Triton GDN CP integration parity")
     if torch.cuda.device_count() < world:
@@ -758,8 +767,7 @@ def _run_distributed_gpu(*, world: int = 2, case_names: tuple[str, ...] | None =
     ctx = mp.get_context("spawn")
     result_queue = ctx.Queue()
     procs = [
-        ctx.Process(target=_worker, args=(rank, world, init_method, result_queue, case_names))
-        for rank in range(world)
+        ctx.Process(target=_worker, args=(rank, world, init_method, result_queue, case_names)) for rank in range(world)
     ]
     for proc in procs:
         proc.start()

@@ -38,7 +38,6 @@ data:
   normalize_poses: false
   return_delta_actions: false
   return_chunk_plucker: true
-
 model:
   model: SanaMSVideoCamCtrl_1600M_P1_D20
   image_size: 720
@@ -73,7 +72,6 @@ model:
   chunk_plucker_channels: 48
   chunk_plucker_post_attn_blocks: 20
   use_autograd_kernel: true
-
 vae:
   vae_type: LTX2VAE_diffusers
   vae_pretrained: Efficient-Large-Model/SANA-WM_bidirectional
@@ -86,7 +84,6 @@ vae:
   use_framewise_decoding: true
   tile_sample_stride_num_frames: 64
   tile_sample_min_num_frames: 96
-
 text_encoder:
   text_encoder_name: gemma-2-2b-it
   caption_channels: 2304
@@ -102,7 +99,6 @@ text_encoder:
     - '- User Prompt: A busy city street -> Enhanced: A bustling city street scene at dusk, featuring glowing street lamps, a diverse crowd of people in colorful clothing, and a double-decker bus passing by towering glass skyscrapers.'
     - 'Please generate only the enhanced description for the prompt below and avoid including any additional commentary or evaluations:'
     - 'User Prompt: '
-
 scheduler:
   train_sampling_steps: 1000
   predict_flow_v: true
@@ -115,7 +111,6 @@ scheduler:
   logit_mean: 0.0
   logit_std: 1.0
   vis_sampler: chunk_flow_euler
-
 train:
   use_fsdp: true
   fsdp_version: 2
@@ -164,7 +159,6 @@ train:
         reshard_after_forward: false
         limit_all_gathers: false
         backward_prefetch: backward_pre
-
 work_dir: output/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2
 resume_from: null
 load_from: null

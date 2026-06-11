@@ -407,7 +407,9 @@ def _build_timesteps(
     return timesteps, chunk_index
 
 
-def _build_time_sampler(config: SanaVideoCamCtrlConfig, latent_t: int, device: torch.device) -> IncrementalTimesteps | None:
+def _build_time_sampler(
+    config: SanaVideoCamCtrlConfig, latent_t: int, device: torch.device
+) -> IncrementalTimesteps | None:
     chunk_index = _chunk_index_from_config(config, latent_t)
     if chunk_index is None:
         return None
@@ -727,10 +729,7 @@ def main(cfg: SanaVideoCamCtrlConfig) -> None:
                             valid_tokens = clean_images.numel()
                         else:
                             valid_tokens = (
-                                loss_mask.sum()
-                                * clean_images.shape[1]
-                                * clean_images.shape[3]
-                                * clean_images.shape[4]
+                                loss_mask.sum() * clean_images.shape[1] * clean_images.shape[3] * clean_images.shape[4]
                             )
                         loss = cp_reduce_loss(loss, cp_group, num_valid_tokens=valid_tokens)
                 accelerator.backward(loss)

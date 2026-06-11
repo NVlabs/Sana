@@ -299,8 +299,8 @@ def _apply_active_mask(
 
 
 def _case_frame_gdn_scan(rank: int, world: int, group: dist.ProcessGroup) -> None:
-    from diffusion.distributed.context_parallel.config import CpRuntimeConfig, set_cp_runtime_config
     from diffusion.distributed.context_parallel import distributed_scan as scan_mod
+    from diffusion.distributed.context_parallel.config import CpRuntimeConfig, set_cp_runtime_config
 
     scan_mod._cumulative_matmul_right = _eager_cumulative_right
     scan_mod._cumulative_matmul_left = _eager_cumulative_left
@@ -342,8 +342,7 @@ def _case_frame_gdn_scan(rank: int, world: int, group: dist.ProcessGroup) -> Non
     active_t = world * local_t - 2
     full_inputs = _make_scan_inputs(world, local_t)
     local_inputs = [
-        tensor[:, start : start + local_t].contiguous().detach().clone().requires_grad_(True)
-        for tensor in full_inputs
+        tensor[:, start : start + local_t].contiguous().detach().clone().requires_grad_(True) for tensor in full_inputs
     ]
     result = scan_mod.cp_frame_gdn_scan(*local_inputs, group=group, reverse=False, truncate_to_active=active_t)
     masked_inputs = _apply_active_mask(*full_inputs, active_t=active_t)

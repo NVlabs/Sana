@@ -141,7 +141,7 @@ class SanaWMZipLatentDataset(Dataset):
     def load_json_sidecar(path: str) -> dict:
         if not osp.exists(path):
             return {}
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, dict):
             return data
@@ -155,7 +155,7 @@ class SanaWMZipLatentDataset(Dataset):
         if not osp.exists(path):
             return {}
         out = {}
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:

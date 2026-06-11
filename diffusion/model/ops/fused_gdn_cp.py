@@ -506,7 +506,6 @@ class _CpFusedGdnPrep(torch.autograd.Function):
         #   W_z[bh, f, d1, d2]       = decay[bh, f] * I_P_z_active[bh, f, d1, d2]
         #   U_z[bh, f, d]            = B_z_active[bh, f, d]
         # All cast to fp32 first; B_z is already fp32.
-        BLOCK_D = I_P_kv.shape[-1]
         decay_f = decay.reshape(BH, F).to(fp32)
         decay_view = decay_f.view(BH, F, 1, 1)
 
@@ -866,7 +865,6 @@ class _CpFusedGdnOutput(torch.autograd.Function):
         B, N, H, D, F, S, C = ctx.shape
         dot_precision = ctx.dot_precision
         BLOCK_S = _resolve_bwd_block_s()
-        device = qkv_normed.device
         fp32 = torch.float32
         dtype = qkv_normed.dtype
         BH = B * H
@@ -1296,8 +1294,8 @@ def cp_fused_cam_gdn_num_autograd(
     * The camera branch uses **pure-PyTorch** transition build +
       output projection. The "fused" part of the camera path lives
       outside this function: it is the upstream
-	      :func:`cam_prep_func_with_grad` Triton kernel which fuses
-	      RMSNorm + ReLU + K-scale + UCPE-projmat + RoPE on the raw QKV.
+      :func:`cam_prep_func_with_grad` Triton kernel which fuses
+      RMSNorm + ReLU + K-scale + UCPE-projmat + RoPE on the raw QKV.
 
     Args:
         q: ``(B, H, D, N)`` -- post-UCPE+RoPE rotated camera queries.

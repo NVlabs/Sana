@@ -55,7 +55,6 @@ from diffusion.distributed.context_parallel.config import (
     get_cp_scan_backend,
 )
 
-
 # ---------------------------------------------------------------------------
 # Local scan backends
 # ---------------------------------------------------------------------------

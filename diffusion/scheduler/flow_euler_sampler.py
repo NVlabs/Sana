@@ -197,7 +197,9 @@ class ChunkFlowEuler(LTXFlowEuler):
     """Euler sampler for non-cached chunk-causal teacher models."""
 
     @staticmethod
-    def create_temporal_chunks(num_frames: int, chunk_index: list[int] | tuple[int, ...] | None) -> list[tuple[int, int]]:
+    def create_temporal_chunks(
+        num_frames: int, chunk_index: list[int] | tuple[int, ...] | None
+    ) -> list[tuple[int, int]]:
         if num_frames <= 0:
             raise ValueError(f"num_frames must be positive, got {num_frames}")
         if not chunk_index:
@@ -235,9 +237,11 @@ class ChunkFlowEuler(LTXFlowEuler):
                 sliced[key] = self._slice_temporal_tensor(value, end_frame=active_end, total_frames=total_frames)
             elif isinstance(value, dict):
                 sliced[key] = {
-                    k: self._slice_temporal_tensor(v, end_frame=active_end, total_frames=total_frames)
-                    if isinstance(v, torch.Tensor)
-                    else v
+                    k: (
+                        self._slice_temporal_tensor(v, end_frame=active_end, total_frames=total_frames)
+                        if isinstance(v, torch.Tensor)
+                        else v
+                    )
                     for k, v in value.items()
                 }
         return sliced

@@ -436,7 +436,6 @@ def _phase_a_kv_bwd_kernel(
     # Backward kernels use bf16 TC (with fp32 accumulate) — enough precision for gradients
     # while avoiding the 3× Markidis fp32 IEEE penalty that dominates at P0.
     # cos_sim bar is 0.999; measured cos_dx stays at 0.999+.
-    dot_dtype = tl.bfloat16
     dot_ip: tl.constexpr = "tf32"
 
     pid = tl.program_id(0)
@@ -558,7 +557,6 @@ def _phase_a_z_bwd_kernel(
     # Backward kernels use bf16 TC (with fp32 accumulate) — enough precision for gradients
     # while avoiding the 3× Markidis fp32 IEEE penalty that dominates at P0.
     # cos_sim bar is 0.999; measured cos_dx stays at 0.999+.
-    dot_dtype = tl.bfloat16
     dot_ip: tl.constexpr = "tf32"
 
     pid = tl.program_id(0)
@@ -1064,7 +1062,6 @@ class FusedBiGDNChunkwiseFunction(torch.autograd.Function):
         ) = ctx.saved_tensors
         B, N, H, D, F, S, C = ctx.shape
         k_scale, eps = ctx.k_scale, ctx.eps
-        norm_eps = ctx.norm_eps
         dot_precision, BLOCK_S = ctx.dot_precision, ctx.BLOCK_S
         device = qkv.device
         fp32 = torch.float32
@@ -1087,7 +1084,6 @@ class FusedBiGDNChunkwiseFunction(torch.autograd.Function):
 
         # ──── 3. Phase A + B intermediates loaded from ctx (saved during forward) ────
         # Adapt state to (BH, F, D, D) / (BH, F, D) — fp32 for scan math precision
-        BLOCK_D = I_P_kv.shape[-1]
         I_D = torch.eye(D, device=device, dtype=fp32)
         P_kv_all = I_D[None, None] - I_P_kv[:, :, :D, :D].float()
         P_z_all = I_D[None, None] - I_P_z[:, :, :D, :D].float()
@@ -1143,11 +1139,6 @@ class FusedBiGDNChunkwiseFunction(torch.autograd.Function):
         # For Phase C den, we use Q_post_relu (no rope). Reuse.
         Q_for_den_bhfsd = Q_post_relu_bhfsd
         K_z_bhfsd = K_post_relu_bhfsd
-        # rope_cos_fs / rope_sin_fs no longer needed by Phase C̄ KV path here,
-        # but kept for the bwd unrope below.
-        rope_cos_fs = rope_cos.reshape(F, S, D)
-        rope_sin_fs = rope_sin.reshape(F, S, D)
-
         beta_bhfs = beta.reshape(BH, F, S).float()
         decay_bhf = decay.reshape(BH, F).float()
         dO_bhfsd = bnhd_to_bhfsd(dnum)

@@ -318,8 +318,7 @@ class IncrementalTimesteps:
 
 def _expand_chunk_to_frames(chunk_timesteps: th.Tensor, chunk_sizes: list[int]) -> th.Tensor:
     frame_chunks = [
-        chunk_timesteps[:, i : i + 1].unsqueeze(1).repeat(1, 1, chunk_sizes[i])
-        for i in range(len(chunk_sizes))
+        chunk_timesteps[:, i : i + 1].unsqueeze(1).repeat(1, 1, chunk_sizes[i]) for i in range(len(chunk_sizes))
     ]
     return th.cat(frame_chunks, dim=-1).long()
 
@@ -404,9 +403,7 @@ def _sample_chunk_timesteps_mixture(
         dtype=th.float32,
     )
     mode = th.bucketize(th.rand(batch_size, device=device), th.cumsum(p, dim=0)[:-1])
-    base_timesteps = _sample_logit_timesteps(
-        weighting_scheme, train_sampling_steps, batch_size, device, **kwargs
-    )
+    base_timesteps = _sample_logit_timesteps(weighting_scheme, train_sampling_steps, batch_size, device, **kwargs)
 
     use_last_anchor = (mode == 2) | (mode == 3)
     random_curf = th.randint(0, num_chunks, (batch_size,), device=device)

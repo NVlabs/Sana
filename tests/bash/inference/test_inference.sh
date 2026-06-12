@@ -38,6 +38,19 @@ python inference_video_scripts/wm/inference_sana_wm.py \
     --num_frames=641 \
     --step=4
 
+python inference_video_scripts/wm/inference_sana_wm.py \
+    --config=configs/sana_wm/sana_wm_chunk_causal_1600m_720p.yaml \
+    --model_path=hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors \
+    --image=asset/sana_wm/demo_0.png \
+    --prompt=asset/sana_wm/demo_0.txt \
+    --action=w-25 \
+    --intrinsics=asset/sana_wm/demo_0_intrinsics.npy \
+    --output_dir=results/sana_wm_chunk_causal_ci \
+    --name=demo_0_chunk_causal \
+    --num_frames=25 \
+    --step=4 \
+    --no_refiner
+
 python inference_video_scripts/wm/inference_sana_wm_streaming.py \
     --image=asset/sana_wm/demo_0.png \
     --prompt=asset/sana_wm/demo_0.txt \

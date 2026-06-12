@@ -333,7 +333,7 @@ def _stage1_nvfp4_scope() -> str:
     is required -- a single autocast over the full call bleeds onto the fp32 RoPE /
     camera math and kills action-following.
     """
-    return (os.environ.get("SANA_WM_STAGE1_NVFP4_SCOPE", "block").strip().lower() or "block")
+    return os.environ.get("SANA_WM_STAGE1_NVFP4_SCOPE", "block").strip().lower() or "block"
 
 
 def _fp8_scoped_forward(self, *args, **kwargs):
@@ -366,14 +366,8 @@ def _apply_stage1_nvfp4_scoped(model: nn.Module, recipe, scope: str) -> int:
             raise RuntimeError("SANA_WM_STAGE1_NVFP4_SCOPE=block requires model.blocks")
         return sum(_wrap_forward_fp8(blk, recipe) for blk in blocks)
     if scope == "linear":
-        return sum(
-            _wrap_forward_fp8(m, recipe)
-            for m in model.modules()
-            if isinstance(m, te.Linear)
-        )
-    raise ValueError(
-        f"Unsupported SANA_WM_STAGE1_NVFP4_SCOPE={scope!r}; expected block|linear"
-    )
+        return sum(_wrap_forward_fp8(m, recipe) for m in model.modules() if isinstance(m, te.Linear))
+    raise ValueError(f"Unsupported SANA_WM_STAGE1_NVFP4_SCOPE={scope!r}; expected block|linear")
 
 
 def _unwrap_stage1_nvfp4_scoped(model: nn.Module) -> bool:
@@ -1117,9 +1111,7 @@ class SanaWMPipeline:
         finally:
             _restore_stripped_pickle_values(restore)
             if scoped:
-                _apply_stage1_nvfp4_scoped(
-                    model, model._sana_wm_stage1_nvfp4_recipe, _stage1_nvfp4_scope()
-                )
+                _apply_stage1_nvfp4_scoped(model, model._sana_wm_stage1_nvfp4_recipe, _stage1_nvfp4_scope())
             if forward_long is not None:
                 model.forward_long = forward_long
             try:

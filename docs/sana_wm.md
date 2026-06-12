@@ -119,7 +119,7 @@ as the matching `--action` string.
 
 For the fixed 80-scene, 60s SANA-WM benchmark release and reproducible
 bidirectional inference/evaluation workflow, see
-[`docs/sana-wm-bench.md`](sana-wm-bench.md).
+[SANA-WM benchmark guide](sana-wm-bench.md).
 
 ### Lower memory
 
@@ -221,11 +221,10 @@ default `--refiner_kv_max_frames 11`:
 | stage-1 / refiner | peak VRAM | H100 (×realtime) | GB200 (×realtime) |
 |---|---|---|---|
 | bf16 / bf16 | 47.3 GB | 1.09× | 1.27× |
-| fp8  / fp8  | 35.4 GB | ~1.00× *(est.)* | 1.16× |
-| fp4  / fp4  | 29.4 GB | — (Blackwell only) | 1.16× |
+| fp8 / fp8 | 35.4 GB | ~1.00× *(est.)* | 1.16× |
+| fp4 / fp4 | 29.4 GB | — (Blackwell only) | 1.16× |
 
-> 🎯 **Runs on a 32 GB RTX 5090:** `--stage1_precision fp4 --refiner_precision
-> fp4` fits in **29.4 GB** (the bf16 default needs 47 GB). fp4 requires Blackwell,
+> 🎯 **Runs on a 32 GB RTX 5090:** `--stage1_precision fp4 --refiner_precision fp4` fits in **29.4 GB** (the bf16 default needs 47 GB). fp4 requires Blackwell,
 > which the 5090 is; the ×realtime figures above are measured on GB200/B200.
 
 A tighter KV window (`--refiner_kv_max_frames 2`) drops VRAM further and is
@@ -235,8 +234,8 @@ for final renders):
 | stage-1 / refiner | peak VRAM | H100 (×realtime) | GB200 (×realtime) |
 |---|---|---|---|
 | bf16 / bf16 | 37.4 GB | 1.26× | 1.57× |
-| fp8  / fp8  | 25.4 GB | — | 1.32× |
-| fp4  / fp4  | 25.0 GB | — | 1.25× |
+| fp8 / fp8 | 25.4 GB | — | 1.32× |
+| fp4 / fp4 | 25.0 GB | — | 1.25× |
 
 **Picking a precision:** bf16 for best quality on any GPU; **fp8** for Hopper
 (H100) users who want lower VRAM with no Blackwell requirement; **fp4** for

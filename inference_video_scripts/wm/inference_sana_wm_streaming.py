@@ -373,8 +373,8 @@ def _apply_precision_args(args: argparse.Namespace, logger: logging.Logger) -> N
     if args.stage1_precision != "bf16" or args.refiner_precision != "bf16":
         need = "NVFP4BlockScaling" if "fp4" in (args.stage1_precision, args.refiner_precision) else "Float8BlockScaling"
         try:
-            import transformer_engine.pytorch  # noqa: F401
             import transformer_engine.common.recipe as _te_recipe
+            import transformer_engine.pytorch  # noqa: F401
 
             if not hasattr(_te_recipe, need):
                 raise ImportError(f"installed Transformer Engine lacks {need}")
@@ -391,8 +391,7 @@ def _apply_precision_args(args: argparse.Namespace, logger: logging.Logger) -> N
     if "fp4" in (args.stage1_precision, args.refiner_precision) and torch.cuda.is_available():
         if torch.cuda.get_device_capability()[0] < 10:  # NVFP4 needs Blackwell (sm_100/sm_120)
             logger.warning(
-                "fp4 (NVFP4) requires a Blackwell GPU (sm_100/sm_120); detected sm_%d%d. "
-                "Use fp8 on Hopper.",
+                "fp4 (NVFP4) requires a Blackwell GPU (sm_100/sm_120); detected sm_%d%d. " "Use fp8 on Hopper.",
                 *torch.cuda.get_device_capability(),
             )
     logger.info("[precision] stage1=%s refiner=%s", args.stage1_precision, args.refiner_precision)
@@ -562,9 +561,7 @@ def main() -> None:
             sample_frame_stride=args.sample_frame_stride,
         )
         end_to_end_seconds = time.perf_counter() - wall_start
-        peak_mem_gb = (
-            torch.cuda.max_memory_allocated() / (1024**3) if torch.cuda.is_available() else 0.0
-        )
+        peak_mem_gb = torch.cuda.max_memory_allocated() / (1024**3) if torch.cuda.is_available() else 0.0
         logger.info(
             f"[streaming] done: run={run_idx} mode={result['output_mode']} "
             f"frames={result['n_pixel_frames']} stream_wall={result['wall_seconds']:.3f}s "

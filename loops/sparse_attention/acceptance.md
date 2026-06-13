@@ -5,9 +5,12 @@
 - Independent test:
   `~/lustre/miniconda3/envs/sana/bin/python loops/sparse_attention/test_sparse_attention.py`
   exits 0.
-- Launcher dry-run: `scripts/launch_candidate.py candidates/sparse_attention.toml
-  --mode dry-run` prepares a run bundle without submitting GPU work.
-- Official config matches `evals/profiles/official_video_t2v.toml`.
+- Search enumeration:
+  `~/lustre/miniconda3/envs/sana/bin/python search/search.py --model <target-model>`
+  lists this dimension as composable when the target model declares
+  `SWAPPABLE_ATTENTION`, or skipped when it does not.
+- Official config comes from the target model profile and matches
+  `evals/profiles/official_video_t2v.toml` when that profile is selected.
 - OFF identity: with sparse env disabled or all attention routed to dense
   fallback, same seed, same prompt, and same official config recover the
   baseline path.
@@ -20,8 +23,8 @@
 ## Rejection Conditions
 
 - `outputs/out.mp4` is missing or empty.
-- Candidate changes official config without a new baseline.
-- Cosmos3 claims `SWAPPABLE_ATTENTION` before the runtime attention seam is
+- Candidate config changes official config without a new baseline.
+- Target model claims `SWAPPABLE_ATTENTION` before the runtime attention seam is
   wired.
 - Sparse mode cannot be disabled cleanly.
 - New visual artifacts exceed the official gate.

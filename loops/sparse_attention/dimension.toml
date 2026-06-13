@@ -1,0 +1,31 @@
+# Search dimension: PISA sparse attention backend (MODEL-AGNOSTIC)
+#
+# A dimension declares a generic transform, a small param search space, and the
+# capability a model must expose to be eligible. It never names a model. The
+# search composes each config against the target ModelSpec; incompatible models
+# are auto-skipped by the capability/type checks.
+
+id = "sparse_attention"
+title = "PISA sparse attention backend"
+kind = "build_transform"
+exclusive_seam = "attention_backend"
+requires_capabilities = ["swappable_attention"]
+
+[[technique]]
+name = "sparse_attention"
+[technique.search_space]
+sparsity = [0.9]
+component = ["transformer_2"]
+stage2_dense_layers = ["0", "0-1"]
+
+# LTX-2.3 proven config = prior the search seeds from (provenance in reference/).
+[[seeds]]
+technique = "sparse_attention"
+note = "LTX-2.3 PISA stage-2 sparse attention: piecewise_sparsity=0.9, block_size=64, stage1_dense_steps=3"
+params = { sparsity = 0.9, block_size = 64, dense_steps = 3, component = "transformer_2", stage2_dense_layers = "0" }
+
+# Eval binding (model-agnostic; the model profile supplies the baseline to beat).
+[eval]
+profile = "evals/profiles/official_video_t2v.toml"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10

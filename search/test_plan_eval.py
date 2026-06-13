@@ -35,6 +35,12 @@ check("faster + medium-severity -> high",
 check("high-severity artifact -> reject",
       tier_of(3.0, None, {"overall": "fail", "new_artifacts": [{"severity": "high"}]}, tiers) is None)
 
+# --- missing / inconclusive Gemini verdict -> NO tier (never auto-promote to high) ---
+check("no gemini verdict -> no tier",
+      tier_of(2.0, None, None, tiers) is None)
+check("inconclusive gemini -> no tier",
+      tier_of(2.0, None, {"overall": "inconclusive", "new_artifacts": []}, tiers) is None)
+
 # --- memory-only win still qualifies ---
 check("mem win (peak_mem_ratio<1) + clean -> low",
       tier_of(None, 0.8, {"overall": "pass", "new_artifacts": []}, tiers) == "low")

@@ -113,6 +113,11 @@ python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 - `seam_status`: `swappable_attention` declared (sparse eligible); `teacache_signal`
   + `prunable_segment` refine = TODO (model-onboarding.md) — wiring these makes those
   dimensions *functional*, not just eligible.
-- GPU eval harness: see the latest `runs/` + `search/plan_eval.py`. <!-- STATUS -->
+- GPU eval harness: **VERIFIED end-to-end** (job 3294303, `runs/20260613-175619-baseline`):
+  launch (sbatch) -> GPU run (127.83s) -> `collect_run.py` (`benchmark.json`, denoise 119.18s)
+  -> Gemini pairwise judge (`overall=pass`, no artifacts) -> `tier_of` -> `tier=low`, via
+  `python search/plan_eval.py --assess <run_dir> --baseline-frames <dir>`. NOTE: that candidate
+  *is* the baseline config (no technique wired into the Cosmos3 denoise loop yet) -> 1.02x is
+  run-variance, clean -> low. Real speedups need a technique wired into the runtime (next milestone).
 
 Supersedes the pre-search `agents/launch-agent.md` for the model-agnostic search era.

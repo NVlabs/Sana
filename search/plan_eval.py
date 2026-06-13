@@ -64,8 +64,10 @@ def tier_of(speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
     )
     if not improved:
         return None  # no speed/mem win -> not a tier candidate
+    overall = (gemini or {}).get("overall")
+    if overall in (None, "inconclusive"):
+        return None  # no usable quality verdict -> cannot tier (never auto-promote to high)
     sev = _SEV[max_gemini_severity(gemini)]
-    overall = (gemini or {}).get("overall", "inconclusive")
     for name in ("low", "medium", "high"):  # cleanest budget first
         t = tiers[name]
         if sev > _SEV.get(t.get("gemini_max_artifact_severity", "high"), 3):
@@ -127,20 +129,26 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
     cand_total = bench.get("total_s") or bench.get("denoise_s")
     base_total = base.get("total_s")
     speedup = (base_total / cand_total) if (cand_total and base_total) else None
+
+    # Gemini verdict: prefer a rigorous pairwise judge (candidate frames vs the real
+    # baseline frames); fall back to the collector's quality.json verdict.
     gem = None
+    qp = run_dir / "outputs/quality.json"
     cand_frames = sorted((run_dir / "outputs/frames").glob("*.png"))
-    if gemini and baseline_frames and cand_frames:
-        base_fr = sorted(Path(baseline_frames).glob("*.png"))
+    base_fr = sorted(Path(baseline_frames).glob("*.png")) if baseline_frames else []
+    if gemini and base_fr and cand_frames:
         n = min(len(base_fr), len(cand_frames), 4)
-        if n:
-            cmd = [sys.executable, str(REPO / "tools/vision/nvidia_gemini_judge.py"),
-                   "--out", str(run_dir / "outputs/quality.json"), "--max-tokens", "1024"]
-            for i in range(n):
-                cmd += ["--baseline-frame", str(base_fr[i]), "--candidate-frame", str(cand_frames[i])]
-            r = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
-            qp = run_dir / "outputs/quality.json"
-            if qp.exists():
-                gem = json.load(open(qp))
+        pj = run_dir / "outputs/quality_pairwise.json"
+        cmd = [sys.executable, str(REPO / "tools/vision/nvidia_gemini_judge.py"),
+               "--out", str(pj), "--max-tokens", "1024"]
+        for i in range(n):
+            cmd += ["--baseline-frame", str(base_fr[i]), "--candidate-frame", str(cand_frames[i])]
+        subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
+        if pj.exists():
+            gem = json.load(open(pj))
+    if gem is None and qp.exists():  # fall back to the collector's gemini verdict (nested)
+        q = json.load(open(qp))
+        gem = ((q.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
     tier = tier_of(speedup, None, gem, tiers)
     return {
         "run_dir": str(run_dir),

@@ -1,0 +1,10 @@
+# Copyright 2025 SGLang authors
+#
+# Concrete efficiency techniques. Importing a module registers its technique
+# via @register_technique.
+
+from efficiency.techniques import (  # noqa: F401
+    step_cache,
+    teacache,
+    token_prune,
+)

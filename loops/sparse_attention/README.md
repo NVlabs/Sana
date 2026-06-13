@@ -1,71 +1,65 @@
-# Loop: sparse_attention
+# Dimension: sparse_attention - PISA sparse attention
 
-## Purpose
+A **model-agnostic search dimension**. It searches PISA/piecewise sparse
+attention backend configs and composes them against whichever model the search
+targets. It names no model in its schema; model specifics live in
+`models/<id>.toml` and `efficiency/models/<id>_spec.py`.
 
-Bring the LTX-2.3 PISA sparse-attention recipe into the autovideo loop system and
-verify that the in-repo `efficiency/` transform emits the expected
-`SGLANG_HQ_*` backend configuration.
+## What it searches
 
-## LTX-2.3 Provenance
-
-This loop migrates the sparse-attention pieces from the read-only
-`Sol-LTX-Infer` checkout at `29d0d9e`:
-
-- `scripts/run_ltx23_sglang_hq_1080p10s.sh`: piecewise/PISA env setup for
-  `piecewise_attn`.
-- `docs/ltx23_sglang_hq_variants.md`: sparse-attention notes and the 1080p10s
-  matrix where `kwl_sparse` reached 1.126x total and 1.136x denoise speedup
-  versus the KWL baseline.
-
-The migrated reference snippets are in `reference/`. They are local excerpts
-with provenance headers, not runtime dependencies on the LTX checkout.
-
-## Mapping To `efficiency/`
-
-The generic implementation is already present at
-`efficiency/transforms/sparse_attention.py` as `SparseAttention`. It is a
-build-time transform requiring `Capability.SWAPPABLE_ATTENTION`, writing
-`Seam.ATTENTION_BACKEND`, and delegating to the existing SGLang HQ pipeline by
-setting:
+The generic implementation is
+`efficiency/transforms/sparse_attention.py` (`SparseAttention`). It is a
+build-time transform that installs an attention backend by setting the existing
+SGLang HQ backend env/config:
 
 - `SGLANG_HQ_COMPONENT_ATTENTION_BACKENDS`
 - `SGLANG_HQ_ATTENTION_BACKEND_CONFIG`
 
-The local test composes `SparseAttention(dense_steps=3, stage2_dense_layers="0")`
-against a loop-local `ModelSpec` fixture with `BLOCKS` and
-`SWAPPABLE_ATTENTION`, then asserts the generated env selects
-`transformer_2=piecewise_attn` with the LTX-2.3 sparse config.
+`dimension.toml` searches a small grid of real transform params:
+`sparsity`, `component`, and `stage2_dense_layers`. The transform defaults keep
+the dense fallback available and use the existing `piecewise_attn` backend
+rather than reimplementing sparse attention in this repo.
 
-## Cosmos3 Wiring Step
+## Why it is model-agnostic
 
-`efficiency/models/cosmos3_spec.py` intentionally does not declare
-`Capability.SWAPPABLE_ATTENTION` yet. To run this on Cosmos3, a future Codex
-task must wire an attention-backend seam in the Cosmos3 runtime, then add that
-capability to the Cosmos3 spec. That task must also confirm the Cosmos3
-component names and layer guards because the LTX names `transformer` and
-`transformer_2` may not map directly to Cosmos3 generation layers.
+`SparseAttention` writes the exclusive `ATTENTION_BACKEND` seam and requires
+`Capability.SWAPPABLE_ATTENTION`. The search calls
+`compose([build_transform("sparse_attention", **cfg)], spec)` for the target
+model. If that model has not declared the swappable-attention capability, the
+dimension is automatically skipped.
 
-## Candidate
+To enable this dimension for a model, wire the model's attention-backend seam in
+its adapter, add `Capability.SWAPPABLE_ATTENTION` to
+`efficiency/models/<id>_spec.py`, and record the wiring state in
+`models/<id>.toml [seam_status]`. The dimension itself does not change.
 
-The launcher-runnable manifest is `candidates/sparse_attention.toml`. The loop
-copy is `candidate.toml`. The candidate is `kind = "env_only"` because it
-delegates to `SGLANG_HQ_*` environment configuration rather than carrying a
-runtime patch in this worktree.
+The current `cosmos3` profile intentionally does not declare
+`swappable_attention`, so `python search/search.py --model cosmos3` should show
+this dimension as `[skip]`. That is the correct model-agnostic behavior until
+the target model wires the seam.
 
-## Test
+## Migrated LTX-2.3 priors
 
-Run the independent gate with the torch-capable sana environment:
+`reference/recipe.md` captures the proven LTX-2.3 PISA recipe:
+`piecewise_sparsity=0.9`, `piecewise_block_size=64`, and
+`piecewise_stage1_dense_steps=3`, with stage 2 routed to `piecewise_attn`.
+Those values seed `dimension.toml` as priors; `reference/report.md` preserves
+the reported sparse-attention results and `references.md` records provenance.
+
+## Independent test
 
 ```bash
 ~/lustre/miniconda3/envs/sana/bin/python loops/sparse_attention/test_sparse_attention.py
 ```
 
-Optional launcher dry-run:
+CPU-only; validates the transform through `efficiency` against a local fixture
+that declares `SWAPPABLE_ATTENTION`, and verifies that an unwired target spec is
+rejected by composition.
+
+## Run it in the search
 
 ```bash
-python3 scripts/launch_candidate.py candidates/sparse_attention.toml --mode dry-run
+python search/search.py --model cosmos3   # skip until that model wires swappable_attention
 ```
 
-## Status
-
-`ready-for-codex`
+See `acceptance.md` for promotion gates and `references.md` for provenance.

@@ -9,7 +9,8 @@
 - performance: at least 1.03x denoise speedup for experimental status and 1.10x
   for promotion unless an exploratory result is explicitly recorded.
 - off_identity: disabled `SGLANG_HQ_ENABLE_TE_NVFP4_FFN` must recover the
-  baseline path; enabled NVFP4 is lossy and is not byte-exact by design.
+  target model's baseline path; enabled NVFP4 is lossy and is not byte-exact by
+  design.
 - quantitative_quality: record frame metrics and PSNR, but use PSNR only as a
   diagnostic signal.
 - visual_artifact: pass with `outputs/side_by_side.mp4` and the configured
@@ -26,7 +27,7 @@ Use `evals/profiles/official_video_t2v.toml`:
 
 ## Rejection Conditions
 
-- NVFP4 cannot be disabled without changing the baseline path.
+- NVFP4 cannot be disabled without changing the target model's baseline path.
 - The official config changes without a separate matching baseline.
 - Output video is missing, empty, wrong duration, or wrong frame count.
 - Side-by-side visual judge finds medium or high new artifacts.

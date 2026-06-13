@@ -48,3 +48,70 @@ The wrapper delegates to the local skill helper when available:
 Use normal sampled video frames for smoke tests. Extremely small placeholder
 images can trigger provider-side 500s even when the API key and endpoint are
 working.
+
+## LPIPS Judge
+
+`lpips_judge.py` computes a learned perceptual distance between baseline and
+candidate frames. Lower scores are better. The CLI is self-contained and imports
+the optional `lpips` and `torch` dependencies only when scoring, so `--help` and
+offline collector probes keep working without those packages installed.
+
+Stable frame contract:
+
+```bash
+python3 tools/vision/lpips_judge.py \
+  --baseline-frame A.png \
+  --candidate-frame B.png \
+  --out OUT.json
+```
+
+Frame arguments are repeatable and paired by order:
+
+```bash
+python3 tools/vision/lpips_judge.py \
+  --baseline-frame baseline_0001.png \
+  --candidate-frame candidate_0001.png \
+  --baseline-frame baseline_0002.png \
+  --candidate-frame candidate_0002.png
+```
+
+The tool can also sample a baseline/candidate video pair before scoring:
+
+```bash
+python3 tools/vision/lpips_judge.py \
+  --baseline-video baseline.mp4 \
+  --candidate-video candidate.mp4 \
+  --sample-fps 1 \
+  --out lpips.json
+```
+
+Video sampling uses `ffmpeg` from `PATH`, falling back to
+`~/lustre/bin/ffmpeg`. Missing `ffmpeg`, `lpips`, or `torch` produces an
+`unavailable` JSON payload and exits 0. Bad arguments, such as unmatched frame
+counts or missing input paths, exit nonzero.
+
+Successful output schema:
+
+```json
+{
+  "metric": "lpips",
+  "status": "ok",
+  "per_frame": [0.0123],
+  "mean": 0.0123,
+  "median": 0.0123,
+  "max": 0.0123,
+  "n": 1,
+  "notes": ["lower_is_better", "frames_paired_by_order"]
+}
+```
+
+Unavailable output schema:
+
+```json
+{
+  "metric": "lpips",
+  "status": "unavailable",
+  "reason": "lpips is not importable: ...",
+  "n": 0
+}
+```

@@ -1,95 +1,71 @@
-# Loop: kwl_fusion
+# Dimension: kwl_fusion - KWL operator fusion
 
-## Purpose
+A **model-agnostic search dimension**. It searches build-time KWL operator-fusion
+bundles and composes them against whatever model the search targets. It names no
+model; model specifics live in `models/<id>.toml` +
+`efficiency/models/<id>_spec.py`.
 
-Bring the LTX-2.3 kernel-wise lossless (KWL) operator-fusion experience into a
-Cosmos3 acceleration loop. This loop does not copy the shared efficiency
-framework; it preserves the LTX recipe, helper, and report evidence, then tests
-that the in-repo `efficiency/transforms/kwl_fusions.py` transform emits the
-expected `SGLANG_HQ_KWL_*` build-time flags.
+## What it searches
 
-## LTX-2.3 Provenance
+`efficiency/transforms/kwl_fusions.py` registers **`kwl_fusions`**, a build-time
+`ModelTransform` that writes the `KERNEL_FUSION` seam and emits
+`SGLANG_HQ_KWL_*` build flags. Its real search parameter is `flags`: a tuple of
+fusion switches. `dimension.toml` searches:
 
-Source checkout: `/home/haozhel/lustre/auto-video/Sol-LTX-Infer` at `29d0d9e`.
+- the OFF/identity bundle (`flags = []`);
+- the full LTX-2.3 proven bundle;
+- leave-one-out variants that disable one KWL flag at a time.
 
-- Recipe wrapper: `scripts/run_ltx23_sglang_hq_kwl_1080p10s.sh`
-- Env mapping: `scripts/run_ltx23_sglang_hq_1080p10s.sh`
-- Helper code: `scripts/ltx23_official_kwl_ops.py`
-- Report: `docs/ltx23_official_hq_kwl_report.md`
-- Detailed fusion report: `docs/diffusion/ltx2_dit_fusion_report.md`
+The searched flags cover block/guidance sharing, fused QK/RoPE and QKNorm/RoPE,
+RMS/AdaLN paths, dual and cross-attention dual modulation, Ada value handling,
+residual gate fusion, FFN `proj_in + GELU`, gate-to-output compile, audio QKVG,
+and tiled VAE compile.
 
-The migrated reference files live under `reference/`. They are not runtime
-dependencies for Cosmos3.
+## Why it's model-agnostic
 
-## Success Story
+`KWLFusions` declares `required_capabilities = []`, so the search can compose it
+with any registered `ModelSpec`. The transform itself only declares a generic
+build-time operator-fusion intent; each model adapter decides whether its build
+path consumes those flags.
 
-The LTX KWL path kept the official HQ two-stage pipeline and applied only
-operator-level execution changes inside the transformer build path. The report
-states that the KWL branch did not include sparse attention, FP4, step-count
-changes, scheduler changes, prompt changes, CFG changes, or LoRA-strength
-changes. The measured official HQ KWL run improved end-to-end wall time from
-`321.71s` to `256.27s` (`1.26x`) while preserving the algorithmic graph.
+The per-model seam is kept OUT of this dimension: a model must wire its module
+construction to consume the KWL flag bundle and record that wiring in
+`models/<id>.toml [seam_status]`. If a model has not wired fused operator paths,
+the dimension can still compose, but a real promotion run must show that ON
+installs the intended fused kernels and OFF recovers the baseline path.
 
-The reusable lesson is the fusion catalog and flag discipline:
+## Migrated LTX-2.3 experience (the search prior)
 
-- Q/K RMSNorm plus RoPE
-- RMS/AdaLN and dual modulation chains
-- FFN `proj_in + GELU`
-- gate-to-output compiled subgraphs
-- audio Q/K/V/gate projection fusion
-- tiled VAE decoder compile
+The full bundle in `dimension.toml` is seeded from the migrated LTX-2.3 KWL
+recipe and report:
 
-Each path is individually flag-gated. OFF must recover the baseline path, and
-ON is accepted only after same-config benchmark and quality review.
+- `reference/recipe.sh` preserves the KWL wrapper and flag mapping.
+- `reference/kwl_ops.py` preserves the official operator installer reference.
+- `reference/report.md` records the 1.26x official HQ KWL result and the
+  lossless/operator-only acceptance interpretation.
 
-## Efficiency Mapping
+KWL is treated as operator-only: it must not change scheduler, step count,
+prompting, guidance, LoRA state, resolution, frame count, token set, or attention
+semantics. OFF is expected to be identity; ON may differ at low-order numeric
+levels because fused kernels change floating-point operation ordering, so
+side-by-side visual review remains part of promotion.
 
-The generic entrypoint is `efficiency.transforms.kwl_fusions.KWLFusions`.
-It is a build-time `ModelTransform` that writes `Seam.KERNEL_FUSION` and sets
-the `SGLANG_HQ_KWL_*` env keys consumed by model-specific build code.
-
-This loop's independent test composes `KWLFusions` through `efficiency.compose`
-and checks that `plan.apply_transforms(None, stage, env)` sets the exact KWL
-bundle, including `SGLANG_HQ_KWL_FUSED_CA_DUAL_MODULATE=1`.
-
-## Cosmos3 Wiring
-
-To run this on Cosmos3, a future implementation branch must wire the flags into
-the Cosmos3 implementation in `Sol-LTX-Infer`:
-
-- keep `efficiency/models/cosmos3_spec.py` as the target `ModelSpec` for
-  `get_model_spec("Cosmos3")`;
-- make Cosmos3 module construction read the `SGLANG_HQ_KWL_*` flags or a
-  Cosmos3-specific alias set produced from them;
-- add model-specific fused operator paths around the hot Cosmos3 DiT op chains;
-- keep every fused path independently flag-gated with OFF equal to baseline;
-- add same-noise/off-identity and official-profile quality artifacts before
-  promotion.
-
-Cosmos3 currently declares `BLOCKS` and `PRUNABLE_TOKENS`; KWL does not require
-a new capability in the current framework because it is an env-only build
-transform. The missing work is the model-specific fused kernels and build-time
-flag consumption.
-
-## Candidate
-
-`candidate.toml` is mirrored at `../../candidates/kwl_fusion.toml` for
-`scripts/launch_candidate.py`.
-
-## Eval
-
-`eval.toml` points at `evals/profiles/official_video_t2v.toml`.
-
-## Independent Test
-
-Run:
+## Independent test
 
 ```bash
 ~/lustre/miniconda3/envs/sana/bin/python loops/kwl_fusion/test_kwl_fusion.py
 ```
 
-The test is CPU-only and does not execute the reference LTX recipe or helper.
+CPU-only; validates the transform through `efficiency.compose`, checks the full
+KWL env bundle, checks a subset/ablation bundle, and smoke-imports the migrated
+reference helper.
 
-## Status
+## Run it in the search
 
-ready-for-codex
+```bash
+python search/search.py --model <id>
+```
+
+The search enumerates this dimension's composable build-transform candidates for
+the selected model profile. See `acceptance.md` for promotion gates and
+`references.md` for provenance.

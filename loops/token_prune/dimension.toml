@@ -1,0 +1,31 @@
+# Search dimension: feature-norm token pruning  (MODEL-AGNOSTIC)
+#
+# A dimension declares a technique + a param search space + the capability a
+# model must expose to be eligible. It NEVER names a model. The search composes
+# each config against the target model's ModelSpec; an incompatible model is
+# auto-skipped. Migrated LTX-2.3 configs are the seeds/priors (see reference/).
+
+id = "token_prune"
+title = "Feature-norm token pruning (gather prunable tokens, scatter after blocks)"
+kind = "runtime_technique"
+exclusive_seam = "token_set"           # at most one token-set mutator active at a time
+requires_capabilities = ["prunable_tokens"]
+
+[[technique]]
+name = "token_prune"
+[technique.search_space]
+keep_ratio = [0.5, 0.6, 0.75]
+method = ["feat_norm"]
+compensation = ["prev"]
+
+# LTX-2.3 proven config = prior the search seeds from (provenance in reference/).
+[[seeds]]
+technique = "token_prune"
+note = "LTX-2.3 stage-2 midpoint prune (efficiency/presets.ltx_full_opt, prune_steps \"1-2\")"
+params = { keep_ratio = 0.5, method = "feat_norm", compensation = "prev" }
+
+# Eval binding (model-agnostic; the model profile supplies the baseline to beat).
+[eval]
+profile = "evals/profiles/official_video_t2v.toml"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10

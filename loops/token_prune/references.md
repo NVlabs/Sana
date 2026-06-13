@@ -24,4 +24,3 @@ All Sol-LTX-Infer paths below were read from the read-only checkout at
 - Source branch/report: `Sol-LTX-Infer @ 29d0d9e`, LTX-2.3 HQ efficiency
   framework smoke and warmed stage-2 midpoint prune.
 - In-repo target loop: `loops/token_prune/`.
-- Launcher manifest: `candidates/token_prune.toml`.

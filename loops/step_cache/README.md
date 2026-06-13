@@ -17,7 +17,7 @@ Two cache flavors from the `efficiency` engine (generic, written once):
 
 Both write the exclusive `STEP_OUTPUT` seam (only one whole-step cache at a time)
 and are OFF==byte-identical baseline. The search space + LTX-2.3 seeds are in
-`dimension.toml`; provenance/recipe/report in `reference/`.
+`dimension.toml`; provenance/recipe/report in `reference/step_cache/`.
 
 ## Why it's model-agnostic
 `StepCache` wraps the whole step, so it needs no structural capability — it
@@ -34,9 +34,9 @@ not here. Until a model wires it, TeaCache composes but falls back to full
 compute at runtime; StepCache works immediately.
 
 ## Migrated LTX-2.3 experience (the search priors)
-`reference/recipe.md` — LTX cache env/knobs (from `run_ltx23_sglang_nonhq_cache_10s.sh`,
-`run_ltx23_teacache_hq_nonhq_matrix_10s.sh`); `reference/make_cache_report.py` —
-the cache-report helper (canonical artifacts); `reference/report.md` — required
+`reference/step_cache/recipe.md` — LTX cache env/knobs (from `run_ltx23_sglang_nonhq_cache_10s.sh`,
+`run_ltx23_teacache_hq_nonhq_matrix_10s.sh`); `reference/step_cache/make_cache_report.py` —
+the cache-report helper (canonical artifacts); `reference/step_cache/report.md` — required
 report shape. These feed `dimension.toml`'s `[[seeds]]` (e.g. TeaCache c04_s6).
 
 ## Independent test

@@ -41,7 +41,7 @@ def check(name: str, condition: bool) -> None:
 
 
 def smoke_import_reference_ops() -> None:
-    path = Path(__file__).with_name("reference") / "kwl_ops.py"
+    path = Path(__file__).resolve().parents[2] / "reference" / "kwl_fusion" / "kwl_ops.py"
     spec = importlib.util.spec_from_file_location("kwl_reference_ops", path)
     check("reference kwl_ops import spec", spec is not None and spec.loader is not None)
     module = importlib.util.module_from_spec(spec)

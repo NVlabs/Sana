@@ -41,9 +41,9 @@ text, or other non-video tokens outside the pruned range.
 
 ## Migrated LTX-2.3 experience (the search prior)
 
-`reference/recipe.md` records the LTX-2.3 stage-2 midpoint prune:
+`reference/token_prune/recipe.md` records the LTX-2.3 stage-2 midpoint prune:
 `keep_ratio = 0.5`, `method = "feat_norm"`, `compensation = "prev"`, active on
-stage-2 steps `1-2` via `efficiency/presets.ltx_full_opt`. `reference/report.md`
+stage-2 steps `1-2` via `efficiency/presets.ltx_full_opt`. `reference/token_prune/report.md`
 records the warmed runtime result from `45.1s` to `41.1s`, approximately
 `1.10x` speedup, with OFF recovering the baseline path. Those values seed
 `dimension.toml`; the search remains free to evaluate neighboring ratios.

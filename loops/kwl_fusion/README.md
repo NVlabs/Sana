@@ -39,9 +39,9 @@ installs the intended fused kernels and OFF recovers the baseline path.
 The full bundle in `dimension.toml` is seeded from the migrated LTX-2.3 KWL
 recipe and report:
 
-- `reference/recipe.sh` preserves the KWL wrapper and flag mapping.
-- `reference/kwl_ops.py` preserves the official operator installer reference.
-- `reference/report.md` records the 1.26x official HQ KWL result and the
+- `reference/kwl_fusion/recipe.sh` preserves the KWL wrapper and flag mapping.
+- `reference/kwl_fusion/kwl_ops.py` preserves the official operator installer reference.
+- `reference/kwl_fusion/report.md` records the 1.26x official HQ KWL result and the
   lossless/operator-only acceptance interpretation.
 
 KWL is treated as operator-only: it must not change scheduler, step count,

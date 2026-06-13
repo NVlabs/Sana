@@ -40,10 +40,10 @@ the target model wires the seam.
 
 ## Migrated LTX-2.3 priors
 
-`reference/recipe.md` captures the proven LTX-2.3 PISA recipe:
+`reference/sparse_attention/recipe.md` captures the proven LTX-2.3 PISA recipe:
 `piecewise_sparsity=0.9`, `piecewise_block_size=64`, and
 `piecewise_stage1_dense_steps=3`, with stage 2 routed to `piecewise_attn`.
-Those values seed `dimension.toml` as priors; `reference/report.md` preserves
+Those values seed `dimension.toml` as priors; `reference/sparse_attention/report.md` preserves
 the reported sparse-attention results and `references.md` records provenance.
 
 ## Independent test

@@ -3,7 +3,7 @@
 # A dimension declares a technique + a param search space + the capability a
 # model must expose to be eligible. It NEVER names a model. The search composes
 # each config against the target model's ModelSpec; an incompatible model is
-# auto-skipped. Migrated LTX-2.3 configs are the seeds/priors (see reference/).
+# auto-skipped. Migrated LTX-2.3 configs are the seeds/priors (see reference/step_cache/).
 
 id = "step_cache"
 title = "Diffusion step caching (skip/reuse whole denoise-step output)"
@@ -29,7 +29,7 @@ threshold = [0.04, 0.06, 0.08]
 start_step = [5, 6]
 max_continuous_hits = [1, 2]
 
-# LTX-2.3 proven configs = priors the search seeds from (provenance in reference/).
+# LTX-2.3 proven configs = priors the search seeds from (provenance in reference/step_cache/).
 [[seeds]]
 technique = "teacache"
 note = "LTX-2.3 c04_s6 (run_ltx23_teacache_hq_nonhq_matrix_10s.sh)"

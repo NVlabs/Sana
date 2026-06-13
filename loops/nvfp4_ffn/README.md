@@ -19,7 +19,7 @@ The search grid in `dimension.toml` covers the transform's real class params:
 - `disable_2d_quantization`
 
 The LTX-2.3 best selective video-FFN recipe is carried as the seed prior. Its
-reference scripts, report, and helper live under `reference/`.
+reference scripts, report, and helper live under `reference/nvfp4_ffn/`.
 
 ## Why it's model-agnostic
 

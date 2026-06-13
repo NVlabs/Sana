@@ -3,7 +3,7 @@
 # A dimension declares a technique + a param search space + the capability a
 # model must expose to be eligible. It NEVER names a model. The search composes
 # each config against the target model's ModelSpec; an incompatible model is
-# auto-skipped. Migrated LTX-2.3 configs are the seeds/priors (see reference/).
+# auto-skipped. Migrated LTX-2.3 configs are the seeds/priors (see reference/token_prune/).
 
 id = "token_prune"
 title = "Feature-norm token pruning (gather prunable tokens, scatter after blocks)"
@@ -18,7 +18,7 @@ keep_ratio = [0.5, 0.6, 0.75]
 method = ["feat_norm"]
 compensation = ["prev"]
 
-# LTX-2.3 proven config = prior the search seeds from (provenance in reference/).
+# LTX-2.3 proven config = prior the search seeds from (provenance in reference/token_prune/).
 [[seeds]]
 technique = "token_prune"
 note = "LTX-2.3 stage-2 midpoint prune (efficiency/presets.ltx_full_opt, prune_steps \"1-2\")"

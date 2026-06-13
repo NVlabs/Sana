@@ -1,75 +1,68 @@
-# Loop: token_prune
+# Dimension: token_prune - feature-norm token pruning
 
-## Purpose
+A **model-agnostic search dimension**. It searches mid-loop token pruning
+configs and composes them against whatever model the search targets. It names
+no model; model specifics live in `models/<id>.toml` +
+`efficiency/models/<id>_spec.py`.
 
-Port the proven LTX-2.3 feature-norm token-pruning recipe into a bounded
-Cosmos3 acceleration loop.
+## What it searches
 
-## LTX-2.3 Reference
+`efficiency/techniques/token_prune.py` (`TokenPrune`) scores a model-declared
+prunable token segment, gathers the kept tokens before the transformer-block
+loop, runs the blocks on that shorter sequence, then scatters back to the
+original sequence length after the loop. The primary migrated recipe scores
+tokens by feature L2 norm (`method = "feat_norm"`), keeps the top fraction in
+ascending sequence order, and fills dropped tokens from the previous full hidden
+state (`compensation = "prev"`).
 
-The source recipe is the LTX-2.3 stage-2 midpoint prune from
-`Sol-LTX-Infer @ 29d0d9e`. It uses the generic
-`efficiency.techniques.token_prune.TokenPrune` technique with:
+The dimension searches:
 
-- `keep_ratio = 0.5`
-- `method = "feat_norm"`
-- `compensation = "prev"`
-- active only in stage2 steps `1,2`
-- `keep_ratio >= 1.0` or disabled schedule as the OFF path
+- `keep_ratio`: how many prunable tokens survive the gather.
+- `method`: the token scoring strategy.
+- `compensation`: how dropped-token hidden states are filled during scatter.
 
-The proven LTX-2.3 result is warmed denoise/runtime improvement from `45.1s` to
-`41.1s` with OFF matching the baseline path. That is the success story this
-loop preserves for Cosmos3 rather than re-implementing token scoring.
+`keep_ratio >= 1.0` or an inactive schedule is the OFF path and leaves the
+baseline hidden states unchanged. The active dimension writes the exclusive
+`TOKEN_SET` seam, so only one token-set-changing technique can be active in a
+composed plan.
 
-## Mapping To `efficiency/`
+## Why it's model-agnostic
 
-The loop references the shared implementation instead of copying it:
+`TokenPrune` only requires a model to expose the `prunable_tokens` capability.
+The search calls `compose([build_technique("token_prune", **cfg)], spec)` for
+the target model; if that model has not declared the required seam, the
+dimension is skipped automatically. The dimension never chooses the token span
+itself.
 
-- `efficiency/techniques/token_prune.py` owns scoring, gather, scatter, and
-  `prev` compensation.
-- `efficiency/presets.py` shows the LTX schedule:
-  `by_stage({"stage2": const(0.5)}, default=1.0)` plus
-  `by_stage({"stage2": at_steps("1-2", True, False)}, default=False)`.
-- `efficiency/selftest.py` sections `[4]` and `[5]` are mirrored by this loop's
-  independent Cosmos3 test.
+The per-model seam is the adapter's `prunable_segment` implementation and its
+profile status in `models/<id>.toml [seam_status].prunable_tokens`. A model
+should refine that segment to the generated video-token span, leaving prompt,
+text, or other non-video tokens outside the pruned range.
 
-## Cosmos3 Wiring Objective
+## Migrated LTX-2.3 experience (the search prior)
 
-Cosmos3 already declares `Capability.PRUNABLE_TOKENS` in
-`efficiency/models/cosmos3_spec.py`. The implementation branch that promotes
-this loop should:
+`reference/recipe.md` records the LTX-2.3 stage-2 midpoint prune:
+`keep_ratio = 0.5`, `method = "feat_norm"`, `compensation = "prev"`, active on
+stage-2 steps `1-2` via `efficiency/presets.ltx_full_opt`. `reference/report.md`
+records the warmed runtime result from `45.1s` to `41.1s`, approximately
+`1.10x` speedup, with OFF recovering the baseline path. Those values seed
+`dimension.toml`; the search remains free to evaluate neighboring ratios.
 
-- keep `PRUNABLE_TOKENS` declared only while the runtime exposes a valid
-  prunable token segment;
-- refine `cosmos3_spec.prunable_segment` to return the generated video-token
-  span, not understanding/text/prompt tokens;
-- call the composed plan around the Cosmos3 DiT block loop in
-  `runtime/models/dits/cosmos3video.py`;
-- add `prune_gather` and `prune_scatter` accessors if the pruned forward must
-  carry coordinates, timestep embeddings, masks, or other per-token side data;
-- guard runtime activation with env/config so OFF recovers the baseline path.
-
-## Candidate
-
-Use `candidate.toml` in this loop or the launcher copy at
-`candidates/token_prune.toml`.
-
-## Eval
-
-`eval.toml` points at `evals/profiles/official_video_t2v.toml`.
-
-## Independent Test
-
-Run the CPU-only gate with the torch-enabled env:
+## Independent test
 
 ```bash
 ~/lustre/miniconda3/envs/sana/bin/python loops/token_prune/test_token_prune.py
 ```
 
-The test composes `TokenPrune` against `get_model_spec("Cosmos3")`, asserts
-ratio `1.0` is an identity, then checks ratio `0.5` gathers `S=16` to `K=8` and
-scatters back to `S=16` across steps.
+CPU-only; validates the token-prune technique through `efficiency` against a
+registered model spec. The search-level check that this dimension stays
+model-agnostic lives in `search/test_search.py`.
 
-## Status
+## Run it in the search
 
-`ready-for-codex`
+```bash
+python search/search.py --model <model-id>
+```
+
+The target model profile decides whether this dimension is eligible,
+composable, or skipped.

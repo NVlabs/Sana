@@ -2,8 +2,8 @@
 
 - Independent gate passes:
   `~/lustre/miniconda3/envs/sana/bin/python loops/token_prune/test_token_prune.py`.
-- Patch candidate composes through `efficiency/` on Cosmos3 with no capability
-  or seam conflicts.
+- Search candidates compose through `efficiency/` on any target model that
+  declares the `prunable_tokens` capability, or are skipped cleanly.
 - OFF mode is baseline: same official config, prompt, seed, and disabled token
   pruning recover the baseline path.
 - ON mode uses `keep_ratio=0.5`, `method=feat_norm`, `compensation=prev`, and a

@@ -28,3 +28,7 @@ wired yet is auto-skipped (compose() refuses it), surfaced in the search plan.
 - `cosmos3` — nvidia/Cosmos3-Super (the first target). Baseline verified 130.4s.
 - (reference) `LTX2` spec exists in `efficiency/models/ltx2_spec.py` (the proven
   template); add `models/ltx2.toml` to run the search against it too.
+
+## Expanding the interface (more dimensions)
+Full per-seam wiring playbook for ANY model: **docs/model-onboarding.md**
+(declare capability -> wire model hook -> verify; eligible dimensions grow).

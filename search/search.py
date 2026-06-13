@@ -110,6 +110,10 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
 
     if verbose:
         print(f"# acceleration search — model '{model_id}' (spec={prof['spec']}, caps={sorted(caps)})")
+        ss = prof.get("seam_status", {})
+        if ss:
+            print("#   seam_status: " + ", ".join(f"{k}={v}" for k, v in ss.items())
+                  + "   (wiring: docs/model-onboarding.md)")
         if not results:
             print("  (no loops/*/dimension.toml found yet)")
         for r in results:

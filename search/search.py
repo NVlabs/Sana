@@ -52,6 +52,11 @@ def load_dimensions() -> list[tuple[str, dict]]:
     ]
 
 
+def load_tiers() -> dict:
+    p = REPO / "evals" / "tiers.toml"
+    return _load_toml(p) if p.exists() else {}
+
+
 def _grid(space: dict) -> list[dict]:
     """Cartesian product of a {param: [values]} search space."""
     if not space:
@@ -116,14 +121,35 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
         print(f"# {len(elig)} eligible technique-dimensions, "
               f"{sum(r['composable'] for r in elig)} composable candidates "
               f"(eval+tiering = GPU stage, stubbed)")
+        # each dimension is a BOUNDED SEARCH LOOP; tiers define the per-tier quality budgets
+        print("# search loop (per dimension):")
+        for dim_id, dim in load_dimensions():
+            lp = dim.get("loop", {})
+            if lp:
+                print(f"    {dim_id}: granularity={lp.get('granularity','?')} "
+                      f"max_iters={lp.get('max_iters','?')} "
+                      f"early_stop={lp.get('early_stop_patience','?')} keep={lp.get('keep','?')}")
+        tiers = load_tiers()
+        if tiers:
+            names = [t for t in tiers if t != "targets"]
+            print(f"# risk tiers: {names}  composed targets: {tiers.get('targets', {})}")
     return results
 
 
 def plan_eval(model_id: str):  # noqa: D401
-    """STUB (GPU stage): for each composable candidate, render a run bundle from
-    the model profile + technique cfg, launch via scripts/launch_candidate.py,
-    collect benchmark.json/quality.json, compare vs the profile baseline, and bin
-    into low/mid/high risk tiers per the eval profile. Not run here (no GPU)."""
+    """STUB (GPU stage): run each dimension's BOUNDED SEARCH LOOP.
+
+    Per dimension (its [loop]): up to max_iters iterations (early-stop after
+    early_stop_patience with no Pareto improvement). Each iteration picks a config
+    from the search_space (LTX seeds first), renders a run bundle from the model
+    profile + cfg, launches via scripts/launch_candidate.py, collects
+    benchmark.json/quality.json, and compares latency + peak_mem + quality vs the
+    profile [baseline]. A candidate is kept only if it beats baseline on latency
+    OR peak_mem AND meets a tier's quality budget (evals/tiers.toml); it is binned
+    into the loosest tier it satisfies, keeping the best (latency, peak_mem) config
+    per tier. The integration stage then stacks per-tier dimension winners into the
+    final low/medium/high profiles (composed targets in tiers.toml [targets]).
+    Not run here (no GPU). See docs/search-architecture.md."""
     raise NotImplementedError("eval+tiering is the GPU stage; see docs/search-architecture.md")
 
 

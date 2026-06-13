@@ -1,0 +1,33 @@
+# Risk tiers — the project delivers THREE configs (low / medium / high), per the
+# videogen-accel plan. A tier is a QUALITY BUDGET that loosens allowed degradation
+# in exchange for more speed/memory headroom. Every dimension's search loop bins
+# its candidates into the LOOSEST tier whose budget they meet and keeps the best
+# (latency, peak_mem) per tier; the integration stage stacks per-tier dimension
+# winners into the final low/medium/high profiles.
+
+[low]
+label = "default / quality-first"
+# near-lossless: guarded paths must be off==baseline identity; lossy paths bounded tight
+lpips_delta_max = 0.01
+new_artifacts = "none"
+gemini = "mostly_tie"
+off_identity = "required_for_guarded_paths"
+
+[medium]
+label = "graded / throughput"
+lpips_delta_max = 0.04
+new_artifacts = "no_medium_or_high"
+gemini = "controlled_loss"
+
+[high]
+label = "preview / draft"
+lpips_delta_max = 0.09
+new_artifacts = "visible_but_described"
+gemini = "loss_ok_labeled"
+
+# Composed speedup TARGETS for the INTEGRATION stage (all eligible dimensions
+# stacked vs the model baseline) — NOT per-dimension gates. From the plan matrix.
+[targets]
+low_speedup = 1.35
+medium_speedup = 2.20
+high_speedup = 3.00

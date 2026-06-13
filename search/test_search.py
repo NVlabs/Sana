@@ -50,5 +50,24 @@ for dim_id, _ in load_dimensions():
     check(f"loops/{dim_id}/dimension.toml is model-agnostic (no model identity)",
           not leak.search(txt))
 
+# every dimension declares a bounded search LOOP with a valid granularity + budget
+from search.search import load_tiers  # noqa: E402
+
+VALID_GRAN = {"per_step", "per_module", "per_strategy"}
+for dim_id, dim in load_dimensions():
+    lp = dim.get("loop", {})
+    check(f"loops/{dim_id} has [loop]", bool(lp))
+    check(f"loops/{dim_id} loop.granularity valid", lp.get("granularity") in VALID_GRAN)
+    check(f"loops/{dim_id} loop.max_iters is int", isinstance(lp.get("max_iters"), int))
+
+# the three risk tiers are defined globally and loosen the quality budget
+tiers = load_tiers()
+check("evals/tiers.toml defines low/medium/high",
+      all(t in tiers for t in ("low", "medium", "high")))
+check("tiers loosen lpips budget low<medium<high",
+      tiers.get("low", {}).get("lpips_delta_max", 1)
+      < tiers.get("medium", {}).get("lpips_delta_max", 1)
+      < tiers.get("high", {}).get("lpips_delta_max", 1))
+
 print(f"\n=== {ok} passed, {fail} failed ===")
 sys.exit(1 if fail else 0)

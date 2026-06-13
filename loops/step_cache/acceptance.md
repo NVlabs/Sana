@@ -1,37 +1,31 @@
-# Acceptance
+# Search loop — step_cache
 
-## Required Gates
+This dimension is a **bounded search loop**, not a one-shot checklist.
 
-- artifact: pass
-- official_config: pass
-- off_identity: pass
-- performance: pass for promotion, exploratory result recorded for first wiring
-- quantitative_quality: pass
-- visual_artifact: pass
+## Loop (see `dimension.toml [loop]`)
+- **Granularity: per_step** — the axis searched.
+- **Objective:** beat the model baseline (`models/<id>.toml [baseline]`) on
+  **latency OR peak memory** — either improvement counts (Pareto over the two).
+- **Budget:** `max_iters = 20` (hyperparameter) with **early stop** after 5
+  iterations with no Pareto improvement.
+- **Per iteration:** pick a config from `dimension.toml [search_space]` (seeded by
+  the LTX-2.3 priors) → compose against the model spec → (GPU) run → measure
+  latency + peak_mem + quality.
 
-## Cache-Specific Gates
+## Acceptance = quality is a hard, PER-TIER constraint
+A candidate counts only if it (a) beats baseline on latency or peak_mem **and**
+(b) meets a risk tier's quality budget (`evals/tiers.toml`). It is binned into the
+**loosest tier it satisfies**:
+- **low** — near-lossless: off==baseline identity for guarded paths; LPIPS Δ ≤ 0.01; no new artifacts.
+- **medium** — controlled loss: LPIPS Δ ≤ 0.04; no medium/high artifacts.
+- **high** — preview: LPIPS Δ ≤ 0.09; visible-but-described loss OK.
 
-- Disabled env path produces baseline behavior with the same prompt, seed, and
-  official config.
-- Enabled path logs cache stats with calls, computes, hits, and skipped steps.
-- Candidate report compares baseline and candidate total, denoise, and
-  stage-level seconds.
-- Cache schedule is documented, including eligible stages and steps.
-- TeaCache is not promoted until the Cosmos3 timestep/modulated-input signal is
-  wired and logged.
+## Keep / output
+Keep the best (latency, peak_mem) config **per tier**. These per-tier winners feed
+the **integration stage**, which stacks dimensions into the final low/medium/high
+delivery profiles (composed targets ~1.35x / 2.2x / 3.0x+ in `evals/tiers.toml [targets]`).
 
-## Promotion Threshold
-
-Use `evals/profiles/official_video_t2v.toml`:
-
-- experimental: denoise speedup >= 1.03x
-- promotion: denoise speedup >= 1.10x with warmup recorded
-
-## Rejection Conditions
-
-- OFF path changes output or bypasses the baseline compute path.
-- Output video is missing or empty.
-- Official config differs from baseline without a separate baseline run.
-- Medium/high visual artifact regression.
-- Speedup falls below the profile threshold after tuning.
-- Cache state leaks across prompts, samples, or stages.
+## Reject
+- OFF path not byte-identical on guarded paths / baseline path altered.
+- Improves speed/mem but fails every tier's quality budget.
+- State (cache/prune/etc.) leaks across samples or stages.

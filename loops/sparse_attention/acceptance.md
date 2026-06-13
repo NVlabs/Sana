@@ -1,30 +1,31 @@
-# Acceptance
+# Search loop — sparse_attention
 
-## Required Gates
+This dimension is a **bounded search loop**, not a one-shot checklist.
 
-- Independent test:
-  `~/lustre/miniconda3/envs/sana/bin/python loops/sparse_attention/test_sparse_attention.py`
-  exits 0.
-- Search enumeration:
-  `~/lustre/miniconda3/envs/sana/bin/python search/search.py --model <target-model>`
-  lists this dimension as composable when the target model declares
-  `SWAPPABLE_ATTENTION`, or skipped when it does not.
-- Official config comes from the target model profile and matches
-  `evals/profiles/official_video_t2v.toml` when that profile is selected.
-- OFF identity: with sparse env disabled or all attention routed to dense
-  fallback, same seed, same prompt, and same official config recover the
-  baseline path.
-- Performance: record total and denoise time; promote at >= 1.10x denoise
-  speedup and treat >= 1.03x as exploratory.
-- Quantitative quality: `quality.json` passes frame count, duration, sharpness,
-  and temporal jitter thresholds from the official profile.
-- Visual artifact gate: no new medium/high artifacts relative to baseline.
+## Loop (see `dimension.toml [loop]`)
+- **Granularity: per_module** — the axis searched.
+- **Objective:** beat the model baseline (`models/<id>.toml [baseline]`) on
+  **latency OR peak memory** — either improvement counts (Pareto over the two).
+- **Budget:** `max_iters = 20` (hyperparameter) with **early stop** after 5
+  iterations with no Pareto improvement.
+- **Per iteration:** pick a config from `dimension.toml [search_space]` (seeded by
+  the LTX-2.3 priors) → compose against the model spec → (GPU) run → measure
+  latency + peak_mem + quality.
 
-## Rejection Conditions
+## Acceptance = quality is a hard, PER-TIER constraint
+A candidate counts only if it (a) beats baseline on latency or peak_mem **and**
+(b) meets a risk tier's quality budget (`evals/tiers.toml`). It is binned into the
+**loosest tier it satisfies**:
+- **low** — near-lossless: off==baseline identity for guarded paths; LPIPS Δ ≤ 0.01; no new artifacts.
+- **medium** — controlled loss: LPIPS Δ ≤ 0.04; no medium/high artifacts.
+- **high** — preview: LPIPS Δ ≤ 0.09; visible-but-described loss OK.
 
-- `outputs/out.mp4` is missing or empty.
-- Candidate config changes official config without a new baseline.
-- Target model claims `SWAPPABLE_ATTENTION` before the runtime attention seam is
-  wired.
-- Sparse mode cannot be disabled cleanly.
-- New visual artifacts exceed the official gate.
+## Keep / output
+Keep the best (latency, peak_mem) config **per tier**. These per-tier winners feed
+the **integration stage**, which stacks dimensions into the final low/medium/high
+delivery profiles (composed targets ~1.35x / 2.2x / 3.0x+ in `evals/tiers.toml [targets]`).
+
+## Reject
+- OFF path not byte-identical on guarded paths / baseline path altered.
+- Improves speed/mem but fails every tier's quality budget.
+- State (cache/prune/etc.) leaks across samples or stages.

@@ -1,36 +1,31 @@
-# Acceptance
+# Search loop — nvfp4_ffn
 
-## Required Gates
+This dimension is a **bounded search loop**, not a one-shot checklist.
 
-- artifact: pass with canonical `outputs/benchmark.json`, `outputs/quality.json`,
-  `outputs/risk_notes.md`, `outputs/patch_summary.md`, and
-  `outputs/collection.json`.
-- official_config: pass against `evals/profiles/official_video_t2v.toml`.
-- performance: at least 1.03x denoise speedup for experimental status and 1.10x
-  for promotion unless an exploratory result is explicitly recorded.
-- off_identity: disabled `SGLANG_HQ_ENABLE_TE_NVFP4_FFN` must recover the
-  target model's baseline path; enabled NVFP4 is lossy and is not byte-exact by
-  design.
-- quantitative_quality: record frame metrics and PSNR, but use PSNR only as a
-  diagnostic signal.
-- visual_artifact: pass with `outputs/side_by_side.mp4` and the configured
-  visual judge result for any non-dry-run NVFP4 candidate.
+## Loop (see `dimension.toml [loop]`)
+- **Granularity: per_module** — the axis searched.
+- **Objective:** beat the model baseline (`models/<id>.toml [baseline]`) on
+  **latency OR peak memory** — either improvement counts (Pareto over the two).
+- **Budget:** `max_iters = 20` (hyperparameter) with **early stop** after 5
+  iterations with no Pareto improvement.
+- **Per iteration:** pick a config from `dimension.toml [search_space]` (seeded by
+  the LTX-2.3 priors) → compose against the model spec → (GPU) run → measure
+  latency + peak_mem + quality.
 
-## Promotion Threshold
+## Acceptance = quality is a hard, PER-TIER constraint
+A candidate counts only if it (a) beats baseline on latency or peak_mem **and**
+(b) meets a risk tier's quality budget (`evals/tiers.toml`). It is binned into the
+**loosest tier it satisfies**:
+- **low** — near-lossless: off==baseline identity for guarded paths; LPIPS Δ ≤ 0.01; no new artifacts.
+- **medium** — controlled loss: LPIPS Δ ≤ 0.04; no medium/high artifacts.
+- **high** — preview: LPIPS Δ ≤ 0.09; visible-but-described loss OK.
 
-Use `evals/profiles/official_video_t2v.toml`:
+## Keep / output
+Keep the best (latency, peak_mem) config **per tier**. These per-tier winners feed
+the **integration stage**, which stacks dimensions into the final low/medium/high
+delivery profiles (composed targets ~1.35x / 2.2x / 3.0x+ in `evals/tiers.toml [targets]`).
 
-- `performance.primary_metric = "denoise_s"`
-- `performance.min_speedup_for_experimental = 1.03`
-- `performance.min_speedup_for_promotion = 1.10`
-- `visual_artifact.side_by_side_required = true`
-
-## Rejection Conditions
-
-- NVFP4 cannot be disabled without changing the target model's baseline path.
-- The official config changes without a separate matching baseline.
-- Output video is missing, empty, wrong duration, or wrong frame count.
-- Side-by-side visual judge finds medium or high new artifacts.
-- Speedup is below the promotion threshold after tuning.
-- Runtime requires unavailable CUDA, TransformerEngine, or Blackwell support and
-  no blocker is recorded.
+## Reject
+- OFF path not byte-identical on guarded paths / baseline path altered.
+- Improves speed/mem but fails every tier's quality budget.
+- State (cache/prune/etc.) leaks across samples or stages.

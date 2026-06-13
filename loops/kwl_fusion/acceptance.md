@@ -1,37 +1,31 @@
-# Acceptance
+# Search loop — kwl_fusion
 
-## Required Gates
+This dimension is a **bounded search loop**, not a one-shot checklist.
 
-- artifact: all required official-profile artifacts exist.
-- official_config: candidate config matches `evals/profiles/official_video_t2v.toml`.
-- off_identity: all KWL env flags disabled recover the target model's baseline path.
-- performance: denoise speedup is recorded against the target model baseline.
-- quantitative_quality: pass the official quality profile or record a concrete
-  deferred reason for dry-run only.
-- visual_artifact: pass the official visual gate before promotion.
+## Loop (see `dimension.toml [loop]`)
+- **Granularity: per_strategy** — the axis searched.
+- **Objective:** beat the model baseline (`models/<id>.toml [baseline]`) on
+  **latency OR peak memory** — either improvement counts (Pareto over the two).
+- **Budget:** `max_iters = 20` (hyperparameter) with **early stop** after 5
+  iterations with no Pareto improvement.
+- **Per iteration:** pick a config from `dimension.toml [search_space]` (seeded by
+  the LTX-2.3 priors) → compose against the model spec → (GPU) run → measure
+  latency + peak_mem + quality.
 
-## Promotion Threshold
+## Acceptance = quality is a hard, PER-TIER constraint
+A candidate counts only if it (a) beats baseline on latency or peak_mem **and**
+(b) meets a risk tier's quality budget (`evals/tiers.toml`). It is binned into the
+**loosest tier it satisfies**:
+- **low** — near-lossless: off==baseline identity for guarded paths; LPIPS Δ ≤ 0.01; no new artifacts.
+- **medium** — controlled loss: LPIPS Δ ≤ 0.04; no medium/high artifacts.
+- **high** — preview: LPIPS Δ ≤ 0.09; visible-but-described loss OK.
 
-Use `evals/profiles/official_video_t2v.toml`:
+## Keep / output
+Keep the best (latency, peak_mem) config **per tier**. These per-tier winners feed
+the **integration stage**, which stacks dimensions into the final low/medium/high
+delivery profiles (composed targets ~1.35x / 2.2x / 3.0x+ in `evals/tiers.toml [targets]`).
 
-- experimental: `>= 1.03x` denoise speedup.
-- promotion: `>= 1.10x` denoise speedup with warmup/cache state recorded.
-
-## KWL-Specific Checks
-
-- No sparse attention, token pruning, step cache, quantization, scheduler
-  changes, prompt changes, CFG changes, LoRA changes, resolution changes, or
-  frame-count changes are included in this candidate.
-- Each fused path has an env flag and can be leave-one-out ablated.
-- OFF is the baseline code path, not a separate approximation.
-- Any non-bitwise difference is explained as kernel-level floating-point order
-  only and must pass side-by-side visual review.
-
-## Rejection Conditions
-
-- Output video missing or empty.
-- Official config changed without a new baseline.
-- OFF path differs from baseline.
-- Medium or high new visual artifact.
-- Speedup below threshold after tuning.
-- A fused path cannot be disabled cleanly.
+## Reject
+- OFF path not byte-identical on guarded paths / baseline path altered.
+- Improves speed/mem but fails every tier's quality budget.
+- State (cache/prune/etc.) leaks across samples or stages.

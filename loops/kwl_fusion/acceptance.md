@@ -4,8 +4,8 @@
 
 - artifact: all required official-profile artifacts exist.
 - official_config: candidate config matches `evals/profiles/official_video_t2v.toml`.
-- off_identity: all KWL env flags disabled recover the baseline Cosmos3 path.
-- performance: denoise speedup is recorded against the baseline candidate.
+- off_identity: all KWL env flags disabled recover the target model's baseline path.
+- performance: denoise speedup is recorded against the target model baseline.
 - quantitative_quality: pass the official quality profile or record a concrete
   deferred reason for dry-run only.
 - visual_artifact: pass the official visual gate before promotion.

@@ -9,7 +9,7 @@
 - `efficiency/transforms/kwl_fusions.py`: `KWLFusions` env-writing transform.
 - `efficiency/selftest.py`: section `[7]` asserts `SGLANG_HQ_KWL_FUSED_CA_DUAL_MODULATE`.
 - `efficiency/skills/operator_fusion.md`: KWL methodology and pitfalls.
-- `efficiency/models/cosmos3_spec.py`: target Cosmos3 `ModelSpec`.
+- `models/<id>.toml [seam_status]`: per-model build-transform wiring status.
 
 ## Migrated LTX Files
 

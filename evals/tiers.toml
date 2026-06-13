@@ -1,29 +1,41 @@
 # Risk tiers — the project delivers THREE configs (low / medium / high), per the
 # videogen-accel plan. A tier is a QUALITY BUDGET that loosens allowed degradation
-# in exchange for more speed/memory headroom. Every dimension's search loop bins
-# its candidates into the LOOSEST tier whose budget they meet and keeps the best
-# (latency, peak_mem) per tier; the integration stage stacks per-tier dimension
-# winners into the final low/medium/high profiles.
+# in exchange for more speed/memory headroom.
+#
+# EACH dimension's search loop emits its OWN best (latency, peak_mem) config PER
+# TIER (its own low/medium/high). The integration stage then stacks the per-tier
+# winners across dimensions into the final low/medium/high delivery profiles.
+#
+# A candidate's tier = the LOOSEST tier whose budget it satisfies on BOTH axes:
+#   (1) quantitative: lpips_delta_max  (PSNR is diagnostic only, not a gate)
+#   (2) perceptual: the NVIDIA-Gemini visual-artifact verdict (REQUIRED) — the
+#       pairwise rubric in evals/rubrics/gemini_visual_artifact_gate.md, run via
+#       tools/vision/nvidia_gemini_judge.py. Maps the rubric's `overall` +
+#       max new-artifact `severity` to the tier. This catches perceptual damage
+#       (blur/mosaic/snow/ghosting/flicker/text-faces) that LPIPS/PSNR miss.
+# A candidate also must beat the model baseline on latency OR peak memory.
 
 [low]
 label = "default / quality-first"
-# near-lossless: guarded paths must be off==baseline identity; lossy paths bounded tight
+# near-lossless: guarded paths off==baseline identity; essentially no perceptual change
 lpips_delta_max = 0.01
-new_artifacts = "none"
-gemini = "mostly_tie"
+gemini_overall = "pass"               # rubric: pass => no medium/high-severity artifact
+gemini_max_artifact_severity = "none" # AND no new artifacts at all
 off_identity = "required_for_guarded_paths"
 
 [medium]
 label = "graded / throughput"
+# controlled loss: low-severity perceptual differences allowed
 lpips_delta_max = 0.04
-new_artifacts = "no_medium_or_high"
-gemini = "controlled_loss"
+gemini_overall = "pass"               # still no medium/high severity (rubric pass rule)
+gemini_max_artifact_severity = "low"  # low-severity artifacts tolerated
 
 [high]
 label = "preview / draft"
+# visible-but-described loss OK; never catastrophic
 lpips_delta_max = 0.09
-new_artifacts = "visible_but_described"
-gemini = "loss_ok_labeled"
+gemini_overall = "pass_or_fail"       # may fail on medium severity, but must be labeled
+gemini_max_artifact_severity = "medium"   # medium tolerated; HIGH severity always rejected
 
 # Composed speedup TARGETS for the INTEGRATION stage (all eligible dimensions
 # stacked vs the model baseline) — NOT per-dimension gates. From the plan matrix.
@@ -31,3 +43,13 @@ gemini = "loss_ok_labeled"
 low_speedup = 1.35
 medium_speedup = 2.20
 high_speedup = 3.00
+
+# Gemini judge verified live on HSG (NVIDIA_API_KEY + inference-api.nvidia.com,
+# gcp/google/gemini-3.5-flash): self-vs-self baseline frames -> overall=pass,
+# new_artifacts=[], recommendation=promote.
+[provider]
+visual_judge = "tools/vision/nvidia_gemini_judge.py"
+rubric = "evals/rubrics/gemini_visual_artifact_gate.md"
+model = "gcp/google/gemini-3.5-flash"
+api_key_env = "NVIDIA_API_KEY"
+status = "verified_live"

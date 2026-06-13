@@ -60,3 +60,37 @@ CPU half (enumerate + compose + eligibility) is implemented + tested
 (`search/test_search.py`). GPU half (eval + tiering) is `plan_eval()` — wires the
 existing launcher/collector/eval-profile. Per-model seam wiring tracked in each
 `models/<id>.toml [seam_status]`.
+
+## Quality eval pipeline (per candidate) — what bins a config into a tier
+
+Each search-loop iteration runs a candidate and assesses quality through THREE
+stages; the verdict (plus latency + peak_mem) decides its tier (`evals/tiers.toml`):
+
+```
+1. off_identity      guarded paths must be byte/numeric-identical to baseline when
+                     the technique is OFF (the framework invariant).
+2. quantitative      LPIPS (frame + clip) vs baseline; frame metrics; PSNR diagnostic
+                     only (bf16 chaos floor -> never a hard gate).
+3. perceptual (REQUIRED)  NVIDIA-Gemini pairwise visual-artifact judge:
+                     extract frames -> side_by_side vs baseline ->
+                     tools/vision/nvidia_gemini_judge.py (rubric:
+                     evals/rubrics/gemini_visual_artifact_gate.md) -> verdict
+                     {overall, new_artifacts[severity], recommendation}.
+```
+
+Stage 3 is mandatory: LPIPS/PSNR cannot see blur, mosaic, snow, ghosting,
+temporal flicker, or degraded text/faces/hands — only the multimodal judge can,
+and it is what separates a clean low-tier config from a degraded one. The verdict
+maps to a tier by `gemini_overall` + max new-artifact `severity` (see
+`evals/tiers.toml`): low = pass & no artifacts; medium = pass & ≤low severity;
+high = ≤medium severity (high severity is always rejected).
+
+The combined verdict (all three stages) + the (latency, peak_mem) improvement bin
+the candidate into the loosest tier it satisfies. Each dimension keeps the best
+config per tier; integration stacks per-tier winners.
+
+**Live-verified** on HSG: the Gemini judge runs against `inference-api.nvidia.com`
+(`gcp/google/gemini-3.5-flash`, `NVIDIA_API_KEY`); a self-vs-self baseline check
+returned `overall=pass`, `new_artifacts=[]`, `recommendation=promote`. The judge
+helper is stdlib-only (urllib + ffmpeg frame sampling), so it runs anywhere. The
+eval stage itself (real candidate runs) is GPU-side — `search.plan_eval` (stub).

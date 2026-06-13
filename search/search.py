@@ -131,7 +131,7 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
                       f"early_stop={lp.get('early_stop_patience','?')} keep={lp.get('keep','?')}")
         tiers = load_tiers()
         if tiers:
-            names = [t for t in tiers if t != "targets"]
+            names = [t for t in tiers if t not in ("targets", "provider")]
             print(f"# risk tiers: {names}  composed targets: {tiers.get('targets', {})}")
     return results
 

@@ -46,6 +46,7 @@ def _cosmos3_spec() -> ModelSpec:
             {
                 Capability.BLOCKS,
                 Capability.PRUNABLE_TOKENS,
+                Capability.SWAPPABLE_ATTENTION,
             }
         ),
         get_blocks=lambda tf: getattr(tf, "gen_layers"),

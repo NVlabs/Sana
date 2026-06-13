@@ -49,7 +49,7 @@ NEGATIVE_PROMPT = ""
 [seam_status]
 blocks = "wired"                 # get_blocks -> Cosmos3OmniTransformer.gen_layers
 prunable_tokens = "declared"     # prunable_segment defaults to whole seq; refine to video-token span
-swappable_attention = "todo"     # sparse_attention dimension blocked until SWAPPABLE_ATTENTION declared
+swappable_attention = "declared"     # seam exists (supported_attention_backends->gen_layers); piecewise kernel+component-map = GPU-validated
 residual_tuple = "todo"
 ffn_precision = "transform-env"  # nvfp4 / kwl drive via SGLANG_HQ_* env (build transforms)
 teacache_signal = "todo"         # teacache needs the modulated-input signal stashed per step

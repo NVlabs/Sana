@@ -1,0 +1,24 @@
+{
+  "eval_cases": [
+    {
+      "query": "Run the interview harness on: build a simple task CLI",
+      "should_trigger": true,
+      "expected_behavior": "Runs Seed Gate, then evolves and adds ontology until convergence or safety valve."
+    },
+    {
+      "query": "I only need a Seed from this vague request",
+      "should_trigger": false,
+      "expected_behavior": "Route to socrates."
+    },
+    {
+      "query": "Review this Seed for blind spots only",
+      "should_trigger": false,
+      "expected_behavior": "Route to evolve-step."
+    },
+    {
+      "query": "Converge this request into a final Seed with ontology",
+      "should_trigger": true,
+      "expected_behavior": "Runs the semi-automatic loop and asks for user adoption and boundary equivalence."
+    }
+  ]
+}

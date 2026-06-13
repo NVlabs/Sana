@@ -1,0 +1,24 @@
+{
+  "eval_cases": [
+    {
+      "query": "Create an ontology for the current Seed",
+      "should_trigger": true,
+      "expected_behavior": "Copies Seed.goal as idea and asks for boundary plus exactly three properties."
+    },
+    {
+      "query": "Define the semantic boundary and properties for this goal",
+      "should_trigger": true,
+      "expected_behavior": "Writes top-level ## Ontology without asking for actions or data types."
+    },
+    {
+      "query": "Find Seed blind spots and create v2",
+      "should_trigger": false,
+      "expected_behavior": "Route to evolve-step."
+    },
+    {
+      "query": "Turn this vague request into a Seed first",
+      "should_trigger": false,
+      "expected_behavior": "Route to socrates."
+    }
+  ]
+}

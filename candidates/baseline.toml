@@ -1,0 +1,45 @@
+id = "baseline"
+kind = "baseline"
+description = "Official Cosmos3-Super 64B SGLang baseline."
+submodule = "Sol-LTX-Infer"
+base_commit = "3a69b7788a055bed728ec367961c5f25b4ab48dc"
+run_script = "scripts/run_cosmos3_sglang.sh"
+
+[official_config]
+model = "nvidia/Cosmos3-Super"
+width = 1280
+height = 720
+frames = 189
+fps = 24
+steps = 35
+guidance_scale = 6.0
+flow_shift = 10.0
+max_sequence_length = 4096
+seed = 42
+num_gpus = 4
+
+[env]
+MODEL_REPO = "nvidia/Cosmos3-Super"
+NUM_GPUS = "4"
+SEED = "42"
+PROMPT = "A serene mountain lake at sunrise, mist rising off the still water, pine trees reflected on the surface, a small wooden boat drifting slowly, cinematic, high detail"
+NEGATIVE_PROMPT = ""
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+perf = "perf.json"
+frames_dir = "frames"
+report = "report.md"
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+cpus_per_task = 64
+mem = "0"
+time = "04:00:00"
+job_name = "autovideo-baseline"
+exclusive = true

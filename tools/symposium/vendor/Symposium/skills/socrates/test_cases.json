@@ -1,0 +1,24 @@
+{
+  "eval_cases": [
+    {
+      "query": "Use Socrates to turn 'make a report' into a Seed",
+      "should_trigger": true,
+      "expected_behavior": "Runs Wonder, Reflect, Refine, Restate and writes top-level ## Seed."
+    },
+    {
+      "query": "Close this vague request into goal, constraints, and acceptance criteria",
+      "should_trigger": true,
+      "expected_behavior": "Creates a Seed without guessing missing slots."
+    },
+    {
+      "query": "Evolve this existing Seed from v1 to v2",
+      "should_trigger": false,
+      "expected_behavior": "Route to evolve-step."
+    },
+    {
+      "query": "Add semantic boundary and three properties to the current Seed",
+      "should_trigger": false,
+      "expected_behavior": "Route to ontology."
+    }
+  ]
+}

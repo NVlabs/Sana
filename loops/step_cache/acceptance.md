@@ -15,7 +15,7 @@ This dimension is a **bounded search loop**, not a one-shot checklist.
 ## Acceptance = quality is a hard, PER-TIER constraint
 A candidate counts only if it (a) beats baseline on latency or peak_mem **and**
 (b) meets a risk tier's quality budget (`evals/tiers.toml`). It is binned into the
-**loosest tier it satisfies**:
+**tightest (cleanest, low-first) tier it satisfies**:
 - **low** — near-lossless: off==baseline identity for guarded paths; LPIPS Δ ≤ 0.01; no new artifacts.
 - **medium** — controlled loss: LPIPS Δ ≤ 0.04; no medium/high artifacts.
 - **high** — preview: LPIPS Δ ≤ 0.09; visible-but-described loss OK.

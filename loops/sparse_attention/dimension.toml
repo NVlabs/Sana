@@ -38,5 +38,5 @@ early_stop_patience = 5                  # stop after this many iters with no Pa
 keep = "best_per_tier"                   # keep the best (latency, peak_mem) config in EACH risk tier
 tiers = "evals/tiers.toml"               # quality budgets that define low / medium / high
 # A candidate counts only if it (a) beats baseline on latency or peak_mem AND (b) meets a
-# tier's quality budget; it is binned into the loosest tier it satisfies. Quality is a hard,
+# tier's quality budget; it is binned into the tightest (cleanest, low-first) tier it satisfies. Quality is a hard,
 # per-tier constraint (never trade quality for speed beyond the tier budget).

@@ -86,7 +86,7 @@ maps to a tier by `gemini_overall` + max new-artifact `severity` (see
 high = ≤medium severity (high severity is always rejected).
 
 The combined verdict (all three stages) + the (latency, peak_mem) improvement bin
-the candidate into the loosest tier it satisfies. Each dimension keeps the best
+the candidate into the tightest (cleanest, low-first) tier it satisfies. Each dimension keeps the best
 config per tier; integration stacks per-tier winners.
 
 **Live-verified** on HSG: the Gemini judge runs against `inference-api.nvidia.com`

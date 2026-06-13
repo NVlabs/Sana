@@ -1,5 +1,8 @@
 # autovideo
 
+> **Orchestrating end-to-end acceleration?** Start at [`agents/orchestrator-entry.md`](agents/orchestrator-entry.md) — the main-agent runbook (scan -> fan out per-dimension agents -> gate -> integrate -> deliver 3 tiers).
+
+
 `autovideo` is the orchestration layer for video-generation acceleration work.
 It keeps experiment planning, launch automation, run artifacts, and agent
 protocols outside the implementation repo.

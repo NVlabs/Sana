@@ -26,6 +26,16 @@ except ModuleNotFoundError as exc:  # pragma: no cover - Python < 3.11
 
 
 VALID_ID = re.compile(r"[^A-Za-z0-9_.-]+")
+CANONICAL_ARTIFACT_DEFAULTS = {
+    "log": "run.log",
+    "video": "out.mp4",
+    "benchmark": "benchmark.json",
+    "quality": "quality.json",
+    "risk_notes": "risk_notes.md",
+    "collection": "collection.json",
+    "patch_summary": "patch_summary.md",
+    "frames_dir": "frames",
+}
 
 
 def repo_root() -> Path:
@@ -47,7 +57,16 @@ def shell_export(key: str, value: Any) -> str:
 
 
 def run_git_commit(path: Path) -> str | None:
+    if not path.exists():
+        return None
     try:
+        top = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        if Path(top.strip()).resolve() != path.resolve() and not (path / ".git").exists():
+            return None
         out = subprocess.check_output(
             ["git", "-C", str(path), "rev-parse", "HEAD"],
             stderr=subprocess.DEVNULL,
@@ -156,6 +175,7 @@ def write_metadata(
     current_commit: str | None,
     launch_script: Path,
     job_script: Path,
+    artifact_paths: dict[str, str],
 ) -> None:
     metadata = {
         "candidate_id": data["id"],
@@ -172,6 +192,7 @@ def write_metadata(
         "current_commit": current_commit,
         "launch_script": str(launch_script),
         "job_script": str(job_script),
+        "artifact_contract": artifact_paths,
         "status": "prepared",
     }
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
@@ -207,7 +228,8 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
     run_dir.mkdir(parents=True, exist_ok=False)
 
     source_root = (root / str(data["submodule"])).resolve()
-    if not source_root.exists():
+    allow_missing_runtime = args.mode == "dry-run"
+    if not source_root.exists() and not allow_missing_runtime:
         raise SystemExit(f"Submodule path does not exist: {source_root}")
 
     runtime_config = data.get("runtime", {})
@@ -221,16 +243,20 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
         ).resolve()
     else:
         runtime_root = source_root
-    if not runtime_root.exists():
+    if not runtime_root.exists() and not allow_missing_runtime:
         raise SystemExit(f"Runtime root does not exist: {runtime_root}")
 
     run_script = (runtime_root / str(data["run_script"])).resolve()
-    if not run_script.exists():
+    if not run_script.exists() and not allow_missing_runtime:
         raise SystemExit(f"Run script does not exist: {run_script}")
 
     artifacts = data.get("artifacts", {})
     output_dir = (run_dir / artifacts.get("output_dir", "outputs")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    artifact_paths = {
+        key: str(output_dir / artifacts.get(key, default))
+        for key, default in CANONICAL_ARTIFACT_DEFAULTS.items()
+    }
 
     env = dict(data.get("env", {}))
     for item in args.env or []:
@@ -280,6 +306,7 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
         current_commit,
         launch_script,
         job_script,
+        artifact_paths,
     )
     return run_dir, launch_script, job_script, data
 

@@ -12,9 +12,11 @@ Every candidate launch writes a self-contained run bundle under `runs/`.
 | `job.sbatch` | launcher | Slurm wrapper, even in dry-run mode. |
 | `outputs/run.log` | execution | Full command log from the implementation repo run script. |
 | `outputs/out.mp4` | execution | Generated video output. |
-| `outputs/perf.json` | execution or collector | Timing summary when available. |
+| `outputs/benchmark.json` | collector | Canonical timing summary with total, denoise, and decode seconds when available. |
 | `outputs/frames/` | collector | Extracted review frames for visual inspection. |
-| `outputs/report.md` | agent or collector | Human-readable result summary. |
+| `outputs/quality.json` | collector | Frame metrics plus optional judge outputs or deferred reasons. |
+| `outputs/risk_notes.md` | collector | Risk notes for the run; baseline runs use the no-risk baseline stub. |
+| `outputs/patch_summary.md` | agent or collector | Human-readable result summary. |
 | `outputs/collection.json` | collector | Machine-readable artifact/timing/status summary. |
 
 ## Status Values
@@ -52,6 +54,10 @@ Cosmos3 baseline script writes `run.log` and `out.mp4` there.
 Any future collector should keep derived files inside the same `outputs/`
 directory instead of writing into `Sol-LTX-Infer/outputs/`.
 
+Canonical derived artifact names are fixed: `benchmark.json`,
+`quality.json`, `risk_notes.md`, `patch_summary.md`, and `collection.json`.
+Do not introduce alternate filenames for the same roles.
+
 ## Collection
 
 Collect a run with:
@@ -64,6 +70,9 @@ The collector:
 
 - updates `metadata.json`
 - writes `outputs/collection.json`
-- writes `outputs/report.md`
+- writes `outputs/benchmark.json`
+- writes `outputs/quality.json`
+- writes `outputs/risk_notes.md`
+- writes `outputs/patch_summary.md`
 - extracts frames with `ffmpeg` for completed runs when available
 - returns non-zero for `failed`, `blocked`, or `rejected_quality`

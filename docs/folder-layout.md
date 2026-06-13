@@ -81,9 +81,12 @@ runs/<timestamp>-<candidate-id>/
   outputs/
     run.log
     out.mp4
-    perf.json
+    benchmark.json
     frames/
-    report.md
+    quality.json
+    risk_notes.md
+    collection.json
+    patch_summary.md
 ```
 
 Only `runs/README.md` is tracked. Everything else is generated.

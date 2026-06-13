@@ -62,9 +62,12 @@ Relative to the generated run directory.
 output_dir = "outputs"
 video = "out.mp4"
 log = "run.log"
-perf = "perf.json"
+benchmark = "benchmark.json"
 frames_dir = "frames"
-report = "report.md"
+quality = "quality.json"
+risk_notes = "risk_notes.md"
+collection = "collection.json"
+patch_summary = "patch_summary.md"
 ```
 
 ## `slurm`

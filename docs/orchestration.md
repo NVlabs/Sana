@@ -80,7 +80,7 @@ candidate manifest
   -> runs/<id>/
   -> Slurm/local execution
   -> collect_run.py
-  -> metadata.json + outputs/collection.json + outputs/report.md
+  -> metadata.json + outputs/collection.json + outputs/patch_summary.md
 ```
 
 The collector is intentionally conservative. It marks a dry-run bundle as

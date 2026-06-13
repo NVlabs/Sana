@@ -1,86 +1,54 @@
-# Loop: step_cache
+# Dimension: step_cache — diffusion step caching
 
-## Purpose
+A **model-agnostic search dimension**. It searches whole-denoise-step caching
+configs and composes them against whatever model the search targets. It names no
+model; model specifics live in `models/<id>.toml` + `efficiency/models/<id>_spec.py`.
 
-Bring the proven LTX-2.3 diffusion-cache recipe into an autovideo loop for
-Cosmos3: skip selected denoise-step/block recompute while preserving a clean
-OFF path.
+## What it searches
+Two cache flavors from the `efficiency` engine (generic, written once):
+- **`efficiency/techniques/step_cache.py` (`StepCache`)** — skip a scheduled set
+  of late steps and reuse (or delta-extrapolate) the previous denoiser output.
+  Decision is schedule-based (deterministic). Search space: `skip` schedule,
+  `delta_scale`.
+- **`efficiency/techniques/teacache.py` (`TeaCache`)** — skip while the rescaled
+  cumulative rel-L1 distance of the timestep-modulated input stays under a
+  threshold. Decision is content-adaptive. Search space: `threshold`,
+  `start_step`, `max_continuous_hits`.
 
-## LTX-2.3 Source Story
+Both write the exclusive `STEP_OUTPUT` seam (only one whole-step cache at a time)
+and are OFF==byte-identical baseline. The search space + LTX-2.3 seeds are in
+`dimension.toml`; provenance/recipe/report in `reference/`.
 
-The LTX cache work came from `Sol-LTX-Infer` at
-`29d0d9e464000a2472345dcad51054b15aacca8d`. The non-HQ cache runner carried
-fixed cache variants (`cache_pab_late12_w3`, TeaCache threshold/start variants,
-and `cache_dbcache_aggressive`) plus KWL combinations. The matrix runner paired
-HQ and non-HQ TeaCache variants across prompts, emitted compare videos, and
-called the cache report helper for baseline-vs-candidate timing and skip stats.
+## Why it's model-agnostic
+`StepCache` wraps the whole step, so it needs no structural capability — it
+composes against any registered `ModelSpec` (`requires_capabilities = []`). The
+search calls `compose([build_technique("step_cache", **cfg)], spec)` for the
+target model; nothing here knows whether that model is Cosmos3, LTX-2.3, or the
+next one.
 
-This loop migrates only the cache-specific pieces:
+One genuine per-model hook, kept OUT of this dimension: **TeaCache needs the
+model to stash its timestep-modulated-input signal** under
+`("teacache_signal", cache_key)` each step. That is a runtime seam declared/wired
+in the model adapter (tracked in each `models/<id>.toml [seam_status].teacache_signal`),
+not here. Until a model wires it, TeaCache composes but falls back to full
+compute at runtime; StepCache works immediately.
 
-- `reference/recipe.md`: cache env/run knobs from the two LTX scripts.
-- `reference/make_cache_report.py`: a canonical-artifact report helper for
-  `benchmark.json`, `quality.json`, `run.log`, and `patch_summary.md`.
-- `reference/report.md`: the required cache-report shape.
+## Migrated LTX-2.3 experience (the search priors)
+`reference/recipe.md` — LTX cache env/knobs (from `run_ltx23_sglang_nonhq_cache_10s.sh`,
+`run_ltx23_teacache_hq_nonhq_matrix_10s.sh`); `reference/make_cache_report.py` —
+the cache-report helper (canonical artifacts); `reference/report.md` — required
+report shape. These feed `dimension.toml`'s `[[seeds]]` (e.g. TeaCache c04_s6).
 
-## Mapping To `efficiency/`
-
-The generic runtime primitives already live in the repo:
-
-- `efficiency/techniques/step_cache.py`: `StepCache`, a whole-step
-  denoiser-output cache. It is active exactly on its skip schedule and writes
-  the exclusive `STEP_OUTPUT` seam.
-- `efficiency/techniques/teacache.py`: `TeaCache`, a thresholded residual-replay
-  cache driven by a model-supplied timestep/modulated-input signal.
-
-The LTX full-opt preset represents the tuned stage-1 skip cluster as
-`16-28` for `stage1`. The independent test mirrors that shape: active in the
-skip cluster, inactive before/after it and in other stages, with OFF returning
-the byte-identical result from `run_step()`. Because inactive techniques are
-true plan-level no-ops, `StepCache` seeds its buffer on the first active step
-when no cached output exists; later active steps can reuse that cached output.
-
-## Cosmos3 Wiring Needed
-
-`efficiency/models/cosmos3_spec.py` already declares the conservative Cosmos3
-model spec. The future Cosmos3 runtime patch should:
-
-- Build a `Plan` with `StepCache(skip=by_stage({"stage1": at_steps("16-28",
-  True, False)}, default=False))`, or a Cosmos3-tuned schedule after profiling.
-- Wrap the denoise-step call with `plan.on_step(TechniqueContext(...), run_step)`.
-- Keep a persistent `scratch` dictionary for the generation and a stable
-  `cache_key` per sample/stream.
-- Pass a stage label that separates any stage-specific schedules.
-- Account for the first active step seeding the cache if no earlier active
-  cache state exists.
-- Leave the feature disabled by default and expose an explicit env knob, so
-  disabled/OFF behavior is the baseline path.
-- For TeaCache, stash the model's timestep-conditioned modulated-input signal
-  under `("teacache_signal", cache_key)` before `plan.on_step`; without that
-  signal, `TeaCache` computes the baseline step.
-- Log cache stats in `run.log`: computes, hits, calls, and skipped step indices.
-
-## Candidate
-
-`candidate.toml` is a methodology manifest for the launcher. It keeps the
-official Cosmos3 config and records the expected future touch points, but does
-not claim an implemented runtime speedup until the Cosmos3 denoise loop is
-wired in `Sol-LTX-Infer`.
-
-## Eval
-
-`eval.toml` points at `evals/profiles/official_video_t2v.toml`.
-
-## Independent Test
-
-Run:
-
+## Independent test
 ```bash
 ~/lustre/miniconda3/envs/sana/bin/python loops/step_cache/test_step_cache.py
 ```
+CPU-only; validates the cache techniques through `efficiency` against a model
+spec (the registered target and/or a local fixture spec). The search-level check
+that this dimension stays model-agnostic lives in `search/test_search.py`.
 
-The test is CPU-only and validates `StepCache` through the `efficiency`
-composition engine against the registered Cosmos3 spec.
-
-## Status
-
-ready-for-codex
+## Run it in the search
+```bash
+python search/search.py --model cosmos3   # lists this dimension's composable candidates
+```
+See `acceptance.md` for promotion gates and `references.md` for provenance.

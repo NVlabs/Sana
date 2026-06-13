@@ -1,0 +1,55 @@
+# Model profile — the ONLY place Cosmos3 specifics live.
+#
+# The acceleration search is model-agnostic: it reads this profile + the generic
+# search dimensions in loops/*/dimension.toml, and composes candidates against
+# the model's declared seams (efficiency/models/cosmos3_spec.py). To add a new
+# served model, drop in a ModelSpec (efficiency/models/<x>_spec.py) + a profile
+# like this one; the search auto-applies every eligible dimension. See
+# models/README.md and docs/search-architecture.md.
+
+id = "cosmos3"
+spec = "Cosmos3"                 # efficiency get_model_spec() key (the registered ModelSpec)
+display_name = "nvidia/Cosmos3-Super"
+family = "video_t2v"
+submodule = "Sol-LTX-Infer"
+base_commit = "29d0d9e464000a2472345dcad51054b15aacca8d"
+run_script = "scripts/run_cosmos3_sglang.sh"
+eval_profile = "evals/profiles/official_video_t2v.toml"
+
+[official_config]
+model = "nvidia/Cosmos3-Super"
+width = 1280
+height = 720
+frames = 189
+fps = 24
+steps = 35
+guidance_scale = 6.0
+flow_shift = 10.0
+max_sequence_length = 4096
+seed = 42
+num_gpus = 4
+
+[baseline]
+run_id = "20260612-175151-baseline-official-baseline-autodl"
+denoise_s = 121.4198
+decode_s = 5.8017
+total_s = 130.41
+
+[env]
+MODEL_REPO = "nvidia/Cosmos3-Super"
+NUM_GPUS = "4"
+SEED = "42"
+PROMPT = "A serene mountain lake at sunrise, mist rising off the still water, pine trees reflected on the surface, a small wooden boat drifting slowly, cinematic, high detail"
+NEGATIVE_PROMPT = ""
+
+# Per-seam wiring status — drives which search dimensions are runnable on Cosmos3
+# now vs need a one-time ModelSpec/forward wiring. "compose-eligible" means the
+# search can build the candidate; "runtime-todo" means it still needs a seam wired
+# in cosmos3_spec.py / cosmos3video.py before a real GPU run.
+[seam_status]
+blocks = "wired"                 # get_blocks -> Cosmos3OmniTransformer.gen_layers
+prunable_tokens = "declared"     # prunable_segment defaults to whole seq; refine to video-token span
+swappable_attention = "todo"     # sparse_attention dimension blocked until SWAPPABLE_ATTENTION declared
+residual_tuple = "todo"
+ffn_precision = "transform-env"  # nvfp4 / kwl drive via SGLANG_HQ_* env (build transforms)
+teacache_signal = "todo"         # teacache needs the modulated-input signal stashed per step

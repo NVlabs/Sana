@@ -42,10 +42,14 @@ _RUNTIME_TECHNIQUE_ENV: dict[str, dict[str, tuple[str, callable]]] = {
         "skip": ("SGLANG_HQ_STEP_CACHE_SKIP", str),
         "delta_scale": ("SGLANG_HQ_STEP_CACHE_DELTA", lambda v: f"{float(v)}"),
     },
-    # teacache + token_prune env mappings get added when their model-side seam
-    # wiring lands (teacache_signal stashing for teacache; prune_gather/scatter
-    # refinement for token_prune). Until then the search will skip them at the
-    # runtime stage even though compose() accepts them on Cosmos3.
+    "teacache": {
+        "threshold": ("SGLANG_HQ_TEACACHE_THRESHOLD", lambda v: f"{float(v)}"),
+        "start_step": ("SGLANG_HQ_TEACACHE_START_STEP", lambda v: f"{int(v)}"),
+        "max_continuous_hits": ("SGLANG_HQ_TEACACHE_MAX_HITS", lambda v: f"{int(v)}"),
+    },
+    # token_prune env mapping lands when prunable_segment is refined to the
+    # Cosmos3 video patch span + the gen_layers loop is wrapped with
+    # plan.before_blocks / plan.after_blocks in cosmos3video.py.
 }
 
 

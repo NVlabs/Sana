@@ -20,6 +20,22 @@ Append-only milestone log. One line per milestone, dated UTC. See
   - 3300262 -- candidates/cosmos3_step_cache_16_28.toml (SGLANG_HQ_STEP_CACHE_SKIP=16-28,
     delta=0 -- the LTX-2.3 SCSP-derived late-cluster skip prior).
 
+- 2026-06-14T10:54Z  three more dimensions / compositions. token_prune
+  wiring (Plan.before_blocks / after_blocks around the gen_layers loop in
+  cosmos3video.forward, with cos_gen/sin_gen index_select alongside hidden)
+  landed; caught a carries-list unpack bug in flight (job 3300532) -- fixed
+  in 5a53158/Sol-LTX-Infer b95451114. Results:
+  - step_cache 10-28/0.5 -> 1.823x clean (NEW LOW winner; supersedes
+    12-28/0.5 @ 1.733x). Cliff between 19 (clean) and 21 (high-severity).
+  - token_prune kr=0.6 s=5-30 -> 1.542x but Gemini HIGH severity -> REJECT.
+    Dimension is functional; LTX-2.3 prior kr=0.5-0.6 too aggressive on
+    Cosmos3's cross-attention visual stream. Needs kr=0.75-0.85.
+  - composed step_cache 12-28/0.5 + token_prune kr=0.6 s=5-30 -> 2.046x
+    with Gemini fail medium -> tier=HIGH (per evals/tiers.toml; HIGH
+    accepts pass_or_fail with up to medium severity). Below the 3.0x HIGH
+    speedup target but in the right bucket. Submitted a less-aggressive
+    composed (sc 10-28 + tp kr=0.8 s=2-9) as 3300640 to probe MEDIUM.
+
 - 2026-06-14T10:24Z  more step_cache + teacache results. Low-tier winner is
   now **12-28/0.5 at 1.733x** (was 16-28/0.5 @ 1.522x). 8-28/0.5 hits 2.117x
   but Gemini flags HIGH severity -> rejected; the quality cliff sits between

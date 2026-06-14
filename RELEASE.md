@@ -29,6 +29,52 @@ target with quality clean. The composed-tier targets (1.35 / 2.20 / 3.00 in
 search will only promote a config into MEDIUM/HIGH if it actually hits the
 speedup target.
 
+### Search trajectory (step_cache dimension)
+
+| skip      | delta | total_s | speedup | Gemini | max-artifact | tier   |
+|-----------|-------|---------|---------|--------|--------------|--------|
+| 16-28     | 0.0   | 87.64   | 1.488x  | pass   | none         | low    |
+| 16-28     | 0.5   | 85.67   | 1.522x  | pass   | none         | low    |
+| 20-28     | 0.0   | 96.25   | 1.355x  | pass   | none         | low    |
+| 20-28     | 0.5   | 98.00   | 1.331x  | pass   | none         | low    |
+| **12-28** | **0.5** | **75.26** | **1.733x** | **pass** | **none** | **low (WIN)** |
+| 8-28      | 0.5   | 61.61   | 2.117x  | fail   | high         | REJECT |
+| 10-28     | 0.5   | (in progress -- bisects the cliff between 12-28 clean and 8-28 fail) |
+
+### Search trajectory (teacache dimension)
+
+| threshold | start_step | max_hits | total_s | speedup | Gemini | tier |
+|-----------|------------|----------|---------|---------|--------|------|
+| 0.04      | 6          | 1        | 100.41  | 1.299x  | pass   | low  |
+
+TeaCache becomes functional after wiring `teacache_signal` in
+`cosmos3video.forward`. The LTX-2.3 prior (c04/s6) at 1.30x is below the
+12-28/0.5 step_cache speedup; since both write the exclusive STEP_OUTPUT seam,
+step_cache wins as the dimension's representative.
+
+### MEDIUM / HIGH plan
+
+The aggressive 8-28/0.5 result shows the upper bound on single-dimension
+step_cache on Cosmos3-Super (the Gemini judge starts flagging high-severity
+artifacts somewhere between 17 and 21 skipped of 35 steps). To reach the
+MEDIUM (2.20x) and HIGH (3.00x) composed targets, the search needs to stack
+step_cache with another dimension that writes a *different* exclusive seam:
+
+- **token_prune** -- writes `TOKEN_SET`. The most plausible next dimension on
+  Cosmos3 (LTX-2.3 prior delivers ~1.2-1.4x). Still needs: (a) refine
+  `prunable_segment` in `cosmos3_spec.py` to the video-token span, (b) wrap
+  `gen_layers` with `plan.before_blocks` / `plan.after_blocks` in
+  `cosmos3video.forward`, (c) define `prune_gather`/`prune_scatter` so
+  `cos_gen`/`sin_gen` stay aligned with the pruned hidden.
+- **sparse_attention** -- writes `ATTENTION_BACKEND`. The seam is declared; the
+  LTX-2.3 piecewise kernel is keyed to visual *self*-attention, but Cosmos3's
+  GEN pathway is cross-attention to cached UND K/V. The kernel's
+  `piecewise_only_video_self_attention=true` flag would make it a no-op on
+  Cosmos3 unless the kernel is extended.
+- **nvfp4_ffn / kwl_fusion** -- writes `FFN_PRECISION` / `KERNEL_FUSION`. Both
+  drive via `SGLANG_LTX2_*` env that the Cosmos3 FFN loader does not currently
+  read; would need a Cosmos3-side NVFP4/KWL build hook.
+
 ## What is wired vs not (per the model-onboarding playbook)
 
 `models/cosmos3.toml [seam_status]` is the source of truth. Snapshot:

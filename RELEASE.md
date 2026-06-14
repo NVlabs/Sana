@@ -1,4 +1,4 @@
-# Cosmos3-Super acceleration -- tier matrix (in progress)
+# Cosmos3-Super acceleration -- tier matrix
 
 End-to-end serving acceleration of `nvidia/Cosmos3-Super` (Cosmos3, 64B, video
 T2V) driven by the model-agnostic search engine in this repo. Each tier is a

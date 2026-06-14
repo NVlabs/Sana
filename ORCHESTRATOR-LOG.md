@@ -20,6 +20,20 @@ Append-only milestone log. One line per milestone, dated UTC. See
   - 3300262 -- candidates/cosmos3_step_cache_16_28.toml (SGLANG_HQ_STEP_CACHE_SKIP=16-28,
     delta=0 -- the LTX-2.3 SCSP-derived late-cluster skip prior).
 
+- 2026-06-14T11:08Z  **final LOW-tier winner**: composed step_cache(10-28,
+  delta=0.5) + token_prune(kr=0.8, steps=2-9, feat_norm/prev) at **1.945x
+  total speedup, Gemini pass, no new artifacts -> tier=low**. 11 candidates
+  assessed end-to-end through the full launch -> collect -> Gemini judge
+  pipeline. Per-tier targets vs achieved:
+    - LOW    1.35x -> **1.945x** (HIT, clean)
+    - MEDIUM 2.20x -> open (best clean 1.945x; needs a 3rd clean dim)
+    - HIGH   3.00x -> 2.046x in bucket with medium-severity (per
+      evals/tiers.toml), well short of the 3.0x target.
+
+  RELEASE.md documents the matrix, search trajectory, and the path to
+  MEDIUM/HIGH (token_prune at kr=0.75-0.85 + a 3rd dim like
+  sparse_attention with Cosmos3-side kernel support).
+
 - 2026-06-14T10:54Z  three more dimensions / compositions. token_prune
   wiring (Plan.before_blocks / after_blocks around the gen_layers loop in
   cosmos3video.forward, with cos_gen/sin_gen index_select alongside hidden)

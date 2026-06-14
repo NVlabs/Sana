@@ -20,8 +20,8 @@ visual-artifact pass against the 1280x720 / 189 frames / 35 step baseline.
 | Tier          | Target  | Achieved          | Config (feature flags / env)                            | Verdict                                  | Rollback |
 |---------------|---------|-------------------|---------------------------------------------------------|------------------------------------------|----------|
 | **LOW**       | 1.35x   | **1.823x**  ✓ HIT | `SGLANG_HQ_STEP_CACHE_SKIP=10-28 SGLANG_HQ_STEP_CACHE_DELTA=0.5` | Gemini `pass`, max-artifact `none`, tier `low` | Unset env -> byte-identical baseline |
-| MEDIUM        | 2.20x   | (in progress)     | TBD -- exploring more-aggressive skip + teacache + token_prune | -- | -- |
-| HIGH          | 3.00x   | (in progress)     | TBD                                                       | -- | -- |
+| MEDIUM        | 2.20x   | (open) -- best clean 1.823x (single dim) | Needs another dimension stack at kr=0.75-0.85 to stay clean | -- | -- |
+| HIGH          | 3.00x   | **2.046x** (qualifies for high bucket but short of 3.0x target) | `SGLANG_HQ_STEP_CACHE_SKIP=12-28 SGLANG_HQ_STEP_CACHE_DELTA=0.5 SGLANG_HQ_TOKEN_PRUNE_KEEP_RATIO=0.6 SGLANG_HQ_TOKEN_PRUNE_STEPS=5-30 ...` | Gemini `fail`, medium-severity artifacts -- tier `high` (pass_or_fail w/ ≤medium severity) | Unset env -> baseline |
 
 LOW is delivered: a single dimension (step_cache) already beats the 1.35x low-tier
 target with quality clean. The composed-tier targets (1.35 / 2.20 / 3.00 in
@@ -51,6 +51,29 @@ TeaCache becomes functional after wiring `teacache_signal` in
 `cosmos3video.forward`. The LTX-2.3 prior (c04/s6) at 1.30x is below the
 12-28/0.5 step_cache speedup; since both write the exclusive STEP_OUTPUT seam,
 step_cache wins as the dimension's representative.
+
+### Search trajectory (token_prune dimension)
+
+| keep_ratio | steps | method     | total_s | speedup | Gemini | max-art | tier   |
+|------------|-------|------------|---------|---------|--------|---------|--------|
+| 0.6        | 5-30  | feat_norm  | 84.55   | 1.542x  | fail   | high    | REJECT |
+
+The LTX-2.3 prior keep_ratio=0.5/0.6 is too aggressive on Cosmos3 -- the dim's
+cross-attention visual stream is more sensitive than LTX-2's structured
+visual self-attention. A higher keep_ratio (0.75-0.85) and narrower step
+range are needed for a clean solo result.
+
+### Search trajectory (composed dimensions)
+
+| step_cache | token_prune | total_s | speedup | Gemini | max-art | tier |
+|------------|-------------|---------|---------|--------|---------|------|
+| 12-28/0.5  | kr=0.6 s=5-30 | 63.74 | 2.046x  | fail   | medium  | high |
+
+The composed candidate qualifies for the HIGH tier budget (high accepts
+pass_or_fail with up to medium severity) but the 2.046x speedup is well
+short of the 3.00x HIGH target. A less-aggressive composition (e.g.
+step_cache 10-28/0.5 + token_prune kr=0.8 narrow steps) is in flight to
+explore the MEDIUM budget.
 
 ### MEDIUM / HIGH plan
 

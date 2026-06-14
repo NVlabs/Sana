@@ -20,6 +20,18 @@ Append-only milestone log. One line per milestone, dated UTC. See
   - 3300262 -- candidates/cosmos3_step_cache_16_28.toml (SGLANG_HQ_STEP_CACHE_SKIP=16-28,
     delta=0 -- the LTX-2.3 SCSP-derived late-cluster skip prior).
 
+- 2026-06-14T10:00Z  step_cache=ON results -- **first real Cosmos3 acceleration**.
+  Both 16-28/0 and 20-28/0 pass plan_eval at tier=low (Gemini overall=pass,
+  no new artifacts). Versus the canonical baseline (127.83s):
+  - **16-28/0**: total 87.64s, denoise 78.91s -> **1.488x speedup, tier=low**
+    (HIT vs the 1.35x low-tier target)
+  - **20-28/0**:  total 96.25s, denoise 87.51s -> **1.355x speedup, tier=low**
+    (marginal hit on the 1.35x target)
+  The 13-of-35 late-cluster skip (16-28) clearly wins; pick it as the
+  step_cache LOW-tier winner. Delta=0.5 variants (3300337/3300338) still
+  running; if delta improves the quality margin or quotient further, it may
+  edge into a different tier point.
+
 - 2026-06-14T09:48Z  OFF baseline 3300261 finished. Total 118.2s
   (denoise 109.06s, decode 5.92s) vs prior baseline 127.83s (denoise 119.18s)
   -- 7-8% jitter, within typical GPU run variance. **`scripts/verify_off_identity.py

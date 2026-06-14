@@ -1,0 +1,21 @@
+{
+  "run_dir": "runs/20260614-105737-cosmos3-stepcache-10-28-tokenprune-kr08",
+  "candidate_id": "cosmos3-stepcache-10-28-tokenprune-kr08",
+  "candidate_manifest": "candidates/cosmos3_stepcache10_tokenprune_kr08.toml",
+  "dimension": "composed",
+  "techniques": ["step_cache", "token_prune"],
+  "cfg": {
+    "step_cache": {"skip": "10-28", "delta_scale": 0.5},
+    "token_prune": {"keep_ratio": 0.8, "steps": "2-9", "method": "feat_norm", "compensation": "prev"}
+  },
+  "baseline_run_dir": "runs/20260613-175619-baseline",
+  "baseline_total_s": 130.41,
+  "candidate_total_s": 67.05,
+  "candidate_denoise_s": 57.1158,
+  "candidate_decode_s": 5.805,
+  "speedup": 1.945,
+  "gemini_overall": "pass",
+  "max_artifact_severity": "none",
+  "tier": "low",
+  "note": "LOW tier winner (supersedes step_cache 10-28/0.5 @ 1.823x). Conservative token_prune (keep 80%, only 8 early steps 2-9) layered on the LOW-winning step_cache. Gemini judge stays clean; the +7% speedup over step_cache alone comes from token_prune lightening the 8 early compute steps. Still short of the MEDIUM tier 2.20x target with clean quality -- bridging that gap likely requires (a) a third clean dimension (e.g. sparse_attention with Cosmos3-side kernel support) or (b) tuning a different attack on the same step_cache exclusive seam (teacache with looser threshold + longer max_continuous_hits)."
+}

@@ -19,7 +19,7 @@ visual-artifact pass against the 1280x720 / 189 frames / 35 step baseline.
 
 | Tier          | Target  | Achieved          | Config (feature flags / env)                            | Verdict                                  | Rollback |
 |---------------|---------|-------------------|---------------------------------------------------------|------------------------------------------|----------|
-| **LOW**       | 1.35x   | **1.823x**  ✓ HIT | `SGLANG_HQ_STEP_CACHE_SKIP=10-28 SGLANG_HQ_STEP_CACHE_DELTA=0.5` | Gemini `pass`, max-artifact `none`, tier `low` | Unset env -> byte-identical baseline |
+| **LOW**       | 1.35x   | **1.945x**  ✓ HIT | step_cache(skip=`10-28`, delta=`0.5`) + token_prune(kr=`0.8`, steps=`2-9`, method=`feat_norm`, comp=`prev`) -- 6 env vars under `SGLANG_HQ_STEP_CACHE_*` + `SGLANG_HQ_TOKEN_PRUNE_*` | Gemini `pass`, max-artifact `none`, tier `low` | Unset all SGLANG_HQ_* env -> byte-identical baseline |
 | MEDIUM        | 2.20x   | (open) -- best clean 1.823x (single dim) | Needs another dimension stack at kr=0.75-0.85 to stay clean | -- | -- |
 | HIGH          | 3.00x   | **2.046x** (qualifies for high bucket but short of 3.0x target) | `SGLANG_HQ_STEP_CACHE_SKIP=12-28 SGLANG_HQ_STEP_CACHE_DELTA=0.5 SGLANG_HQ_TOKEN_PRUNE_KEEP_RATIO=0.6 SGLANG_HQ_TOKEN_PRUNE_STEPS=5-30 ...` | Gemini `fail`, medium-severity artifacts -- tier `high` (pass_or_fail w/ ≤medium severity) | Unset env -> baseline |
 
@@ -68,6 +68,7 @@ range are needed for a clean solo result.
 | step_cache | token_prune | total_s | speedup | Gemini | max-art | tier |
 |------------|-------------|---------|---------|--------|---------|------|
 | 12-28/0.5  | kr=0.6 s=5-30 | 63.74 | 2.046x  | fail   | medium  | high |
+| **10-28/0.5** | **kr=0.8 s=2-9** | **67.05** | **1.945x** | **pass** | **none** | **low (NEW WIN)** |
 
 The composed candidate qualifies for the HIGH tier budget (high accepts
 pass_or_fail with up to medium severity) but the 2.046x speedup is well

@@ -47,9 +47,12 @@ _RUNTIME_TECHNIQUE_ENV: dict[str, dict[str, tuple[str, callable]]] = {
         "start_step": ("SGLANG_HQ_TEACACHE_START_STEP", lambda v: f"{int(v)}"),
         "max_continuous_hits": ("SGLANG_HQ_TEACACHE_MAX_HITS", lambda v: f"{int(v)}"),
     },
-    # token_prune env mapping lands when prunable_segment is refined to the
-    # Cosmos3 video patch span + the gen_layers loop is wrapped with
-    # plan.before_blocks / plan.after_blocks in cosmos3video.py.
+    "token_prune": {
+        "keep_ratio": ("SGLANG_HQ_TOKEN_PRUNE_KEEP_RATIO", lambda v: f"{float(v)}"),
+        "steps": ("SGLANG_HQ_TOKEN_PRUNE_STEPS", str),
+        "method": ("SGLANG_HQ_TOKEN_PRUNE_METHOD", str),
+        "compensation": ("SGLANG_HQ_TOKEN_PRUNE_COMP", str),
+    },
 }
 
 

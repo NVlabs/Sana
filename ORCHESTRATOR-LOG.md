@@ -20,6 +20,15 @@ Append-only milestone log. One line per milestone, dated UTC. See
   - 3300262 -- candidates/cosmos3_step_cache_16_28.toml (SGLANG_HQ_STEP_CACHE_SKIP=16-28,
     delta=0 -- the LTX-2.3 SCSP-derived late-cluster skip prior).
 
+- 2026-06-14T09:48Z  OFF baseline 3300261 finished. Total 118.2s
+  (denoise 109.06s, decode 5.92s) vs prior baseline 127.83s (denoise 119.18s)
+  -- 7-8% jitter, within typical GPU run variance. **`scripts/verify_off_identity.py
+  runs/20260614-093356-cosmos3-baseline-off runs/20260613-175619-baseline` ->
+  OK: 8 frames byte/pixel-identical (max_abs_diff=0).** The OFF==identity
+  invariant holds on the new StepCache-wired runtime. Resubmitted step_cache
+  =ON (skip='16-28', delta=0) as job 3300310 against the bug-fixed pin
+  05422e547.
+
 - 2026-06-14T09:44Z  caught a StepCache scheduling BUG in flight (job 3300262
   log: warmup pass finished entire 35-step denoise in 18.5s -- the technique
   was skipping every step, not just steps 16-28). Root cause:

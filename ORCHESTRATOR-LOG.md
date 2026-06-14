@@ -20,6 +20,15 @@ Append-only milestone log. One line per milestone, dated UTC. See
   - 3300262 -- candidates/cosmos3_step_cache_16_28.toml (SGLANG_HQ_STEP_CACHE_SKIP=16-28,
     delta=0 -- the LTX-2.3 SCSP-derived late-cluster skip prior).
 
+- 2026-06-14T10:24Z  more step_cache + teacache results. Low-tier winner is
+  now **12-28/0.5 at 1.733x** (was 16-28/0.5 @ 1.522x). 8-28/0.5 hits 2.117x
+  but Gemini flags HIGH severity -> rejected; the quality cliff sits between
+  17 and 21 skipped steps. Submitted 10-28/0.5 (19 steps) as 3300468 to
+  bisect. **TeaCache validated as functional** (1.299x clean) after wiring
+  teacache_signal in cosmos3video.forward -- LTX-2.3 prior c04/s6; lower
+  speedup than aggressive step_cache so step_cache stays the STEP_OUTPUT
+  owner. New seam status: teacache_signal=wired.
+
 - 2026-06-14T10:00Z  step_cache=ON results -- **first real Cosmos3 acceleration**.
   Both 16-28/0 and 20-28/0 pass plan_eval at tier=low (Gemini overall=pass,
   no new artifacts). Versus the canonical baseline (127.83s):

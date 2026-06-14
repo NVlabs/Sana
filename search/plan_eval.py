@@ -30,6 +30,39 @@ except ModuleNotFoundError:  # py<3.11 (sana env) ships tomli
 REPO = Path(__file__).resolve().parents[1]
 _SEV = {"none": 0, "low": 1, "medium": 2, "high": 3}
 
+# Runtime-technique env mapping. Build-transforms set their own SGLANG_HQ_* env
+# via Plan.apply_transforms(); runtime techniques (Phase.ON_STEP etc.) do not
+# (their hooks live in-process), so the search has to publish their config to
+# the runtime out-of-band. Each entry maps a registered technique name to:
+#   {param_name -> (env_var_name, stringifier)}
+# Adding a runtime technique here makes plan_eval able to drive it through the
+# render_candidate -> launcher -> Sol-LTX-Infer pipeline without further glue.
+_RUNTIME_TECHNIQUE_ENV: dict[str, dict[str, tuple[str, callable]]] = {
+    "step_cache": {
+        "skip": ("SGLANG_HQ_STEP_CACHE_SKIP", str),
+        "delta_scale": ("SGLANG_HQ_STEP_CACHE_DELTA", lambda v: f"{float(v)}"),
+    },
+    # teacache + token_prune env mappings get added when their model-side seam
+    # wiring lands (teacache_signal stashing for teacache; prune_gather/scatter
+    # refinement for token_prune). Until then the search will skip them at the
+    # runtime stage even though compose() accepts them on Cosmos3.
+}
+
+
+def _runtime_technique_env(technique: str, cfg: dict) -> dict[str, str]:
+    """Map a runtime-technique cfg to SGLANG_HQ_* env vars per the table above."""
+    mapping = _RUNTIME_TECHNIQUE_ENV.get(technique)
+    if not mapping:
+        return {}
+    env: dict[str, str] = {}
+    for k, v in cfg.items():
+        spec = mapping.get(k)
+        if spec is None:
+            continue
+        env_key, fmt = spec
+        env[env_key] = fmt(v)
+    return env
+
 
 def _load(p: Path) -> dict:
     with open(p, "rb") as f:
@@ -93,6 +126,10 @@ def render_candidate(profile: dict, technique: str, cfg: dict, kind: str = "buil
     tech_env: dict = {}
     if kind == "build_transform":
         plan.apply_transforms(None, "stage2", tech_env)  # transforms set SGLANG_HQ_* env
+    else:
+        # runtime techniques: publish their cfg through SGLANG_HQ_* env so the
+        # Sol-LTX-Infer side can rebuild the same technique inside the denoise loop.
+        tech_env.update(_runtime_technique_env(technique, cfg))
     cid = candidate_id or f"{profile['id']}__{technique}"
     manifest = {
         "id": cid,

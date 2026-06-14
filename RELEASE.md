@@ -19,7 +19,7 @@ visual-artifact pass against the 1280x720 / 189 frames / 35 step baseline.
 
 | Tier          | Target  | Achieved          | Config (feature flags / env)                            | Verdict                                  | Rollback |
 |---------------|---------|-------------------|---------------------------------------------------------|------------------------------------------|----------|
-| **LOW**       | 1.35x   | **1.733x**  ✓ HIT | `SGLANG_HQ_STEP_CACHE_SKIP=12-28 SGLANG_HQ_STEP_CACHE_DELTA=0.5` | Gemini `pass`, max-artifact `none`, tier `low` | Unset env -> byte-identical baseline |
+| **LOW**       | 1.35x   | **1.823x**  ✓ HIT | `SGLANG_HQ_STEP_CACHE_SKIP=10-28 SGLANG_HQ_STEP_CACHE_DELTA=0.5` | Gemini `pass`, max-artifact `none`, tier `low` | Unset env -> byte-identical baseline |
 | MEDIUM        | 2.20x   | (in progress)     | TBD -- exploring more-aggressive skip + teacache + token_prune | -- | -- |
 | HIGH          | 3.00x   | (in progress)     | TBD                                                       | -- | -- |
 
@@ -37,9 +37,9 @@ speedup target.
 | 16-28     | 0.5   | 85.67   | 1.522x  | pass   | none         | low    |
 | 20-28     | 0.0   | 96.25   | 1.355x  | pass   | none         | low    |
 | 20-28     | 0.5   | 98.00   | 1.331x  | pass   | none         | low    |
-| **12-28** | **0.5** | **75.26** | **1.733x** | **pass** | **none** | **low (WIN)** |
+| 12-28     | 0.5   | 75.26   | 1.733x  | pass   | none         | low    |
 | 8-28      | 0.5   | 61.61   | 2.117x  | fail   | high         | REJECT |
-| 10-28     | 0.5   | (in progress -- bisects the cliff between 12-28 clean and 8-28 fail) |
+| **10-28** | **0.5** | **71.53** | **1.823x** | **pass** | **none** | **low (WIN)** |
 
 ### Search trajectory (teacache dimension)
 

@@ -1,0 +1,18 @@
+{
+  "run_dir": "runs/20260614-100958-cosmos3-teacache-c04-s6",
+  "candidate_id": "cosmos3-teacache-c04-s6",
+  "candidate_manifest": "candidates/cosmos3_teacache_c04_s6.toml",
+  "dimension": "step_cache",
+  "technique": "teacache",
+  "cfg": {"threshold": 0.04, "start_step": 6, "max_continuous_hits": 1},
+  "baseline_run_dir": "runs/20260613-175619-baseline",
+  "baseline_total_s": 130.41,
+  "candidate_total_s": 100.41,
+  "candidate_denoise_s": 91.5196,
+  "candidate_decode_s": 5.8468,
+  "speedup": 1.299,
+  "gemini_overall": "pass",
+  "max_artifact_severity": "none",
+  "tier": "low",
+  "note": "TeaCache becomes functional after wiring teacache_signal in cosmos3video.forward (the per-step time_embed stash). Adaptive cache decides per-step based on rescaled rel-L1 of the timestep-modulated input; with the LTX-2.3 prior (threshold=0.04, start_step=6, max_hits=1) it lands at 1.30x, short of step_cache 12-28/0.5 (1.733x) on the same baseline. Step_cache wins as the STEP_OUTPUT-seam owner; teacache is kept on the bench for future per-tier tuning."
+}

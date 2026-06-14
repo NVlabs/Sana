@@ -1,0 +1,56 @@
+id = "cosmos3-step-cache-20-28-d05"
+kind = "runtime_technique"
+description = "Cosmos3-Super + StepCache(skip=20-28, delta_scale=0.5). Less aggressive skip + linear delta extrapolation -- 9 of 35 steps reuse last_out + 0.5*last_delta. The conservative-skip + extrapolation pairing."
+submodule = "Sol-LTX-Infer"
+base_commit = "05422e547"
+run_script = "scripts/run_cosmos3_sglang.sh"
+eval_profile = "evals/profiles/official_video_t2v.toml"
+
+[official_config]
+model = "nvidia/Cosmos3-Super"
+width = 1280
+height = 720
+frames = 189
+fps = 24
+steps = 35
+guidance_scale = 6.0
+flow_shift = 10.0
+max_sequence_length = 4096
+seed = 42
+num_gpus = 4
+
+[env]
+PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python"
+COSMOS3_CACHE = "/home/haozhel/.cache/cosmos3"
+HF_HOME = "/home/haozhel/.cache/huggingface"
+HF_HUB_CACHE = "/home/haozhel/.cache/huggingface/hub"
+HF_HUB_OFFLINE = "1"
+MODEL_REPO = "nvidia/Cosmos3-Super"
+NUM_GPUS = "4"
+SEED = "42"
+PROMPT = "A serene mountain lake at sunrise, mist rising off the still water, pine trees reflected on the surface, a small wooden boat drifting slowly, cinematic, high detail"
+NEGATIVE_PROMPT = ""
+SGLANG_HQ_STEP_CACHE_SKIP = "20-28"
+SGLANG_HQ_STEP_CACHE_DELTA = "0.5"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"
+quality = "quality.json"
+risk_notes = "risk_notes.md"
+collection = "collection.json"
+patch_summary = "patch_summary.md"
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+cpus_per_task = 64
+mem = "0"
+time = "04:00:00"
+job_name = "autovideo-cosmos3-step-cache-20-28-d05"
+exclusive = true

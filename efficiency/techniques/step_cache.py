@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 from efficiency.registry import register_technique
-from efficiency.schedule import as_schedule
+from efficiency.schedule import as_schedule, at_steps
 from efficiency.technique import (
     Phase,
     Seam,
@@ -28,8 +28,13 @@ class StepCache(Technique):
 
     Parameters
     ----------
-    skip : Schedule[bool] | bool -- True on steps whose compute is skipped and
-        replaced by the cached (optionally delta-extrapolated) previous output.
+    skip : Schedule[bool] | str | bool -- True on steps whose compute is
+        skipped and replaced by the cached (optionally delta-extrapolated)
+        previous output. A *string* like ``"16-28"`` / ``"1-2,5,7-9"`` is
+        parsed as a step set (the LTX-2.3 SCSP "late cluster skip" idiom);
+        ``""`` / ``False`` / ``None`` disables; a bare ``True`` skips every
+        step. Pass a pre-built Schedule for stage/policy-aware skips (see
+        ``efficiency.presets.ltx_full_opt`` for the stage-gated form).
     delta_scale : float -- 0.0 reuses the last output verbatim; >0 linearly
         extrapolates using the last computed delta (output_t - output_{t-1}).
     """
@@ -39,9 +44,21 @@ class StepCache(Technique):
     reads = frozenset({Seam.STEP_OUTPUT})
     writes = frozenset({Seam.STEP_OUTPUT})
 
-    def __init__(self, skip="", delta_scale: float = 0.0, enabled="" or True):
-        # the cache is "on" exactly on the skip steps
-        super().__init__(enabled=as_schedule(skip) if skip != "" else enabled)
+    def __init__(self, skip="", delta_scale: float = 0.0, enabled=True):
+        # A string-skip spec ("16-28", "1-2,5") must be PARSED into a step set
+        # via at_steps -- otherwise as_schedule wraps the literal string in a
+        # const() schedule whose .at(step)="16-28" (truthy) and the technique
+        # is active on every step. Bug history: a 6.4x "speedup" on Cosmos3
+        # with skip='16-28' that was actually skipping all 35 steps.
+        #
+        # An EMPTY string means "no steps to skip" -> the technique is OFF
+        # (compose() still accepts it; it just never fires). When ``skip`` is
+        # a pre-built Schedule we trust it as-is.
+        if isinstance(skip, str):
+            sched = at_steps(skip, True, False) if skip else False
+        else:
+            sched = as_schedule(skip) if skip is not None else enabled
+        super().__init__(enabled=sched)
         self.delta_scale = float(delta_scale)
 
     def on_step(self, ctx: TechniqueContext, run_step):

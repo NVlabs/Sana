@@ -57,6 +57,21 @@ def main() -> int:
         not step_cache.is_active(TechniqueContext(step=20, stage="stage2", spec=spec)),
     )
 
+    # Regression: a *string* skip spec must be parsed into a step set, not
+    # wrapped in a const() schedule (which would be truthy on every step and
+    # produce a degenerate "speedup" that skips ALL steps). See the
+    # StepCache.__init__ comment.
+    print("[step_cache] regression: string-skip parsing")
+    string_sc = StepCache(skip="16-28", delta_scale=0.0)
+    bare_ctx = lambda i: TechniqueContext(step=i, stage="", spec=spec, cache_key="k", scratch={})
+    check("string-skip '16-28' INACTIVE step 0",  not string_sc.is_active(bare_ctx(0)))
+    check("string-skip '16-28' INACTIVE step 15", not string_sc.is_active(bare_ctx(15)))
+    check("string-skip '16-28' ACTIVE step 16",   string_sc.is_active(bare_ctx(16)))
+    check("string-skip '16-28' ACTIVE step 28",   string_sc.is_active(bare_ctx(28)))
+    check("string-skip '16-28' INACTIVE step 29", not string_sc.is_active(bare_ctx(29)))
+    check("string-skip '' INACTIVE on all",
+          not StepCache(skip="").is_active(bare_ctx(20)))
+
     print("[step_cache] OFF == identity")
     torch.manual_seed(0)
     hidden = torch.randn(2, 4)

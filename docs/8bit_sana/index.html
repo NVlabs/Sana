@@ -730,6 +730,8 @@
       
         
       
+        
+      
     
     
     
@@ -812,6 +814,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../sana_streaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sana_wm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-WM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sana_video_inference/" class="md-nav__link">
         
   
@@ -848,34 +906,6 @@
     
   
     LongSANA
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sana_wm/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    SANA-WM
   
 
     
@@ -1467,7 +1497,7 @@
 <p>The abstract from the paper is:</p>
 <p><em>We introduce Sana, a text-to-image framework that can efficiently generate images up to 4096×4096 resolution. Sana can synthesize high-resolution, high-quality images with strong text-image alignment at a remarkably fast speed, deployable on laptop GPU. Core designs include: (1) Deep compression autoencoder: unlike traditional AEs, which compress images only 8×, we trained an AE that can compress images 32×, effectively reducing the number of latent tokens. (2) Linear DiT: we replace all vanilla attention in DiT with linear attention, which is more efficient at high resolutions without sacrificing quality. (3) Decoder-only text encoder: we replaced T5 with modern decoder-only small LLM as the text encoder and designed complex human instruction with in-context learning to enhance the image-text alignment. (4) Efficient training and sampling: we propose Flow-DPM-Solver to reduce sampling steps, with efficient caption labeling and selection to accelerate convergence. As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.g. Flux-12B), being 20 times smaller and 100+ times faster in measured throughput. Moreover, Sana-0.6B can be deployed on a 16GB laptop GPU, taking less than 1 second to generate a 1024×1024 resolution image. Sana enables content creation at low cost. Code and model will be publicly released.</em></p>
 <p><Tip></p>
-<p>Make sure to check out the Schedulers <a href="https://huggingface.co/docs/diffusers/using-diffusers/schedulers">guide</a> to learn how to explore the tradeoff between scheduler speed and quality, and see the <a href="https://huggingface.co/docs/diffusers/using-diffusers/loading#reuse-a-pipeline">reuse components across pipelines</a> section to learn how to efficiently load the same components into multiple pipelines.</p>
+<p>Make sure to check out the Schedulers <a href="../../using-diffusers/schedulers">guide</a> to learn how to explore the tradeoff between scheduler speed and quality, and see the <a href="../../using-diffusers/loading#reuse-a-pipeline">reuse components across pipelines</a> section to learn how to efficiently load the same components into multiple pipelines.</p>
 <p></Tip></p>
 <p>This pipeline was contributed by <a href="https://github.com/lawrence-cj">lawrence-cj</a> and <a href="https://github.com/chenjy2003">chenjy2003</a>. The original codebase can be found <a href="https://github.com/NVlabs/Sana">here</a>. The original weights can be found under <a href="https://huggingface.co/Efficient-Large-Model">hf.co/Efficient-Large-Model</a>.</p>
 <p>Available models:</p>
@@ -1516,7 +1546,7 @@
 <p></Tip></p>
 <h2 id="quantization">Quantization<a class="headerlink" href="#quantization" title="Permanent link">&para;</a></h2>
 <p>Quantization helps reduce the memory requirements of very large models by storing model weights in a lower precision data type. However, quantization may have varying impact on video quality depending on the video model.</p>
-<p>Refer to the <a href="https://huggingface.co/docs/diffusers/quantization/overview">Quantization</a> overview to learn more about supported quantization backends and selecting a quantization backend that supports your use case. The example below demonstrates how to load a quantized [<code>SanaPipeline</code>] for inference with bitsandbytes.</p>
+<p>Refer to the <a href="../../quantization/overview">Quantization</a> overview to learn more about supported quantization backends and selecting a quantization backend that supports your use case. The example below demonstrates how to load a quantized [<code>SanaPipeline</code>] for inference with bitsandbytes.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">diffusers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BitsAndBytesConfig</span> <span class="k">as</span> <span class="n">DiffusersBitsAndBytesConfig</span><span class="p">,</span> <span class="n">SanaTransformer2DModel</span><span class="p">,</span> <span class="n">SanaPipeline</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BitsAndBytesConfig</span> <span class="k">as</span> <span class="n">BitsAndBytesConfig</span><span class="p">,</span> <span class="n">AutoModel</span>

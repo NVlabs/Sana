@@ -841,6 +841,9 @@ class SanaMSVideo(Sana):
                 nn.init.zeros_(block.cross_attn.image_kv_linear.weight)
                 nn.init.zeros_(block.cross_attn.image_kv_linear.bias)
 
+            if hasattr(block, "attn") and hasattr(block.attn, "_init_gdn_gates_for_linear_equiv"):
+                block.attn._init_gdn_gates_for_linear_equiv()
+
     def load_state_dict(self, state_dict, strict=True):
         """when the channel in FFN is not the same as the checkpoint, load the checkpoint"""
         current_state_dict = self.state_dict()

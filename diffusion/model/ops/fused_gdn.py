@@ -503,6 +503,126 @@ def fused_qk_inv_rms(
     return q_inv_rms, k_inv_rms
 
 
+@triton.jit
+def _fused_bidi_merge_kernel(
+    num_fwd_ptr,
+    num_bwd_ptr,
+    den_fwd_ptr,
+    den_bwd_ptr,
+    gate_ptr,
+    out_ptr,
+    B,
+    N,
+    H,
+    D,
+    eps,
+    snum_b,
+    snum_n,
+    snum_h,
+    snum_d,
+    sden_b,
+    sden_h,
+    sden_n,
+    APPLY_GATE: tl.constexpr,
+    PRE_SUMMED: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_D: tl.constexpr,
+):
+    pid_bh = tl.program_id(0)
+    pid_n = tl.program_id(1)
+    b = pid_bh // H
+    h = pid_bh % H
+
+    offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    offs_d = tl.arange(0, BLOCK_D)
+    mask_n = offs_n < N
+    mask_d = offs_d < D
+    mask_nd = mask_n[:, None] & mask_d[None, :]
+
+    num_base = b * snum_b + offs_n[:, None] * snum_n + h * snum_h + offs_d[None, :] * snum_d
+    nf = tl.load(num_fwd_ptr + num_base, mask=mask_nd, other=0.0).to(tl.float32)
+    den_base = b * sden_b + h * sden_h + offs_n * sden_n
+    df = tl.load(den_fwd_ptr + den_base, mask=mask_n, other=0.0).to(tl.float32)
+
+    if PRE_SUMMED:
+        num_total = nf
+        den_total = df + eps
+    else:
+        nb = tl.load(num_bwd_ptr + num_base, mask=mask_nd, other=0.0).to(tl.float32)
+        db = tl.load(den_bwd_ptr + den_base, mask=mask_n, other=0.0).to(tl.float32)
+        num_total = nf + nb
+        den_total = df + db + eps
+    out_val = num_total / den_total[:, None]
+
+    if APPLY_GATE:
+        g = tl.load(gate_ptr + num_base, mask=mask_nd, other=0.0).to(tl.float32)
+        silu_g = g * (1.0 / (1.0 + tl.exp(-g)))
+        out_val = out_val * silu_g
+
+    tl.store(out_ptr + num_base, out_val.to(tl.bfloat16), mask=mask_nd)
+
+
+def fused_bidi_merge(
+    num_fwd: torch.Tensor,
+    num_bwd: torch.Tensor | None,
+    den_fwd: torch.Tensor,
+    den_bwd: torch.Tensor | None,
+    eps: float,
+    gate: torch.Tensor | None = None,
+) -> torch.Tensor:
+    pre_summed = num_bwd is None
+    assert (num_bwd is None) == (den_bwd is None), "num_bwd/den_bwd must both be None or both provided"
+    if not pre_summed:
+        assert num_fwd.shape == num_bwd.shape and den_fwd.shape == den_bwd.shape
+        assert num_fwd.dtype == num_bwd.dtype and den_fwd.dtype == den_bwd.dtype
+    B, N, H, D = num_fwd.shape
+    out = torch.empty(
+        B, N, H, D, device=num_fwd.device, dtype=(torch.float32 if num_fwd.dtype == torch.float32 else torch.bfloat16)
+    )
+    BLOCK_D = triton.next_power_of_2(D)
+    BLOCK_N = 64
+    grid = (B * H, triton.cdiv(N, BLOCK_N))
+    if gate is not None:
+        assert gate.shape == (B, N, H, D), f"gate shape {gate.shape} != {(B, N, H, D)}"
+        gate_arg = gate
+        apply_gate = 1
+    else:
+        gate_arg = num_fwd
+        apply_gate = 0
+    num_bwd_arg = num_bwd if num_bwd is not None else num_fwd
+    den_bwd_arg = den_bwd if den_bwd is not None else den_fwd
+    _fused_bidi_merge_kernel[grid](
+        num_fwd,
+        num_bwd_arg,
+        den_fwd,
+        den_bwd_arg,
+        gate_arg,
+        out,
+        B,
+        N,
+        H,
+        D,
+        float(eps),
+        num_fwd.stride(0),
+        num_fwd.stride(1),
+        num_fwd.stride(2),
+        num_fwd.stride(3),
+        den_fwd.stride(0),
+        den_fwd.stride(1),
+        den_fwd.stride(2),
+        APPLY_GATE=apply_gate,
+        PRE_SUMMED=1 if pre_summed else 0,
+        BLOCK_N=BLOCK_N,
+        BLOCK_D=BLOCK_D,
+    )
+    return out
+
+
+# =====================================================================
+#  Single-direction GDN entry point (delegates to chunkwise)
+# =====================================================================
+
+
 def fused_gdn_func(
     qkv: torch.Tensor,  # (B, N, 3, H, D)
     q_inv_rms: torch.Tensor,  # (B, N) float32

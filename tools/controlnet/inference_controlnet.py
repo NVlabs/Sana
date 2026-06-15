@@ -411,7 +411,7 @@ if __name__ == "__main__":
         )
         os.umask(0o000)
         sample, control_signal = results["samples"][0], results["control_signal"][0]
-        # 混合mask和image
+        # Blend the mask and image.
         if args.blend_alpha > 0:
             print(f"blend image and mask with alpha: {args.blend_alpha}")
             sample = sample * (1 - args.blend_alpha) + control_signal * args.blend_alpha

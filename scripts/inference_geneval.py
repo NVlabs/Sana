@@ -223,7 +223,9 @@ def visualize(sample_steps, cfg_scale, pag_scale):
                 caption_token = tokenizer(
                     prompts_all, max_length=max_length_all, padding="max_length", truncation=True, return_tensors="pt"
                 ).to(device)
-                select_index = [0] + list(range(-config.text_encoder.model_max_length + 1, 0))  # 第一个bos和最后N-1个
+                select_index = [0] + list(
+                    range(-config.text_encoder.model_max_length + 1, 0)
+                )  # First BOS token and the last N - 1 tokens
                 caption_embs = text_encoder(caption_token.input_ids, caption_token.attention_mask)[0][:, None][
                     :, :, select_index
                 ]

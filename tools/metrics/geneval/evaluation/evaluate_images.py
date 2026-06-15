@@ -293,10 +293,10 @@ def tracker_ori(df_dict, label=""):
         for exp_name, df in df_dict.items():
             steps = []
 
-            # 在函数内初始化wandb表格
+            # Initialize the wandb table inside the function.
             wandb_table = wandb.Table(columns=["Metric", "Value"])
 
-            # 计算总图像数、总提示数、正确图像百分比和正确提示百分比
+            # Compute total images, total prompts, correct image percentage, and correct prompt percentage.
             total_images = len(df)
             total_prompts = len(df.groupby("metadata"))
             percentage_correct_images = df["correct"].mean()
@@ -314,24 +314,24 @@ def tracker_ori(df_dict, label=""):
                 task_result = f"{tag:<16} = {task_score:.2%} ({task_df['correct'].sum()} / {len(task_df)})"
                 print(task_result)
 
-                # 将任务得分添加到表格中
+                # Add the task score to the table.
                 wandb_table.add_data(tag, f"{task_score:.2%} ({task_df['correct'].sum()} / {len(task_df)})")
 
-            # 计算整体得分
+            # Compute the overall score.
             overall_score = np.mean(task_scores)
             print(f"Overall score (avg. over tasks): {overall_score:.5f}")
 
-            # 处理exp_name中的步骤
+            # Extract the step from exp_name.
             match = re.search(r".*epoch(\d+)_step(\d+).*", exp_name)
             if match:
                 epoch_name, step_name = match.groups()
                 step = int(step_name)
                 steps.append(step)
 
-                # 记录每个步骤和对应的整体得分
+                # Log each step and its corresponding overall score.
                 run.log({"custom_step": step, f"GenEval_Overall_Score({label})": overall_score})
 
-            # 记录表格到wandb
+            # Log the table to wandb.
             run.log({"Metrics Table": wandb_table})
 
     else:

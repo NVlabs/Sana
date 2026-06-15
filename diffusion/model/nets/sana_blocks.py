@@ -1655,7 +1655,7 @@ class WindowAttention(FlashAttention):
 
         if remainder_t > 0 or remainder_h > 0 or remainder_w > 0:
             if self.pad_if_needed:
-                # 向上调整window尺寸以覆盖所有tokens
+                # Round window sizes up to cover all tokens.
                 temporal_window = (T + self.temporal_window_count - 1) // self.temporal_window_count
                 spatial_window_h = (H + self.spatial_window_h_count - 1) // self.spatial_window_h_count
                 spatial_window_w = (W + self.spatial_window_w_count - 1) // self.spatial_window_w_count
@@ -1712,7 +1712,7 @@ class WindowAttention(FlashAttention):
             k = k.view(B, T, H, W, self.num_heads, C // self.num_heads)
             v = v.view(B, T, H, W, self.num_heads, C // self.num_heads)
 
-        # 5. Window attention计算
+        # 5. Compute window attention.
         num_windows_t = self.temporal_window_count
         num_windows_h = self.spatial_window_h_count
         num_windows_w = self.spatial_window_w_count

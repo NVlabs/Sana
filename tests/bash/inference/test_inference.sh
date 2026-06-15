@@ -9,6 +9,9 @@ python scripts/inference.py \
     --config=configs/sana_config/1024ms/Sana_1600M_img1024.yaml \
     --model_path=hf://Efficient-Large-Model/Sana_1600M_1024px/checkpoints/Sana_1600M_1024px.pth
 
+mkdir -p tools/controlnet/annotator/ckpts
+hf download lllyasviel/Annotators ControlNetHED.pth --local-dir tools/controlnet/annotator/ckpts
+
 python tools/controlnet/inference_controlnet.py \
     --config=configs/sana_controlnet_config/Sana_600M_img1024_controlnet.yaml \
     --model_path=hf://Efficient-Large-Model/Sana_600M_1024px_ControlNet_HED/checkpoints/Sana_600M_1024px_ControlNet_HED.pth \
@@ -61,3 +64,19 @@ python inference_video_scripts/wm/inference_sana_wm_streaming.py \
     --num_frames=25 \
     --no_compile \
     --streaming_preset=ultrafast
+
+python inference_video_scripts/v2v/inference_sana_streaming.py \
+    --mode=bidirectional_short \
+    --config=configs/sana_streaming/sana_streaming_bidirectional_2b_720p.yaml \
+    --model_path=hf://Efficient-Large-Model/SANA-Streaming_bidirectional/dit/sana_bidirectional_short.pth \
+    --prompt="Remove the thick, textured gold hoop earrings from the woman's ears. Carefully reconstruct the exposed earlobes to match her natural skin tone and texture. Ensure the lighting and soft shadows on the newly bare ears blend seamlessly with the rest of her face, leaving no trace or reflection of the metallic jewelry behind." \
+    --video_path=hf://Efficient-Large-Model/SANA-Streaming/source/00_local_editing_source.mp4 \
+    --output_dir=results/sana_streaming_bidirectional_ci
+
+python inference_video_scripts/v2v/inference_sana_streaming.py \
+    --mode=long_streaming \
+    --config=configs/sana_streaming/sana_streaming_2b_720p.yaml \
+    --model_path=hf://Efficient-Large-Model/SANA-Streaming/dit/sana_streaming_ar.pth \
+    --prompt="Transform the entire scene into a breathtaking Sci-Fi Art digital painting." \
+    --video_path=hf://Efficient-Large-Model/SANA-Streaming/source/09_style_transfer_source.mp4 \
+    --output_dir=results/sana_streaming_long_ci

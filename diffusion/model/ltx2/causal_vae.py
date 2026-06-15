@@ -211,6 +211,33 @@ class DecoderCacheManager:
             self._state.prev_latent_tail = z[:, :, -prepend_prev_latent_frames:, :, :].clone()
 
 
+class EncoderCacheManager:
+    """Manages encoder cache state for streaming video encoding."""
+
+    def __init__(self):
+        self._feat_map: list = []
+
+    @property
+    def feat_map(self) -> list:
+        """Get the feature cache map."""
+        return self._feat_map
+
+    def clear(self) -> None:
+        """Clear all cache state."""
+        self._feat_map = []
+
+    def check_pending_consumed(self) -> None:
+        """Verify that all temporal grouping state has been fully consumed."""
+        for state in self._feat_map:
+            if isinstance(state, dict) and state.get("pending") is not None:
+                pending = state["pending"]
+                if isinstance(pending, torch.Tensor) and pending.shape[2] > 0:
+                    raise RuntimeError(
+                        "Encoder ended with non-empty temporal pending state. "
+                        "Use chunk sizes aligned with temporal downsampling or process more frames."
+                    )
+
+
 # =============================================================================
 # Normalization Layers
 # =============================================================================
@@ -1570,6 +1597,7 @@ class AutoencoderKLCausalLTX2Video(ModelMixin, AutoencoderMixin, ConfigMixin, Fr
         self.tile_sample_stride_num_frames = 8
 
         # Cache managers for streaming inference
+        self._encoder_cache = EncoderCacheManager()
         self._decoder_cache = DecoderCacheManager()
 
         # Expose config-driven gradient checkpointing toggle for training
@@ -1611,9 +1639,23 @@ class AutoencoderKLCausalLTX2Video(ModelMixin, AutoencoderMixin, ConfigMixin, Fr
     # -------------------------------------------------------------------------
     # Cache Management (Legacy API for backward compatibility)
     # -------------------------------------------------------------------------
+    def clear_encoder_cache(self) -> None:
+        """Clear encoder cache (legacy API, delegates to cache manager)."""
+        self._encoder_cache.clear()
+
     def clear_decoder_cache(self) -> None:
         """Clear decoder cache (legacy API, delegates to cache manager)."""
         self._decoder_cache.clear()
+
+    @property
+    def _encoder_feat_map(self) -> list:
+        """Legacy property for encoder feature map."""
+        return self._encoder_cache.feat_map
+
+    @_encoder_feat_map.setter
+    def _encoder_feat_map(self, value: list):
+        """Setter for legacy encoder feature map property."""
+        self._encoder_cache._feat_map = value
 
     # -------------------------------------------------------------------------
     # Streaming Encode/Decode Methods
@@ -1735,24 +1777,85 @@ class AutoencoderKLCausalLTX2Video(ModelMixin, AutoencoderMixin, ConfigMixin, Fr
             )
             yield decoded_chunk
 
-    def encode(
-        self, x: torch.Tensor, causal: bool | None = None, return_dict: bool = True
+    @apply_forward_hook
+    def streaming_causal_encode(
+        self,
+        x: torch.Tensor,
+        causal: bool | None = True,
+        return_dict: bool = True,
+        reset_cache: bool = False,
     ) -> AutoencoderKLOutput | tuple[DiagonalGaussianDistribution]:
-        """Encode a batch of images into latents.
+        """Encode one streaming video chunk with persistent causal encoder cache.
+
+        Unlike ``encode``, this method does not split the input chunk and does
+        not clear encoder cache unless ``reset_cache`` is True.
+        """
+        if reset_cache:
+            self._encoder_cache.clear()
+
+        if self.use_slicing and x.shape[0] > 1:
+            raise ValueError(
+                "streaming_causal_encode does not support batch slicing; pass batch size 1 or disable slicing."
+            )
+        if x.shape[2] <= 0:
+            raise ValueError("Input video chunk must contain at least 1 frame.")
+
+        h = self.encoder(x, causal=causal, feat_cache=self._encoder_cache.feat_map, feat_idx=[0])
+        posterior = DiagonalGaussianDistribution(h)
+
+        if not return_dict:
+            return (posterior,)
+        return AutoencoderKLOutput(latent_dist=posterior)
+
+    @apply_forward_hook
+    def encode(
+        self,
+        x: torch.Tensor,
+        causal: bool | None = True,
+        return_dict: bool = True,
+    ) -> AutoencoderKLOutput | tuple[DiagonalGaussianDistribution]:
+        """Encode a full video by iterating over temporal chunks with persistent encoder cache.
 
         Args:
-            x: Input batch of images [B, C, T, H, W].
+            x: Input video tensor [B, C, T, H, W]
             causal: Whether to use causal encoding.
-            return_dict: Whether to return a dict or tuple.
+            return_dict: Whether to return dict or tuple.
 
         Returns:
-            The latent representations of the encoded videos.
+            AutoencoderKLOutput containing latent distribution.
         """
+        chunk_num_frames = self.temporal_compression_ratio
+        num_frames = x.shape[2]
+        first_chunk_num_frames = num_frames % self.temporal_compression_ratio
+
         if self.use_slicing and x.shape[0] > 1:
-            encoded_slices = [self._encode(x_slice, causal=causal) for x_slice in x.split(1)]
-            h = torch.cat(encoded_slices)
+            raise ValueError(
+                "encode_full_video_with_cache does not support batch slicing; pass batch size 1 or disable slicing."
+            )
+
+        self._encoder_cache.clear()
+
+        encoded_chunks = []
+        start = 0
+        step = first_chunk_num_frames if first_chunk_num_frames > 0 else chunk_num_frames
+        while start < num_frames:
+            end = min(start + step, num_frames)
+            encoded_chunk = self.encoder(
+                x[:, :, start:end, :, :],
+                causal=causal,
+                feat_cache=self._encoder_cache.feat_map,
+                feat_idx=[0],
+            )
+            encoded_chunks.append(encoded_chunk)
+            start = end
+            step = chunk_num_frames
+
+        if len(encoded_chunks) == 1:
+            h = encoded_chunks[0]
         else:
-            h = self._encode(x, causal=causal)
+            h = torch.cat(encoded_chunks, dim=2)
+
+        self._encoder_cache.check_pending_consumed()
         posterior = DiagonalGaussianDistribution(h)
 
         if not return_dict:
@@ -2044,6 +2147,46 @@ class AutoencoderKLCausalLTX2Video(ModelMixin, AutoencoderMixin, ConfigMixin, Fr
         if not return_dict:
             return (dec,)
 
+        return DecoderOutput(sample=dec)
+
+    def decode_chunk_tile(
+        self, z: torch.Tensor, temb: torch.Tensor | None, causal: bool | None = None, return_dict: bool = True
+    ) -> DecoderOutput | torch.Tensor:
+        """Decode latent videos with temporal-only tiling.
+
+        This is used by SANA-Streaming inference with the public LTX-2 VAE
+        weights. It avoids spatial tiling and only chunks along latent time,
+        matching the release recipe used for long 720p V2V editing.
+        """
+        batch_size, num_channels, num_frames, height, width = z.shape
+        del batch_size, num_channels, height, width
+
+        num_sample_frames = (num_frames - 1) * self.temporal_compression_ratio + 1
+        tile_latent_min_num_frames = self.tile_sample_min_num_frames // self.temporal_compression_ratio
+        tile_latent_stride_num_frames = self.tile_sample_stride_num_frames // self.temporal_compression_ratio
+        blend_num_frames = self.tile_sample_min_num_frames - self.tile_sample_stride_num_frames
+
+        row = []
+        for i in range(0, num_frames, tile_latent_stride_num_frames):
+            tile = z[:, :, i : i + tile_latent_min_num_frames + 1, :, :]
+            decoded = self.decoder(tile, temb, causal=causal)
+            if i > 0:
+                decoded = decoded[:, :, 1:, :, :]
+            row.append(decoded)
+
+        result_row = []
+        for i, tile in enumerate(row):
+            if i > 0:
+                tile = self.blend_t(row[i - 1], tile, blend_num_frames)
+                tile = tile[:, :, : self.tile_sample_stride_num_frames, :, :]
+                result_row.append(tile)
+            else:
+                result_row.append(tile[:, :, : self.tile_sample_stride_num_frames + 1, :, :])
+
+        dec = torch.cat(result_row, dim=2)[:, :, :num_sample_frames]
+
+        if not return_dict:
+            return (dec,)
         return DecoderOutput(sample=dec)
 
     def _temporal_tiled_encode(self, x: torch.Tensor, causal: bool | None = None) -> torch.Tensor:

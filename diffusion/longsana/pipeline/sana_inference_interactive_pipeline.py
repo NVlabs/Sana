@@ -221,7 +221,9 @@ class SanaInferenceInteractivePipeline:
         chunk_prompt_indices: List[int] = []
         if prompt_blocks is not None:
             if sum(prompt_blocks) != num_chunks:
-                raise ValueError(f"prompt_blocks之和({sum(prompt_blocks)})必须等于chunk数量({num_chunks})")
+                raise ValueError(
+                    f"sum(prompt_blocks) ({sum(prompt_blocks)}) must equal the number of chunks ({num_chunks})"
+                )
             for p_idx, cnt in enumerate(prompt_blocks):
                 chunk_prompt_indices.extend([p_idx] * int(cnt))
         elif num_segments == num_chunks:

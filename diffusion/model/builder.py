@@ -189,6 +189,20 @@ def get_vae(name, model_path, device="cuda", dtype=None, config=None):
         vae = AutoencoderKLCausalLTX2Video.from_pretrained(config.vae_pretrained, torch_dtype=dtype).to(device)
         vae.eval()
         return vae
+    elif "LTX2VAE_chunk_tile" in name:
+        # Public LTX-2 VAE loaded through the local causal wrapper so long V2V
+        # inference can decode with temporal-only chunk tiling.
+        from diffusion.model.ltx2.causal_vae import AutoencoderKLCausalLTX2Video
+
+        assert config is not None, "config.vae is required for LTX2VAE_chunk_tile"
+        print(colored(f"[LTX2VAE_chunk_tile] Loading model from {config.vae_pretrained}", attrs=["bold"]))
+        vae = (
+            AutoencoderKLCausalLTX2Video.from_pretrained(config.vae_pretrained, subfolder="vae", torch_dtype=dtype)
+            .to(device)
+            .eval()
+        )
+        vae.enable_tiling(tile_sample_min_num_frames=24, tile_sample_stride_num_frames=8)
+        return vae
     elif "LTX2VAE_diffusers" in name:
         # Use diffusers AutoencoderKLLTX2Video for LTX2
         assert config is not None, "config.vae is required for LTX2VAE_diffusers"
@@ -316,13 +330,16 @@ def vae_encode(name, vae, images, sample_posterior=True, device="cuda", cache_ke
         ae = vae
         z = ae.encode(images.to(device))
         z = torch.stack(z, dim=0)
+    elif "LTX2VAE_chunk_tile" in name:
+        posterior = vae.encode(images.to(device=vae.device, dtype=vae.dtype), causal=True).latent_dist
+        z = posterior.mode()
+        latents_mean = vae.latents_mean.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
+        latents_std = vae.latents_std.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
+        z = (z - latents_mean) * vae.config.scaling_factor / latents_std
     elif "LTX2VAE_diffusers" in name:
-        # Covers both bidirectional ("LTX2VAE_diffusers") and causal
-        # ("LTX2VAE_diffusers_causal") variants — they share an identical
-        # encoder + latents_mean/std/scaling_factor contract.
+        # Diffusers LTX-2 VAE uses full-video encode.
         posterior = vae.encode(images.to(device=vae.device, dtype=vae.dtype)).latent_dist
         z = posterior.mode()
-        # Normalize latents: z = (z - mean) / std * scaling_factor
         latents_mean = vae.latents_mean.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
         latents_std = vae.latents_std.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
         z = (z - latents_mean) * vae.config.scaling_factor / latents_std
@@ -370,6 +387,12 @@ def vae_decode(name, vae, latent):
         samples = vae.decode(latent)
     elif "Wan2_2_VAE" in name:
         samples = vae.decode(latent)
+    elif "LTX2VAE_chunk_tile" in name:
+        latents_mean = vae.latents_mean.view(1, -1, 1, 1, 1).to(latent.device, latent.dtype)
+        latents_std = vae.latents_std.view(1, -1, 1, 1, 1).to(latent.device, latent.dtype)
+        latent = latent * latents_std / vae.config.scaling_factor + latents_mean
+        latent = latent.to(vae.dtype)
+        samples = vae.decode_chunk_tile(latent, temb=None, causal=False, return_dict=False)[0]
     elif "LTX2VAE_diffusers" in name:
         # Covers both bidirectional ("LTX2VAE_diffusers") and causal
         # ("LTX2VAE_diffusers_causal") variants — they share the same

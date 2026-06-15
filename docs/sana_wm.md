@@ -391,13 +391,10 @@ The Sana text encoder (`gemma-2-2b-it`) is fetched separately from
 ## 📝 BibTeX
 
 ```bibtex
-@misc{zhu2026sanawm,
-      title={SANA-WM: Efficient Minute-Scale World Modeling with Hybrid Linear Diffusion Transformer},
-      author={Haoyi Zhu and Haozhe Liu and Yuyang Zhao and Tian Ye and Junsong Chen and Jincheng Yu and Tong He and Song Han and Enze Xie},
-      year={2026},
-      eprint={2605.15178},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2605.15178},
+@article{zhu2026sana,
+  title={Sana-wm: Efficient minute-scale world modeling with hybrid linear diffusion transformer},
+  author={Zhu, Haoyi and Liu, Haozhe and Zhao, Yuyang and Ye, Tian and Chen, Junsong and Yu, Jincheng and He, Tong and Han, Song and Xie, Enze},
+  journal={arXiv preprint arXiv:2605.15178},
+  year={2026}
 }
 ```

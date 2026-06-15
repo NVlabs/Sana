@@ -781,10 +781,10 @@ def split_and_recombine(lst, n):
 
     for part in unique_parts:
         part_list = [item for item in lst if extract_prefix(item) == part]
-        chunk_size = max(1, len(part_list) // n)  # 确保 chunk_size 至少为 1
+        chunk_size = max(1, len(part_list) // n)  # Ensure chunk_size is at least 1.
         chunks = [part_list[i * chunk_size : (i + 1) * chunk_size] for i in range(n)]
 
-        # 处理最后一个 chunk，如果数量不均匀，将剩余的元素添加到最后一个 chunk
+        # Handle the last chunk; if counts are uneven, append the remaining elements to it.
         if len(part_list) % n != 0:
             chunks[-1].extend(part_list[n * chunk_size :])
 

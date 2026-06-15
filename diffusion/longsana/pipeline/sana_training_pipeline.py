@@ -10,7 +10,7 @@ from diffusion.model.nets.basic_modules import CachedGLUMBConvTemp
 from diffusion.model.nets.sana_blocks import CachedCausalAttention
 
 
-# 功能：生成整个长视频
+# Generate the full long video.
 class SanaTrainingPipeline:
     def __init__(
         self,
@@ -53,7 +53,7 @@ class SanaTrainingPipeline:
         self.context_noise = context_noise
 
         self.flow_shift = float(kwargs.get("timestep_shift", 3.0))
-        # KV cache相关
+        # KV-cache state.
         self.chunk_indices = None
         self.kv_cache = None
         self.cached_modules = None
@@ -94,9 +94,9 @@ class SanaTrainingPipeline:
             "conditional_info_real": None,
             "unconditional_info_real": None,
             "chunk_indices": chunk_indices,
-            # "has_switched": False,  # 跟踪是否已经切换过prompt
-            # "previous_frames": None,  # 存储上一次生成的帧，用于重叠（最多21帧）
-            # "temp_max_length": None,  # 当前序列的临时最大长度
+            # "has_switched": False,  # Track whether the prompt has already switched.
+            # "previous_frames": None,  # Store previous frames for overlap, up to 21 frames.
+            # "temp_max_length": None,  # Temporary maximum length for the current sequence.
         }
 
     def reach_max_frames(self) -> bool:
@@ -428,7 +428,7 @@ class SanaTrainingPipeline:
                         latent_model_input = rearrange(latent_model_input, "b f c h w -> b c f h w")
 
                 else:
-                    # 直接使用 (B, C, T, H, W) 作为 SANA 输入 (B, C, F, H, W)
+                    # Use (B, C, T, H, W) directly as SANA input (B, C, F, H, W).
                     flow_pred_grad, pred_x0_grad, _ = self.generator(
                         noisy_image_or_video=latent_model_input,
                         condition=chunk_condition,
@@ -453,7 +453,7 @@ class SanaTrainingPipeline:
 
                     else:
                         pred_x0 = pred_x0_grad
-                        # 退出当前 chunk 的时间步循环
+                        # Exit the current chunk timestep loop.
                         break
 
             # immediately write to external KV cache: explicitly pass kv_cache, underlying returns updated kv_cache

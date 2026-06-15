@@ -1,0 +1,53 @@
+model:
+  model: SanaMSVideoV2V_2000M_P1_D20
+  image_size: 720
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_720_MS_DIV32
+  mixed_precision: bf16
+  fp32_attention: true
+  multi_scale: true
+  attn_type: V2VBiGDNAttention
+  softmax_ratio: 0.25
+  softmax_layer_indices:
+  softmax_attn_type: V2VGatedSoftmaxAttention
+  linear_head_dim: 112
+  ffn_type: GLUMBConvTemp
+  t_kernel_size: 3
+  mlp_acts:
+    - silu
+    - silu
+    -
+  mlp_ratio: 3
+  use_pe: true
+  pos_embed_type: wan_rope
+  qk_norm: true
+  cross_norm: true
+  class_dropout_prob: 0.1
+vae:
+  vae_type: LTX2VAE_diffusers
+  vae_pretrained: Lightricks/LTX-2
+  weight_dtype: bfloat16
+  vae_latent_dim: 128
+  vae_downsample_rate: 32
+  vae_stride: [8, 32, 32]
+  use_framewise_encoding: true
+  use_framewise_decoding: true
+  tile_sample_stride_num_frames: 64
+  tile_sample_min_num_frames: 96
+text_encoder:
+  text_encoder_name: gemma-2-2b-it
+  y_norm: true
+  y_norm_scale_factor: 0.01
+  model_max_length: 300
+  chi_prompt:
+    - 'Given a user prompt, generate an "Enhanced prompt" that provides detailed visual descriptions suitable for image generation. Evaluate the level of detail in the user prompt:'
+    - '- If the prompt is simple, focus on adding specifics about colors, shapes, sizes, textures, and spatial relationships to create vivid and concrete scenes.'
+    - '- If the prompt is already detailed, refine and enhance the existing details slightly without overcomplicating.'
+    - 'Please generate only the enhanced description for the prompt below and avoid including any additional commentary or evaluations:'
+    - 'User Prompt: '
+scheduler:
+  predict_flow_v: true
+  noise_schedule: linear_flow
+  pred_sigma: false
+  flow_shift: 3.0
+  inference_flow_shift: 8.0
+  vis_sampler: flow_dpm-solver

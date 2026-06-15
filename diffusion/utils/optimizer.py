@@ -432,7 +432,7 @@ class CAMEWrapper(torch.optim.Optimizer):
                     # Approximate calculation
                     res_approx = self._approx_sq_grad(exp_avg_res_row, exp_avg_res_col)
                     if layer_type == "1x1_conv":
-                        # 需要reshape回4D
+                        # Reshape back to 4D.
                         res_approx = res_approx.view(grad_shape[0], grad_shape[1], 1, 1)
                     update = res_approx.mul_(exp_avg)
                 else:

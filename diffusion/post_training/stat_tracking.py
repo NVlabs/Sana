@@ -77,9 +77,9 @@ def filter_top_bottom_k_gpu(data, unique_num, num_in_group, k=2):
     prompts = data["prompt_ids"]  # [N, L]
     advs = data["advantages"][:, 0]  # [N]
 
-    # 1. 纯 GPU 分组
-    # unique 能够识别 [N, 300] 中唯一的行
-    # inverse_indices: 形状 [N]，内容是 0~num_groups-1，表示每一行属于第几个 unique group
+    # 1. Pure GPU grouping.
+    # unique identifies unique rows in [N, 300].
+    # inverse_indices has shape [N] and values 0..num_groups-1, indicating each row's unique group.
     unique_prompts, inverse_indices = torch.unique(prompts, dim=0, return_inverse=True)
 
     num_groups = unique_prompts.shape[0]
@@ -88,49 +88,49 @@ def filter_top_bottom_k_gpu(data, unique_num, num_in_group, k=2):
     print(f"unique_num: {unique_num}, num_groups: {num_groups}")
     assert unique_num == num_groups, f"unique_num: {unique_num}, num_groups: {num_groups}"
 
-    # 2. 遍历每个组 (因为 group 数量很少，比如 6 个，Python 循环也没关系)
+    # 2. Iterate over each group; the group count is small, so a Python loop is acceptable.
     for group_idx in range(num_groups):
-        # 创建 mask：当前组的位置
+        # Create a mask for the current group.
         group_mask = inverse_indices == group_idx
 
-        # 获取当前组的全局索引
-        # nonzero 返回 [m, 1]，squeeze 变成 [m]
+        # Get the global indices for the current group.
+        # nonzero returns [m, 1]; squeeze converts it to [m].
         global_indices = torch.nonzero(group_mask).squeeze(1)
 
         current_count = global_indices.numel()
 
         assert current_count == num_in_group, f"current_count: {current_count}, num_in_group: {num_in_group}"
 
-        # 获取对应的 advantages
+        # Get the corresponding advantages.
         group_advs = advs[global_indices]
 
-        # 检查数量是否足够
+        # Check whether there are enough samples.
         if group_advs.shape[0] < 2 * k:
-            # 如果不够，可以根据策略选择跳过或报错，这里演示跳过
+            # If there are not enough samples, the policy could skip or error; this implementation errors.
             assert False, f"group_advs.shape[0]: {group_advs.shape[0]}, k: {k}"
 
-        # 3. 排序选 Top/Bottom
-        # argsort 得到的是组内相对索引
+        # 3. Sort and select Top/Bottom.
+        # argsort returns indices relative to the group.
         sorted_relative_indices = torch.argsort(group_advs)
 
-        # 映射回全局索引
+        # Map back to global indices.
         sorted_global_indices = global_indices[sorted_relative_indices]
 
-        # 选最小 k 个 (Bottom)
+        # Select the smallest k entries (Bottom).
         keep_indices.append(sorted_global_indices[:k])
-        # 选最大 k 个 (Top)
+        # Select the largest k entries (Top).
         keep_indices.append(sorted_global_indices[-k:])
 
-    # 4. 拼接索引并切片
+    # 4. Concatenate indices and slice.
     if len(keep_indices) > 0:
         final_indices = torch.cat(keep_indices)
-        # 可选：保持原来的 batch 顺序
+        # Optional: preserve the original batch order.
         final_indices, _ = torch.sort(final_indices)
     else:
-        # 极端情况：没有任何组满足条件
+        # Edge case: no group satisfies the condition.
         final_indices = torch.tensor([], device=prompts.device, dtype=torch.long)
 
-    # 5. 重构字典
+    # 5. Rebuild the dictionary.
     new_dict = {}
     n_total = prompts.shape[0]
     for key, val in data.items():

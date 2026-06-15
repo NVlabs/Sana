@@ -2,14 +2,12 @@
 """Model-agnostic acceleration search harness.
 
 Given a MODEL PROFILE (models/<id>.toml) and the generic SEARCH DIMENSIONS
-(loops/<dim>/dimension.toml), enumerate candidate acceleration configs and
-compose each against the model's declared seams (efficiency ModelSpec). The
-framework's compose() type-checks every candidate, so a dimension whose seam the
-model has not declared is auto-skipped. That is what makes the search
-model-agnostic: swap the profile, the eligible dimensions change automatically —
-the dimensions never name a model.
+(loops/<dim>/dimension.toml), report which method families are available and run
+lightweight compose diagnostics. This is not the search driver for subagents:
+native Codex goals start from search_space/ and inspect/edit inference code
+directly.
 
-This skeleton produces the eligible candidate SPACE (CPU-only). The eval +
+This skeleton produces a CPU-only launchability/diagnostic view. The eval +
 risk-tiering (low/mid/high vs baseline) is the GPU stage; see plan_eval() stub
 and docs/search-architecture.md.
 """
@@ -79,8 +77,6 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
     results = []
     for dim_id, dim in load_dimensions():
         kind = dim.get("kind", "runtime_technique")
-        req = set(dim.get("requires_capabilities", []))
-        dim_caps_ok = req <= caps
         for tech in dim.get("technique", []):
             name = tech["name"]
             cfgs = _grid(tech.get("search_space", {}))
@@ -103,28 +99,27 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
                     "candidates": len(cfgs),
                     "composable": ok,
                     "rejected": rej,
-                    "eligible": dim_caps_ok and ok > 0,
+                    "eligible": True,
+                    "compose_ready": ok > 0,
                     "reason": reason,
                 }
             )
 
     if verbose:
         print(f"# acceleration search — model '{model_id}' (spec={prof['spec']}, caps={sorted(caps)})")
-        ss = prof.get("seam_status", {})
-        if ss:
-            print("#   seam_status: " + ", ".join(f"{k}={v}" for k, v in ss.items())
-                  + "   (wiring: docs/model-onboarding.md)")
+        if prof.get("run_script"):
+            print(f"#   run_script: {prof['run_script']}")
         if not results:
             print("  (no loops/*/dimension.toml found yet)")
         for r in results:
-            mark = "OK  " if r["eligible"] else "skip"
+            mark = "RUN " if r["eligible"] else "skip"
             extra = f"  ({r['rejected']} rejected: {r['reason']})" if r["rejected"] else ""
             print(f"  [{mark}] {r['dimension']}/{r['technique']}: "
-                  f"{r['composable']}/{r['candidates']} composable{extra}")
+                  f"{r['composable']}/{r['candidates']} compose-diagnostic{extra}")
         elig = [r for r in results if r["eligible"]]
-        print(f"# {len(elig)} eligible technique-dimensions, "
+        print(f"# {len(elig)} launchable technique-dimensions, "
               f"{sum(r['composable'] for r in elig)} composable candidates "
-              f"(eval+tiering = GPU stage, stubbed)")
+              f"(compose is diagnostic; eval+tiering = GPU stage, stubbed)")
         # each dimension is a BOUNDED SEARCH LOOP; tiers define the per-tier quality budgets
         print("# search loop (per dimension):")
         for dim_id, dim in load_dimensions():
@@ -145,8 +140,9 @@ def plan_eval(model_id: str):  # noqa: D401
 
     Per dimension (its [loop]): up to max_iters iterations (early-stop after
     early_stop_patience with no Pareto improvement). Each iteration picks a config
-    from the search_space (LTX seeds first), renders a run bundle from the model
-    profile + cfg, launches via scripts/launch_candidate.py, collects
+    from search_space/ plus model traces/code, records it in a candidate
+    manifest, renders a run bundle from the model profile + cfg, launches via
+    scripts/launch_candidate.py, collects
     benchmark.json/quality.json, and compares latency + peak_mem + quality vs the
     profile [baseline]. A candidate is kept only if it beats baseline on latency
     OR peak_mem AND meets a tier's quality budget (evals/tiers.toml); it is binned

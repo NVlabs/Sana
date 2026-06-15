@@ -1,5 +1,10 @@
 # Launch Agent Protocol
 
+Deprecated for multi-agent acceleration search. Use
+`agents/orchestrator-entry.md` as the main-agent entry point; implementation and
+gate workers are launched as native Codex goals. This file only describes the
+older one-candidate launch/collect protocol.
+
 The launch agent is the top-level automation agent for `autovideo`.
 
 ## Mission

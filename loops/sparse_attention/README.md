@@ -1,9 +1,9 @@
 # Dimension: sparse_attention - PISA sparse attention
 
-A **model-agnostic search dimension**. It searches PISA/piecewise sparse
-attention backend configs and composes them against whichever model the search
-targets. It names no model in its schema; model specifics live in
-`models/<id>.toml` and `efficiency/models/<id>_spec.py`.
+A search dimension for sparse, routed, or approximate attention experiments.
+Native subagents should read `search_space/04_sparse_attention.md`, then inspect
+and modify Cosmos3 self-attention, cross-attention, and joint/GEN attention
+paths directly in their isolated worktree.
 
 ## What it searches
 
@@ -20,31 +20,12 @@ SGLang HQ backend env/config:
 the dense fallback available and use the existing `piecewise_attn` backend
 rather than reimplementing sparse attention in this repo.
 
-## Why it is model-agnostic
+## Exploration Mode
 
-`SparseAttention` writes the exclusive `ATTENTION_BACKEND` seam and requires
-`Capability.SWAPPABLE_ATTENTION`. The search calls
-`compose([build_transform("sparse_attention", **cfg)], spec)` for the target
-model. If that model has not declared the swappable-attention capability, the
-dimension is automatically skipped.
-
-To enable this dimension for a model, wire the model's attention-backend seam in
-its adapter, add `Capability.SWAPPABLE_ATTENTION` to
-`efficiency/models/<id>_spec.py`, and record the wiring state in
-`models/<id>.toml [seam_status]`. The dimension itself does not change.
-
-The current `cosmos3` profile intentionally does not declare
-`swappable_attention`, so `python search/search.py --model cosmos3` should show
-this dimension as `[skip]`. That is the correct model-agnostic behavior until
-the target model wires the seam.
-
-## Migrated LTX-2.3 priors
-
-`reference/sparse_attention/recipe.md` captures the proven LTX-2.3 PISA recipe:
-`piecewise_sparsity=0.9`, `piecewise_block_size=64`, and
-`piecewise_stage1_dense_steps=3`, with stage 2 routed to `piecewise_attn`.
-Those values seed `dimension.toml` as priors; `reference/sparse_attention/report.md` preserves
-the reported sparse-attention results and `references.md` records provenance.
+Do not wait for a predeclared swappable-attention seam. Inspect the live
+attention modules and dispatch paths, then implement the candidate directly
+where the backend or routing decision actually occurs. Main-agent integration
+can later normalize the implementation.
 
 ## Independent test
 
@@ -52,14 +33,13 @@ the reported sparse-attention results and `references.md` records provenance.
 ~/lustre/miniconda3/envs/sana/bin/python loops/sparse_attention/test_sparse_attention.py
 ```
 
-CPU-only; validates the transform through `efficiency` against a local fixture
-that declares `SWAPPABLE_ATTENTION`, and verifies that an unwired target spec is
-rejected by composition.
+CPU-only; validates the transform through `efficiency` against Cosmos3 and a
+local fixture that declares `SWAPPABLE_ATTENTION`.
 
 ## Run it in the search
 
 ```bash
-python search/search.py --model cosmos3   # skip until that model wires swappable_attention
+python search/search.py --model cosmos3
 ```
 
-See `acceptance.md` for promotion gates and `references.md` for provenance.
+See `acceptance.md` for promotion gates.

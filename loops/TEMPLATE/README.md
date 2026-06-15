@@ -12,9 +12,10 @@
 
 `eval.toml`
 
-## References
+## Search Space
 
-`references.md`
+Start from `search_space/` and the dimension's `exploration.md`. Do not add a
+per-dimension reference archive.
 
 ## Status
 

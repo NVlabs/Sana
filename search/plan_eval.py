@@ -165,10 +165,16 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
            gemini: bool = True) -> dict:
     """Collect a finished run, judge quality vs baseline, bin into a tier."""
     run_dir = Path(run_dir)
-    subprocess.run([sys.executable, str(REPO / "scripts/collect_run.py"), str(run_dir)],
-                   cwd=str(REPO), capture_output=True, text=True)
+    collect_cmd = [sys.executable, str(REPO / "scripts/collect_run.py"), str(run_dir)]
+    base_fr = sorted(Path(baseline_frames).glob("*.png")) if baseline_frames else []
+    for frame in base_fr:
+        collect_cmd.extend(["--baseline-frame", str(frame)])
+    subprocess.run(collect_cmd, cwd=str(REPO), capture_output=True, text=True)
     bench_p = run_dir / "outputs/benchmark.json"
     bench = json.load(open(bench_p)) if bench_p.exists() else {}
+    qp = run_dir / "outputs/quality.json"
+    quality = json.load(open(qp)) if qp.exists() else {}
+    quality_blockers = list(quality.get("promotion_blockers") or [])
     base = profile.get("baseline", {})
     cand_total = bench.get("total_s") or bench.get("denoise_s")
     base_total = base.get("total_s")
@@ -177,23 +183,29 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
     # Gemini verdict: prefer a rigorous pairwise judge (candidate frames vs the real
     # baseline frames); fall back to the collector's quality.json verdict.
     gem = None
-    qp = run_dir / "outputs/quality.json"
     cand_frames = sorted((run_dir / "outputs/frames").glob("*.png"))
-    base_fr = sorted(Path(baseline_frames).glob("*.png")) if baseline_frames else []
     if gemini and base_fr and cand_frames:
-        n = min(len(base_fr), len(cand_frames), 4)
+        total = min(len(base_fr), len(cand_frames))
+        n = min(total, 32)
         pj = run_dir / "outputs/quality_pairwise.json"
         cmd = [sys.executable, str(REPO / "tools/vision/nvidia_gemini_judge.py"),
-               "--out", str(pj), "--max-tokens", "1024"]
-        for i in range(n):
+               "--out", str(pj), "--max-tokens", "4096",
+               "--context",
+               "Pairwise tier check with stratified chronological frames. "
+               "Prioritize temporal flicker, patch-boundary discontinuity, "
+               "broken motion coherence, blur/detail loss, ghosting, snow/static, "
+               "and severe degradation."]
+        indices = [0] if n == 1 else [round(i * (total - 1) / (n - 1)) for i in range(n)]
+        for i in indices:
             cmd += ["--baseline-frame", str(base_fr[i]), "--candidate-frame", str(cand_frames[i])]
         subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
         if pj.exists():
             gem = json.load(open(pj))
     if gem is None and qp.exists():  # fall back to the collector's gemini verdict (nested)
-        q = json.load(open(qp))
-        gem = ((q.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
-    tier = tier_of(speedup, None, gem, tiers)
+        gem = ((quality.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
+    lpips_result = ((quality.get("judges") or {}).get("lpips") or {}).get("result") or {}
+    lpips_delta = lpips_result.get("max") if lpips_result.get("status") == "ok" else None
+    tier = None if quality_blockers else tier_of(speedup, None, gem, tiers, lpips_delta=lpips_delta)
     return {
         "run_dir": str(run_dir),
         "baseline_total_s": base_total,
@@ -201,9 +213,18 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
         "speedup": round(speedup, 4) if speedup else None,
         "gemini_overall": (gem or {}).get("overall"),
         "max_artifact_severity": max_gemini_severity(gem) if gem else None,
+        "quality_status": quality.get("status"),
+        "quality_blockers": quality_blockers,
+        "lpips_max": lpips_delta,
         "tier": tier,
-        "note": (None if tier else "no latency/mem improvement vs baseline -> not a tier winner "
-                 "(expected until a technique is wired into the model runtime)"),
+        "note": (
+            None if tier else (
+                "quality gates blocked promotion: " + ", ".join(quality_blockers)
+                if quality_blockers
+                else "no latency/mem improvement vs baseline -> not a tier winner "
+                "(expected until a technique is wired into the model runtime)"
+            )
+        ),
     }
 
 

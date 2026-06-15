@@ -10,37 +10,36 @@ everything else is generic.
 ```
 GENERIC (write once, every model):
   efficiency/                 the acceleration engine — Techniques/Transforms,
-                              ModelSpec contract, compose() type-check, schedules
-  loops/<dim>/dimension.toml  a SEARCH DIMENSION: technique + param search space +
-                              required capability. Never names a model.
-  search/search.py            enumerate (model x dimensions x configs) -> compose
+                              diagnostics, compose checks, schedules
+  loops/<dim>/dimension.toml  a SEARCH DIMENSION: method family + search axes +
+                              budget/quality metadata. Never names a model.
+  search/search.py            observe dimensions and run optional compose diagnostics
                               -> [GPU] eval vs baseline -> low/mid/high tiers
 
-MODEL-SPECIFIC (one small adapter per served model):
-  efficiency/models/<id>_spec.py   ModelSpec: the seams this model exposes (~50 LOC)
+MODEL/RUNTIME:
   models/<id>.toml                 profile: official config, baseline, run entry,
-                                   base env, per-seam wiring status
+                                   base env
+  Sol-LTX-Infer/                   live inference code that subagents inspect/edit
 ```
 
-Why this shape: the `efficiency` engine already separates a generic Technique
-from a tiny per-model `ModelSpec` (the engine type-checks the former against the
-latter). The search just lifts that one level up — dimensions are generic, the
-model is a parameter. Adding a served model = write a spec + a profile; the
-search auto-applies every dimension whose required seam the model declares.
+Why this shape: goal agents should not wait for a pre-exposed interface before
+trying an acceleration idea. The dimensions describe method families and quality
+contracts; each subagent reads the live inference code and implements a
+model-specific candidate directly. The `efficiency` engine and `ModelSpec`
+remain useful for smoke tests and merge diagnostics, but they do not gate launch.
 
-## Eligibility is automatic
-`compose([technique(cfg)], spec)` raises `CompositionError` when the model does
-not declare the seam a technique needs. The search catches that and skips the
-dimension for that model — surfaced in the search plan. So:
-- a model that declares `SWAPPABLE_ATTENTION` gets the sparse-attention dimension;
-- one that doesn't, automatically doesn't — no per-model edit to the dimension.
+## Launchability Is Main-Agent Policy
+`search/search.py` reports method families, loop budgets, and compose diagnostics.
+The main agent decides which dimensions to wake. A failed compose diagnostic is
+not a reason to skip exploration; it usually means the useful implementation
+should happen directly in `Sol-LTX-Infer/` before being normalized.
 
 ## Search pipeline
-1. Load `models/<id>.toml` + its `ModelSpec`.
-2. For each `loops/<dim>/dimension.toml` whose `requires_capabilities` ⊆ the
-   spec's capabilities: enumerate the `search_space` (the migrated LTX-2.3
-   proven configs are the `seeds`/priors).
-3. Compose each candidate against the spec (auto-reject incompatible).
+1. Load `models/<id>.toml` and observe available method families.
+2. For each dimension the main agent chooses to wake: spawn a native Codex goal
+   from `search_space/` plus `loops/<dim>/exploration.md`.
+3. The subagent inspects and modifies `Sol-LTX-Infer/` directly, then writes a
+   candidate manifest and artifacts. Compose checks are optional diagnostics.
 4. **(GPU stage)** Render a run bundle from the profile + cfg → existing
    `scripts/launch_candidate.py` → `scripts/collect_run.py` → `benchmark.json`/
    `quality.json` → compare vs the profile `[baseline]` → bin into low/mid/high
@@ -53,13 +52,13 @@ dimension for that model — surfaced in the search plan. So:
 - "integration search → low/mid/high" → step 4–5 here (eval + tiering), model as a
   parameter.
 - The model-specific wiring the plan implies (which token span, where the
-  attention seam is) → the per-model `ModelSpec`, the only place it lives.
+  attention path is) → discovered by subagents in inference code first, then
+  optionally normalized by the main agent during integration.
 
 ## Status
-CPU half (enumerate + compose + eligibility) is implemented + tested
+CPU observation and compose diagnostics are implemented + tested
 (`search/test_search.py`). GPU half (eval + tiering) is `plan_eval()` — wires the
-existing launcher/collector/eval-profile. Per-model seam wiring tracked in each
-`models/<id>.toml [seam_status]`.
+existing launcher/collector/eval-profile.
 
 ## Quality eval pipeline (per candidate) — what bins a config into a tier
 
@@ -69,8 +68,10 @@ stages; the verdict (plus latency + peak_mem) decides its tier (`evals/tiers.tom
 ```
 1. off_identity      guarded paths must be byte/numeric-identical to baseline when
                      the technique is OFF (the framework invariant).
-2. quantitative      LPIPS (frame + clip) vs baseline; frame metrics; PSNR diagnostic
-                     only (bf16 chaos floor -> never a hard gate).
+2. quantitative      PSNR/MSE/mean abs diff over extracted frames, temporal
+                     flicker and patch-boundary metrics, plus LPIPS over
+                     stratified frame pairs. Missing baseline frames or missing
+                     LPIPS blocks promotion.
 3. perceptual (REQUIRED)  NVIDIA-Gemini pairwise visual-artifact judge:
                      extract frames -> side_by_side vs baseline ->
                      tools/vision/nvidia_gemini_judge.py (rubric:
@@ -86,8 +87,10 @@ maps to a tier by `gemini_overall` + max new-artifact `severity` (see
 high = ≤medium severity (high severity is always rejected).
 
 The combined verdict (all three stages) + the (latency, peak_mem) improvement bin
-the candidate into the tightest (cleanest, low-first) tier it satisfies. Each dimension keeps the best
-config per tier; integration stacks per-tier winners.
+the candidate into the tightest (cleanest, low-first) tier it satisfies. The
+source of truth is structured JSON (`quality.json` and verdict JSON), never prose
+logs or release notes. Each dimension keeps the best config per tier; integration
+stacks per-tier winners.
 
 **Live-verified** on HSG: the Gemini judge runs against `inference-api.nvidia.com`
 (`gcp/google/gemini-3.5-flash`, `NVIDIA_API_KEY`); a self-vs-self baseline check

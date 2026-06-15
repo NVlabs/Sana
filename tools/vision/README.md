@@ -105,6 +105,25 @@ Successful output schema:
 }
 ```
 
+## Promotion Gate Notes
+
+`scripts/collect_run.py` now treats visual quality as structured gate data:
+
+- baseline frames are required for promotion;
+- frame extraction defaults to the official 189-frame Cosmos3 profile so
+  PSNR/MSE/mean absolute diff are audited across the whole sampled output;
+- pixel metrics include PSNR/MSE/mean absolute diff, sharpness, temporal delta
+  error, temporal jitter ratio, and multi-scale patch-boundary discontinuity
+  ratios when image dependencies are available;
+- LPIPS is required for promotion, and unavailable dependencies are recorded as
+- blocked quality rather than silently deferred. LPIPS receives stratified
+  chronological pairs plus worst-case pixel-drift pairs;
+- Gemini verdict JSON must be present in `quality.json` or the assessment
+  verdict, not only in prose logs. Gemini receives stratified + worst-case
+  frame pairs and, when available, baseline/candidate/side-by-side video inputs
+  to catch flicker, patch-level discontinuity, motion breakage, blur, ghosting,
+  snow/static, and severe temporal degradation.
+
 Unavailable output schema:
 
 ```json

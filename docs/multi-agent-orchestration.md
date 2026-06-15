@@ -19,6 +19,12 @@ workspace.
 
 ## Recommended Shape
 
+Run the main agent as a normal Codex orchestration session, not as a native goal.
+The main agent observes the whole system, decides which dimensions to wake,
+sends mid-run corrections, spawns independent gate agents, merges approved work,
+and releases resources. Native `/goal follow` is only for implementation and
+gate subagents.
+
 Use one root repo worktree per agent goal, each with its own initialized
 `Sol-LTX-Infer` submodule checkout. The current repo remains the coordinator;
 goal worktrees are disposable execution sandboxes.
@@ -54,10 +60,13 @@ create goal
   -> initialize submodule
   -> create submodule branch
   -> write goal.md/context.json
-  -> enter interactive agent mode
+  -> enter interactive Codex
+  -> send /goal follow <goal.md>
   -> launch candidate
   -> collect run
+  -> spawn independent gate goal
   -> summarize and close
+  -> release session resources
 ```
 
 Root and submodule branches are separate because the root repo tracks orchestration
@@ -99,12 +108,13 @@ owner = "codex"
 root_branch = "codex/token-prune"
 submodule_branch = "codex/token-prune-sol"
 write_scope = [
-  "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py",
-  "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/efficiency/models/cosmos3_spec.py",
+  "Sol-LTX-Infer/",
 ]
 ```
 
-Agents should only write inside their declared scope.
+Agents should only write inside their declared scope, but that scope should
+normally expose the full inference repo so exploration is not blocked by missing
+interfaces.
 
 ## Slurm Isolation
 
@@ -121,16 +131,20 @@ cold or warm.
 
 ## Goal Mode Bridge
 
-Claude-to-Codex goal mode should not be a non-interactive fire-and-forget shell
-command if the target mode requires interactive approval. The bridge should:
+Goal mode must not be a non-interactive fire-and-forget shell command. The bridge
+should:
 
 1. create or select an isolated goal worktree
 2. write a goal prompt file
 3. open an interactive Codex session in that worktree
-4. pass the goal prompt as the initial instruction
-5. keep all run artifacts in that goal worktree
+4. send `/goal follow <goal.md>` inside the interactive session
+5. expose `status`, `capture`, `send`, `attach`, `stop`, and `release` controls
+6. keep all run artifacts in that goal worktree
 
-The current adapter lives at `tools/symposium/start_codex_goal.sh`. It validates
-the goal bundle and refuses to launch without a TTY and a Codex command.
+The adapter lives at `tools/symposium/start_codex_goal.sh`; the tmux-backed
+manager is `tools/symposium/codex_goal_session.py`. The main agent can run the
+manager from the coordinator checkout and pass `--worktree <agent-worktree>` so
+session state remains centrally visible while Codex edits and runs inside the
+agent's isolated worktree.
 
 See `docs/codex-goal-mode.md` for the bridge contract.

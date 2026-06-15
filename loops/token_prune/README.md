@@ -1,19 +1,18 @@
 # Dimension: token_prune - feature-norm token pruning
 
-A **model-agnostic search dimension**. It searches mid-loop token pruning
-configs and composes them against whatever model the search targets. It names
-no model; model specifics live in `models/<id>.toml` +
-`efficiency/models/<id>_spec.py`.
+A search dimension for token pruning, token masking, or token-routing
+experiments. Native subagents should read `search_space/02_token_pruning.md`,
+then inspect and modify the Cosmos3 inference path directly in their isolated
+worktree.
 
 ## What it searches
 
 `efficiency/techniques/token_prune.py` (`TokenPrune`) scores a model-declared
 prunable token segment, gathers the kept tokens before the transformer-block
 loop, runs the blocks on that shorter sequence, then scatters back to the
-original sequence length after the loop. The primary migrated recipe scores
-tokens by feature L2 norm (`method = "feat_norm"`), keeps the top fraction in
-ascending sequence order, and fills dropped tokens from the previous full hidden
-state (`compensation = "prev"`).
+original sequence length after the loop. Subagents are free to replace this
+framework helper with a direct inference-code experiment when that exposes the
+model-specific token layout more clearly.
 
 The dimension searches:
 
@@ -22,31 +21,15 @@ The dimension searches:
 - `compensation`: how dropped-token hidden states are filled during scatter.
 
 `keep_ratio >= 1.0` or an inactive schedule is the OFF path and leaves the
-baseline hidden states unchanged. The active dimension writes the exclusive
-`TOKEN_SET` seam, so only one token-set-changing technique can be active in a
-composed plan.
+baseline hidden states unchanged. Any active candidate must restore the full
+token layout cleanly before downstream computation observes it.
 
-## Why it's model-agnostic
+## Exploration Mode
 
-`TokenPrune` only requires a model to expose the `prunable_tokens` capability.
-The search calls `compose([build_technique("token_prune", **cfg)], spec)` for
-the target model; if that model has not declared the required seam, the
-dimension is skipped automatically. The dimension never chooses the token span
-itself.
-
-The per-model seam is the adapter's `prunable_segment` implementation and its
-profile status in `models/<id>.toml [seam_status].prunable_tokens`. A model
-should refine that segment to the generated video-token span, leaving prompt,
-text, or other non-video tokens outside the pruned range.
-
-## Migrated LTX-2.3 experience (the search prior)
-
-`reference/token_prune/recipe.md` records the LTX-2.3 stage-2 midpoint prune:
-`keep_ratio = 0.5`, `method = "feat_norm"`, `compensation = "prev"`, active on
-stage-2 steps `1-2` via `efficiency/presets.ltx_full_opt`. `reference/token_prune/report.md`
-records the warmed runtime result from `45.1s` to `41.1s`, approximately
-`1.10x` speedup, with OFF recovering the baseline path. Those values seed
-`dimension.toml`; the search remains free to evaluate neighboring ratios.
+Do not wait for a predeclared prunable-token seam. Inspect the real token layout,
+position tensors, masks, cross-attention inputs, and generated-video spans, then
+implement a candidate directly where it is safest. Main-agent integration can
+later normalize the implementation.
 
 ## Independent test
 
@@ -64,5 +47,5 @@ model-agnostic lives in `search/test_search.py`.
 python search/search.py --model <model-id>
 ```
 
-The target model profile decides whether this dimension is eligible,
-composable, or skipped.
+The main agent decides whether to launch this dimension. The CPU search output
+is diagnostic only and must not block direct inference-code exploration.

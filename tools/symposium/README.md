@@ -23,7 +23,7 @@ vague acceleration idea
 | `vendor/Symposium/` | Vendored upstream Symposium source files. |
 | `install_project_skills.py` | Install Symposium skills into this project root. |
 | `probe_goal_mode.py` | Check whether Symposium skills and interactive Codex goal-mode prerequisites are present. |
-| `prepare_goal.py` | Create a goal bundle with `goal.md`, `context.json`, and candidate reference. |
+| `prepare_goal.py` | Create a goal bundle with `goal.md`, `context.json`, and candidate manifest. |
 | `codex_goal_session.py` | Manage detached interactive Codex goal sessions through tmux. |
 | `start_claude_goal.sh` | Start an interactive Claude session with the goal prompt. |
 | `start_codex_goal.sh` | Guarded interactive adapter. It refuses to run without a TTY and Codex command. |
@@ -65,6 +65,9 @@ Codex launcher is available:
 export CODEX_GOAL_COMMAND="/absolute/path/to/codex -C /absolute/path/to/auto-video --no-alt-screen"
 ```
 
+The command must start interactive Codex. Goal text is not passed as a normal
+CLI prompt; managed sessions send `/goal follow <goal.md>` after the pane starts.
+
 ## Probe
 
 ```bash
@@ -85,7 +88,9 @@ The probe checks:
 python3 tools/symposium/prepare_goal.py \
   --goal-id sparse-attention \
   --candidate candidates/baseline.toml \
-  --objective "Use Symposium to refine the sparse-attention candidate into a bounded Codex goal."
+  --dimension sparse_attention \
+  --role implementation \
+  --objective "Explore sparse attention from search_space/ by directly inspecting and modifying Cosmos3 inference code."
 ```
 
 This writes:
@@ -96,6 +101,10 @@ goals/<goal-id>/
   context.json
   candidate.toml
 ```
+
+Each generated `goal.md` includes its own search-space-start section, required
+artifacts, write scope, and acceptance criteria. Subagents should not need to
+infer acceptance criteria from external orchestration docs.
 
 ## Start Codex Goal Mode
 
@@ -108,8 +117,9 @@ This script is intentionally guarded. It only starts an interactive session when
 - stdin/stdout are attached to a TTY
 - a Codex command is available through `PATH`, or `CODEX_GOAL_COMMAND` is set
 
-On this machine, `.symposium/goal-mode.env` points at the nvm-installed
-`@openai/codex` CLI and passes `goal.md` as the initial interactive prompt.
+Direct use starts interactive Codex and prints the native command to run:
+`/goal follow goals/<goal-id>/goal.md`. For unattended fanout, prefer the
+managed tmux session below, which sends that slash command automatically.
 
 ## Managed Codex Goal Sessions
 
@@ -120,6 +130,16 @@ Start a detached goal session:
 
 ```bash
 python3 tools/symposium/codex_goal_session.py start goals/<goal-id>
+```
+
+Start a detached goal session in an isolated worktree while keeping the session
+registry in the coordinator checkout:
+
+```bash
+python3 tools/symposium/codex_goal_session.py start \
+  --worktree output/fanout/<goal-id> \
+  --name <goal-id> \
+  goals/<goal-id>
 ```
 
 Check whether it is alive:
@@ -151,6 +171,13 @@ Stop the session:
 
 ```bash
 python3 tools/symposium/codex_goal_session.py stop goals/<goal-id>
+```
+
+Release resources and mark the session state released:
+
+```bash
+python3 tools/symposium/codex_goal_session.py release goals/<goal-id> \
+  --note "gate complete"
 ```
 
 Session metadata is written under `.symposium/scratch/codex-goal-sessions/`.

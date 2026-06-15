@@ -19,7 +19,9 @@ autovideo/
     rubrics/
   snippets/
     README.md
-    sol-ltx-infer-reference.md
+  search_space/
+    README.md
+    01_cache.md
   loops/
     README.md
     TEMPLATE/
@@ -58,12 +60,12 @@ autovideo/
 - cross-candidate reports
 - eval profiles and promotion gates
 - independent sub-loop folders
-- reference snippets copied from successful prior branches/reports
+- search-space method-family docs
 
 `Sol-LTX-Infer` owns:
 
 - SGLang diffusion runtime
-- Cosmos3 and LTX model code
+- Cosmos3 model code
 - acceleration framework implementation
 - Slurm scripts used by the implementation repo
 - kernels, quantization, cache, and sparse-attention code

@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import math
 import os
 import re
 import shutil
@@ -25,12 +26,13 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from statistics import fmean
 from typing import Any
 
 try:
     import tomllib
-except ModuleNotFoundError as exc:  # pragma: no cover - Python < 3.11
-    raise SystemExit("Python 3.11+ is required for tomllib TOML support") from exc
+except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
+    import tomli as tomllib
 
 
 ERROR_PATTERNS = (
@@ -63,6 +65,17 @@ LOG_TIMING_PATTERNS = {
     ),
 }
 NVIDIA_KEY_ENVS = ("NVIDIA_API_KEY", "NVIDIA_VISION_API_KEY", "API_KEY", "NGC_API_KEY")
+STRICT_QUALITY_JUDGES = ("lpips", "nvidia_gemini")
+DEFAULT_FRAME_COUNT = 189
+LPIPS_MAX_PAIRS = 48
+LPIPS_STRATIFIED_PAIRS = 32
+LPIPS_WORST_CASE_PAIRS = 16
+GEMINI_MAX_FRAME_PAIRS = 32
+GEMINI_STRATIFIED_PAIRS = 24
+GEMINI_WORST_CASE_PAIRS = 8
+GEMINI_VIDEO_MAX_FRAMES = 32
+GEMINI_VIDEO_FRAME_INTERVAL = 0.5
+PATCH_BOUNDARY_SIZES = (8, 16, 32)
 
 
 def project_root() -> Path:
@@ -438,6 +451,10 @@ def deferred(reason: str) -> dict[str, str]:
     return {"status": "deferred", "reason": reason}
 
 
+def blocked(reason: str) -> dict[str, str]:
+    return {"status": "blocked", "reason": reason}
+
+
 def have_nvidia_key() -> bool:
     return any(os.environ.get(name) for name in NVIDIA_KEY_ENVS)
 
@@ -447,38 +464,116 @@ def nvidia_helper_path() -> Path:
     return Path(os.environ.get("NVIDIA_VISION_HELPER", default)).expanduser()
 
 
+def resolve_baseline_frames(args: argparse.Namespace) -> list[str]:
+    frames = [str(Path(path).expanduser()) for path in (args.baseline_frame or [])]
+    baseline_run_dir = getattr(args, "baseline_run_dir", None)
+    if baseline_run_dir:
+        baseline_dir = Path(baseline_run_dir).expanduser()
+        frames_dir = baseline_dir / "outputs" / "frames"
+        frames.extend(str(path) for path in sorted(frames_dir.glob("f_*.png")))
+    # Keep order stable and remove duplicates.
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for frame in frames:
+        if frame not in seen:
+            deduped.append(frame)
+            seen.add(frame)
+    return deduped
+
+
+def paired_frames(frame_paths: list[Path], baseline_frames: list[str]) -> list[tuple[Path, Path]]:
+    baseline_paths = [Path(path).expanduser() for path in baseline_frames]
+    return list(zip(baseline_paths, frame_paths))
+
+
+def select_pairs(
+    pairs: list[tuple[Path, Path]],
+    limit: int,
+) -> list[tuple[Path, Path]]:
+    if len(pairs) <= limit:
+        return pairs
+    if limit <= 1:
+        return [pairs[0]]
+    selected = []
+    last = len(pairs) - 1
+    for i in range(limit):
+        selected.append(pairs[round(i * last / (limit - 1))])
+    return selected
+
+
+def select_stratified_and_worst_pairs(
+    pairs: list[tuple[Path, Path]],
+    stratified_limit: int,
+    worst_case_limit: int,
+    total_limit: int,
+) -> list[tuple[Path, Path]]:
+    """Select chronological coverage plus frames with largest pixel drift."""
+    selected: list[tuple[Path, Path]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(pair: tuple[Path, Path]) -> None:
+        key = (str(pair[0]), str(pair[1]))
+        if key not in seen and len(selected) < total_limit:
+            selected.append(pair)
+            seen.add(key)
+
+    for pair in select_pairs(pairs, min(stratified_limit, total_limit)):
+        add(pair)
+
+    if worst_case_limit <= 0 or len(selected) >= total_limit:
+        return selected
+
+    try:
+        import numpy as np  # type: ignore
+
+        scored: list[tuple[float, tuple[Path, Path]]] = []
+        for baseline, candidate in pairs:
+            ba = image_array(baseline)
+            ca = image_array(candidate)
+            if ba.shape != ca.shape:
+                continue
+            scored.append((float(np.abs(ca - ba).mean()), (baseline, candidate)))
+        for _score, pair in sorted(scored, key=lambda item: item[0], reverse=True)[:worst_case_limit]:
+            add(pair)
+    except Exception:
+        # Pixel dependencies are best-effort here; LPIPS/Gemini still receive the
+        # stratified chronological pairs.
+        return selected
+    return selected
+
+
 def run_lpips_judge(frame_paths: list[Path], baseline_frames: list[str], skip: bool) -> dict[str, Any]:
     if skip:
         return deferred("disabled")
     if not frame_paths:
-        return deferred("frames_missing")
+        return blocked("frames_missing")
     if not baseline_frames:
-        return deferred("baseline_frame_missing")
+        return blocked("baseline_frame_missing")
 
     tool = project_root() / "tools/vision/lpips_judge.py"
     if not tool.exists():
-        return deferred("tool_missing")
+        return blocked("tool_missing")
     missing = [
         module
         for module in ("torch", "lpips")
         if importlib.util.find_spec(module) is None
     ]
     if missing:
-        return {"status": "deferred", "reason": "dependencies_missing", "missing": missing}
+        return {"status": "blocked", "reason": "dependencies_missing", "missing": missing}
 
     with tempfile.TemporaryDirectory(prefix="autovideo-lpips-") as tmp:
         out_path = Path(tmp) / "lpips.json"
+        pairs = select_stratified_and_worst_pairs(
+            paired_frames(frame_paths, baseline_frames),
+            stratified_limit=LPIPS_STRATIFIED_PAIRS,
+            worst_case_limit=LPIPS_WORST_CASE_PAIRS,
+            total_limit=LPIPS_MAX_PAIRS,
+        )
+        cmd = [sys.executable, str(tool), "--out", str(out_path)]
+        for baseline, candidate in pairs:
+            cmd.extend(["--baseline-frame", str(baseline), "--candidate-frame", str(candidate)])
         proc = subprocess.run(
-            [
-                sys.executable,
-                str(tool),
-                "--baseline-frame",
-                str(Path(baseline_frames[0]).expanduser()),
-                "--candidate-frame",
-                str(frame_paths[0]),
-                "--out",
-                str(out_path),
-            ],
+            cmd,
             cwd=project_root(),
             text=True,
             stdout=subprocess.PIPE,
@@ -487,45 +582,79 @@ def run_lpips_judge(frame_paths: list[Path], baseline_frames: list[str], skip: b
         payload = load_json(out_path)
         if proc.returncode != 0:
             return {
-                "status": "failed",
+                "status": "blocked",
                 "returncode": proc.returncode,
                 "stderr": proc.stderr.strip(),
                 "result": payload,
             }
-        return {"status": "complete", "result": payload}
+        status = payload.get("status")
+        if status != "ok":
+            return {"status": "blocked", "reason": status or "lpips_not_ok", "result": payload}
+        return {"status": "complete", "result": payload, "pairs_scored": len(pairs)}
 
 
 def run_nvidia_gemini_judge(
     frame_paths: list[Path],
+    baseline_frames: list[str],
     candidate_id: str,
     skip: bool,
+    candidate_video: Path | None = None,
+    baseline_video: Path | None = None,
+    side_by_side_video: Path | None = None,
 ) -> dict[str, Any]:
     if skip:
         return deferred("disabled")
     if not frame_paths:
-        return deferred("frames_missing")
+        return blocked("frames_missing")
+    if not baseline_frames:
+        return blocked("baseline_frame_missing")
 
     tool = project_root() / "tools/vision/nvidia_gemini_judge.py"
     if not tool.exists():
-        return deferred("tool_missing")
+        return blocked("tool_missing")
     if not have_nvidia_key():
-        return deferred("api_key_missing")
+        return blocked("api_key_missing")
     helper = nvidia_helper_path()
     if not helper.exists():
-        return deferred("helper_missing")
+        return blocked("helper_missing")
 
     with tempfile.TemporaryDirectory(prefix="autovideo-gemini-") as tmp:
         out_path = Path(tmp) / "nvidia_gemini.json"
+        pairs = select_stratified_and_worst_pairs(
+            paired_frames(frame_paths, baseline_frames),
+            stratified_limit=GEMINI_STRATIFIED_PAIRS,
+            worst_case_limit=GEMINI_WORST_CASE_PAIRS,
+            total_limit=GEMINI_MAX_FRAME_PAIRS,
+        )
         cmd = [
             sys.executable,
             str(tool),
             "--out",
             str(out_path),
+            "--video-max-frames",
+            str(GEMINI_VIDEO_MAX_FRAMES),
+            "--video-frame-interval",
+            str(GEMINI_VIDEO_FRAME_INTERVAL),
             "--context",
-            f"Autovideo candidate run: {candidate_id}",
+            (
+                f"Autovideo candidate run: {candidate_id}. Images are provided "
+                "as matched baseline/candidate pairs in chronological order. "
+                "Videos, when present, are provided as baseline video first, "
+                "candidate video second, and side-by-side video third. Prioritize "
+                "temporal flicker/popping, patch-boundary instability, patch-level "
+                "texture mismatch, broken motion coherence, blur/detail loss, "
+                "ghosting/smearing, snow/static, and severe perceptual degradation."
+            ),
         ]
-        for frame in frame_paths[:4]:
-            cmd.extend(["--candidate-frame", str(frame)])
+        for baseline, candidate in pairs:
+            cmd.extend(["--baseline-frame", str(baseline)])
+            cmd.extend(["--candidate-frame", str(candidate)])
+        if baseline_video and baseline_video.exists():
+            cmd.extend(["--video", str(baseline_video)])
+        if candidate_video and candidate_video.exists():
+            cmd.extend(["--video", str(candidate_video)])
+        if side_by_side_video and side_by_side_video.exists():
+            cmd.extend(["--video", str(side_by_side_video)])
 
         proc = subprocess.run(
             cmd,
@@ -537,12 +666,166 @@ def run_nvidia_gemini_judge(
         payload = load_json(out_path)
         if proc.returncode != 0:
             return {
-                "status": "failed",
+                "status": "blocked",
                 "returncode": proc.returncode,
                 "stderr": proc.stderr.strip(),
                 "result": payload,
             }
-        return {"status": "complete", "result": payload}
+        if payload.get("overall") in (None, "inconclusive"):
+            return {"status": "blocked", "reason": "gemini_inconclusive", "result": payload}
+        return {"status": "complete", "result": payload, "pairs_scored": len(pairs)}
+
+
+def load_image_arrays():
+    try:
+        import numpy as np  # type: ignore
+        from PIL import Image  # type: ignore
+    except Exception as exc:
+        raise RuntimeError(f"image metric dependencies missing: {exc}") from exc
+    return np, Image
+
+
+def image_array(path: Path):
+    np, Image = load_image_arrays()
+    with Image.open(path) as img:
+        return np.asarray(img.convert("RGB"), dtype=np.float32)
+
+
+def mean_abs_gradient(arr) -> float:
+    import numpy as np  # type: ignore
+
+    dx = np.abs(arr[:, 1:, :] - arr[:, :-1, :]).mean() if arr.shape[1] > 1 else 0.0
+    dy = np.abs(arr[1:, :, :] - arr[:-1, :, :]).mean() if arr.shape[0] > 1 else 0.0
+    return float(dx + dy)
+
+
+def patch_boundary_score(arr, patch: int = 16) -> float:
+    import numpy as np  # type: ignore
+
+    scores = []
+    for x in range(patch, arr.shape[1], patch):
+        scores.append(np.abs(arr[:, x, :] - arr[:, x - 1, :]).mean())
+    for y in range(patch, arr.shape[0], patch):
+        scores.append(np.abs(arr[y, :, :] - arr[y - 1, :, :]).mean())
+    return float(np.mean(scores)) if scores else 0.0
+
+
+def patch_boundary_scores(arr) -> dict[int, float]:
+    return {patch: patch_boundary_score(arr, patch=patch) for patch in PATCH_BOUNDARY_SIZES}
+
+
+def build_off_identity(frame_paths: list[Path], baseline_frames: list[str]) -> dict[str, Any]:
+    pairs = paired_frames(frame_paths, baseline_frames)
+    if not frame_paths:
+        return blocked("frames_missing")
+    if not baseline_frames:
+        return blocked("baseline_frame_missing")
+    if not pairs:
+        return blocked("no_frame_pairs")
+    try:
+        np, _Image = load_image_arrays()
+        max_abs = 0.0
+        nonidentical = 0
+        for baseline, candidate in pairs:
+            ba = image_array(baseline)
+            ca = image_array(candidate)
+            if ba.shape != ca.shape:
+                return {"status": "failed", "reason": "shape_mismatch", "baseline": str(baseline), "candidate": str(candidate)}
+            diff = np.abs(ca - ba)
+            frame_max = float(diff.max())
+            max_abs = max(max_abs, frame_max)
+            if frame_max != 0.0:
+                nonidentical += 1
+        return {
+            "status": "ok" if nonidentical == 0 else "different",
+            "pairs": len(pairs),
+            "nonidentical_frames": nonidentical,
+            "max_abs_diff_uint8": max_abs,
+        }
+    except Exception as exc:
+        return {"status": "blocked", "reason": str(exc)}
+
+
+def build_pixel_metrics(frame_paths: list[Path], baseline_frames: list[str]) -> dict[str, Any]:
+    pairs = paired_frames(frame_paths, baseline_frames)
+    if not frame_paths:
+        return blocked("frames_missing")
+    if not baseline_frames:
+        return blocked("baseline_frame_missing")
+    if not pairs:
+        return blocked("no_frame_pairs")
+    try:
+        np, _Image = load_image_arrays()
+        mse_values: list[float] = []
+        mae_values: list[float] = []
+        psnr_values: list[float] = []
+        sharpness_ratios: list[float] = []
+        patch_ratios: list[float] = []
+        patch_ratios_by_size: dict[int, list[float]] = {patch: [] for patch in PATCH_BOUNDARY_SIZES}
+        baseline_prev = None
+        candidate_prev = None
+        temporal_delta_errors: list[float] = []
+        temporal_jitter_ratios: list[float] = []
+        for baseline, candidate in pairs:
+            ba = image_array(baseline)
+            ca = image_array(candidate)
+            if ba.shape != ca.shape:
+                return {"status": "blocked", "reason": "shape_mismatch", "baseline": str(baseline), "candidate": str(candidate)}
+            diff = ca - ba
+            mse = float(np.square(diff).mean())
+            mae = float(np.abs(diff).mean())
+            psnr = math.inf if mse == 0 else 20.0 * math.log10(255.0 / math.sqrt(mse))
+            base_sharp = mean_abs_gradient(ba)
+            cand_sharp = mean_abs_gradient(ca)
+            base_patch_scores = patch_boundary_scores(ba)
+            cand_patch_scores = patch_boundary_scores(ca)
+            per_size_patch_ratios = []
+            for patch in PATCH_BOUNDARY_SIZES:
+                ratio = cand_patch_scores[patch] / max(base_patch_scores[patch], 1e-8)
+                patch_ratios_by_size[patch].append(ratio)
+                per_size_patch_ratios.append(ratio)
+            mse_values.append(mse)
+            mae_values.append(mae)
+            psnr_values.append(psnr)
+            sharpness_ratios.append(cand_sharp / max(base_sharp, 1e-8))
+            patch_ratios.append(max(per_size_patch_ratios))
+            if baseline_prev is not None and candidate_prev is not None:
+                base_delta = ba - baseline_prev
+                cand_delta = ca - candidate_prev
+                temporal_delta_errors.append(float(np.abs(cand_delta - base_delta).mean()))
+                base_delta_mag = float(np.abs(base_delta).mean())
+                cand_delta_mag = float(np.abs(cand_delta).mean())
+                temporal_jitter_ratios.append(cand_delta_mag / max(base_delta_mag, 1e-8))
+            baseline_prev = ba
+            candidate_prev = ca
+        finite_psnr = [value for value in psnr_values if math.isfinite(value)]
+        return {
+            "status": "ok",
+            "pairs": len(pairs),
+            "mse_mean": fmean(mse_values),
+            "mse_max": max(mse_values),
+            "mean_abs_pixel_diff": fmean(mae_values),
+            "psnr_mean": fmean(finite_psnr) if finite_psnr else None,
+            "psnr_min": min(finite_psnr) if finite_psnr else None,
+            "sharpness_ratio_mean": fmean(sharpness_ratios),
+            "patch_boundary_ratio_mean": fmean(patch_ratios),
+            "patch_boundary_ratio_max": max(patch_ratios),
+            "patch_boundary_ratio_by_size_mean": {
+                str(patch): fmean(values) if values else 0.0
+                for patch, values in patch_ratios_by_size.items()
+            },
+            "patch_boundary_ratio_by_size_max": {
+                str(patch): max(values) if values else 0.0
+                for patch, values in patch_ratios_by_size.items()
+            },
+            "temporal_delta_error_mean": fmean(temporal_delta_errors) if temporal_delta_errors else 0.0,
+            "temporal_delta_error_max": max(temporal_delta_errors) if temporal_delta_errors else 0.0,
+            "temporal_jitter_ratio_mean": fmean(temporal_jitter_ratios) if temporal_jitter_ratios else 1.0,
+            "temporal_jitter_ratio_min": min(temporal_jitter_ratios) if temporal_jitter_ratios else 1.0,
+            "temporal_jitter_ratio_max": max(temporal_jitter_ratios) if temporal_jitter_ratios else 1.0,
+        }
+    except Exception as exc:
+        return {"status": "blocked", "reason": str(exc)}
 
 
 def build_quality(
@@ -552,6 +835,9 @@ def build_quality(
     frames: dict[str, Any],
     baseline_frames: list[str],
     skip_judges: bool,
+    candidate_video: Path | None = None,
+    baseline_video: Path | None = None,
+    side_by_side_video: Path | None = None,
 ) -> dict[str, Any]:
     frame_paths = sorted(frames_dir.glob("f_*.png")) if frames_dir.exists() else []
     frame_metrics: dict[str, Any]
@@ -569,21 +855,46 @@ def build_quality(
         }
 
     candidate_id = str(metadata.get("candidate_id", run_dir.name))
+    off_identity = build_off_identity(frame_paths, baseline_frames)
+    pixel_metrics = build_pixel_metrics(frame_paths, baseline_frames)
     judges = {
         "lpips": run_lpips_judge(frame_paths, baseline_frames, skip_judges),
         "nvidia_gemini": run_nvidia_gemini_judge(
             frame_paths,
+            baseline_frames,
             candidate_id,
             skip_judges,
+            candidate_video=candidate_video,
+            baseline_video=baseline_video,
+            side_by_side_video=side_by_side_video,
         ),
     }
+    promotion_blockers: list[str] = []
+    if not baseline_frames and not skip_judges:
+        promotion_blockers.append("baseline_frames_missing")
+    for name, result in judges.items():
+        if name in STRICT_QUALITY_JUDGES and result.get("status") != "complete":
+            promotion_blockers.append(f"{name}:{result.get('reason', result.get('status', 'missing'))}")
+    if pixel_metrics.get("status") != "ok" and not skip_judges:
+        promotion_blockers.append(f"pixel_metrics:{pixel_metrics.get('reason', pixel_metrics.get('status'))}")
     return {
-        "status": "available" if frame_paths else "deferred",
+        "status": "blocked_quality" if promotion_blockers else ("available" if frame_paths else "deferred"),
         "collected_at_utc": datetime.now(timezone.utc).isoformat(),
         "frame_extraction": frames,
         "frame_metrics": frame_metrics,
+        "off_identity": off_identity,
+        "pixel_metrics": pixel_metrics,
         "judges": judges,
+        "promotion_blockers": promotion_blockers,
     }
+
+
+def resolve_baseline_video(args: argparse.Namespace) -> Path | None:
+    baseline_run_dir = getattr(args, "baseline_run_dir", None)
+    if not baseline_run_dir:
+        return None
+    candidate = Path(baseline_run_dir).expanduser() / "outputs" / "out.mp4"
+    return candidate if candidate.exists() else None
 
 
 def render_risk_notes(metadata: dict[str, Any]) -> str:
@@ -658,6 +969,9 @@ def render_patch_summary(
     )
     for name, result in sorted((quality.get("judges") or {}).items()):
         lines.append(f"- {name}: `{result.get('status', 'deferred')}`")
+    blockers = quality.get("promotion_blockers") or []
+    if blockers:
+        lines.append("- promotion blockers: `" + "`, `".join(blockers) + "`")
 
     lines.extend(["", "## Notes", ""])
     if notes:
@@ -717,6 +1031,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     paths = {
         "log": output_dir / artifacts.get("log", "run.log"),
         "video": output_dir / artifacts.get("video", "out.mp4"),
+        "side_by_side_video": output_dir / artifacts.get("side_by_side_video", "side_by_side.mp4"),
         "benchmark": output_dir / artifacts.get("benchmark", "benchmark.json"),
         "quality": output_dir / artifacts.get("quality", "quality.json"),
         "risk_notes": output_dir / artifacts.get("risk_notes", "risk_notes.md"),
@@ -755,8 +1070,11 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
         metadata,
         frames_dir,
         frames,
-        args.baseline_frame or [],
+        resolve_baseline_frames(args),
         args.skip_judges,
+        candidate_video=paths["video"],
+        baseline_video=resolve_baseline_video(args),
+        side_by_side_video=paths["side_by_side_video"],
     )
     write_json(paths["quality"], quality)
     paths["risk_notes"].write_text(render_risk_notes(metadata))
@@ -835,12 +1153,21 @@ def main() -> int:
         help="Regenerate frames if they already exist",
     )
     parser.add_argument("--frame-fps", type=float, default=2.0)
-    parser.add_argument("--frame-count", type=int, default=8)
+    parser.add_argument(
+        "--frame-count",
+        type=int,
+        default=DEFAULT_FRAME_COUNT,
+        help="Maximum frames to extract for all-frame metrics; defaults to the official Cosmos3 189-frame profile.",
+    )
     parser.add_argument("--ffmpeg", help="ffmpeg executable path override")
     parser.add_argument(
         "--baseline-frame",
         action="append",
         help="Baseline frame for optional LPIPS comparison; may be repeated",
+    )
+    parser.add_argument(
+        "--baseline-run-dir",
+        help="Baseline run directory whose outputs/frames are paired with candidate frames",
     )
     parser.add_argument(
         "--skip-judges",

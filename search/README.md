@@ -10,9 +10,9 @@ risk-tiered (low/mid/high) configs — without any dimension knowing which model
   name a model.
 - **Model** (`models/<id>.toml` + `efficiency/models/<id>_spec.py`) is the only
   model-specific surface.
-- `search.py` composes every candidate against the model's `ModelSpec`;
-  `compose()` type-checks it, so dimensions the model hasn't wired are
-  auto-skipped. Swap `--model`, the eligible set changes automatically.
+- `search.py` gives the main agent a CPU-only diagnostic view. It can still run
+  compose checks, but those checks do not gate subagent launch; subagents inspect
+  and edit inference code directly.
 
 ## Run
 ```bash
@@ -24,9 +24,10 @@ risk-tiered (low/mid/high) configs — without any dimension knowing which model
 ## Pipeline (this skeleton = the CPU half)
 ```
 load model profile + ModelSpec
-  -> for each dimension eligible for this model's seams:
-       enumerate search_space (seeds from migrated LTX-2.3 recipes as priors)
-       compose([technique(cfg)], spec)        # framework rejects incompatible
+  -> for each method family the main agent decides to wake:
+       start from search_space + loops/<dim>/exploration.md
+       discover model-specific candidates from traces/code
+       compose([technique(cfg)], spec)        # optional diagnostic, not the driver
   -> [GPU stage, stubbed — plan_eval()]:
        render run bundle from profile + cfg -> scripts/launch_candidate.py
        collect benchmark.json/quality.json -> compare vs profile baseline

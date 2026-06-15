@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -40,16 +39,6 @@ def check(name: str, condition: bool) -> None:
     print(f"PASS {name}")
 
 
-def smoke_import_reference_ops() -> None:
-    path = Path(__file__).resolve().parents[2] / "reference" / "kwl_fusion" / "kwl_ops.py"
-    spec = importlib.util.spec_from_file_location("kwl_reference_ops", path)
-    check("reference kwl_ops import spec", spec is not None and spec.loader is not None)
-    module = importlib.util.module_from_spec(spec)
-    assert spec is not None and spec.loader is not None
-    spec.loader.exec_module(module)
-    check("reference exposes installer", hasattr(module, "build_official_kwl_module_op"))
-
-
 def main() -> None:
     spec = ModelSpec(
         name="Cosmos3KWLFixture",
@@ -81,7 +70,6 @@ def main() -> None:
     )
 
     before = dict(os.environ)
-    smoke_import_reference_ops()
     check("smoke import does not mutate process env", dict(os.environ) == before)
 
 

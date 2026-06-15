@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from efficiency import Capability, CompositionError, ModelSpec, compose, get_model_spec  # noqa: E402
+from efficiency import Capability, ModelSpec, compose, get_model_spec  # noqa: E402
 from efficiency.transforms.sparse_attention import SparseAttention  # noqa: E402
 
 
@@ -43,18 +43,13 @@ def main() -> int:
     cosmos = get_model_spec("Cosmos3")
     check("Cosmos3 spec is registered", cosmos is not None)
     check(
-        "Cosmos3 does not declare SWAPPABLE_ATTENTION yet",
-        not cosmos.has(Capability.SWAPPABLE_ATTENTION),
+        "Cosmos3 declares SWAPPABLE_ATTENTION",
+        cosmos.has(Capability.SWAPPABLE_ATTENTION),
     )
 
     transform = SparseAttention(dense_steps=3, stage2_dense_layers="0")
-
-    try:
-        compose([transform], cosmos)
-    except CompositionError:
-        print("ok - Cosmos3 rejects sparse attention until the seam is wired")
-    else:
-        raise AssertionError("Cosmos3 should reject sparse attention before wiring")
+    cosmos_plan = compose([transform], cosmos)
+    check("Cosmos3 composes sparse attention", len(cosmos_plan.transforms) == 1)
 
     spec = local_sparse_spec()
     plan = compose([transform], spec)

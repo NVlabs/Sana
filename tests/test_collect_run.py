@@ -91,6 +91,114 @@ def test_collect_run_timing_and_canonical_outputs() -> None:
         assert not (output_dir / "report.md").exists()
 
 
+def test_quality_blocks_promotion_without_baseline_frames() -> None:
+    collect_run = load_collect_run()
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        run_dir = root / "run"
+        frames_dir = run_dir / "outputs" / "frames"
+        frames_dir.mkdir(parents=True)
+        (frames_dir / "f_001.png").write_bytes(b"placeholder")
+        quality = collect_run.build_quality(
+            run_dir=run_dir,
+            metadata={"candidate_id": "candidate"},
+            frames_dir=frames_dir,
+            frames={"status": "existing", "count": 1},
+            baseline_frames=[],
+            skip_judges=False,
+        )
+        assert quality["status"] == "blocked_quality"
+        assert "baseline_frames_missing" in quality["promotion_blockers"]
+        assert quality["judges"]["lpips"]["status"] == "blocked"
+
+
+def test_lpips_missing_baseline_is_blocked() -> None:
+    collect_run = load_collect_run()
+    result = collect_run.run_lpips_judge(
+        frame_paths=[Path("candidate.png")],
+        baseline_frames=[],
+        skip=False,
+    )
+    assert result["status"] == "blocked"
+    assert result["reason"] == "baseline_frame_missing"
+
+
+def test_lpips_unavailable_dependency_is_blocked() -> None:
+    collect_run = load_collect_run()
+    result = collect_run.run_lpips_judge(
+        frame_paths=[Path("candidate.png")],
+        baseline_frames=["baseline.png"],
+        skip=False,
+    )
+    assert result["status"] == "blocked"
+    assert result["reason"] == "dependencies_missing"
+
+
+def test_targeted_quality_defaults_and_rubric() -> None:
+    collect_run = load_collect_run()
+    assert collect_run.DEFAULT_FRAME_COUNT == 189
+    assert collect_run.GEMINI_MAX_FRAME_PAIRS >= 32
+    assert collect_run.LPIPS_WORST_CASE_PAIRS > 0
+
+    rubric = (ROOT / "evals/rubrics/gemini_visual_artifact_gate.md").read_text()
+    for phrase in (
+        "frame-to-frame flicker",
+        "patch-boundary discontinuity",
+        "broken temporal movement",
+        "temporal_checks",
+        "motion_coherence",
+        "patch_boundary_stability",
+    ):
+        assert phrase in rubric
+
+
+def test_pixel_metrics_include_temporal_and_patch_targets() -> None:
+    try:
+        import numpy as np  # type: ignore
+        from PIL import Image  # type: ignore
+    except Exception:
+        return
+
+    collect_run = load_collect_run()
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        base_dir = root / "baseline"
+        cand_dir = root / "candidate"
+        base_dir.mkdir()
+        cand_dir.mkdir()
+
+        base1 = np.zeros((64, 64, 3), dtype=np.uint8)
+        base2 = np.full((64, 64, 3), 24, dtype=np.uint8)
+        cand1 = base1.copy()
+        cand2 = base2.copy()
+        cand2[:, 32:, :] = 80
+
+        for path, arr in (
+            (base_dir / "f_001.png", base1),
+            (base_dir / "f_002.png", base2),
+            (cand_dir / "f_001.png", cand1),
+            (cand_dir / "f_002.png", cand2),
+        ):
+            Image.fromarray(arr).save(path)
+
+        metrics = collect_run.build_pixel_metrics(
+            sorted(cand_dir.glob("f_*.png")),
+            [str(path) for path in sorted(base_dir.glob("f_*.png"))],
+        )
+        assert metrics["status"] == "ok"
+        assert "psnr_min" in metrics
+        assert "mse_max" in metrics
+        assert "patch_boundary_ratio_max" in metrics
+        assert "patch_boundary_ratio_by_size_max" in metrics
+        assert "temporal_delta_error_max" in metrics
+        assert "temporal_jitter_ratio_max" in metrics
+
+
 if __name__ == "__main__":
     test_collect_run_timing_and_canonical_outputs()
+    test_quality_blocks_promotion_without_baseline_frames()
+    test_lpips_missing_baseline_is_blocked()
+    test_lpips_unavailable_dependency_is_blocked()
+    test_targeted_quality_defaults_and_rubric()
+    test_pixel_metrics_include_temporal_and_patch_targets()
     print("tests/test_collect_run.py: ok")

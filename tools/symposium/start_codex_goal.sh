@@ -44,9 +44,8 @@ else
 fi
 
 echo "Starting interactive Codex goal session for $GOAL_DIR"
-echo "Goal prompt: $GOAL_DIR/goal.md"
+echo "Goal file: $GOAL_DIR/goal.md"
+echo "Run inside Codex: /goal follow $GOAL_DIR/goal.md"
 echo
 
-GOAL_PROMPT="$(cat "$GOAL_DIR/goal.md")"
-
-exec "${CODEX_CMD[@]}" "$GOAL_PROMPT"
+exec "${CODEX_CMD[@]}"

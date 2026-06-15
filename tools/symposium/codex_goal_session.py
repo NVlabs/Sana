@@ -80,6 +80,13 @@ def load_state(path: Path) -> dict[str, Any]:
         return {}
 
 
+def load_context(goal_dir: Path) -> dict[str, Any]:
+    try:
+        return json.loads((goal_dir / "context.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def write_state(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
@@ -97,6 +104,20 @@ def resolve_goal_dir(root: Path, raw: str) -> Path:
     return path
 
 
+def resolve_worktree(root: Path, raw: str | None) -> Path:
+    if not raw:
+        return root
+    path = Path(raw)
+    if not path.is_absolute():
+        path = root / path
+    path = path.resolve()
+    if not path.exists() or not path.is_dir():
+        raise SystemExit(f"Worktree directory does not exist: {path}")
+    if not (path / "tools/symposium/start_codex_goal.sh").exists():
+        raise SystemExit(f"Worktree does not look like autovideo: {path}")
+    return path
+
+
 def relative_to_root(root: Path, path: Path) -> str:
     try:
         return str(path.relative_to(root))
@@ -106,7 +127,9 @@ def relative_to_root(root: Path, path: Path) -> str:
 
 def start(args: argparse.Namespace) -> dict[str, Any]:
     root = project_root()
-    goal_dir = resolve_goal_dir(root, args.goal_dir)
+    worktree = resolve_worktree(root, args.worktree)
+    goal_dir = resolve_goal_dir(worktree, args.goal_dir)
+    context = load_context(goal_dir)
     session = session_name_for(goal_dir, args.name)
     state_file = state_path(root, goal_dir, args.name)
 
@@ -117,10 +140,12 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
             )
         run_tmux(["kill-session", "-t", session])
 
-    goal_arg = relative_to_root(root, goal_dir)
+    launcher = worktree / "tools/symposium/start_codex_goal.sh"
+    goal_arg = relative_to_root(worktree, goal_dir)
+    goal_file = relative_to_root(worktree, goal_dir / "goal.md")
     command = (
         "export TERM=xterm-256color; "
-        f"exec {shlex_quote(str(root / 'tools/symposium/start_codex_goal.sh'))} "
+        f"exec {shlex_quote(str(launcher))} "
         f"{shlex_quote(goal_arg)}"
     )
     run_tmux(
@@ -134,15 +159,29 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
             "-y",
             str(args.rows),
             "-c",
-            str(root),
+            str(worktree),
             f"bash -lc {shlex_quote(command)}",
         ]
     )
+    time.sleep(args.startup_delay)
+    follow_command = f"/goal follow {goal_file}"
+    run_tmux(["send-keys", "-t", session, "--", follow_command])
+    run_tmux(["send-keys", "-t", session, "Enter"])
 
     data = {
         "session": session,
+        "tmux_session": session,
         "goal_dir": str(goal_dir),
         "goal_id": goal_id(goal_dir),
+        "role": context.get("role", "implementation"),
+        "dimension": context.get("dimension", "general"),
+        "worktree": str(worktree),
+        "branch": context.get("root_branch"),
+        "submodule_branch": context.get("submodule_branch"),
+        "status": "starting",
+        "resource_state": "active",
+        "goal_follow_command": follow_command,
+        "last_capture_at_utc": None,
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "state_file": str(state_file),
         "root": str(root),
@@ -158,7 +197,8 @@ def shlex_quote(value: str) -> str:
 
 def session_from_args(args: argparse.Namespace) -> tuple[Path, Path, str, dict[str, Any]]:
     root = project_root()
-    goal_dir = resolve_goal_dir(root, args.goal_dir)
+    worktree = resolve_worktree(root, getattr(args, "worktree", None))
+    goal_dir = resolve_goal_dir(worktree, args.goal_dir)
     state_file = state_path(root, goal_dir, getattr(args, "name", None))
     state = load_state(state_file)
     session = state.get("session") or session_name_for(goal_dir, getattr(args, "name", None))
@@ -201,7 +241,7 @@ def status(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def capture(args: argparse.Namespace) -> str:
-    _, _, session, _ = session_from_args(args)
+    root, goal_dir, session, state = session_from_args(args)
     if not tmux_alive(session):
         raise SystemExit(f"Session is not running: {session}")
     proc = run_tmux(
@@ -215,17 +255,34 @@ def capture(args: argparse.Namespace) -> str:
             f"-{args.lines}",
         ]
     )
+    state.update(
+        {
+            "session": session,
+            "goal_dir": str(goal_dir),
+            "last_capture_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    write_state(state_path(root, goal_dir, getattr(args, "name", None)), state)
     return proc.stdout.rstrip("\n")
 
 
 def send(args: argparse.Namespace) -> dict[str, Any]:
-    _, _, session, _ = session_from_args(args)
+    root, goal_dir, session, state = session_from_args(args)
     if not tmux_alive(session):
         raise SystemExit(f"Session is not running: {session}")
     if args.text:
         run_tmux(["send-keys", "-t", session, "--", args.text])
     if args.enter:
         run_tmux(["send-keys", "-t", session, "Enter"])
+    state.update(
+        {
+            "session": session,
+            "goal_dir": str(goal_dir),
+            "last_sent_at_utc": datetime.now(timezone.utc).isoformat(),
+            "last_sent_text": args.text,
+        }
+    )
+    write_state(state_path(root, goal_dir, getattr(args, "name", None)), state)
     return {"session": session, "sent": bool(args.text), "enter": args.enter}
 
 
@@ -237,11 +294,45 @@ def attach(args: argparse.Namespace) -> None:
 
 
 def stop(args: argparse.Namespace) -> dict[str, Any]:
-    _, _, session, _ = session_from_args(args)
+    root, goal_dir, session, state = session_from_args(args)
     alive_before = tmux_alive(session)
     if alive_before:
         run_tmux(["kill-session", "-t", session])
+    state.update(
+        {
+            "session": session,
+            "goal_dir": str(goal_dir),
+            "status": "stopped",
+            "resource_state": "stopped",
+            "stopped_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    write_state(state_path(root, goal_dir, getattr(args, "name", None)), state)
     return {"session": session, "alive_before": alive_before, "alive_after": tmux_alive(session)}
+
+
+def release(args: argparse.Namespace) -> dict[str, Any]:
+    root, goal_dir, session, state = session_from_args(args)
+    alive_before = tmux_alive(session)
+    if alive_before and not args.keep_session:
+        run_tmux(["kill-session", "-t", session])
+    state.update(
+        {
+            "session": session,
+            "goal_dir": str(goal_dir),
+            "status": "released",
+            "resource_state": "released",
+            "released_at_utc": datetime.now(timezone.utc).isoformat(),
+            "release_note": args.note,
+        }
+    )
+    write_state(state_path(root, goal_dir, getattr(args, "name", None)), state)
+    return {
+        "session": session,
+        "alive_before": alive_before,
+        "alive_after": tmux_alive(session),
+        "resource_state": "released",
+    }
 
 
 def list_sessions(_: argparse.Namespace) -> list[dict[str, Any]]:
@@ -280,9 +371,11 @@ def main() -> int:
     start_parser = sub.add_parser("start", help="Start a detached Codex goal session")
     start_parser.add_argument("goal_dir")
     start_parser.add_argument("--name")
+    start_parser.add_argument("--worktree", help="Autovideo worktree where the goal runs")
     start_parser.add_argument("--force", action="store_true")
     start_parser.add_argument("--rows", type=int, default=40)
     start_parser.add_argument("--cols", type=int, default=120)
+    start_parser.add_argument("--startup-delay", type=float, default=2.0)
     start_parser.set_defaults(func=start)
 
     for command, help_text, func in (
@@ -291,16 +384,21 @@ def main() -> int:
         ("send", "Send text or enter to the session", send),
         ("attach", "Attach to the interactive session", attach),
         ("stop", "Stop the session", stop),
+        ("release", "Release session resources and mark state released", release),
         ("watch", "Continuously capture the session", watch),
     ):
         p = sub.add_parser(command, help=help_text)
         p.add_argument("goal_dir")
         p.add_argument("--name")
+        p.add_argument("--worktree", help="Autovideo worktree that owns the goal")
         if command in {"capture", "watch"}:
             p.add_argument("--lines", type=int, default=80)
         if command == "send":
             p.add_argument("--text", default="")
             p.add_argument("--enter", action="store_true")
+        if command == "release":
+            p.add_argument("--keep-session", action="store_true")
+            p.add_argument("--note", default="")
         if command == "watch":
             p.add_argument("--interval", type=float, default=3.0)
         p.set_defaults(func=func)

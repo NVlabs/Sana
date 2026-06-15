@@ -1,16 +1,15 @@
 # Dimension: nvfp4_ffn - NVFP4 FFN quantization
 
-A **model-agnostic search dimension**. It searches load-time NVFP4 FFN
-quantization configs and composes them against whatever model the search
-targets. It names no model; model specifics live in `models/<id>.toml` and
-`efficiency/models/<id>_spec.py`.
+A search dimension for low-precision FFN or linear-layer experiments. Native
+subagents should read `search_space/03_quantization.md`, then inspect and
+modify Cosmos3 module loading and inference code directly in their isolated
+worktree.
 
 ## What it searches
 
 `efficiency/transforms/nvfp4_ffn.py` registers the `nvfp4_ffn` transform.
-`NVFP4FFN` is a load-time `ModelTransform`, not a runtime `Technique`: it writes
-the exclusive `FFN_PRECISION` seam and delegates to the model loader via the
-existing TE NVFP4 FFN environment contract.
+`NVFP4FFN` is a load-time diagnostic helper, not a runtime `Technique`: it
+delegates to the model loader via the existing TE NVFP4 FFN environment contract.
 
 The search grid in `dimension.toml` covers the transform's real class params:
 
@@ -18,35 +17,15 @@ The search grid in `dimension.toml` covers the transform's real class params:
 - `disable_stochastic_rounding`
 - `disable_2d_quantization`
 
-The LTX-2.3 best selective video-FFN recipe is carried as the seed prior. Its
-reference scripts, report, and helper live under `reference/nvfp4_ffn/`.
+Current exploration starts from `search_space/` plus model-specific module
+profiling. Subagents choose module scope, dense guards, precision format, and
+fallback policy from evidence gathered in code/traces.
 
-## Why it's model-agnostic
+## Exploration Mode
 
-The dimension only names the registry transform, its params, and the seam it
-writes. `requires_capabilities = []` matches the transform class: composition
-does not require a structural runtime hook. The search builds candidates with
-`build_transform("nvfp4_ffn", **cfg)` and lets `compose()` validate exclusive
-seam conflicts against the selected `ModelSpec`.
-
-The genuine per-model work is the loader seam. A target model must declare and
-track that wiring in `models/<id>.toml [seam_status].ffn_precision`, then consume
-the transform's loader env while preserving a clean BF16/off path. That adapter
-work stays outside this loop.
-
-## Migrated LTX-2.3 experience
-
-The migrated reference material comes from `Sol-LTX-Infer` commit
-`29d0d9e464000a2472345dcad51054b15aacca8d`:
-
-- `scripts/slurm_ltx23_best_nvfp4_video_attn_ffn_sglquant_1080p10s.sh`
-- `scripts/bench_te_nvfp4_gelu_epilogue.py`
-- `docs/diffusion/quantization.md`
-
-The LTX recipe used a 1080p/10s two-stage run with selective NVFP4 transformer
-overrides for video attention and FFN linears. This dimension carries only the
-FFN quantization methodology forward. The attention quantization path is
-reference context, not part of this search dimension.
+Do not wait for a predeclared precision seam. Inspect the loader and FFN/linear
+modules directly, then implement the candidate where it is easiest to prove a
+clean OFF path and controlled ON behavior.
 
 ## Deploy requirement
 
@@ -77,4 +56,4 @@ search-level check that this dimension stays model-agnostic lives in
 python search/search.py --model <id>
 ```
 
-See `acceptance.md` for promotion gates and `references.md` for provenance.
+See `acceptance.md` for promotion gates.

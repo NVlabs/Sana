@@ -7,7 +7,7 @@ Before M1.6, the repo could launch and collect a baseline, but lacked:
 - a canonical eval profile
 - promotion/rejection vocabulary
 - a visual judge rubric
-- a place to record reference snippets from successful branches
+- a canonical search-space contract for open-ended agent exploration
 - a mature folder shape for independent sub-loops
 
 ## Eval Model
@@ -51,20 +51,20 @@ loops/<loop-id>/
   acceptance.md
   candidate.toml
   eval.toml
-  references.md
   runs/
   scratch/
 ```
 
 This lets each Codex goal own a bounded task and acceptance criteria.
 
-## Reference Strategy
+## Search-Space Strategy
 
-Do not rebuild from scratch. For every loop, start from:
+For every implementation loop, start from:
 
-- `snippets/sol-ltx-infer-reference.md`
-- relevant `Sol-LTX-Infer/scripts/slurm_*.sh`
-- relevant `Sol-LTX-Infer/docs/*.md`
-- remote branch names recorded in `snippets/README.md`
+- `search_space/` for method families and broad axes;
+- `loops/<dim>/exploration.md` for the natural-language dimension brief;
+- the live Cosmos3 inference code under `Sol-LTX-Infer/`.
 
-Then move only the smallest useful snippet into the candidate manifest or goal.
+Do not add per-dimension reference archives. Subagents should discover
+model-specific layer, step, signal, routing, and fallback choices from code,
+traces, and reproduction artifacts.

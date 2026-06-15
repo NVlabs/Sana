@@ -1,5 +1,10 @@
 # Onboarding a model & expanding its interface (any model)
 
+Current role: post-hoc integration and cleanup guide. Native implementation
+subagents do **not** wait for these seams before exploring; they inspect and
+modify `Sol-LTX-Infer/` inference code directly. Use this document after a useful
+candidate exists and the main agent wants to normalize, compose, or port it.
+
 This is the **repeatable procedure** for making the acceleration search work on
 **any** served model, and for **expanding which search dimensions it can run** by
 wiring more seams. It generalizes the Cosmos3 work into a model-agnostic playbook.

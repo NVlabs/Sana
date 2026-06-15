@@ -15,7 +15,6 @@ loops/<loop-id>/
   acceptance.md
   candidate.toml
   eval.toml
-  references.md
   runs/
   scratch/
 ```
@@ -42,5 +41,4 @@ A loop is complete when:
 - `acceptance.md` defines promotion/rejection gates
 - `candidate.toml` can launch or clearly states why it is methodology-only
 - `eval.toml` points at an eval profile
-- `references.md` links to the relevant successful branches/scripts
 - collector output exists for at least dry-run; GPU runs when applicable

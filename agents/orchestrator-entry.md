@@ -7,25 +7,28 @@ per search dimension, gate their results, integrate the winners, and deliver.
 
 This is the single entry point. Everything else hangs off it.
 
+Launch this as a normal main-agent Codex session. Do **not** run `/goal follow`
+on this file. Native goal mode is reserved for implementation and gate
+subagents that the main agent creates under `goals/<goal-id>/`.
+
 ---
 
 ## 0. Read these first (the system you drive)
 - `docs/search-architecture.md` — the three planes + the search & eval pipeline.
-- `docs/model-onboarding.md` — how to expand a model's interface (seams) so more
-  dimensions become eligible.
-- `models/README.md` — the model adapter (profile + ModelSpec).
-- The **`codex-goal-fanout`** skill — how to spawn + gate per-dimension agents.
+- `models/README.md` — the target model profile and run environment.
+- `docs/codex-goal-mode.md` and `docs/multi-agent-orchestration.md` — how to
+  spawn, correct, gate, and release per-dimension native goal sessions.
 - `efficiency/README.md` — the generic acceleration engine.
 
 ## 1. Mental model (3 planes, 3 levels)
 - **GENERIC** (never model-specific): `efficiency/` (engine), `loops/<dim>/`
   (search dimensions), `search/` (harness), `evals/tiers.toml` (the 3 tiers),
-  `reference/` (LTX-2.3 priors).
-- **MODEL-SPECIFIC** (the only model surface): `models/<id>.toml` +
-  `efficiency/models/<id>_spec.py`.
-- A dimension is **eligible** if the model's spec declares its capability,
-  **functional** if the model wires the hook, **quality-valid** if OFF==baseline
-  and it passes a tier gate. (See model-onboarding.md "three levels of wired".)
+  `search_space/` (the method-family search space).
+- **MODEL/RUNTIME SURFACE**: `models/<id>.toml` plus the live inference code under
+  `Sol-LTX-Infer/`.
+- A dimension is **launchable** when the main agent decides it is worth exploring.
+  Do not block launch on predeclared seams. Subagents may write directly in the
+  inference path; seams/compose are post-hoc diagnostics and merge aids.
 
 ## 2. End-to-end procedure
 ```
@@ -35,12 +38,17 @@ This is the single entry point. Everything else hangs off it.
                    carry the working runtime env (PYTHON_BIN, HF_HOME/HF_HUB_CACHE,
                    COSMOS3_CACHE, HF_HUB_OFFLINE) or the cluster run fails.
 1. SCAN            python search/search.py --model <id>
-                   -> eligible dimensions + each model's [seam_status] + the 3 tiers.
-                   Expand seams (model-onboarding.md) to grow eligibility where worth it.
-2. FAN OUT         one codex /goal agent per ELIGIBLE dimension (codex-goal-fanout):
-                   own worktree+branch+isolated CODEX_HOME; AGENT-GOAL.md = shared
-                   rules + the dimension spec. Each runs that dimension's [loop]:
-                     enumerate dimension.toml [search_space] (LTX [[seeds]] first)
+                   -> method families, loop budgets, compose diagnostics, and the 3 tiers.
+                   Use this as an observation pass, not as a launch gate.
+2. FAN OUT         one native Codex goal session per selected dimension:
+                   own worktree+branch+isolated CODEX_HOME; goal.md includes
+                   objective, search-space-start, artifacts, and acceptance criteria.
+                   Start through `tools/symposium/codex_goal_session.py start`,
+                   which opens interactive Codex and sends `/goal follow <goal.md>`.
+                   Each agent starts from `search_space/` and
+                   `loops/<dim>/exploration.md`, then derives model-specific
+                   candidates from inference code/traces. It can directly modify
+                   `Sol-LTX-Infer/`; do not wait for an exposed seam/interface:
                        -> plan_eval.render_candidate(profile, technique, cfg)
                        -> scripts/launch_candidate.py --mode sbatch --confirm-submit
                        -> scripts/collect_run.py  -> plan_eval.assess (benchmark + Gemini)
@@ -51,28 +59,35 @@ This is the single entry point. Everything else hangs off it.
                    tier budgets (evals/tiers.toml). Read each branch diff, run the
                    gate, merge sequentially (by SHA), reconcile shared-file conflicts.
 4. INTEGRATE       stack per-tier dimension winners across dimensions -> composed
-                   low/medium/high profiles. compose() rejects seam conflicts
-                   (exclusive seams). Re-eval the composed configs on GPU. Target
-                   composed speedups ~1.35x / 2.2x / 3.0x (evals/tiers.toml [targets]).
+                   low/medium/high profiles. Main resolves code conflicts and any
+                   runtime interaction between patches, then re-gates merged glue.
+                   Re-eval the composed configs on GPU. Target composed speedups
+                   ~1.35x / 2.2x / 3.0x (evals/tiers.toml [targets]).
 5. DELIVER         the final matrix: per tier -> config (feature flags) + speedup +
                    peak-mem + quality verdict + rollback. Write the release report.
 ```
 
 ## 3. Spawn recipe (per dimension) — the fan-out
-Per the `codex-goal-fanout` skill (verified on HSG). For each eligible dimension:
+For each selected dimension, prepare a goal bundle and start a managed native
+Codex goal session:
 ```
-WT=output/fanout/<dim>; git worktree add -b codex/<dim> $WT <BASE>
+WT=$PWD/output/fanout/<dim>; git worktree add -b codex/<dim> $WT <BASE>
 CH=$WT/.codex-home; mkdir -p $CH; cp ~/.codex/{auth.json,config.toml} $CH/
-cat COMMON.md loops/<dim>/dimension.toml loops/<dim>/acceptance.md > $WT/AGENT-GOAL.md
-# tmux /goal (no symposium bridge on HSG): unique socket per agent, isolated CODEX_HOME
-tmux -L cc-fan-<dim> new-session -d -s g
-tmux -L cc-fan-<dim> send-keys -t g 'export CODEX_HOME=$CH; \
-  codex --dangerously-bypass-approvals-and-sandbox --no-alt-screen -m gpt-5.5 \
-  -c model_reasoning_effort=xhigh -C $WT "Read AGENT-GOAL.md and run this dimension fully"' Enter
+(cd $WT && python3 tools/symposium/prepare_goal.py \
+    --goal-id <dim> \
+    --candidate candidates/baseline.toml \
+    --dimension <dim> \
+    --role implementation \
+    --write-scope Sol-LTX-Infer/ \
+    --objective "Explore and implement the <dim> dimension from search_space/ by directly inspecting and modifying Cosmos3 inference code.")
+CODEX_HOME=$CH python3 tools/symposium/codex_goal_session.py start \
+  --worktree $WT --name <dim> goals/<dim>
 ```
-Monitor commits + `SUMMARY.md`; then **review + gate + merge by SHA** (you are the gate).
-Cap N to what you will review; CPU-only dimension prep runs on the park node, GPU
-candidate runs go through Slurm.
+Use `status`, `capture`, and `send` to track and correct live subagents. When a
+candidate is ready, spawn a separate gate goal (`--role gate`); then review,
+gate, and merge by SHA. Cap N to what you will review; CPU-only dimension prep
+runs on the park node, GPU candidate runs go through Slurm. Use `release` after
+the agent is closed or rejected.
 
 ## 4. Cluster / GPU
 - Runs: `scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit`
@@ -94,13 +109,13 @@ candidate runs go through Slurm.
 | --- | --- |
 | search harness | `search/search.py` (scan), `search/plan_eval.py` (render/assess/tier) |
 | model adapter | `models/<id>.toml`, `efficiency/models/<id>_spec.py` |
-| dimensions | `loops/<dim>/{dimension.toml, acceptance.md, references.md}` |
-| LTX-2.3 priors | `reference/<dim>/` |
+| dimensions | `loops/<dim>/{dimension.toml, exploration.md, acceptance.md}` |
+| search space | `search_space/` |
 | engine | `efficiency/` (`selftest.py` = compose/seam test) |
 | tiers | `evals/tiers.toml`; visual rubric `evals/rubrics/gemini_visual_artifact_gate.md` |
 | docs | `docs/{search-architecture,model-onboarding}.md` |
 ```bash
-python search/search.py --model <id>                  # eligible dimensions + seam_status + tiers
+python search/search.py --model <id>                  # method families + diagnostics + tiers
 python search/plan_eval.py --assess <run_dir> --baseline-frames <dir>   # benchmark+Gemini+tier
 python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 ~/lustre/miniconda3/envs/sana/bin/python efficiency/selftest.py        # 23/23
@@ -108,11 +123,11 @@ python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 
 ## 7. Current target — Cosmos3 (first model)
 - Baseline verified (~130s, `models/cosmos3.toml [baseline]`).
-- `search --model cosmos3`: **6 eligible dimensions** — `step_cache`, `teacache`,
+- `search --model cosmos3`: **6 launchable method families** — `step_cache`, `teacache`,
   `token_prune`, `nvfp4_ffn`, `kwl_fusion`, `sparse_attention`.
-- `seam_status`: `swappable_attention` declared (sparse eligible); `teacache_signal`
-  + `prunable_segment` refine = TODO (model-onboarding.md) — wiring these makes those
-  dimensions *functional*, not just eligible.
+- Subagents should inspect and patch the Cosmos3 inference path directly. Any
+  adapter/seam cleanup is a main-agent integration concern after a candidate is
+  proven useful.
 - GPU eval harness: **VERIFIED end-to-end** (job 3294303, `runs/20260613-175619-baseline`):
   launch (sbatch) -> GPU run (127.83s) -> `collect_run.py` (`benchmark.json`, denoise 119.18s)
   -> Gemini pairwise judge (`overall=pass`, no artifacts) -> `tier_of` -> `tier=low`, via

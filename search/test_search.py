@@ -32,12 +32,12 @@ check("profile carries official_config + baseline", "official_config" in prof an
 results = search("cosmos3", verbose=False)
 check("search returns results once a dimension exists", isinstance(results, list))
 
-# whatever dimensions exist, each result is composable-or-rejected with a reason,
-# and eligibility is decided by the model spec's declared capabilities (not by the
-# dimension naming the model)
+# whatever dimensions exist, each result is launchable and has a compose
+# diagnostic. Compose readiness is useful, but it must not gate subagent launch.
 for r in results:
     check(f"{r['dimension']}/{r['technique']} has a verdict",
           r["composable"] + r["rejected"] == r["candidates"])
+    check(f"{r['dimension']}/{r['technique']} is launchable", r["eligible"])
 
 # the dimensions on disk must be model-agnostic: no model id / no SGLANG_<MODEL>_ env
 import pathlib  # noqa: E402
@@ -59,6 +59,16 @@ for dim_id, dim in load_dimensions():
     check(f"loops/{dim_id} has [loop]", bool(lp))
     check(f"loops/{dim_id} loop.granularity valid", lp.get("granularity") in VALID_GRAN)
     check(f"loops/{dim_id} loop.max_iters is int", isinstance(lp.get("max_iters"), int))
+    check(
+        f"loops/{dim_id} has open-ended exploration brief",
+        (REPO / "loops" / dim_id / "exploration.md").exists(),
+    )
+    check(
+        f"loops/{dim_id} has no per-dimension references file",
+        not (REPO / "loops" / dim_id / "references.md").exists(),
+    )
+    fixed_grid = any("search_space" in tech for tech in dim.get("technique", []))
+    check(f"loops/{dim_id} has no fixed hyperparameter grid", not fixed_grid)
 
 # the three risk tiers are defined globally and loosen the quality budget
 tiers = load_tiers()

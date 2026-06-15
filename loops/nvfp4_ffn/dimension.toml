@@ -1,27 +1,22 @@
 # Search dimension: NVFP4 FFN quantization (MODEL-AGNOSTIC)
 #
-# A dimension declares a transform plus its param search space. It never names a
-# target model; the search composes each config against the selected ModelSpec.
-# The model profile owns per-model loader/seam status in models/<id>.toml.
+# Metadata for the low-precision FFN exploration dimension. Native subagents
+# start from search_space/ and inspect the target model inference code directly;
+# this file is not a fixed hyperparameter grid.
 
 id = "nvfp4_ffn"
 title = "NVFP4 FFN quantization (load-time video FFN precision transform)"
 kind = "build_transform"
-exclusive_seam = "ffn_precision"
-requires_capabilities = []
 
 [[technique]]
 name = "nvfp4_ffn"
-[technique.search_space]
-disable_rht = [true, false]
-disable_stochastic_rounding = [true, false]
-disable_2d_quantization = [true, false]
-
-# LTX-2.3 proven config = prior the search seeds from (provenance in reference/nvfp4_ffn/).
-[[seeds]]
-technique = "nvfp4_ffn"
-note = "LTX-2.3 best selective NVFP4 video-FFN recipe"
-params = { disable_rht = true, disable_stochastic_rounding = true, disable_2d_quantization = true }
+search_axes = [
+  "module scope",
+  "precision format",
+  "dense guard layers",
+  "dense guard steps",
+  "fallback and calibration policy",
+]
 
 # Eval binding (model-agnostic; the model profile supplies the baseline to beat).
 [eval]

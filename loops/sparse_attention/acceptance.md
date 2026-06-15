@@ -8,9 +8,10 @@ This dimension is a **bounded search loop**, not a one-shot checklist.
   **latency OR peak memory** — either improvement counts (Pareto over the two).
 - **Budget:** `max_iters = 20` (hyperparameter) with **early stop** after 5
   iterations with no Pareto improvement.
-- **Per iteration:** pick a config from `dimension.toml [search_space]` (seeded by
-  the LTX-2.3 priors) → compose against the model spec → (GPU) run → measure
-  latency + peak_mem + quality.
+- **Per iteration:** start from `search_space/`, derive a
+  model-specific candidate from traces/code, record it in the candidate manifest,
+  then compose against the model spec → (GPU) run → measure latency + peak_mem +
+  quality. `dimension.toml` records search axes and loop metadata, not fixed hyperparameter candidates.
 
 ## Acceptance = quality is a hard, PER-TIER constraint
 A candidate counts only if it (a) beats baseline on latency or peak_mem **and**

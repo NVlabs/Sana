@@ -1,7 +1,12 @@
 # Codex Goal Mode Bridge
 
-This is the planned bridge for letting an upstream planner such as Claude hand
-off a bounded goal into Codex interactive mode.
+This bridge lets the main orchestration agent hand off a bounded implementation
+or gate task into Codex interactive mode.
+
+The main orchestration agent itself is **not** a native goal. It runs as a
+normal Codex session, reads `agents/orchestrator-entry.md`, observes the system,
+spawns subagents, sends corrections, gates results, merges, and releases
+resources. Only implementation and gate subagents follow `goals/<goal-id>/goal.md`.
 
 ## Constraint
 
@@ -26,7 +31,13 @@ goals/<goal-id>/
   candidate.toml
 ```
 
-`goal.md` is the instruction passed into Codex interactive mode.
+`goal.md` is followed from inside Codex interactive mode with:
+
+```text
+/goal follow goals/<goal-id>/goal.md
+```
+
+It must include its own acceptance criteria and search-space-start section.
 
 `context.json` records:
 
@@ -58,8 +69,8 @@ Responsibilities:
 2. require an interactive TTY
 3. source `.symposium/goal-mode.env`
 4. require `codex` or `CODEX_GOAL_COMMAND`
-5. open Codex interactive mode
-6. reference `goal.md`
+5. open Codex interactive mode without passing the goal body as a normal prompt
+6. send `/goal follow <goal.md>` into the interactive session
 
 The adapter must not silently fall back to non-interactive execution.
 
@@ -99,6 +110,15 @@ Start interactive mode when a Codex launcher exists:
 tools/symposium/start_codex_goal.sh goals/sparse-attention
 ```
 
+For detached managed sessions, use:
+
+```bash
+python3 tools/symposium/codex_goal_session.py start --worktree output/fanout/sparse-attention goals/sparse-attention
+python3 tools/symposium/codex_goal_session.py capture --worktree output/fanout/sparse-attention goals/sparse-attention
+python3 tools/symposium/codex_goal_session.py send --worktree output/fanout/sparse-attention goals/sparse-attention --text "Please pause and summarize status." --enter
+python3 tools/symposium/codex_goal_session.py release --worktree output/fanout/sparse-attention goals/sparse-attention --note "done"
+```
+
 Start an interactive Claude goal session:
 
 ```bash
@@ -115,6 +135,13 @@ You are working in an isolated autovideo worktree.
 ## Objective
 
 <one bounded implementation or experiment objective>
+
+## Search Space Start
+
+- Search-space root: `search_space`
+- Dimension brief: `loops/<dim>/exploration.md`
+- Implementation surface: inspect and modify `Sol-LTX-Infer/` directly in the
+  isolated worktree.
 
 ## Source Ownership
 

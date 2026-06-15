@@ -1,49 +1,36 @@
 # Search dimension: diffusion step caching  (MODEL-AGNOSTIC)
 #
-# A dimension declares a technique + a param search space + the capability a
-# model must expose to be eligible. It NEVER names a model. The search composes
-# each config against the target model's ModelSpec; an incompatible model is
-# auto-skipped. Migrated LTX-2.3 configs are the seeds/priors (see reference/step_cache/).
+# Metadata for the step-cache exploration dimension. Native subagents start from
+# search_space/ and inspect the target model inference code directly; this file
+# is not a fixed hyperparameter grid.
 
 id = "step_cache"
 title = "Diffusion step caching (skip/reuse whole denoise-step output)"
 kind = "runtime_technique"
-exclusive_seam = "step_output"          # at most one whole-step cache active at a time
-requires_capabilities = []              # wraps the whole step -> no structural seam required
                                         # (TeaCache additionally needs a runtime modulated-input
-                                        #  signal; tracked per-model in models/<id>.toml seam_status)
+                                        #  signal; discover it from inference code/traces)
 
 # Two cache flavors searched in this dimension. Each lists the generic technique
 # (efficiency registry name) + its model-agnostic param grid.
 
 [[technique]]
 name = "step_cache"                     # schedule-based skip + reuse / delta-extrapolate
-[technique.search_space]
-skip = ["", "16-28", "20-28"]           # "" = OFF/baseline; others = late-cluster skip schedules
-delta_scale = [0.0, 0.5]
+search_axes = [
+  "step schedule",
+  "reuse mode",
+  "delta/extrapolation policy",
+  "warmup and forced recompute policy",
+]
 
 [[technique]]
 name = "teacache"                       # similarity-adaptive skip (timestep-embedding rel-L1)
-[technique.search_space]
-threshold = [0.04, 0.06, 0.08]
-start_step = [5, 6]
-max_continuous_hits = [1, 2]
-
-# LTX-2.3 proven configs = priors the search seeds from (provenance in reference/step_cache/).
-[[seeds]]
-technique = "teacache"
-note = "LTX-2.3 c04_s6 (run_ltx23_teacache_hq_nonhq_matrix_10s.sh)"
-params = { threshold = 0.04, start_step = 6, max_continuous_hits = 1 }
-
-[[seeds]]
-technique = "teacache"
-note = "LTX-2.3 c06_s5"
-params = { threshold = 0.06, start_step = 5, max_continuous_hits = 1 }
-
-[[seeds]]
-technique = "step_cache"
-note = "LTX-2.3 SCSP 8of15 late cluster (efficiency/presets.ltx_full_opt)"
-params = { skip = "16-28", delta_scale = 0.0 }
+search_axes = [
+  "signal source",
+  "per-step accumulation rule",
+  "per-layer or block scope",
+  "threshold policy discovered from traces",
+  "max consecutive reuse policy",
+]
 
 # Eval binding (model-agnostic; the model profile supplies the baseline to beat).
 [eval]

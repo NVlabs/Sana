@@ -18,6 +18,8 @@ DEFAULT_HELPER = Path.home() / ".codex/skills/nvidia-vision-api/scripts/nvidia_m
 DEFAULT_RUBRIC = "evals/rubrics/gemini_visual_artifact_gate.md"
 DEFAULT_BASE_URL = "https://inference-api.nvidia.com/v1"
 DEFAULT_MODEL = "gcp/google/gemini-3.5-flash"
+DEFAULT_VIDEO_MAX_FRAMES = 32
+DEFAULT_VIDEO_FRAME_INTERVAL = 0.5
 
 
 def project_root() -> Path:
@@ -99,8 +101,8 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--max-tokens", type=int, default=4096)
-    parser.add_argument("--video-max-frames", type=int, default=8)
-    parser.add_argument("--video-frame-interval", type=float, default=2.0)
+    parser.add_argument("--video-max-frames", type=int, default=DEFAULT_VIDEO_MAX_FRAMES)
+    parser.add_argument("--video-frame-interval", type=float, default=DEFAULT_VIDEO_FRAME_INTERVAL)
     parser.add_argument("--video-frame-width", type=int, default=960)
     args = parser.parse_args()
 

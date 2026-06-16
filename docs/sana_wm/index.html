@@ -643,6 +643,8 @@
       
         
       
+        
+      
     
     
     
@@ -878,6 +880,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#80-scene-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        80-scene benchmark
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#lower-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -899,8 +912,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#quantized-inference-fp8-fp4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Quantized inference (fp8 / fp4)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-causal-stage-1-teacher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk-Causal Stage-1 Teacher
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-causal-stage-1-training-on-sekai-game" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk-Causal Stage-1 Training on Sekai-Game
+      
+    </span>
+  </a>
   
 </li>
       
@@ -989,6 +1035,34 @@
     
   
     LongSANA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sana-wm-bench/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-WM Benchmark
   
 
     
@@ -1565,6 +1639,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#80-scene-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        80-scene benchmark
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#lower-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1586,8 +1671,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#quantized-inference-fp8-fp4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Quantized inference (fp8 / fp4)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-causal-stage-1-teacher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk-Causal Stage-1 Teacher
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-causal-stage-1-training-on-sekai-game" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk-Causal Stage-1 Training on Sekai-Game
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1771,6 +1889,10 @@ look-around.</p>
 <p>The <code>_pose.npy</code> files already bake in these actions (and <code>demo_2</code>'s slower
 speed), so <code>--camera asset/sana_wm/demo_N_pose.npy</code> reproduces the same motion
 as the matching <code>--action</code> string.</p>
+<h3 id="80-scene-benchmark">80-scene benchmark<a class="headerlink" href="#80-scene-benchmark" title="Permanent link">&para;</a></h3>
+<p>For the fixed 80-scene, 60s SANA-WM benchmark release and reproducible
+bidirectional inference/evaluation workflow, see
+<a href="../sana-wm-bench/">SANA-WM benchmark guide</a>.</p>
 <h3 id="lower-memory">Lower memory<a class="headerlink" href="#lower-memory" title="Permanent link">&para;</a></h3>
 <p>For tight VRAM budgets, opt in to lazy-load + CPU offload:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>...<span class="w"> </span>--offload_vae<span class="w"> </span>--offload_refiner
@@ -1821,6 +1943,173 @@ slow/fast toggle; the script is the fast config.</p>
   <code>"1000,960,889,727,0"</code>), <code>--refiner_block_size</code> (3), <code>--refiner_kv_max_frames</code>
   (11) — change the canonical recipe at your own quality risk.</li>
 </ul>
+<h3 id="quantized-inference-fp8-fp4">⚡ Quantized inference (fp8 / fp4)<a class="headerlink" href="#quantized-inference-fp8-fp4" title="Permanent link">&para;</a></h3>
+<p>Streaming supports <strong>per-component</strong> low-precision compute to cut peak VRAM, set
+independently for the stage-1 DiT and the LTX-2 refiner:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>python<span class="w"> </span>inference_video_scripts/wm/inference_sana_wm_streaming.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--image<span class="w">       </span>asset/sana_wm/demo_0.png<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--prompt<span class="w">      </span>asset/sana_wm/demo_0.txt<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--action<span class="w">      </span><span class="s2">&quot;w-80,dw-40,w-80,aw-40&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--num_frames<span class="w">  </span><span class="m">241</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--stage1_precision<span class="w">  </span>fp4<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--refiner_precision<span class="w"> </span>fp4<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--output_dir<span class="w">  </span>results/sana_wm_streaming
+</code></pre></div>
+<p><code>--stage1_precision</code> / <code>--refiner_precision</code> each take <code>bf16</code> (default, any GPU),
+<code>fp8</code> (FP8 W8A8, Hopper <strong>and</strong> Blackwell), or <code>fp4</code> (NVFP4 W4A4, <strong>Blackwell
+only</strong> — sm_100/sm_120). Quantization touches only the linear GEMMs (self-attn,
+cross-attn, FFN), scoped <strong>per transformer block</strong> so the camera/action
+conditioning math stays in native precision and action-following is preserved.</p>
+<p><strong>Requirements.</strong> fp8/fp4 need <a href="https://github.com/NVIDIA/TransformerEngine">NVIDIA Transformer Engine</a>
+≥ 2.0, which <code>environment_setup.sh</code> installs by default. If you skipped it
+(<code>SANA_SKIP_TE=1</code>) the script exits with an install hint; bf16 needs nothing
+extra. fp4 additionally requires a Blackwell GPU (GB200, B200, RTX 50-series).</p>
+<p>Quantization is primarily a <strong>memory</strong> optimization — the GEMMs are
+latency-bound at these chunk sizes, so bf16 is already near the compute roofline
+and lower precision mainly buys VRAM headroom (and a modest GB200 speedup).</p>
+<p>Steady-state throughput and peak VRAM, <strong>SANA-WM stages only</strong> (excludes the
+one-time Pi3X intrinsics estimate and first-chunk <code>torch.compile</code> warmup),
+default <code>--refiner_kv_max_frames 11</code>:</p>
+<table>
+<thead>
+<tr>
+<th>stage-1 / refiner</th>
+<th>peak VRAM</th>
+<th>H100 (×realtime)</th>
+<th>GB200 (×realtime)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bf16 / bf16</td>
+<td>47.3 GB</td>
+<td>1.09×</td>
+<td>1.27×</td>
+</tr>
+<tr>
+<td>fp8 / fp8</td>
+<td>35.4 GB</td>
+<td>~1.00× <em>(est.)</em></td>
+<td>1.16×</td>
+</tr>
+<tr>
+<td>fp4 / fp4</td>
+<td>29.4 GB</td>
+<td>— (Blackwell only)</td>
+<td>1.16×</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>🎯 <strong>Runs on a 32 GB RTX 5090:</strong> <code>--stage1_precision fp4 --refiner_precision fp4</code> fits in <strong>29.4 GB</strong> (the bf16 default needs 47 GB). fp4 requires Blackwell,
+which the 5090 is; the ×realtime figures above are measured on GB200/B200.</p>
+</blockquote>
+<p>A tighter KV window (<code>--refiner_kv_max_frames 2</code>) drops VRAM further and is
+faster, at a <strong>quality cost</strong> (more temporal flicker / drift — not recommended
+for final renders):</p>
+<table>
+<thead>
+<tr>
+<th>stage-1 / refiner</th>
+<th>peak VRAM</th>
+<th>H100 (×realtime)</th>
+<th>GB200 (×realtime)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bf16 / bf16</td>
+<td>37.4 GB</td>
+<td>1.26×</td>
+<td>1.57×</td>
+</tr>
+<tr>
+<td>fp8 / fp8</td>
+<td>25.4 GB</td>
+<td>—</td>
+<td>1.32×</td>
+</tr>
+<tr>
+<td>fp4 / fp4</td>
+<td>25.0 GB</td>
+<td>—</td>
+<td>1.25×</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Picking a precision:</strong> bf16 for best quality on any GPU; <strong>fp8</strong> for Hopper
+(H100) users who want lower VRAM with no Blackwell requirement; <strong>fp4</strong> for
+Blackwell, the only setting that fits the 47 GB bf16 model onto a 32 GB card. You
+can mix (e.g. <code>--stage1_precision bf16 --refiner_precision fp8</code>).</p>
+<blockquote>
+<p><strong>Note:</strong> quantization does not change the intrinsic long-rollout drift of the
+AR stage-1 backbone — very long clips slowly lose scene consistency regardless
+of precision. This is a property of the autoregressive teacher, not the quant.</p>
+</blockquote>
+<h2 id="chunk-causal-stage-1-teacher">Chunk-Causal Stage-1 Teacher<a class="headerlink" href="#chunk-causal-stage-1-teacher" title="Permanent link">&para;</a></h2>
+<p>The chunk-causal Stage-1 teacher is an intermediate research checkpoint: only
+the Stage-1 Sana DiT is chunk-causal, while inference keeps the bidirectional
+LTX-2 VAE and refiner path enabled by default. It is released mainly so users
+can reproduce the CP/FSDP2 Stage-1 training path and experiment with future
+chunk-causal models. It may show severe artifacts, temporal flicker, or weaker
+camera adherence than the full bidirectional / streaming releases; keep the
+default refiner on for qualitative samples and use <code>--no_refiner</code> only for fast
+Stage-1 debugging.</p>
+<p>The public config sets <code>scheduler.vis_sampler: chunk_flow_euler</code>, so the CLI's
+default <code>--sampling_algo auto</code> selects the correct sampler:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python<span class="w"> </span>inference_video_scripts/wm/inference_sana_wm.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--config<span class="w">     </span>hf://Efficient-Large-Model/SANA-WM_chunk_causal/config.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--model_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--image<span class="w">      </span>asset/sana_wm/demo_0.png<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--prompt<span class="w">     </span>asset/sana_wm/demo_0.txt<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--action<span class="w">     </span><span class="s2">&quot;w-240,dw-120,w-120,aw-180,w-300&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--num_frames<span class="w"> </span><span class="m">961</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--offload_refiner<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--output_dir<span class="w"> </span>results/sana_wm_chunk_causal
+</code></pre></div>
+<p><code>--offload_refiner</code> only changes model residency; the bidirectional refiner still
+runs unless <code>--no_refiner</code> is passed.</p>
+<p><code>chunk_flow_euler</code> uses <code>interval_k = 1 / num_chunks</code> by default. Override it
+with <code>--chunk_interval_k</code> only for ablations.</p>
+<h2 id="chunk-causal-stage-1-training-on-sekai-game">Chunk-Causal Stage-1 Training on Sekai-Game<a class="headerlink" href="#chunk-causal-stage-1-training-on-sekai-game" title="Permanent link">&para;</a></h2>
+<p>This repo includes the minimal chunk-causal Stage-1 training path:</p>
+<ul>
+<li>training script: <code>train_video_scripts/train_sana_wm_stage1.py</code></li>
+<li>training config: <code>configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml</code></li>
+<li>latent dataset loader: <code>diffusion/data/datasets/video/sana_wm_zip_latent_data.py</code></li>
+<li>CP/FSDP2 tests: <code>tests/test_context_parallel*.py</code></li>
+</ul>
+<p>The example can run directly from the public HF dataset
+<a href="https://huggingface.co/datasets/Efficient-Large-Model/SANA-WM-example-training-dataset"><code>Efficient-Large-Model/SANA-WM-example-training-dataset</code></a>.
+The config downloads the dataset on the main rank, waits for all ranks, and
+trains from the chunk-causal Stage-1 teacher checkpoint with FSDP2 and CP2:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span>--master_port<span class="o">=</span><span class="m">29500</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>train_video_scripts/train_sana_wm_stage1.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml
+</code></pre></div>
+<p>The dataset repo is about 235 GB and is laid out so the config paths resolve to:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">data</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">hf_dataset_repo</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Efficient-Large-Model/SANA-WM-example-training-dataset</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">hf_dataset_revision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4d965e94b9ea11b9c5ba085251ffa7a0345e006f</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">hf_dataset_local_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="nt">data_dir</span><span class="p">:</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">sekai_game</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data/sekai_game_train_961frames_16fps_ovl640</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">vae_cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data/vae_cache/LTX2VAE_diffusers_704x1280/sekai_game_train_961frames_16fps_ovl640</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nt">model</span><span class="p">:</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span><span class="nt">load_from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">  </span><span class="nt">attn_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ChunkCausalGDNTriton</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">  </span><span class="nt">camctrl_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ChunkCausalGDNUCPESinglePathLiteLABothTriton</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="nt">train</span><span class="p">:</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">  </span><span class="nt">use_fsdp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">  </span><span class="nt">fsdp_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">  </span><span class="nt">cp_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</code></pre></div>
+<p>Set <code>data.hf_dataset_local_dir</code> to a shared filesystem path if you do not want
+the dataset under the repo checkout. Relative <code>data_dir</code> and <code>vae_cache_dir</code>
+entries are resolved under that directory after download.</p>
+<p>The Sekai-derived dataset is redistributed for non-commercial research use
+only. See the dataset card, <code>LICENSE</code>, and <code>NOTICE.md</code> in the HF dataset repo
+before training or redistributing derivatives.</p>
 <h2 id="argument-reference">🎛️ Argument Reference<a class="headerlink" href="#argument-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1860,7 +2149,7 @@ slow/fast toggle; the script is the fast config.</p>
 </tr>
 <tr>
 <td><code>--num_frames</code></td>
-<td>Total frames to generate (default <code>161</code>; the demos above use <code>321</code>).</td>
+<td>Total frames to generate (default <code>161</code>; the streaming demo uses <code>241</code>; the chunk-causal Stage-1 teacher example uses <code>961</code>).</td>
 </tr>
 <tr>
 <td><code>--fps</code></td>
@@ -1880,7 +2169,7 @@ slow/fast toggle; the script is the fast config.</p>
 </tr>
 <tr>
 <td><code>--no_refiner</code></td>
-<td>Skip the LTX-2 refiner and decode Stage-1 latents with the Sana VAE (faster, lower quality).</td>
+<td>The LTX-2 refiner is enabled by default. This flag skips it and decodes Stage-1 latents with the Sana VAE for fast, lower-quality debugging.</td>
 </tr>
 <tr>
 <td><code>--refiner_root</code></td>
@@ -1899,8 +2188,20 @@ slow/fast toggle; the script is the fast config.</p>
 <td>Lazy-load the LTX-2 refiner only when needed; release afterwards.</td>
 </tr>
 <tr>
+<td><code>--stage1_precision</code></td>
+<td>Streaming only. Stage-1 DiT compute precision: <code>bf16</code> (default), <code>fp8</code> (Hopper+/Blackwell), <code>fp4</code> (Blackwell only). fp8/fp4 need Transformer Engine.</td>
+</tr>
+<tr>
+<td><code>--refiner_precision</code></td>
+<td>Streaming only. LTX-2 refiner compute precision: <code>bf16</code> (default), <code>fp8</code>, <code>fp4</code>. See <a href="#-quantized-inference-fp8--fp4">Quantized inference</a>.</td>
+</tr>
+<tr>
 <td><code>--sampling_algo</code></td>
-<td><code>flow_euler_ltx</code> (default, bidirectional). For streaming use the dedicated <code>wm/inference_sana_wm_streaming.py</code>.</td>
+<td><code>auto</code> (default). Uses <code>chunk_flow_euler</code> for chunk-causal teacher configs and <code>flow_euler_ltx</code> otherwise. For streaming use the dedicated <code>wm/inference_sana_wm_streaming.py</code>.</td>
+</tr>
+<tr>
+<td><code>--chunk_interval_k</code></td>
+<td>Optional <code>chunk_flow_euler</code> interval override. Defaults to <code>1 / num_chunks</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1969,17 +2270,38 @@ slow/fast toggle; the script is the fast config.</p>
 </tr>
 </tbody>
 </table>
-<p>The inference config ships in-repo at
-<code>configs/sana_wm/sana_wm_streaming_1600m_720p.yaml</code> (not in the weights repo).</p>
+<p><code>Efficient-Large-Model/SANA-WM_chunk_causal</code> (Stage-1 teacher):</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chunk-causal Sana DiT (Stage 1)</td>
+<td><code>dit/sana_wm_chunk_causal_1600m_720p.safetensors</code></td>
+</tr>
+<tr>
+<td>Inference config</td>
+<td><code>config.yaml</code></td>
+</tr>
+</tbody>
+</table>
+<p>The chunk-causal teacher repo intentionally contains only the Stage-1 config and
+DiT weights. The CLI resolves the bidirectional VAE, LTX-2 refiner, and refiner
+text encoder from <code>Efficient-Large-Model/SANA-WM_bidirectional</code> by default to
+avoid duplicating large immutable artifacts.</p>
 <p>The Sana text encoder (<code>gemma-2-2b-it</code>) is fetched separately from
 <code>Efficient-Large-Model/gemma-2-2b-it</code>.</p>
 <h2 id="bibtex">📝 BibTeX<a class="headerlink" href="#bibtex" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">zhu2026sana</span><span class="p">,</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Sana-wm: Efficient minute-scale world modeling with hybrid linear diffusion transformer}</span><span class="p">,</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Zhu, Haoyi and Liu, Haozhe and Zhao, Yuyang and Ye, Tian and Chen, Junsong and Yu, Jincheng and He, Tong and Han, Song and Xie, Enze}</span><span class="p">,</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="na">journal</span><span class="p">=</span><span class="s">{arXiv preprint arXiv:2605.15178}</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2026}</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">zhu2026sana</span><span class="p">,</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Sana-wm: Efficient minute-scale world modeling with hybrid linear diffusion transformer}</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Zhu, Haoyi and Liu, Haozhe and Zhao, Yuyang and Ye, Tian and Chen, Junsong and Yu, Jincheng and He, Tong and Han, Song and Xie, Enze}</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="na">journal</span><span class="p">=</span><span class="s">{arXiv preprint arXiv:2605.15178}</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2026}</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">}</span>
 </code></pre></div>
 
 

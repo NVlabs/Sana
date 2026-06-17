@@ -252,11 +252,11 @@ const cg2RealItems = [
   }
 ];
 
-const bibtex = `@article{zhao2026sanastreaming,
-  title   = {SANA-Streaming: Real-time Streaming Video Editing with Hybrid Diffusion Transformer},
-  author  = {Zhao, Yuyang and Pan, Yicheng and He, Qiyuan and Yu, Jincheng and Chen, Junsong and Ye, Tian and Liu, Haozhe and Xie, Enze and Han, Song},
-  journal = {arXiv preprint},
-  year    = {2026}
+const bibtex = `@article{zhao2026sana,
+  title={SANA-Streaming: Real-time Streaming Video Editing with Hybrid Diffusion Transformer},
+  author={Zhao, Yuyang and Pan, Yicheng and He, Qiyuan and Yu, Jincheng and Chen, Junsong and Ye, Tian and Liu, Haozhe and Xie, Enze and Han, Song},
+  journal={arXiv preprint arXiv:2605.30409},
+  year={2026}
 }`;
 
 function assetPath(path) {
@@ -456,7 +456,7 @@ function render() {
       <div class="paper-links">
         <a href="https://arxiv.org/abs/2605.30409" target="_blank" rel="noopener noreferrer">Paper</a>
         <a href="https://github.com/NVlabs/Sana">Code</a>
-        <a href="">Demo</a>
+        <a class="is-featured" href="https://sana-streaming.reactor.inc/" target="_blank" rel="noopener noreferrer">Online Demo <em>live</em></a>
         <button type="button" data-copy-citation>BibTeX</button>
         
       </div>

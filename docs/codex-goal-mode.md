@@ -37,7 +37,8 @@ goals/<goal-id>/
 /goal follow goals/<goal-id>/goal.md
 ```
 
-It must include its own acceptance criteria and search-space-start section.
+It must include its own acceptance criteria, search-space-start section, and the
+fan-out loop contract from `docs/fanout-loop-contract.md`.
 
 `context.json` records:
 
@@ -155,13 +156,39 @@ You are working in an isolated autovideo worktree.
 - Candidate manifest: `<candidate_manifest>`
 - Launch with: `python3 scripts/launch_candidate.py <candidate> --mode dry-run`
 - Collect with: `python3 scripts/collect_run.py runs/<run-id>`
+- Authoritative assess with:
+  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames`
+
+## Fan-Out Loop Contract
+
+This is a bounded per-dimension search loop, not a single target:
+
+1. observe prior results, failed signatures, current best_per_tier, and baseline;
+2. propose a new hypothesis expected to improve over the previous loop or avoid
+   a recorded failure;
+3. implement exactly one candidate;
+4. preflight, launch, collect, and run the authoritative gate;
+5. if promoted, keep it and loop for a better point;
+6. if rejected, record the failure signature and loop with a meaningfully
+   different hypothesis;
+7. stop only at max_iters, early_stop, real blocker, or structured-negative
+   evidence.
+
+Collector `quality.json` is telemetry; promotion authority is OFF identity plus
+aligned LPIPS plus aligned pairwise Gemini on the canonical baseline frames.
 
 ## Done When
 
-- implementation or manifest change is complete
-- dry-run bundle can be generated
-- relevant tests or static checks pass
-- final notes explain artifacts and remaining blockers
+- the loop ended for max_iters, early_stop, real blocker, or structured negative;
+- or the orchestrator explicitly released the session after reviewing current
+  best_per_tier;
+- `SEARCH_JOURNAL.md`, `AGENT-STATUS.json`, and `SUMMARY.md` explain winners,
+  rejects, failure signatures, artifacts, and remaining blockers.
+
+This closes only the per-dimension goal. The global run still needs the fan-in
+integration goal to compose eligible winners into low/medium/high delivery
+profiles and re-gate those merged profiles, or to record explicit per-tier
+blockers.
 ```
 
 ## Remaining Follow-Up

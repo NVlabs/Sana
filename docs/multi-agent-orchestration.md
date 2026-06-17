@@ -62,9 +62,12 @@ create goal
   -> write goal.md/context.json
   -> enter interactive Codex
   -> send /goal follow <goal.md>
-  -> launch candidate
-  -> collect run
-  -> spawn independent gate goal
+  -> run dimension loop:
+       observe -> hypothesize -> implement one candidate
+       -> preflight -> launch -> collect -> authoritative gate
+       -> keep/reject and loop
+  -> spawn independent gate goal or main-gate promising candidates
+  -> stop only at max_iters, early_stop, real blocker, structured negative, or release
   -> summarize and close
   -> release session resources
 ```
@@ -128,6 +131,31 @@ Every job should use:
 
 For apples-to-apples perf numbers, explicitly record whether compile caches were
 cold or warm.
+
+## Loop And Gate Discipline
+
+Each native implementation goal follows `docs/fanout-loop-contract.md`. A single
+candidate failure is not a completed dimension: the agent records the failure
+signature and proposes a different next hypothesis. A single success is also not
+completion: it updates best_per_tier and the loop continues until a stop
+condition or orchestrator release.
+
+Promotion decisions use the authoritative aligned gate, not prose and not
+collector-only video-sampled Gemini:
+
+- OFF identity when applicable;
+- aligned LPIPS against canonical baseline frames;
+- aligned pairwise Gemini;
+- latency or peak-memory improvement.
+
+The main agent should kill duplicate collectors/jobs for the same run and release
+closed sessions that keep launching redundant jobs.
+
+Fan-out terminal state is not global completion. After the selected dimensions
+close, the main agent must start one fan-in integration goal that stacks eligible
+per-tier winners, launches composed GPU runs, and re-gates each merged profile.
+The experiment is complete only when every low/medium/high tier has a composed
+artifact or an explicit integration blocker.
 
 ## Goal Mode Bridge
 

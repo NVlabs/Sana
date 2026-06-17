@@ -37,13 +37,15 @@ should happen directly in `Sol-LTX-Infer/` before being normalized.
 ## Search pipeline
 1. Load `models/<id>.toml` and observe available method families.
 2. For each dimension the main agent chooses to wake: spawn a native Codex goal
-   from `search_space/` plus `loops/<dim>/exploration.md`.
-3. The subagent inspects and modifies `Sol-LTX-Infer/` directly, then writes a
-   candidate manifest and artifacts. Compose checks are optional diagnostics.
+   from `search_space/` plus `loops/<dim>/exploration.md` and
+   `docs/fanout-loop-contract.md`.
+3. The subagent runs the bounded dimension loop: observe prior results, propose
+   a new hypothesis, implement exactly one candidate, preflight, launch, gate,
+   then keep/reject and loop. Compose checks are optional diagnostics.
 4. **(GPU stage)** Render a run bundle from the profile + cfg → existing
    `scripts/launch_candidate.py` → `scripts/collect_run.py` → `benchmark.json`/
-   `quality.json` → compare vs the profile `[baseline]` → bin into low/mid/high
-   per `evals/profiles/official_video_t2v.toml`.
+   `quality.json` plus aligned gate artifacts → compare vs the profile
+   `[baseline]` → bin into low/mid/high per `evals/tiers.toml`.
 5. Emit the tiered `final_matrix` (the plan's deliverable).
 
 ## Map to the videogen-accel plan
@@ -63,7 +65,8 @@ existing launcher/collector/eval-profile.
 ## Quality eval pipeline (per candidate) — what bins a config into a tier
 
 Each search-loop iteration runs a candidate and assesses quality through THREE
-stages; the verdict (plus latency + peak_mem) decides its tier (`evals/tiers.toml`):
+authoritative stages; the verdict (plus latency + peak_mem) decides its tier
+(`evals/tiers.toml`):
 
 ```
 1. off_identity      guarded paths must be byte/numeric-identical to baseline when
@@ -72,7 +75,7 @@ stages; the verdict (plus latency + peak_mem) decides its tier (`evals/tiers.tom
                      flicker and patch-boundary metrics, plus LPIPS over
                      stratified frame pairs. Missing baseline frames or missing
                      LPIPS blocks promotion.
-3. perceptual (REQUIRED)  NVIDIA-Gemini pairwise visual-artifact judge:
+3. perceptual (REQUIRED)  aligned NVIDIA-Gemini pairwise visual-artifact judge:
                      extract frames -> side_by_side vs baseline ->
                      tools/vision/nvidia_gemini_judge.py (rubric:
                      evals/rubrics/gemini_visual_artifact_gate.md) -> verdict
@@ -87,10 +90,32 @@ maps to a tier by `gemini_overall` + max new-artifact `severity` (see
 high = ≤medium severity (high severity is always rejected).
 
 The combined verdict (all three stages) + the (latency, peak_mem) improvement bin
-the candidate into the tightest (cleanest, low-first) tier it satisfies. The
-source of truth is structured JSON (`quality.json` and verdict JSON), never prose
+the candidate into the tightest (cleanest, low-first) tier it satisfies.
+Promotion authority is OFF identity, aligned LPIPS on canonical baseline frames,
+and aligned pairwise Gemini. Collector `quality.json` is telemetry and may be
+used for bookkeeping, but its video-sampled Gemini output is not promotion
+authority when it contradicts aligned LPIPS or aligned pairwise gate artifacts.
+The source of truth is structured JSON from the authoritative gate, never prose
 logs or release notes. Each dimension keeps the best config per tier; integration
-stacks per-tier winners.
+stacks per-tier winners. Integration is a mandatory fan-in loop: composed
+profiles must be generated and gated themselves, and a tier with no eligible
+composition must be recorded as an explicit blocker.
+
+## Loop control and failed candidates
+
+A native goal dimension is not complete when one candidate fails. Failed
+candidates must be rejected, logged with a failure signature, and used to choose
+the next hypothesis. Successful candidates update `best_per_tier`, then the
+dimension keeps searching for a better point. A dimension stops only at:
+
+- `max_iters`;
+- `early_stop_patience` with no Pareto improvement or new diagnostic signal;
+- a real external blocker;
+- structured-negative evidence that covers the meaningful mechanism space;
+- explicit main-orchestrator release after review.
+
+See `docs/fanout-loop-contract.md` for the exact state machine and required
+`SEARCH_JOURNAL.md` / `AGENT-STATUS.json` fields.
 
 **Live-verified** on HSG: the Gemini judge runs against `inference-api.nvidia.com`
 (`gcp/google/gemini-3.5-flash`, `NVIDIA_API_KEY`); a self-vs-self baseline check

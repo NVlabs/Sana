@@ -60,6 +60,11 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert "## Search Space Start" in text
     assert "## Required Artifacts" in text
     assert "AGENT-STATUS.json" in text
+    assert "## Fan-Out Loop Contract" in text
+    assert "bounded per-dimension search loop" in text
+    assert "rejected candidate: record a failure signature" in text
+    assert "Collector `quality.json`" in text
+    assert "not promotion authority" in text
     assert "identify at least three caching mechanisms" in text
     assert "quality-gate status" in text
     assert "reference/search_space_docs" not in text
@@ -68,6 +73,55 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert context["dimension"] == "step_cache"
     assert context["search_space_root"] == "search_space"
     assert context["acceptance_criteria"]
+    assert context["loop_contract"]["failed_candidate_action"] == "reject_log_and_loop"
+    assert context["loop_contract"]["successful_candidate_action"] == "keep_best_per_tier_and_loop"
+    assert "aligned_lpips" in context["loop_contract"]["promotion_authority"]
+    assert context["loop_contract"]["global_done_requires_integration"] is True
+
+
+def test_prepare_goal_can_create_integration_goal() -> None:
+    goals_root = ROOT / ".symposium/scratch/test-goals"
+    goal_id = "unit-integration-goal"
+    goal_dir = goals_root / goal_id
+    if goal_dir.exists():
+        shutil.rmtree(goal_dir)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(PREPARE),
+            "--goal-id",
+            goal_id,
+            "--candidate",
+            "candidates/baseline.toml",
+            "--objective",
+            "Integrate fan-out winners into composed low, medium, and high profiles.",
+            "--dimension",
+            "integration",
+            "--role",
+            "integration",
+            "--goals-root",
+            str(goals_root.relative_to(ROOT)),
+        ],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.returncode == 0, proc.stderr
+    text = (goal_dir / "goal.md").read_text()
+    assert "## Fan-In Integration Contract" in text
+    assert "fan-in integration loop" in text
+    assert "no_eligible_profile" in text
+    assert "INTEGRATION-STATUS.json" in text
+    assert "failed composition: record an interaction failure signature" in text
+    assert "finish only when every low/medium/high tier" in text
+    context = json.loads((goal_dir / "context.json").read_text())
+    assert context["role"] == "integration"
+    assert context["dimension"] == "integration"
+    assert context["loop_contract"]["kind"] == "fan_in_integration_loop"
+    assert context["loop_contract"]["failed_candidate_action"] == "record_interaction_failure_and_loop"
+    assert context["loop_contract"]["successful_candidate_action"] == "keep_composed_tier_incumbent_and_loop"
+    assert "integration/" in context["write_scope"]
 
 
 def test_session_start_sends_native_goal_follow() -> None:
@@ -203,6 +257,7 @@ def test_search_space_import_records_source_metadata() -> None:
 
 def main() -> None:
     test_prepare_goal_embeds_search_space_and_acceptance()
+    test_prepare_goal_can_create_integration_goal()
     test_session_start_sends_native_goal_follow()
     test_session_start_can_run_in_isolated_worktree()
     test_search_space_import_records_source_metadata()

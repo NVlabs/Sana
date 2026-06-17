@@ -5,6 +5,9 @@
 # EACH dimension's search loop emits its OWN best (latency, peak_mem) config PER
 # TIER (its own low/medium/high). The integration stage then stacks the per-tier
 # winners across dimensions into the final low/medium/high delivery profiles.
+# This fan-in integration stage is mandatory for global completion: a run with
+# only per-dimension winners is unfinished unless each tier has an explicit
+# integration blocker.
 #
 # A candidate's tier = the TIGHTEST (cleanest, low-first) tier whose budget it satisfies on BOTH axes:
 #   (1) quantitative: lpips_delta_max  (PSNR is diagnostic only, not a gate)
@@ -37,8 +40,9 @@ lpips_delta_max = 0.09
 gemini_overall = "pass_or_fail"       # may fail on medium severity, but must be labeled
 gemini_max_artifact_severity = "medium"   # medium tolerated; HIGH severity always rejected
 
-# Composed speedup TARGETS for the INTEGRATION stage (all eligible dimensions
-# stacked vs the model baseline) — NOT per-dimension gates. From the plan matrix.
+# Composed speedup TARGETS for the mandatory INTEGRATION stage (all eligible
+# dimensions stacked vs the model baseline) — NOT per-dimension gates. From the
+# plan matrix.
 [targets]
 low_speedup = 1.35
 medium_speedup = 2.20

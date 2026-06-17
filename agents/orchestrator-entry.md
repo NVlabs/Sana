@@ -15,6 +15,8 @@ subagents that the main agent creates under `goals/<goal-id>/`.
 
 ## 0. Read these first (the system you drive)
 - `docs/search-architecture.md` — the three planes + the search & eval pipeline.
+- `docs/fanout-loop-contract.md` — the per-dimension loop state machine, gate
+  authority, failure signatures, and stopping rules.
 - `models/README.md` — the target model profile and run environment.
 - `docs/codex-goal-mode.md` and `docs/multi-agent-orchestration.md` — how to
   spawn, correct, gate, and release per-dimension native goal sessions.
@@ -42,27 +44,39 @@ subagents that the main agent creates under `goals/<goal-id>/`.
                    Use this as an observation pass, not as a launch gate.
 2. FAN OUT         one native Codex goal session per selected dimension:
                    own worktree+branch+isolated CODEX_HOME; goal.md includes
-                   objective, search-space-start, artifacts, and acceptance criteria.
+                   objective, search-space-start, artifacts, acceptance criteria,
+                   and the fan-out loop contract.
                    Start through `tools/symposium/codex_goal_session.py start`,
                    which opens interactive Codex and sends `/goal follow <goal.md>`.
                    Each agent starts from `search_space/` and
-                   `loops/<dim>/exploration.md`, then derives model-specific
-                   candidates from inference code/traces. It can directly modify
-                   `Sol-LTX-Infer/`; do not wait for an exposed seam/interface:
+                   `loops/<dim>/exploration.md`, then runs a bounded loop:
+                   observe prior results -> propose a better hypothesis ->
+                   implement exactly one candidate -> preflight -> launch ->
+                   authoritative gate -> keep/reject and loop. It can directly
+                   modify `Sol-LTX-Infer/`; do not wait for an exposed seam/interface:
                        -> plan_eval.render_candidate(profile, technique, cfg)
                        -> scripts/launch_candidate.py --mode sbatch --confirm-submit
-                       -> scripts/collect_run.py  -> plan_eval.assess (benchmark + Gemini)
+                       -> sana search/plan_eval.py --assess (benchmark + aligned quality)
                        -> plan_eval.tier_of  -> keep best_per_tier
                      budget: max_iters=20, early_stop_patience=5.
-3. GATE (you)      never auto-merge. Per candidate enforce the 3-stage quality:
-                   off_identity -> LPIPS -> NVIDIA-Gemini visual judge, against the
-                   tier budgets (evals/tiers.toml). Read each branch diff, run the
+                   Candidate failure does not finish the dimension; it must
+                   produce a failure signature and loop unless max_iters,
+                   early_stop, structured-negative evidence, or a real blocker applies.
+3. GATE (you)      never auto-merge. Per candidate enforce the authoritative quality:
+                   off_identity -> aligned LPIPS -> aligned pairwise NVIDIA-Gemini,
+                   against the tier budgets (evals/tiers.toml). Collector
+                   `quality.json` Gemini is telemetry, not promotion authority,
+                   when it disagrees with the aligned gate. Read each branch diff, run the
                    gate, merge sequentially (by SHA), reconcile shared-file conflicts.
-4. INTEGRATE       stack per-tier dimension winners across dimensions -> composed
-                   low/medium/high profiles. Main resolves code conflicts and any
-                   runtime interaction between patches, then re-gates merged glue.
-                   Re-eval the composed configs on GPU. Target composed speedups
-                   ~1.35x / 2.2x / 3.0x (evals/tiers.toml [targets]).
+4. INTEGRATE       mandatory fan-in stage after all selected dimensions are
+                   terminal. Start a native integration goal in a clean worktree.
+                   It stacks eligible per-tier dimension winners into composed
+                   low/medium/high profiles, resolves code/config interactions,
+                   then re-gates each merged profile on GPU. A failed composed
+                   gate records an interaction failure and loops with a repaired
+                   merge, reduced subset, or different tier plan. Empty tiers get
+                   explicit blockers. Target composed speedups ~1.35x / 2.2x /
+                   3.0x (evals/tiers.toml [targets]).
 5. DELIVER         the final matrix: per tier -> config (feature flags) + speedup +
                    peak-mem + quality verdict + rollback. Write the release report.
 ```
@@ -84,17 +98,53 @@ CODEX_HOME=$CH python3 tools/symposium/codex_goal_session.py start \
   --worktree $WT --name <dim> goals/<dim>
 ```
 Use `status`, `capture`, and `send` to track and correct live subagents. When a
-candidate is ready, spawn a separate gate goal (`--role gate`); then review,
-gate, and merge by SHA. Cap N to what you will review; CPU-only dimension prep
-runs on the park node, GPU candidate runs go through Slurm. Use `release` after
-the agent is closed or rejected.
+candidate is ready, spawn a separate gate goal (`--role gate`) or run the main
+authoritative gate yourself; then review, gate, and merge by SHA. Cap N to what
+you will review; CPU-only dimension prep runs on the park node, GPU candidate
+runs go through Slurm. If a candidate fails, require the subagent to record the
+failure signature and propose a meaningfully different next hypothesis. Use
+`release` after the agent is closed or rejected; for repeated cap violations or
+duplicate job launches, release the session instead of relying only on queued
+steering text.
+
+## 3.1 Spawn recipe — the fan-in integration loop
+After every selected fan-out dimension is terminal and no dimension has active
+Slurm/collector/gate work, start exactly one integration goal. Do not mark the
+experiment complete before this stage produces composed artifacts or explicit
+per-tier blockers.
+
+```
+WT=$PWD/output/fanout/integration; git worktree add -b codex/integration $WT <BASE>
+CH=$WT/.codex-home; mkdir -p $CH; cp ~/.codex/{auth.json,config.toml} $CH/
+(cd $WT && python3 tools/symposium/prepare_goal.py \
+    --goal-id integration \
+    --candidate candidates/baseline.toml \
+    --dimension integration \
+    --role integration \
+    --objective "Integrate fan-out winners into gated composed low, medium, and high delivery profiles. Read each dimension status and durable run artifacts, build tier plans, merge one composed profile per iteration, launch GPU generation, run the authoritative aligned gate, and loop on failures until every tier has a composed artifact or explicit blocker.")
+CODEX_HOME=$CH python3 tools/symposium/codex_goal_session.py start \
+  --worktree $WT --name integration goals/integration
+```
+
+Integration acceptance:
+
+- low/medium/high each has a gated composed manifest and video, or an explicit
+  blocker such as `no_eligible_profile`;
+- every composed profile has its own benchmark, collect artifacts, aligned LPIPS,
+  and aligned pairwise Gemini verdict against the canonical baseline;
+- `INTEGRATION-STATUS.json` and `INTEGRATION-JOURNAL.md` separate per-dimension
+  winners from true composed delivery profiles;
+- failed merges or quality regressions are recorded as interaction failures and
+  looped, not treated as completion.
 
 ## 4. Cluster / GPU
 - Runs: `scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit`
   (HSG `batch`, 4 GPU/node). The profile `[env]` supplies the cache/python.
 - Collect: `scripts/collect_run.py <run_dir>` -> `benchmark.json` + frames.
-- Quality: `tools/vision/nvidia_gemini_judge.py` (`NVIDIA_API_KEY`) -> `quality.json`.
-- Assess + tier: `python search/plan_eval.py --assess <run_dir> --baseline-frames <dir>`.
+- Assess + tier: `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`.
+- Quality authority: OFF identity + aligned LPIPS + aligned pairwise Gemini.
+  `quality.json` collector Gemini can be logged, but it cannot override the
+  aligned gate.
 
 ## 5. Guardrails (hard)
 - Dimensions stay model-agnostic; model specifics live ONLY in `models/` + the spec.
@@ -103,6 +153,16 @@ the agent is closed or rejected.
 - OFF==baseline (byte/numeric) on guarded paths; WARMUP before quoting timings;
   never claim speedup from cold compile.
 - Bounded loops (max_iters + early stop); log any truncation; review before merge.
+- A failed candidate gate means reject/log/loop, not finish. A successful
+  candidate means keep best_per_tier and keep searching for a better point until
+  a stop condition applies.
+- The next candidate after a reject must address the recorded failure signature;
+  do not allow cosmetic parameter sweeps of an already-disproven mechanism.
+- Fan-out terminal state is not global completion. The run completes only after
+  the integration loop produces composed low/medium/high artifacts or explicit
+  per-tier blockers.
+- Kill duplicate collectors/jobs for the same run; never let two processes race
+  to write the same quality artifacts.
 
 ## 6. File map / quick commands
 | What | Where |
@@ -116,7 +176,7 @@ the agent is closed or rejected.
 | docs | `docs/{search-architecture,model-onboarding}.md` |
 ```bash
 python search/search.py --model <id>                  # method families + diagnostics + tiers
-python search/plan_eval.py --assess <run_dir> --baseline-frames <dir>   # benchmark+Gemini+tier
+/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>   # benchmark+aligned quality+tier
 python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 ~/lustre/miniconda3/envs/sana/bin/python efficiency/selftest.py        # 23/23
 ```
@@ -131,7 +191,7 @@ python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 - GPU eval harness: **VERIFIED end-to-end** (job 3294303, `runs/20260613-175619-baseline`):
   launch (sbatch) -> GPU run (127.83s) -> `collect_run.py` (`benchmark.json`, denoise 119.18s)
   -> Gemini pairwise judge (`overall=pass`, no artifacts) -> `tier_of` -> `tier=low`, via
-  `python search/plan_eval.py --assess <run_dir> --baseline-frames <dir>`. NOTE: that candidate
+  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`. NOTE: that candidate
   *is* the baseline config (no technique wired into the Cosmos3 denoise loop yet) -> 1.02x is
   run-variance, clean -> low. Real speedups need a technique wired into the runtime (next milestone).
 

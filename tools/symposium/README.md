@@ -102,9 +102,13 @@ goals/<goal-id>/
   candidate.toml
 ```
 
-Each generated `goal.md` includes its own search-space-start section, required
-artifacts, write scope, and acceptance criteria. Subagents should not need to
-infer acceptance criteria from external orchestration docs.
+Each generated `goal.md` includes its own search-space-start section, fan-out
+loop contract, required artifacts, write scope, and acceptance criteria.
+Subagents should not need to infer acceptance criteria from external
+orchestration docs. In particular, a failed candidate gate means
+reject/log/loop; a successful candidate means keep best_per_tier and continue
+until max_iters, early_stop, a real blocker, structured-negative evidence, or
+explicit orchestrator release.
 
 ## Start Codex Goal Mode
 

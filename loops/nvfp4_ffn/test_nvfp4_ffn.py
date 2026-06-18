@@ -51,12 +51,60 @@ def main() -> int:
     expected = {
         "SGLANG_HQ_ENABLE_TE_NVFP4_FFN": "1",
         "SGLANG_LTX2_TE_NVFP4_VIDEO_FFN": "1",
+        "SGLANG_HQ_NVFP4_MODULE_SCOPE": "video_ffn",
         "SGLANG_LTX2_TE_NVFP4_DISABLE_RHT": "1",
         "SGLANG_LTX2_TE_NVFP4_DISABLE_STOCHASTIC_ROUNDING": "1",
         "SGLANG_LTX2_TE_NVFP4_DISABLE_2D_QUANTIZATION": "1",
+        "SGLANG_HQ_NVFP4_ROW_SCALED_ACTIVATION": "0",
+        "SGLANG_HQ_ENABLE_TE_NVFP4_FUSED_PROJ_IN_GELU": "0",
+        "SGLANG_HQ_ENABLE_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE": "0",
+        "SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_IN_GELU": "0",
+        "SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE": "0",
+        "SGLANG_LTX2_TE_NVFP4_PAD_M_TO": "16",
+        "SGLANG_HQ_NVFP4_FALLBACK_POLICY": "bf16",
     }
     for key, value in expected.items():
         check(f"{key} set", env.get(key) == value)
+
+    variant_env: dict[str, str] = {}
+    variant_plan = compose(
+        [
+            NVFP4FFN(
+                module_scope="profiled_ffn_and_attention",
+                disable_rht=False,
+                disable_stochastic_rounding=False,
+                disable_2d_quantization=False,
+                row_scaled_activation=True,
+                fused_proj_in_gelu=True,
+                fused_proj_out_bias_gate=True,
+                pad_m_to=32,
+                fp4_gemm_backend="cudnn",
+                dense_layers="0-1,30-31",
+                dense_steps="0-2,32-34",
+                fallback_policy="bf16_on_shape_miss",
+            )
+        ],
+        spec,
+    )
+    variant_plan.apply_transforms(None, stage="stage2", env=variant_env)
+    variant_expected = {
+        "SGLANG_HQ_NVFP4_MODULE_SCOPE": "profiled_ffn_and_attention",
+        "SGLANG_LTX2_TE_NVFP4_DISABLE_RHT": "0",
+        "SGLANG_LTX2_TE_NVFP4_DISABLE_STOCHASTIC_ROUNDING": "0",
+        "SGLANG_LTX2_TE_NVFP4_DISABLE_2D_QUANTIZATION": "0",
+        "SGLANG_HQ_NVFP4_ROW_SCALED_ACTIVATION": "1",
+        "SGLANG_HQ_ENABLE_TE_NVFP4_FUSED_PROJ_IN_GELU": "1",
+        "SGLANG_HQ_ENABLE_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE": "1",
+        "SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_IN_GELU": "1",
+        "SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE": "1",
+        "SGLANG_LTX2_TE_NVFP4_PAD_M_TO": "32",
+        "SGLANG_DIFFUSION_FLASHINFER_FP4_GEMM_BACKEND": "cudnn",
+        "SGLANG_HQ_NVFP4_DENSE_LAYERS": "0-1,30-31",
+        "SGLANG_HQ_NVFP4_DENSE_STEPS": "0-2,32-34",
+        "SGLANG_HQ_NVFP4_FALLBACK_POLICY": "bf16_on_shape_miss",
+    }
+    for key, value in variant_expected.items():
+        check(f"variant {key} set", variant_env.get(key) == value)
 
     env_off: dict[str, str] = {}
     compose(nvfp4_items(False), spec).apply_transforms(

@@ -37,9 +37,19 @@ def read_prompt(rubric: Path, extra: str) -> str:
     return prompt
 
 
+def normalize_result(payload: Any, raw_response: str) -> dict[str, Any]:
+    if isinstance(payload, dict):
+        return payload
+    return {
+        "overall": "inconclusive",
+        "raw_response": raw_response,
+        "parse_error": f"json_root_not_object:{type(payload).__name__}",
+    }
+
+
 def extract_json(text: str) -> dict[str, Any]:
     try:
-        return json.loads(text)
+        return normalize_result(json.loads(text), text)
     except json.JSONDecodeError:
         pass
     match = re.search(r"\{.*\}", text, flags=re.DOTALL)
@@ -50,7 +60,7 @@ def extract_json(text: str) -> dict[str, Any]:
             "parse_error": "no_json_object_found",
         }
     try:
-        return json.loads(match.group(0))
+        return normalize_result(json.loads(match.group(0)), text)
     except json.JSONDecodeError as exc:
         return {
             "overall": "inconclusive",

@@ -212,6 +212,119 @@ def parse_sbatch_job_id(stdout: str) -> str | None:
     return match.group(1)
 
 
+def is_scored_candidate(data: dict[str, Any]) -> bool:
+    kind = str(data.get("kind", "")).lower()
+    if kind == "baseline":
+        return False
+
+    slurm = data.get("slurm", {})
+    job_name = slurm.get("job_name", "") if isinstance(slurm, dict) else ""
+    label = f"{data.get('id', '')} {job_name}".lower()
+    non_scored_markers = (
+        "baseline_off",
+        "trace_off",
+        "off_identity",
+        "warm_ctrl",
+        "warm-ctrl",
+        "control",
+        "ctrl",
+        "profile",
+        "profiler",
+    )
+    return not any(marker in label for marker in non_scored_markers)
+
+
+def recorded_run_dirs(root: Path, status_path: Path) -> set[Path]:
+    try:
+        status = json.loads(status_path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return set()
+
+    recorded: set[Path] = set()
+    for collection in (
+        "candidates",
+        "frontier_candidates",
+        "discarded_candidates",
+        "rejected_candidates",
+    ):
+        for record in status.get(collection, []):
+            if not isinstance(record, dict) or not record.get("run_dir"):
+                continue
+            path = Path(str(record["run_dir"]))
+            recorded.add((path if path.is_absolute() else root / path).resolve())
+    return recorded
+
+
+def load_manifest_for_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    manifest = metadata.get("candidate_manifest")
+    if manifest:
+        manifest_path = Path(str(manifest))
+        if manifest_path.exists():
+            return load_toml(manifest_path)
+    return {"id": metadata.get("candidate_id", ""), "kind": metadata.get("kind", "")}
+
+
+def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    if os.environ.get("AUTO_VIDEO_DISABLE_SINGLE_FLIGHT_GUARD") == "1":
+        return
+    if args.mode != "sbatch" or not args.confirm_submit:
+        return
+
+    root = repo_root()
+    status_path = root / "AGENT-STATUS.json"
+    if not status_path.exists():
+        return
+
+    runs_root = (root / args.run_root).resolve()
+    if not runs_root.exists():
+        return
+
+    recorded = recorded_run_dirs(root, status_path)
+    nonblocking_statuses = {
+        "prepared",
+        "failed",
+        "submission_failed",
+        "canceled",
+        "canceled_by_watchdog",
+    }
+    candidate_id = str(data.get("id", ""))
+    current_is_scored = is_scored_candidate(data)
+    blockers: list[str] = []
+    for metadata_path in sorted(runs_root.glob("*/metadata.json")):
+        try:
+            metadata = json.loads(metadata_path.read_text())
+        except json.JSONDecodeError:
+            continue
+        run_dir = Path(str(metadata.get("run_dir") or metadata_path.parent))
+        run_dir = (run_dir if run_dir.is_absolute() else root / run_dir).resolve()
+        if run_dir in recorded:
+            continue
+        if metadata.get("status") in nonblocking_statuses:
+            continue
+        existing_data = load_manifest_for_metadata(metadata)
+        if str(existing_data.get("id", metadata.get("candidate_id", ""))) == candidate_id:
+            blockers.append(
+                f"{run_dir} status={metadata.get('status')} job={metadata.get('slurm_job_id')}"
+            )
+            continue
+        if current_is_scored and is_scored_candidate(existing_data):
+            blockers.append(
+                f"{run_dir} status={metadata.get('status')} job={metadata.get('slurm_job_id')}"
+            )
+
+    if blockers:
+        raise SystemExit(
+            "Refusing to submit because this fanout dimension has active or "
+            "unrecorded run(s) that would violate single-flight launch control. "
+            "Gate and record scored runs with "
+            "tools/symposium/loop_control.py before launching another scored "
+            "candidate; do not duplicate controls. Set "
+            "AUTO_VIDEO_DISABLE_SINGLE_FLIGHT_GUARD=1 only for an explicit "
+            "orchestrator-approved override.\n- "
+            + "\n- ".join(blockers)
+        )
+
+
 def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, Any]]:
     root = repo_root()
     candidate_path = Path(args.candidate).resolve()
@@ -342,6 +455,9 @@ def main() -> int:
         help="Actually submit when --mode sbatch is selected. Without this flag, sbatch mode renders only.",
     )
     args = parser.parse_args()
+
+    candidate_data = load_toml(Path(args.candidate).resolve())
+    enforce_single_flight_or_exit(args, candidate_data)
 
     run_dir, launch_script, job_script, data = prepare_run(args)
     print(f"candidate: {data['id']}")

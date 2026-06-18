@@ -111,11 +111,11 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[DC-AE](https://hanlab.mit.edu/projects/dc-ae)**: 32× image compression (vs. traditional 8×) to reduce latent tokens.
 - **Decoder-only Text Encoder**: Modern decoder-only LLM with in-context learning for better text-image alignment.
 - **Block Causal Linear Attention & Causal Mix-FFN**: Efficient attention and feedforward for long video generation.
-- **Streaming Video Editing**: Real-time long-form video-to-video editing with stable temporal consistency.
 - **Flow-DPM-Solver**: Reduce sampling steps with efficient training and sampling.
 - **sCM Distillation**: One/few-step generation with continuous-time consistency distillation.
 - **Sol-RL**: Low precision(NVFP4) rollout selection, high precesion(BF16) optimization for faster RL training.
 - **Controllable World Modeling**: Efficient long-context modeling and camera trajectory control for consistent world generation.
+- **Streaming Video Editing**: Real-time long-form video-to-video editing with stable temporal consistency.
 
 **In summary**, SANA is a fully open-source framework integrating **efficient training, fast inference, and flexible deployment** for both image and video generation. Deployable on laptop GPUs with **< 8GB VRAM** via 4-bit quantization.
 

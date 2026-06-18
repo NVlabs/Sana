@@ -169,6 +169,15 @@ selector.
 The main agent should kill duplicate collectors/jobs for the same run and release
 closed sessions that keep launching redundant jobs.
 
+Stale cleanup includes tmux. `prepare_goal.py --clean-stale-records` removes old
+reports, verdicts, worktrees, and run directories, but it cannot clean live tmux
+sessions. Before starting a fresh workflow in a reused checkout, run
+`tmux ls | rg "$RUN_ID"` for the old run id and release/kill exact matches. Use
+`python3 tools/symposium/codex_goal_session.py release ... --worktree <WT> --name
+<session>` when state files exist; use `tmux kill-session -t
+<exact-session-name>` only for leftover sessions whose state files were already
+removed. Old tmux sessions are runtime state, not harmless logs.
+
 Fan-out terminal state is not global completion. After selected dimensions close,
 the main agent must choose 1.5x/2.0x/3.0x target winners from retained frontiers,
 then call the runtime integration trigger:

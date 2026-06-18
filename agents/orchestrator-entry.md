@@ -127,6 +127,27 @@ failure signature and propose a meaningfully different next hypothesis. Use
 duplicate job launches, release the session instead of relying only on queued
 steering text.
 
+Before reusing a checkout for a new workflow, clean both durable stale records
+and live tmux resources from the previous run. The filesystem cleaner does not
+own tmux panes, so check them explicitly:
+
+```bash
+python3 tools/symposium/prepare_goal.py --clean-stale-records --run-id "$RUN_ID"
+tmux ls | rg "$RUN_ID" || true
+# Prefer managed release when the goal state exists:
+python3 tools/symposium/codex_goal_session.py list
+python3 tools/symposium/codex_goal_session.py release goals/<dim> \
+  --worktree "$FANOUT_ROOT/<dim>" \
+  --name ${RUN_ID}-<dim> \
+  --note "stale run cleanup"
+# If the state file was already removed, kill the exact old run sessions by name:
+tmux kill-session -t ${RUN_ID}-<dim>
+```
+
+Do not leave old `workflow_$RUN_ID` or `$RUN_ID-<dim>`/`${RUN_ID}_<dim>` tmux
+sessions alive after deleting their `output/fanout_runs/$RUN_ID` directory; they
+are stale runtime state and can keep launching jobs or confuse status review.
+
 ## 3.1 Spawn recipe — the fan-in integration loop
 After every selected fan-out dimension is terminal and no dimension has active
 Slurm/collector/gate work, start exactly one integration goal. Do not mark the

@@ -176,6 +176,25 @@ Do not reuse `output/fanout/`, `output/fanout_loop_*`, old `evals/verdicts/*.jso
 release reports, or
 archived session captures as startup context for a new goal.
 
+Clean live tmux state separately when a run is abandoned or before reusing a
+checkout. The stale-record cleaner intentionally manages files, not running
+terminal sessions:
+
+```bash
+tmux ls | rg "$RUN_ID" || true
+python3 tools/symposium/codex_goal_session.py list
+python3 tools/symposium/codex_goal_session.py release goals/<goal-id> \
+  --worktree "$WT" \
+  --name ${RUN_ID}-<goal-id> \
+  --note "stale run cleanup"
+```
+
+If the session registry was already deleted, kill only exact old run sessions:
+
+```bash
+tmux kill-session -t ${RUN_ID}-<goal-id>
+```
+
 Check whether it is alive:
 
 ```bash

@@ -41,6 +41,9 @@ def main() -> int:
     check("search_space exists", search_space.is_dir())
     for file_name in DIMENSIONS.values():
         check(f"search_space/{file_name} exists", (search_space / file_name).exists())
+    for search_doc in search_space.glob("*.md"):
+        text = search_doc.read_text()
+        check(f"{search_doc.name} is model-agnostic", "Cosmos3" not in text and "cosmos3" not in text)
 
     reference_files = list((ROOT / "reference").glob("**/*")) if (ROOT / "reference").exists() else []
     check("legacy reference files removed", not any(path.is_file() for path in reference_files))
@@ -57,6 +60,9 @@ def main() -> int:
         text = (dim_dir / "dimension.toml").read_text()
         check(f"{dim} has no fixed search grid", "[technique.search_space]" not in text)
         check(f"{dim} has no legacy seeds", "[[seeds]]" not in text)
+        check(f"{dim} loop max_iters is 40", "max_iters = 40" in text)
+        check(f"{dim} loop early_stop_patience is 0", "early_stop_patience = 0" in text)
+        check(f"{dim} loop keeps frontier", 'keep = "frontier_candidates"' in text)
 
         goal_id = f"e2e-{dim}"
         run(
@@ -81,10 +87,21 @@ def main() -> int:
         goal = (goal_dir / "goal.md").read_text()
         context = json.loads((goal_dir / "context.json").read_text())
         check(f"{dim} goal has search-space section", "## Search Space Start" in goal)
+        check(f"{dim} goal has history policy", "## Historical Record Policy" in goal)
         check(f"{dim} goal exposes inference repo", "Sol-LTX-Infer/" in goal)
         check(f"{dim} goal says direct modify", "modify" in goal and "inference code" in goal)
+        check(f"{dim} goal uses target-model wording", "target-model" in goal and "inference code" in goal)
+        check(f"{dim} goal does not hard-code Cosmos3 in generic wording", "Cosmos3 inference code" not in goal)
         check(f"{dim} goal has acceptance criteria", bool(context["acceptance_criteria"]))
         check(f"{dim} context search_space_root", context["search_space_root"] == "search_space")
+        check(f"{dim} context search_space_doc", context["search_space_doc"] == f"search_space/{DIMENSIONS[dim]}")
+        check(f"{dim} context history policy", context["history_policy"]["mode"] == "clean_start_current_experiment_only")
+        check(f"{dim} goal uses relevant search doc", f"Relevant search doc: `search_space/{DIMENSIONS[dim]}`" in goal)
+        check(f"{dim} context max_iters", context["loop_contract"]["max_iters"] == 40)
+        check(
+            f"{dim} context review handoff",
+            context["loop_contract"]["early_stop_exit_status"] == "terminal_pending_review",
+        )
 
     session_help = run([PY, "tools/symposium/codex_goal_session.py", "start", "--help"]).stdout
     check("session manager supports native goal start", "goal_dir" in session_help)

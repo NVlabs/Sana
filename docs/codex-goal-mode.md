@@ -48,8 +48,8 @@ fan-out loop contract from `docs/fanout-loop-contract.md`.
   "created_by": "claude",
   "target_agent": "codex",
   "mode": "interactive-goal",
-  "root_branch": "codex/token-prune",
-  "submodule_branch": "codex/token-prune-sol",
+  "root_branch": "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune",
+  "submodule_branch": "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune-sol",
   "candidate_manifest": "candidates/token_prune_feat_norm_075.toml",
   "write_scope": [],
   "launch_mode": "dry-run"
@@ -102,8 +102,21 @@ Prepare a goal:
 python3 tools/symposium/prepare_goal.py \
   --goal-id sparse-attention \
   --candidate candidates/baseline.toml \
+  --run-id ${RUN_ID:-} \
   --objective "Use Symposium to refine sparse attention into a bounded Codex goal."
 ```
+
+Runtime loop control inside a goal:
+
+```bash
+python3 tools/symposium/loop_control.py init --dimension <dim> --goal-id <goal-id> --max-iters 40 --early-stop-patience 0 --loop-mode fixed_budget_frontier
+python3 tools/symposium/loop_control.py record-candidate --candidate-id <id> --decision rejected --reason "<reason>"
+python3 tools/symposium/loop_control.py decide-next
+python3 tools/symposium/loop_control.py validate-status
+```
+
+`decide-next` is authoritative for whether the subagent may continue searching,
+must hand off as `terminal_pending_review`, or must stop as `blocked`.
 
 Start interactive mode when a Codex launcher exists:
 
@@ -114,11 +127,21 @@ tools/symposium/start_codex_goal.sh goals/sparse-attention
 For detached managed sessions, use:
 
 ```bash
-python3 tools/symposium/codex_goal_session.py start --worktree output/fanout/sparse-attention goals/sparse-attention
-python3 tools/symposium/codex_goal_session.py capture --worktree output/fanout/sparse-attention goals/sparse-attention
-python3 tools/symposium/codex_goal_session.py send --worktree output/fanout/sparse-attention goals/sparse-attention --text "Please pause and summarize status." --enter
-python3 tools/symposium/codex_goal_session.py release --worktree output/fanout/sparse-attention goals/sparse-attention --note "done"
+RUN_ID=${RUN_ID:-$(date -u +fanout_%Y%m%dT%H%M%SZ)}
+WT=output/fanout_runs/$RUN_ID/sparse-attention
+# after creating the isolated worktree:
+(cd $WT && python3 tools/symposium/prepare_goal.py --clean-stale-records --run-id $RUN_ID)
+python3 tools/symposium/codex_goal_session.py start --worktree $WT --name ${RUN_ID}-sparse-attention goals/sparse-attention
+python3 tools/symposium/codex_goal_session.py capture --worktree $WT --name ${RUN_ID}-sparse-attention goals/sparse-attention
+python3 tools/symposium/codex_goal_session.py send --worktree $WT --name ${RUN_ID}-sparse-attention goals/sparse-attention --text "Please pause and summarize status." --enter
+python3 tools/symposium/codex_goal_session.py release --worktree $WT --name ${RUN_ID}-sparse-attention goals/sparse-attention --note "done"
 ```
+
+Do not reuse `output/fanout/`, `output/fanout_loop_*`, old release reports,
+old verdict JSON, or archived session captures as startup context. New fan-out
+runs should live under one `output/fanout_runs/<RUN_ID>/` root, review globs
+must point only at that root, and `start_codex_goal.sh` refuses to launch while
+stale optimization records are visible.
 
 Start an interactive Claude goal session:
 
@@ -157,38 +180,45 @@ You are working in an isolated autovideo worktree.
 - Launch with: `python3 scripts/launch_candidate.py <candidate> --mode dry-run`
 - Collect with: `python3 scripts/collect_run.py runs/<run-id>`
 - Authoritative assess with:
-  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames`
+  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames --out <run_dir>/assess_verdict.json`
 
 ## Fan-Out Loop Contract
 
 This is a bounded per-dimension search loop, not a single target:
 
-1. observe prior results, failed signatures, current best_per_tier, and baseline;
+1. observe current-experiment results, failed signatures, retained frontier candidates, and baseline;
 2. propose a new hypothesis expected to improve over the previous loop or avoid
    a recorded failure;
 3. implement exactly one candidate;
 4. preflight, launch, collect, and run the authoritative gate;
-5. if promoted, keep it and loop for a better point;
-6. if rejected, record the failure signature and loop with a meaningfully
+5. if quality or speed improves, retain it in the frontier and loop;
+6. if discarded or rejected, record the reason/signature and loop with a meaningfully
    different hypothesis;
-7. stop only at max_iters, early_stop, real blocker, or structured-negative
-   evidence.
+7. use default max_iters=40 and early_stop_patience=0 for fixed-budget fan-out dimensions;
+8. stop only at max_iters, real blocker, or explicit orchestrator release, then
+   hand off as terminal_pending_review unless explicitly blocked. A
+   structured-negative decision is recorded as a proposal/failure signature and
+   does not stop the default fixed-budget loop by itself.
 
-Collector `quality.json` is telemetry; promotion authority is OFF identity plus
-aligned LPIPS plus aligned pairwise Gemini on the canonical baseline frames.
+Collector `quality.json` is telemetry; the authoritative gate provides OFF
+identity, aligned LPIPS, aligned pairwise Gemini, and speed/memory evidence for
+frontier retention and final 1.5x/2.0x/3.0x speed-target selection. LPIPS and
+Gemini are considered together for quality ranking; LPIPS alone is not the
+selector.
 
 ## Done When
 
-- the loop ended for max_iters, early_stop, real blocker, or structured negative;
+- the loop ended for max_iters or real blocker;
 - or the orchestrator explicitly released the session after reviewing current
-  best_per_tier;
+  frontier candidates;
 - `SEARCH_JOURNAL.md`, `AGENT-STATUS.json`, and `SUMMARY.md` explain winners,
-  rejects, failure signatures, artifacts, and remaining blockers.
+  retained/discarded/rejected candidates, no_improve_count, failure signatures,
+  remaining hypotheses, agent_recommendation, artifacts, and remaining blockers.
 
 This closes only the per-dimension goal. The global run still needs the fan-in
 integration goal to compose eligible winners into low/medium/high delivery
-profiles and re-gate those merged profiles, or to record explicit per-tier
-blockers.
+profiles for the 1.5x/2.0x/3.0x speed targets and re-gate those merged profiles,
+or to record explicit per-target blockers.
 ```
 
 ## Remaining Follow-Up

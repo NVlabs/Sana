@@ -125,11 +125,27 @@ def relative_to_root(root: Path, path: Path) -> str:
         return str(path)
 
 
+def infer_run_id(worktree: Path, context: dict[str, Any]) -> str:
+    raw = context.get("run_id")
+    if isinstance(raw, str) and raw:
+        return raw
+    for env_name in ("SYMPOSIUM_CURRENT_RUN_ID", "AUTO_VIDEO_RUN_ID", "RUN_ID"):
+        raw = os.environ.get(env_name, "")
+        if raw:
+            return raw
+    parts = worktree.resolve().parts
+    for idx, part in enumerate(parts[:-2]):
+        if part == "output" and parts[idx + 1] == "fanout_runs":
+            return parts[idx + 2]
+    return ""
+
+
 def start(args: argparse.Namespace) -> dict[str, Any]:
     root = project_root()
     worktree = resolve_worktree(root, args.worktree)
     goal_dir = resolve_goal_dir(worktree, args.goal_dir)
     context = load_context(goal_dir)
+    run_id = infer_run_id(worktree, context)
     session = session_name_for(goal_dir, args.name)
     state_file = state_path(root, goal_dir, args.name)
 
@@ -143,8 +159,18 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
     launcher = worktree / "tools/symposium/start_codex_goal.sh"
     goal_arg = relative_to_root(worktree, goal_dir)
     goal_file = relative_to_root(worktree, goal_dir / "goal.md")
+    exports = ["export TERM=xterm-256color"]
+    if run_id:
+        quoted_run_id = shlex_quote(run_id)
+        exports.append(
+            "export "
+            f"SYMPOSIUM_CURRENT_RUN_ID={quoted_run_id} "
+            f"AUTO_VIDEO_RUN_ID={quoted_run_id} "
+            f"RUN_ID={quoted_run_id}"
+        )
     command = (
-        "export TERM=xterm-256color; "
+        "; ".join(exports)
+        + "; "
         f"exec {shlex_quote(str(launcher))} "
         f"{shlex_quote(goal_arg)}"
     )
@@ -175,6 +201,7 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
         "goal_id": goal_id(goal_dir),
         "role": context.get("role", "implementation"),
         "dimension": context.get("dimension", "general"),
+        "run_id": run_id,
         "worktree": str(worktree),
         "branch": context.get("root_branch"),
         "submodule_branch": context.get("submodule_branch"),

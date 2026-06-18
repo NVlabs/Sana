@@ -31,23 +31,24 @@ goal worktrees are disposable execution sandboxes.
 
 ```text
 autovideo/
-  worktrees/
-    goals/
-      20260612-token-prune/
-        autovideo/
-          Sol-LTX-Infer/
-          runs/
-      20260612-step-cache/
-        autovideo/
-          Sol-LTX-Infer/
-          runs/
+  output/
+    fanout_runs/
+      fanout_YYYYMMDDTHHMMSSZ/
+        token-prune/
+          autovideo/
+            Sol-LTX-Infer/
+            runs/
+        step-cache/
+          autovideo/
+            Sol-LTX-Infer/
+            runs/
 ```
 
 Each goal gets:
 
 - `goal_id`
-- root git branch, for example `codex/token-prune`
-- submodule branch, for example `codex/token-prune-sol`
+- root git branch, for example `codex/fanout_YYYYMMDDTHHMMSSZ-token-prune`
+- submodule branch, for example `codex/fanout_YYYYMMDDTHHMMSSZ-token-prune-sol`
 - independent `runs/<goal-id>/...`
 - independent Slurm job names
 - pinned `base_commit` and recorded resulting commits
@@ -57,6 +58,7 @@ Each goal gets:
 ```text
 create goal
   -> create root worktree
+  -> remove stale optimization records from that worktree
   -> initialize submodule
   -> create submodule branch
   -> write goal.md/context.json
@@ -65,9 +67,10 @@ create goal
   -> run dimension loop:
        observe -> hypothesize -> implement one candidate
        -> preflight -> launch -> collect -> authoritative gate
-       -> keep/reject and loop
+       -> retain/discard/reject and loop
   -> spawn independent gate goal or main-gate promising candidates
-  -> stop only at max_iters, early_stop, real blocker, structured negative, or release
+  -> stop only at max_iters, real blocker, or explicit release
+  -> terminal_pending_review for main-agent tier-selection/restart/validate/integrate decision
   -> summarize and close
   -> release session resources
 ```
@@ -89,8 +92,8 @@ with:
 {
   "goal_id": "token-prune",
   "agent": "codex",
-  "root_branch": "codex/token-prune",
-  "submodule_branch": "codex/token-prune-sol",
+  "root_branch": "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune",
+  "submodule_branch": "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune-sol",
   "candidate": "candidates/token_prune_feat_norm_075.toml",
   "status": "claimed"
 }
@@ -108,8 +111,8 @@ parallel goals:
 [agent]
 goal_id = "token-prune"
 owner = "codex"
-root_branch = "codex/token-prune"
-submodule_branch = "codex/token-prune-sol"
+root_branch = "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune"
+submodule_branch = "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune-sol"
 write_scope = [
   "Sol-LTX-Infer/",
 ]
@@ -137,8 +140,18 @@ cold or warm.
 Each native implementation goal follows `docs/fanout-loop-contract.md`. A single
 candidate failure is not a completed dimension: the agent records the failure
 signature and proposes a different next hypothesis. A single success is also not
-completion: it updates best_per_tier and the loop continues until a stop
-condition or orchestrator release.
+completion: it is retained in the frontier when quality or speed improves, and
+the loop continues until a stop condition or orchestrator release.
+
+Default fan-out loop budget is fixed max_iters=40 with early_stop_patience=0,
+which disables patience early stop. Discarded/rejected candidates increment
+`no_improve_count` as telemetry; retained quality or speed improvements reset it.
+Budget exits are `terminal_pending_review` handoffs to the main agent, which
+decides whether to select low/medium/high winners from the frontier, reopen the
+dimension with a new direction, validate, integrate, drop, or mark blocked.
+A structured-negative decision from a dimension agent is logged as a
+proposal/failure signature and does not stop the default fixed-budget loop by
+itself.
 
 Promotion decisions use the authoritative aligned gate, not prose and not
 collector-only video-sampled Gemini:
@@ -148,13 +161,31 @@ collector-only video-sampled Gemini:
 - aligned pairwise Gemini;
 - latency or peak-memory improvement.
 
+Final low/medium/high winners are 1.5x/2.0x/3.0x speed targets. Within each
+target, the selector ranks quality using aligned pairwise Gemini severity/status
+and aligned LPIPS together, then speed as a tie-breaker. LPIPS alone is not the
+selector.
+
 The main agent should kill duplicate collectors/jobs for the same run and release
 closed sessions that keep launching redundant jobs.
 
-Fan-out terminal state is not global completion. After the selected dimensions
-close, the main agent must start one fan-in integration goal that stacks eligible
-per-tier winners, launches composed GPU runs, and re-gates each merged profile.
-The experiment is complete only when every low/medium/high tier has a composed
+Fan-out terminal state is not global completion. After selected dimensions close,
+the main agent must choose 1.5x/2.0x/3.0x target winners from retained frontiers,
+then call the runtime integration trigger:
+
+```bash
+python3 tools/symposium/loop_control.py ensure-integration \
+  --fanout-root output/fanout_runs/$RUN_ID \
+  --run-id $RUN_ID \
+  --base <BASE>
+```
+
+The trigger refuses to start while any dimension is still running or invalid,
+no-ops when integration is already running/complete, and starts one fan-in goal
+when the review reaches `tier_selection_pending` or `integration_pending`.
+That goal stacks eligible winners, launches composed GPU runs, and re-gates each
+merged profile.
+The experiment is complete only when every 1.5x/2.0x/3.0x target has a composed
 artifact or an explicit integration blocker.
 
 ## Goal Mode Bridge

@@ -12,18 +12,53 @@ the failure cause, update the search state, and generate the next evidence-backe
 hypothesis unless one of these stop conditions is true:
 
 - `max_iters` reached.
-- `early_stop_patience` reached with no Pareto improvement or no new diagnostic
-  information.
 - A real blocker prevents meaningful progress and is recorded with the external
   dependency needed to unblock it.
-- The dimension has enough evidence for a structured negative: the mechanism was
-  tested across its meaningful knobs, failures share a root cause, and remaining
-  variants are redundant.
+- The main orchestrator explicitly releases the dimension after reviewing the
+  retained frontier and remaining hypotheses.
 
-A successful candidate also does not complete the dimension by itself. It is kept
-as the current best per tier, then the loop continues looking for a better
-candidate until the same stopping rules apply or the main orchestrator releases
-the session.
+In default fixed-budget mode, a dimension agent may record a
+`structured_negative` proposal, but it does not stop the loop by itself. The
+runtime controller stores it as a failure signature and the loop continues until
+budget, a real blocker, or explicit orchestrator release.
+
+A successful candidate also does not complete the dimension by itself. During
+fan-out, a candidate is retained when **quality improves** or **speed/memory
+improves**. It is discarded when quality does not improve and speed/memory does
+not improve or regresses. The loop continues until the fixed budget, a real
+blocker, or main-orchestrator release.
+
+Default fan-out budget is `max_iters = 40` and
+`early_stop_patience = 0`, which means patience early stop is disabled in the
+default fixed-budget frontier mode. `no_improve_count` remains telemetry for the
+main agent, but it does not stop the default loop.
+
+Low/medium/high are selected **after** the dimension budget closes, but they are
+delivery speed targets, not hard LPIPS quality thresholds:
+
+- low: best-quality profile at or above 1.5x.
+- medium: best-quality profile at or above 2.0x.
+- high: best-quality profile at or above 3.0x.
+
+Within each speed target, quality ranking considers aligned pairwise Gemini and
+LPIPS together: Gemini artifact severity/status first, aligned LPIPS second, then
+higher speed as a tie-breaker. LPIPS alone is not the selector, and lossy
+generative dimensions do not use absolute LPIPS/Gemini thresholds as hard gates
+during loop retention or final target selection.
+
+Exact/lossless dimensions may specialize the frontier rule. In particular,
+`kwl_fusion` is not allowed to spend intentional quality loss: retain a
+speed or memory candidate only when OFF identity passes and ON quality/numeric
+evidence does not regress; retain a quality or numeric-stability candidate only
+when speed does not meaningfully regress. Semantic changes to scheduler, step
+count, tokens, attention density, cache/prune behavior, precision policy, prompt
+state, LoRA state, frame count, resolution, or output shape are rejects rather
+than lossy KWL candidates.
+
+Low-precision numeric dimensions may also use reliable numeric checks as hard
+gates: OFF identity for disabled paths, BF16 fallback integrity, numeric
+non-regression, precision-support proof, and silent-fallback detection. They
+still record LPIPS and aligned pairwise Gemini for cross-profile quality ranking.
 
 The whole experiment is not complete when the fan-out dimensions become idle or
 terminal. After fan-out closes, the main orchestrator must run the fan-in
@@ -34,9 +69,25 @@ tmux panes, and per-dimension summaries are only preconditions for integration.
 
 Each implementation goal follows this loop:
 
+0. Initialize runtime loop control.
+   Before proposing candidates, create the machine-readable state:
+
+   ```bash
+   python3 tools/symposium/loop_control.py init \
+     --dimension <dim> \
+     --goal-id <goal-id> \
+     --max-iters 40 \
+     --early-stop-patience 0 \
+     --loop-mode fixed_budget_frontier
+   ```
+
 1. Observe state.
-   Read `search_space/`, `loops/<dim>/`, prior `SEARCH_JOURNAL.md`, current
-   best-per-tier candidates, failed signatures, and the canonical baseline.
+   Read `search_space/`, `loops/<dim>/`, this goal's current-experiment
+   `SEARCH_JOURNAL.md`, current frontier candidates, discarded/rejected
+   signatures, and the canonical baseline. Do not read stale `output/fanout/`,
+   `output/fanout_loop_*`, release reports, archived captures, or verdict JSON
+   from earlier experiments unless the main orchestrator explicitly passes them
+   as current-experiment evidence.
 
 2. Propose next hypothesis.
    Write a short hypothesis before implementation: what mechanism changes, why it
@@ -64,19 +115,68 @@ Each implementation goal follows this loop:
    ```bash
    /home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py \
      --assess <run_dir> \
-     --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames
+     --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames \
+     --out <run_dir>/assess_verdict.json
    ```
 
-   Promotion authority is:
+   The authoritative gate provides:
    `OFF identity` + aligned LPIPS over the canonical frame pairs + aligned
-   pairwise Gemini + speed/memory improvement. Collector `quality.json` is useful
-   telemetry, but its video-sampled Gemini result is not promotion authority when
-   it disagrees with the aligned gate.
+   pairwise Gemini + speed/memory evidence. Collector `quality.json` is useful
+   telemetry, but its video-sampled Gemini result is not the sole quality
+   authority when it disagrees with the aligned gate. For lossy generative
+   dimensions, LPIPS and Gemini are joint quality-ranking evidence rather than
+   absolute hard thresholds.
 
 7. Decide and loop.
-   If promoted, update `best_per_tier` and continue to step 1. If rejected, write
-   a failure signature and continue to step 1 with a meaningfully different
-   hypothesis. If blocked or structured-negative, stop and write `SUMMARY.md`.
+   If quality improves or speed/memory improves, retain the candidate in
+   `frontier_candidates`, record the improvement axis, and continue to step 1. If
+   quality does not improve and speed/memory does not improve or regresses,
+   record `discarded_regression`, increment telemetry, and continue to step 1. If
+   the candidate is hard-invalid, write a `rejected` failure signature and
+   continue to step 1 with a meaningfully different hypothesis. If blocked, stop
+   and write `SUMMARY.md`. If the agent believes the mechanism space is
+   structured-negative, record `structured_negative` with the evidence and a
+   remaining-hypothesis note; the fixed-budget loop still continues unless the
+   runtime controller returns `terminal_pending_review` or `blocked`.
+
+   Every gate verdict must be recorded through the runtime controller:
+
+   ```bash
+   python3 tools/symposium/loop_control.py record-candidate \
+     --candidate-id <id> \
+     --decision <quality_improved|speed_improved|quality_and_speed_improved|discarded_regression|rejected|blocked|structured_negative> \
+     --reason "<short reason>" \
+     --improvement-axis <quality|speed|both|none> \
+     --run-dir <run_dir> \
+     --evidence <run_dir>/assess_verdict.json
+   python3 tools/symposium/loop_control.py decide-next
+   python3 tools/symposium/loop_control.py validate-status
+   ```
+
+   For run-backed candidates, `record-candidate` requires a durable
+   authoritative gate artifact in evidence: `assess_verdict.json`,
+   `verdict.json`, `gate_assess.json`, or `reject_note.json`. Collector-only
+   files such as `outputs/quality.json` are supplementary telemetry and cannot
+   by themselves retain or reject a candidate. If an earlier current-experiment
+   record is missing a durable gate artifact, write or regenerate the artifact
+   first, then backfill the status through:
+
+   ```bash
+   python3 tools/symposium/loop_control.py add-evidence \
+     --candidate-id <id> \
+     --evidence <run_dir>/assess_verdict.json \
+     --reason "backfilled authoritative gate artifact"
+   python3 tools/symposium/loop_control.py validate-status
+   ```
+
+   The agent may not continue candidate search when `decide-next` returns
+   `terminal_pending_review` or `blocked`.
+
+When `max_iters` fires, the dimension enters
+`status=terminal_pending_review`, not global completion. The main orchestrator
+reviews the exit report and decides whether to accept the current frontier,
+restart the dimension with a new direction, request validation, drop the
+dimension, mark a blocker, or move it into fan-in integration.
 
 ## Fan-In Integration State Machine
 
@@ -89,14 +189,16 @@ one-shot merge.
    run artifacts, and rejected failure signatures. Prefer durable run artifacts
    over stale status fields when the two disagree, and record the reconciliation.
 
-2. Build tier plans.
-   For each risk tier, choose eligible per-dimension winners whose own gate
-   passed that tier or a stricter tier. If a tier has no eligible winners, write
-   an explicit `no_eligible_profile` blocker for that tier instead of silently
-   omitting it.
+2. Build delivery-target plans.
+   For each speed target (1.5x, 2.0x, 3.0x), choose eligible retained
+   per-dimension winners and composed candidates by best joint quality:
+   aligned pairwise Gemini severity/status first, aligned LPIPS second, then
+   higher speed. If a target has no eligible winners, write an explicit
+   `no_eligible_profile` blocker for that target instead of silently omitting it.
 
 3. Implement one composed profile.
-   Merge the chosen winners into one runtime/config profile for exactly one tier.
+   Merge the chosen winners into one runtime/config profile for exactly one
+   speed target.
    Resolve shared-file conflicts by preserving each winner's OFF guard and
    feature flag. Do not report composed speedup from single-dimension runs.
 
@@ -107,16 +209,17 @@ one-shot merge.
 5. Authoritative composed gate.
    Re-run benchmark, collection, aligned LPIPS, and aligned pairwise Gemini
    against the canonical baseline. A composed profile inherits no quality verdict
-   from its components; it must pass its own gate.
+   from its components; it must produce its own speed and joint quality evidence.
 
 6. Decide and loop.
-   If the composed profile passes, keep it as the tier incumbent and continue
-   searching for a faster compatible composition until the integration stop
-   rules apply. If it fails, record an interaction failure signature and return
-   to step 2 with a repaired merge, a reduced subset, or a different tier plan.
+   If the composed profile improves a target bucket, keep it as that target's
+   incumbent and continue searching for a faster or higher-quality compatible
+   composition until the integration stop rules apply. If it fails, record an
+   interaction failure signature and return to step 2 with a repaired merge, a
+   reduced subset, or a different target plan.
 
-Integration stops only when every tier has either a gated composed profile or an
-explicit blocker, or when `max_iters`, `early_stop_patience`, or a real external
+Integration stops only when every 1.5x/2.0x/3.0x target has either a gated
+composed profile or an explicit blocker, or when `max_iters` or a real external
 blocker is reached. A failed composed gate never completes integration by itself.
 
 ## Failure Signature
@@ -124,7 +227,7 @@ blocker is reached. A failed composed gate never completes integration by itself
 Every rejected candidate writes a compact entry in `SEARCH_JOURNAL.md`:
 
 - `candidate_id`, manifest, run directory, commit SHA.
-- Gate status: OFF identity, speed/memory, LPIPS, pairwise Gemini, tier.
+- Gate status: OFF identity, speed/memory, LPIPS, pairwise Gemini, speed target.
 - Root cause class: `quality_cliff`, `perf_regression`, `off_identity_break`,
   `runtime_error`, `judge_inconclusive`, `implementation_noop`, or
   `orchestrator_cancelled`.
@@ -136,17 +239,31 @@ The next candidate may not repeat the same failure signature with only cosmetic
 parameter changes. It must change the mechanism, fix the diagnosed bug, or move
 to a different region of the search space.
 
-## Early Stop And Structured Negative
+## Structured Negative
 
-`early_stop_patience` counts iterations with no Pareto improvement and no new
-diagnostic information. A dimension may stop early as structured negative only
-when the summary explains:
+In default fixed-budget frontier mode, `no_improve_count` is telemetry rather
+than an automatic stop. A dimension-agent `structured_negative` is a proposal,
+not a terminal state. It must be logged with:
 
 - mechanisms tested;
-- best speed/memory point and why it failed quality, or best clean point and why
-  it failed speed;
+- retained frontier candidates and discarded/rejected candidates;
+- best speed/memory point, best quality point, and why neither justifies more
+  variants;
 - common root cause across rejected candidates;
 - why the remaining untested variants are redundant or lower value.
+
+The runtime controller records that proposal as a failure signature and adds a
+remaining hypothesis. The loop continues to `max_iters` unless the main
+orchestrator explicitly releases the dimension or a real blocker appears.
+
+Frontier improvement means one of:
+
+- a speed target is reached or a target bucket gets a better joint-quality
+  candidate;
+- a target bucket gets a meaningful latency or peak-memory improvement;
+- quality improves at comparable speed;
+- a previous failure mode becomes a gated pass;
+- a new mechanism is proven useful enough to test during integration.
 
 ## Main-Orchestrator Duties
 
@@ -162,8 +279,13 @@ The main orchestration agent owns cross-agent safety:
   rather than relying on queued steering text.
 - Do not mark a dimension dead merely because its tmux session is idle; verify
   no process, Slurm job, or queued input remains.
-- Once all selected dimensions are terminal, launch the integration goal and
-  track it with the same job/process/queue discipline as the fan-out agents.
+- Once selected dimensions are terminal, choose 1.5x/2.0x/3.0x target winners
+  from retained frontier candidates using Gemini+LPIPS quality ranking, then call
+  `python3 tools/symposium/loop_control.py ensure-integration --fanout-root <run-root> --run-id <run-id> --base <base>`.
+  The runtime trigger starts the integration goal when the fan-out review is
+  ready, no-ops when integration is already running/complete, and refuses to
+  start while dimensions are still running or invalid. Track integration with
+  the same job/process/queue discipline as the fan-out agents.
 - Do not mark the experiment complete until integration has produced
   low/medium/high composed artifacts or explicit per-tier blockers.
 - Never press or submit a stray commit/finalization prompt unless the user asked
@@ -174,8 +296,10 @@ The main orchestration agent owns cross-agent safety:
 At close, each dimension produces:
 
 - `SEARCH_JOURNAL.md` with one entry per candidate and all failure signatures.
-- `AGENT-STATUS.json` with `status`, `iters_used`, `best_per_tier`,
-  `rejected_candidates`, `early_stop_reason` or `blocker`, and `next_commands`.
+- `AGENT-STATUS.json` with `status`, `iters_used`, `frontier_candidates`,
+  `discarded_candidates`, `rejected_candidates`, `no_improve_count`,
+  `terminal_reason` or `blocker`, `remaining_hypotheses`,
+  `agent_recommendation`, and `next_commands`.
 - Candidate manifests and run artifacts for every launched candidate.
 - `SUMMARY.md` explaining winners, rejects, remaining hypotheses, and whether the
   dimension is promotable, blocked, or structured-negative.
@@ -186,7 +310,7 @@ At global close, integration produces:
   incumbents, rejected compositions, blockers, and next commands.
 - `INTEGRATION-JOURNAL.md` with one entry per composed profile attempt and every
   interaction failure signature.
-- Final low/medium/high composed manifests or explicit per-tier blockers.
+- Final 1.5x/2.0x/3.0x composed manifests or explicit per-target blockers.
 - Run artifacts, benchmark, aligned quality artifacts, and videos for every
   launched composed profile.
 - A release matrix that clearly separates per-dimension winners from gated

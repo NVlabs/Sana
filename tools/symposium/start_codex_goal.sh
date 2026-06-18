@@ -19,6 +19,42 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
+export AUTO_VIDEO_HISTORY_POLICY="clean_start_current_experiment_only"
+export AUTO_VIDEO_GOAL_DIR="$GOAL_DIR"
+CURRENT_RUN_ID="${SYMPOSIUM_CURRENT_RUN_ID:-${AUTO_VIDEO_RUN_ID:-${RUN_ID:-}}}"
+
+if [[ -z "$CURRENT_RUN_ID" && -f "$GOAL_DIR/context.json" ]]; then
+  CURRENT_RUN_ID="$(python3 - "$GOAL_DIR/context.json" <<'PY' || true
+import json
+import sys
+
+try:
+    value = json.loads(open(sys.argv[1], encoding="utf-8").read()).get("run_id", "")
+except Exception:
+    value = ""
+print(value or "")
+PY
+)"
+fi
+if [[ -z "$CURRENT_RUN_ID" && "$ROOT" =~ /output/fanout_runs/([^/]+)(/|$) ]]; then
+  CURRENT_RUN_ID="${BASH_REMATCH[1]}"
+fi
+if [[ -n "$CURRENT_RUN_ID" ]]; then
+  export SYMPOSIUM_CURRENT_RUN_ID="$CURRENT_RUN_ID"
+fi
+
+if [[ "${SYMPOSIUM_PRESERVE_HISTORY_RECORDS:-0}" != "1" || "${SYMPOSIUM_CLEAN_HISTORY_RECORDS:-0}" == "1" ]]; then
+  python3 tools/symposium/prepare_goal.py --clean-stale-records --run-id "$CURRENT_RUN_ID"
+fi
+
+if [[ "${SYMPOSIUM_ALLOW_HISTORY_RECORDS:-0}" != "1" ]]; then
+  if ! python3 tools/symposium/prepare_goal.py --check-stale-records --run-id "$CURRENT_RUN_ID"; then
+    echo "Refusing to start goal because stale optimization records are visible in this checkout." >&2
+    echo "Move/delete them, start from a clean run-id worktree, or set SYMPOSIUM_ALLOW_HISTORY_RECORDS=1 explicitly." >&2
+    exit 5
+  fi
+fi
+
 ENV_FILE="${SYMPOSIUM_GOAL_ENV:-$ROOT/.symposium/goal-mode.env}"
 if [[ "${SYMPOSIUM_SKIP_GOAL_ENV:-0}" != "1" && -f "$ENV_FILE" ]]; then
   # shellcheck source=/dev/null
@@ -45,6 +81,7 @@ fi
 
 echo "Starting interactive Codex goal session for $GOAL_DIR"
 echo "Goal file: $GOAL_DIR/goal.md"
+echo "History policy: $AUTO_VIDEO_HISTORY_POLICY"
 echo "Run inside Codex: /goal follow $GOAL_DIR/goal.md"
 echo
 

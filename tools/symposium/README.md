@@ -90,7 +90,8 @@ python3 tools/symposium/prepare_goal.py \
   --candidate candidates/baseline.toml \
   --dimension sparse_attention \
   --role implementation \
-  --objective "Explore sparse attention from search_space/ by directly inspecting and modifying Cosmos3 inference code."
+  --run-id ${RUN_ID:-} \
+  --objective "Explore sparse attention from search_space/ by directly inspecting and modifying the target-model inference code."
 ```
 
 This writes:
@@ -106,9 +107,28 @@ Each generated `goal.md` includes its own search-space-start section, fan-out
 loop contract, required artifacts, write scope, and acceptance criteria.
 Subagents should not need to infer acceptance criteria from external
 orchestration docs. In particular, a failed candidate gate means
-reject/log/loop; a successful candidate means keep best_per_tier and continue
-until max_iters, early_stop, a real blocker, structured-negative evidence, or
-explicit orchestrator release.
+discard-or-reject/log/loop; a successful candidate means retain it in the
+frontier when quality or speed improves and continue until max_iters, a real
+blocker, or explicit orchestrator release. A structured-negative decision is
+logged as a proposal/failure signature and does not stop the default
+fixed-budget loop. The default fan-out budget is fixed max_iters=40 with
+early_stop_patience=0, and budget exits should be written as
+terminal_pending_review for main-agent 1.5x/2.0x/3.0x target selection and
+review. Target selection ranks quality with aligned pairwise Gemini and LPIPS
+together; LPIPS alone is not the selector.
+
+Per-dimension goals embed only the relevant method-family document, for example
+`step_cache` gets `search_space/01_cache.md` rather than the whole search-space
+index.
+
+Runtime loop accounting is machine-checked:
+
+```bash
+python3 tools/symposium/loop_control.py init --dimension <dim> --goal-id <goal-id> --max-iters 40 --early-stop-patience 0 --loop-mode fixed_budget_frontier
+python3 tools/symposium/loop_control.py record-candidate --candidate-id <id> --decision rejected --reason "<reason>"
+python3 tools/symposium/loop_control.py decide-next
+python3 tools/symposium/loop_control.py validate-status
+```
 
 ## Start Codex Goal Mode
 
@@ -140,11 +160,21 @@ Start a detached goal session in an isolated worktree while keeping the session
 registry in the coordinator checkout:
 
 ```bash
+RUN_ID=${RUN_ID:-$(date -u +fanout_%Y%m%dT%H%M%SZ)}
+WT=output/fanout_runs/$RUN_ID/<goal-id>
+# after creating the isolated worktree:
+(cd $WT && python3 tools/symposium/prepare_goal.py --clean-stale-records --run-id $RUN_ID)
 python3 tools/symposium/codex_goal_session.py start \
-  --worktree output/fanout/<goal-id> \
-  --name <goal-id> \
+  --worktree $WT \
+  --name ${RUN_ID}-<goal-id> \
   goals/<goal-id>
 ```
+
+Use a fresh `RUN_ID` for each experiment. New worktrees should run
+`prepare_goal.py --clean-stale-records --run-id $RUN_ID` before starting Codex.
+Do not reuse `output/fanout/`, `output/fanout_loop_*`, old `evals/verdicts/*.json`,
+release reports, or
+archived session captures as startup context for a new goal.
 
 Check whether it is alive:
 

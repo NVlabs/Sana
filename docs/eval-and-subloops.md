@@ -63,7 +63,7 @@ For every implementation loop, start from:
 
 - `search_space/` for method families and broad axes;
 - `loops/<dim>/exploration.md` for the natural-language dimension brief;
-- the live Cosmos3 inference code under `Sol-LTX-Infer/`.
+- the live target-model inference code under `Sol-LTX-Infer/`.
 
 Do not add per-dimension reference archives. Subagents should discover
 model-specific layer, step, signal, routing, and fallback choices from code,

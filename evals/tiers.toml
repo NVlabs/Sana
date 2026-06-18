@@ -1,52 +1,54 @@
-# Risk tiers — the project delivers THREE configs (low / medium / high), per the
-# videogen-accel plan. A tier is a QUALITY BUDGET that loosens allowed degradation
-# in exchange for more speed/memory headroom.
+# Delivery tiers — the project delivers THREE configs selected by SPEED TARGET,
+# then chooses the best quality profile available within each target bucket.
 #
-# EACH dimension's search loop emits its OWN best (latency, peak_mem) config PER
-# TIER (its own low/medium/high). The integration stage then stacks the per-tier
-# winners across dimensions into the final low/medium/high delivery profiles.
+# EACH dimension's search loop emits retained frontier candidates. The integration
+# stage then stacks compatible candidates and selects final low/medium/high
+# delivery profiles by target speed:
+#
+#   low    >= 1.5x
+#   medium >= 2.0x
+#   high   >= 3.0x
+#
+# Within each speed bucket, choose the candidate/profile with the best quality
+# evidence, ordered by aligned pairwise Gemini severity/status, aligned LPIPS,
+# and then higher speed as a tie-breaker. LPIPS is telemetry and ranking signal,
+# not an absolute delivery threshold for lossy generative dimensions.
+#
 # This fan-in integration stage is mandatory for global completion: a run with
 # only per-dimension winners is unfinished unless each tier has an explicit
 # integration blocker.
 #
-# A candidate's tier = the TIGHTEST (cleanest, low-first) tier whose budget it satisfies on BOTH axes:
-#   (1) quantitative: lpips_delta_max  (PSNR is diagnostic only, not a gate)
-#   (2) perceptual: the NVIDIA-Gemini visual-artifact verdict (REQUIRED) — the
-#       pairwise rubric in evals/rubrics/gemini_visual_artifact_gate.md, run via
-#       tools/vision/nvidia_gemini_judge.py. Maps the rubric's `overall` +
-#       max new-artifact `severity` to the tier. This catches perceptual damage
-#       (blur/mosaic/snow/ghosting/flicker/text-faces) that LPIPS/PSNR miss.
-# A candidate also must beat the model baseline on latency OR peak memory.
+# Exceptions: exact/numeric dimensions such as kernel/operator fusion and
+# low-precision numeric transforms may enforce OFF identity, numeric tolerance,
+# silent-fallback checks, or precision-specific non-regression as hard gates.
+# Candidate artifacts still record LPIPS and Gemini for comparison.
 
 [low]
-label = "default / quality-first"
-# near-lossless: guarded paths off==baseline identity; essentially no perceptual change
-lpips_delta_max = 0.01
-gemini_overall = "pass"               # rubric: pass => no medium/high-severity artifact
-gemini_max_artifact_severity = "none" # AND no new artifacts at all
-off_identity = "required_for_guarded_paths"
+label = "1.5x quality-best"
+speedup_target = 1.50
+selection = "best_quality_at_or_above_speed_target"
 
 [medium]
-label = "graded / throughput"
-# controlled loss: low-severity perceptual differences allowed
-lpips_delta_max = 0.04
-gemini_overall = "pass"               # still no medium/high severity (rubric pass rule)
-gemini_max_artifact_severity = "low"  # low-severity artifacts tolerated
+label = "2.0x quality-best"
+speedup_target = 2.00
+selection = "best_quality_at_or_above_speed_target"
 
 [high]
-label = "preview / draft"
-# visible-but-described loss OK; never catastrophic
-lpips_delta_max = 0.09
-gemini_overall = "pass_or_fail"       # may fail on medium severity, but must be labeled
-gemini_max_artifact_severity = "medium"   # medium tolerated; HIGH severity always rejected
+label = "3.0x quality-best"
+speedup_target = 3.00
+selection = "best_quality_at_or_above_speed_target"
 
-# Composed speedup TARGETS for the mandatory INTEGRATION stage (all eligible
-# dimensions stacked vs the model baseline) — NOT per-dimension gates. From the
-# plan matrix.
 [targets]
-low_speedup = 1.35
-medium_speedup = 2.20
+low_speedup = 1.50
+medium_speedup = 2.00
 high_speedup = 3.00
+
+[quality_ranking]
+primary = "aligned_pairwise_gemini_max_artifact_severity"
+secondary = "aligned_lpips_max"
+tie_breaker = "higher_speedup"
+lpips_absolute_threshold = "disabled_for_lossy_generative_dimensions"
+gemini_absolute_threshold = "disabled_for_lossy_generative_dimensions"
 
 # Gemini judge verified live on HSG (NVIDIA_API_KEY + inference-api.nvidia.com,
 # gcp/google/gemini-3.5-flash): self-vs-self baseline frames -> overall=pass,

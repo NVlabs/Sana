@@ -70,14 +70,19 @@ for dim_id, dim in load_dimensions():
     fixed_grid = any("search_space" in tech for tech in dim.get("technique", []))
     check(f"loops/{dim_id} has no fixed hyperparameter grid", not fixed_grid)
 
-# the three risk tiers are defined globally and loosen the quality budget
+# the three delivery tiers are speed targets; quality ranking uses Gemini+LPIPS
 tiers = load_tiers()
 check("evals/tiers.toml defines low/medium/high",
       all(t in tiers for t in ("low", "medium", "high")))
-check("tiers loosen lpips budget low<medium<high",
-      tiers.get("low", {}).get("lpips_delta_max", 1)
-      < tiers.get("medium", {}).get("lpips_delta_max", 1)
-      < tiers.get("high", {}).get("lpips_delta_max", 1))
+check("speed targets increase low<medium<high",
+      tiers.get("targets", {}).get("low_speedup", 0)
+      < tiers.get("targets", {}).get("medium_speedup", 0)
+      < tiers.get("targets", {}).get("high_speedup", 0))
+ranking = tiers.get("quality_ranking", {})
+check("quality ranking includes Gemini first",
+      "gemini" in ranking.get("primary", "").lower())
+check("quality ranking includes LPIPS second",
+      "lpips" in ranking.get("secondary", "").lower())
 
 print(f"\n=== {ok} passed, {fail} failed ===")
 sys.exit(1 if fail else 0)

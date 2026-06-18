@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Aggregate per-dimension assessment verdicts into the final tier matrix.
+"""Aggregate assessment verdicts into speed-target quality-best delivery buckets.
 
 Reads one or more `--verdict path/to/plan_eval_assess.json` (the JSON emitted by
 `search/plan_eval.py --assess RUN_DIR`) and prints:
-  1. a per-dimension best-per-tier table
-  2. the composed low/medium/high recommendation across dimensions (which
-     candidates would stack, with compose() seam-conflict noted)
+  1. a candidate table with speed and quality telemetry
+  2. low/medium/high delivery recommendations:
+     for each speed target, choose the best-quality candidate/profile at or
+     above the target speed.
 
 The composition step calls efficiency.compose() against the Cosmos3 spec, so
 exclusive-seam conflicts (two step_output writers / two FFN precisions / etc.)
@@ -24,7 +25,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from search.plan_eval import load_profile, load_tiers  # noqa: E402
+from search.plan_eval import load_profile, load_tiers, quality_ranking_key  # noqa: E402
 
 TIERS = ("low", "medium", "high")
 
@@ -56,52 +57,41 @@ def main() -> int:
         lbl = args.label[i] if i < len(args.label) else Path(v.get("run_dir", vpath)).name
         rows.append({**v, "label": lbl})
 
-    # Per-row tier (already in v) + speedup.
+    # Per-row speed bucket (already in v when produced by current plan_eval) + quality.
     print(f"# Tier matrix -- model={args.model} baseline_total_s={profile['baseline']['total_s']:.2f}s")
     print()
-    print(f"{'CANDIDATE':50} {'TIER':8} {'SPEEDUP':9} {'GEMINI':8} {'MAX_ART':9}")
-    print("-" * 90)
-    by_tier: dict[str, list[dict]] = {t: [] for t in TIERS}
-    rejected: list[dict] = []
+    print(f"{'CANDIDATE':50} {'BUCKET':8} {'SPEEDUP':9} {'GEMINI':8} {'MAX_ART':9} {'LPIPS':9}")
+    print("-" * 102)
     for r in rows:
-        tier = r.get("tier") or "REJECT"
+        tier = r.get("tier") or "-"
         speedup = r.get("speedup")
         gemini = r.get("gemini_overall") or "-"
         sev = r.get("max_artifact_severity") or "-"
+        lpips = r.get("lpips_max")
         speedup_s = f"{speedup:.3f}x" if speedup else "-"
-        print(f"{r['label']:50} {tier:8} {speedup_s:9} {gemini:8} {sev:9}")
-        if tier in by_tier:
-            by_tier[tier].append(r)
-        else:
-            rejected.append(r)
+        lpips_s = f"{lpips:.4f}" if isinstance(lpips, (int, float)) else "-"
+        print(f"{r['label']:50} {tier:8} {speedup_s:9} {gemini:8} {sev:9} {lpips_s:9}")
 
-    # Per-tier winner (best speedup that qualifies for that tier or tighter).
-    # A candidate qualifying for `low` also satisfies `medium` and `high`; pick
-    # the best speedup across the tightest-qualified.
+    # Delivery winner per target: choose the best quality among candidates that
+    # meet the target speed. LPIPS/Gemini are ranking signals, not hard thresholds.
     print()
-    print("# Per-tier winners (best speedup whose tier <= bucket)")
-    rank = {"low": 0, "medium": 1, "high": 2}
-    qualified_for: dict[str, list[dict]] = {t: [] for t in TIERS}
-    for r in rows:
-        if r.get("tier") in rank:
-            for t in TIERS:
-                if rank[r["tier"]] <= rank[t]:
-                    qualified_for[t].append(r)
+    print("# Delivery winners (best quality at or above each speed target)")
     for t in TIERS:
-        winners = sorted(
-            (q for q in qualified_for[t] if q.get("speedup")),
-            key=lambda q: -q["speedup"],
-        )
         target = tiers["targets"].get(f"{t}_speedup")
+        winners = sorted(
+            (row for row in rows if row.get("speedup") and target and row["speedup"] >= target),
+            key=quality_ranking_key,
+        )
         if winners:
             w = winners[0]
-            mark = "[hit]" if (target and w["speedup"] >= target) else "[short]"
             print(
-                f"  {t:8} target {target}x  best {w['speedup']:.3f}x "
-                f"{mark}  cand={w['label']}"
+                f"  {t:8} target {target}x  selected {w['speedup']:.3f}x "
+                f"quality=(gemini={w.get('gemini_overall')}, "
+                f"severity={w.get('max_artifact_severity')}, "
+                f"lpips={w.get('lpips_max')}) cand={w['label']}"
             )
         else:
-            print(f"  {t:8} target {target}x  -- no qualifying candidate")
+            print(f"  {t:8} target {target}x  -- no candidate reaches speed target")
     return 0
 
 

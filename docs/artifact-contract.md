@@ -29,8 +29,8 @@ Use these status labels in reports:
 - `completed`: job finished and expected artifacts exist.
 - `failed`: command or job failed.
 - `blocked`: prerequisite missing, such as weights, CUDA env, or Slurm access.
-- `rejected_quality`: output exists but quality gates failed.
-- `promoted`: candidate passed speed and quality gates.
+- `rejected_quality`: output exists but required quality evidence is missing or an exact/numeric hard gate failed.
+- `promoted`: candidate/profile has speed evidence and Gemini+LPIPS quality evidence for a delivery target.
 
 ## Baseline Comparison
 
@@ -43,7 +43,7 @@ Candidate reports should include:
 - denoise time when available
 - VAE/decode time when available
 - speedup ratio
-- quality gate result
+- quality evidence result, including aligned LPIPS and aligned pairwise Gemini
 - links to `out.mp4`, sampled frames, and logs
 
 ## Generated Paths

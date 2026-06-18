@@ -35,7 +35,7 @@ For each seam, wiring proceeds through three levels — do not conflate them:
 | --- | --- | --- |
 | **(A) compose-eligible** | the capability is declared in the spec | `search.py --model <id>` lists the dimension (not `[skip]`) |
 | **(B) runtime-functional** | the model actually honors the hook (accessor returns the real thing / pipeline honors the env / the forward stashes the signal) | a real run: the technique ON actually changes compute |
-| **(C) quality-valid** | technique OFF == baseline (byte/numeric identical) AND ON passes the tier quality gate (incl. the Gemini judge) | GPU run + the eval pipeline (`docs/search-architecture.md`) |
+| **(C) quality-evidenced** | technique OFF == baseline when guarded, ON produces speed/memory plus LPIPS and Gemini evidence for speed-target ranking | GPU run + the eval pipeline (`docs/search-architecture.md`) |
 
 Declaring a capability you have NOT wired (B) makes the search *try* the dimension
 and it will be wrong at runtime — so declare only what you have wired, and track
@@ -88,7 +88,9 @@ that env at build/run. Track that under `[seam_status]`.
      c. update [seam_status].
 4. python search/search.py --model <id>   # eligible dimensions grew
 5. (level C, GPU) per newly-wired seam: a real run with the technique OFF must be
-   byte/numeric-identical to baseline; ON must engage and pass the tier gate.
+   byte/numeric-identical to baseline when guarded; ON must engage, produce
+   speed/memory evidence, and record aligned LPIPS plus aligned pairwise Gemini
+   for 1.5x/2.0x/3.0x target ranking.
 ```
 
 ## 4. Verification
@@ -97,7 +99,8 @@ that env at build/run. Track that under `[seam_status]`.
   compose() accepts the technique against the spec and OFF==identity on a fixture.
 - **GPU (level C)**: launch the candidate (`scripts/launch_candidate.py` from the
   profile), collect `benchmark.json`/`quality.json`, confirm OFF==baseline and run
-  the 3-stage eval (off_identity → LPIPS → Gemini visual judge) → tier.
+  the 3-stage eval (off_identity → LPIPS → Gemini visual judge) → speed-target
+  bucket and joint quality ranking.
 
 ## 5. Worked examples
 - **LTX-2** (`efficiency/models/ltx2_spec.py`): the full reference — declares

@@ -8,7 +8,7 @@ native Codex goals start from search_space/ and inspect/edit inference code
 directly.
 
 This skeleton produces a CPU-only launchability/diagnostic view. The eval +
-risk-tiering (low/mid/high vs baseline) is the GPU stage; see plan_eval() stub
+speed-target selection (1.5/2/3x vs baseline) is the GPU stage; see plan_eval()
 and docs/search-architecture.md.
 """
 from __future__ import annotations
@@ -119,8 +119,8 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
         elig = [r for r in results if r["eligible"]]
         print(f"# {len(elig)} launchable technique-dimensions, "
               f"{sum(r['composable'] for r in elig)} composable candidates "
-              f"(compose is diagnostic; eval+tiering = GPU stage, stubbed)")
-        # each dimension is a BOUNDED SEARCH LOOP; tiers define the per-tier quality budgets
+              f"(compose is diagnostic; eval+speed-target selection = GPU stage, stubbed)")
+        # each dimension is a fixed-budget frontier loop; tiers are selected after fan-out
         print("# search loop (per dimension):")
         for dim_id, dim in load_dimensions():
             lp = dim.get("loop", {})
@@ -130,25 +130,27 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
                       f"early_stop={lp.get('early_stop_patience','?')} keep={lp.get('keep','?')}")
         tiers = load_tiers()
         if tiers:
-            names = [t for t in tiers if t not in ("targets", "provider")]
-            print(f"# risk tiers: {names}  composed targets: {tiers.get('targets', {})}")
+            names = [t for t in tiers if t not in ("targets", "provider", "quality_ranking")]
+            print(f"# speed-target tiers: {names}  composed targets: {tiers.get('targets', {})}")
     return results
 
 
 def plan_eval(model_id: str):  # noqa: D401
     """STUB (GPU stage): run each dimension's BOUNDED SEARCH LOOP.
 
-    Per dimension (its [loop]): up to max_iters iterations (early-stop after
-    early_stop_patience with no Pareto improvement). Each iteration picks a config
-    from search_space/ plus model traces/code, records it in a candidate
-    manifest, renders a run bundle from the model profile + cfg, launches via
-    scripts/launch_candidate.py, collects
+    Per dimension (its [loop]): run the fixed max_iters frontier budget unless a
+    real blocker or explicit orchestrator release applies. Structured-negative
+    proposals are logged but do not stop the default fixed-budget loop. Each
+    iteration picks a hypothesis from search_space/ plus model traces/code,
+    records it in a candidate manifest, renders a run bundle from the model
+    profile + cfg, launches via scripts/launch_candidate.py, collects
     benchmark.json/quality.json, and compares latency + peak_mem + quality vs the
-    profile [baseline]. A candidate is kept only if it beats baseline on latency
-    OR peak_mem AND meets a tier's quality budget (evals/tiers.toml); it is binned
-    into the loosest tier it satisfies, keeping the best (latency, peak_mem) config
-    per tier. The integration stage then stacks per-tier dimension winners into the
-    final low/medium/high profiles (composed targets in tiers.toml [targets]).
+    profile [baseline]. A candidate is retained when quality improves OR
+    speed/memory improves; it is discarded when neither improves or speed/memory
+    regresses. After the budget closes, the main agent selects low/medium/high
+    speed-target winners from the retained frontier by joint Gemini+LPIPS quality
+    ranking, then integration stacks those winners into final profiles (composed
+    targets in tiers.toml [targets]).
     Not run here (no GPU). See docs/search-architecture.md."""
     raise NotImplementedError("eval+tiering is the GPU stage; see docs/search-architecture.md")
 

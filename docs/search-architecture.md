@@ -14,7 +14,7 @@ GENERIC (write once, every model):
   loops/<dim>/dimension.toml  a SEARCH DIMENSION: method family + search axes +
                               budget/quality metadata. Never names a model.
   search/search.py            observe dimensions and run optional compose diagnostics
-                              -> [GPU] eval vs baseline -> low/mid/high tiers
+                              -> [GPU] eval vs baseline -> 1.5/2/3x delivery targets
 
 MODEL/RUNTIME:
   models/<id>.toml                 profile: official config, baseline, run entry,
@@ -39,20 +39,21 @@ should happen directly in `Sol-LTX-Infer/` before being normalized.
 2. For each dimension the main agent chooses to wake: spawn a native Codex goal
    from `search_space/` plus `loops/<dim>/exploration.md` and
    `docs/fanout-loop-contract.md`.
-3. The subagent runs the bounded dimension loop: observe prior results, propose
-   a new hypothesis, implement exactly one candidate, preflight, launch, gate,
-   then keep/reject and loop. Compose checks are optional diagnostics.
+3. The subagent runs the bounded dimension loop: observe current-experiment
+   results, propose a new hypothesis, implement exactly one candidate,
+   preflight, launch, gate, then retain/discard/reject and loop. Compose checks
+   are optional diagnostics.
 4. **(GPU stage)** Render a run bundle from the profile + cfg → existing
    `scripts/launch_candidate.py` → `scripts/collect_run.py` → `benchmark.json`/
    `quality.json` plus aligned gate artifacts → compare vs the profile
-   `[baseline]` → bin into low/mid/high per `evals/tiers.toml`.
-5. Emit the tiered `final_matrix` (the plan's deliverable).
+   `[baseline]` → bin into 1.5x/2.0x/3.0x speed targets per `evals/tiers.toml`.
+5. Emit the delivery `final_matrix` (low/medium/high speed targets).
 
 ## Map to the videogen-accel plan
 - "four/five directions" → the generic `loops/*` dimensions (cache, token-prune,
   sparse-attn, nvfp4, kwl).
-- "integration search → low/mid/high" → step 4–5 here (eval + tiering), model as a
-  parameter.
+- "integration search → low/mid/high" → step 4–5 here (eval + speed-target
+  quality ranking), model as a parameter.
 - The model-specific wiring the plan implies (which token span, where the
   attention path is) → discovered by subagents in inference code first, then
   optionally normalized by the main agent during integration.
@@ -62,10 +63,11 @@ CPU observation and compose diagnostics are implemented + tested
 (`search/test_search.py`). GPU half (eval + tiering) is `plan_eval()` — wires the
 existing launcher/collector/eval-profile.
 
-## Quality eval pipeline (per candidate) — what bins a config into a tier
+## Quality eval pipeline (per candidate) — what ranks a config
 
 Each search-loop iteration runs a candidate and assesses quality through THREE
-authoritative stages; the verdict (plus latency + peak_mem) decides its tier
+authoritative stages; the verdict (plus latency + peak_mem) decides whether it
+is retained during fan-out and how it is ranked after the budget closes
 (`evals/tiers.toml`):
 
 ```
@@ -74,7 +76,7 @@ authoritative stages; the verdict (plus latency + peak_mem) decides its tier
 2. quantitative      PSNR/MSE/mean abs diff over extracted frames, temporal
                      flicker and patch-boundary metrics, plus LPIPS over
                      stratified frame pairs. Missing baseline frames or missing
-                     LPIPS blocks promotion.
+                     LPIPS blocks final selection until evidence is backfilled.
 3. perceptual (REQUIRED)  aligned NVIDIA-Gemini pairwise visual-artifact judge:
                      extract frames -> side_by_side vs baseline ->
                      tools/vision/nvidia_gemini_judge.py (rubric:
@@ -83,36 +85,45 @@ authoritative stages; the verdict (plus latency + peak_mem) decides its tier
 ```
 
 Stage 3 is mandatory: LPIPS/PSNR cannot see blur, mosaic, snow, ghosting,
-temporal flicker, or degraded text/faces/hands — only the multimodal judge can,
-and it is what separates a clean low-tier config from a degraded one. The verdict
-maps to a tier by `gemini_overall` + max new-artifact `severity` (see
-`evals/tiers.toml`): low = pass & no artifacts; medium = pass & ≤low severity;
-high = ≤medium severity (high severity is always rejected).
+temporal flicker, or degraded text/faces/hands — only the multimodal judge can.
+Final target selection considers both Gemini and LPIPS: aligned pairwise Gemini
+artifact severity/status first, aligned LPIPS second, then higher speed as a
+tie-breaker. LPIPS alone is not the selector.
 
-The combined verdict (all three stages) + the (latency, peak_mem) improvement bin
-the candidate into the tightest (cleanest, low-first) tier it satisfies.
-Promotion authority is OFF identity, aligned LPIPS on canonical baseline frames,
-and aligned pairwise Gemini. Collector `quality.json` is telemetry and may be
-used for bookkeeping, but its video-sampled Gemini output is not promotion
-authority when it contradicts aligned LPIPS or aligned pairwise gate artifacts.
+The combined verdict (all three stages) plus speed/memory evidence determines
+whether a candidate is retained during fan-out and how it can be selected later.
+During the per-dimension loop, quality is not a hard per-tier retention gate:
+retain candidates that improve quality or speed/memory, and discard candidates
+where quality does not improve and speed/memory does not improve or regresses.
 The source of truth is structured JSON from the authoritative gate, never prose
-logs or release notes. Each dimension keeps the best config per tier; integration
-stacks per-tier winners. Integration is a mandatory fan-in loop: composed
-profiles must be generated and gated themselves, and a tier with no eligible
-composition must be recorded as an explicit blocker.
+logs or release notes. After the fixed budget closes, the main agent selects the
+best-quality retained frontier candidate for each speed target:
+low >= 1.5x, medium >= 2.0x, high >= 3.0x.
+Integration then stacks selected winners. Integration is a mandatory fan-in loop:
+composed profiles must be generated and gated themselves, and a tier with no
+eligible composition must be recorded as an explicit blocker.
 
 ## Loop control and failed candidates
 
 A native goal dimension is not complete when one candidate fails. Failed
-candidates must be rejected, logged with a failure signature, and used to choose
-the next hypothesis. Successful candidates update `best_per_tier`, then the
-dimension keeps searching for a better point. A dimension stops only at:
+candidates must be rejected or discarded, logged with a failure signature or
+reason, and used to choose the next hypothesis. Retained candidates update the
+frontier, then the dimension keeps searching for a better point. A dimension
+stops only at:
 
-- `max_iters`;
-- `early_stop_patience` with no Pareto improvement or new diagnostic signal;
+- `max_iters` (default `40` per fan-out dimension);
 - a real external blocker;
-- structured-negative evidence that covers the meaningful mechanism space;
 - explicit main-orchestrator release after review.
+
+A dimension agent may record a structured-negative proposal as a failure
+signature, but it cannot terminate the default fixed-budget loop by itself.
+
+`early_stop_patience` defaults to `0`, so patience early stop is disabled in the
+fixed-budget frontier mode. `no_improve_count` is telemetry. When budget fires,
+the dimension should report `terminal_pending_review` so the main agent can
+select low/medium/high winners from the frontier, restart with a new direction,
+request validation, drop the dimension, mark a blocker, or integrate selected
+winners.
 
 See `docs/fanout-loop-contract.md` for the exact state machine and required
 `SEARCH_JOURNAL.md` / `AGENT-STATUS.json` fields.

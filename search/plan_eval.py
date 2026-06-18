@@ -5,14 +5,14 @@ Drives one candidate (or a dimension's bounded loop) through the real pipeline:
 render a candidate manifest from the model profile + composed technique env ->
 launch (scripts/launch_candidate.py, sbatch) -> collect (scripts/collect_run.py)
 -> quality (tools/vision/nvidia_gemini_judge.py) -> compare vs the model baseline
--> bin into a risk tier (evals/tiers.toml).
+-> bin into a speed-target delivery bucket (evals/tiers.toml [targets]).
 
 The orchestration logic (render_candidate / assess / tier_of / search_loop) lives
 here; the GPU work is the existing scripts. `assess()` also runs standalone on an
 already-completed run dir (no GPU) — used to validate the harness on an existing run.
 
 CLI:
-  python search/plan_eval.py --assess RUN_DIR [--baseline-frames DIR] [--model cosmos3]
+  python search/plan_eval.py --assess RUN_DIR [--baseline-frames DIR] [--model cosmos3] [--out RUN_DIR/assess_verdict.json]
 """
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ except ModuleNotFoundError:  # py<3.11 (sana env) ships tomli
 
 REPO = Path(__file__).resolve().parents[1]
 _SEV = {"none": 0, "low": 1, "medium": 2, "high": 3}
+_OVERALL = {"pass": 0, "fail": 1, "inconclusive": 2, None: 3}
 
 # Runtime-technique env mapping. Build-transforms set their own SGLANG_HQ_* env
 # via Plan.apply_transforms(); runtime techniques (Phase.ON_STEP etc.) do not
@@ -76,6 +77,27 @@ def _load(p: Path) -> dict:
         return tomllib.load(f)
 
 
+def _load_json_if_present(path: Path) -> dict | None:
+    if not path.exists() or path.stat().st_size == 0:
+        return None
+    try:
+        return json.load(open(path))
+    except json.JSONDecodeError:
+        return None
+
+
+def usable_gemini_verdict(gemini: dict | None) -> bool:
+    return (gemini or {}).get("overall") not in (None, "inconclusive")
+
+
+def reconcile_quality_blockers(blockers: list[str], gemini: dict | None) -> list[str]:
+    """Pairwise Gemini from plan_eval overrides collector-only Gemini failures."""
+
+    if not usable_gemini_verdict(gemini):
+        return blockers
+    return [blocker for blocker in blockers if not blocker.startswith("nvidia_gemini:")]
+
+
 def load_profile(model_id: str) -> dict:
     return _load(REPO / "models" / f"{model_id}.toml")
 
@@ -91,33 +113,70 @@ def max_gemini_severity(gemini: dict | None) -> str:
     return max((a.get("severity", "low") for a in arts), key=lambda s: _SEV.get(s, 1))
 
 
-def tier_of(speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
-    """Cleanest (low-first) tier the candidate qualifies for, or None.
+def quality_ranking_key(row: dict) -> tuple:
+    """Sort key for final speed-target winners: Gemini first, LPIPS second."""
+    severity = _SEV.get(row.get("max_artifact_severity") or "high", 3)
+    overall = _OVERALL.get(row.get("gemini_overall"), 3)
+    lpips = row.get("lpips_max")
+    lpips_value = float(lpips) if isinstance(lpips, (int, float)) else float("inf")
+    speedup = row.get("speedup") or 0.0
+    return (severity, overall, lpips_value, -speedup)
 
-    Requires beating the baseline on latency OR peak memory, AND meeting a tier's
-    quality budget. Tiers are quality budgets that loosen low->high, so a clean
-    candidate is classified into the *tightest* (low) tier it satisfies — that is
-    the safest config to ship; a more-degraded one can only be offered higher-risk.
+
+def tier_of(speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
+    """Speed-target delivery bucket the candidate reaches, or None.
+
+    Fan-out retention is frontier-based, not LPIPS-threshold based. Final
+    low/medium/high delivery profiles are speed target buckets (1.5x / 2x / 3x
+    by default); within each bucket, `quality_ranking_key()` picks by aligned
+    Gemini severity/status and LPIPS together rather than requiring an absolute
+    LPIPS cutoff here.
     """
     improved = (speedup and speedup > 1.0 + 1e-6) or (
         peak_mem_ratio and peak_mem_ratio < 1.0 - 1e-6
     )
     if not improved:
-        return None  # no speed/mem win -> not a tier candidate
-    overall = (gemini or {}).get("overall")
-    if overall in (None, "inconclusive"):
-        return None  # no usable quality verdict -> cannot tier (never auto-promote to high)
-    sev = _SEV[max_gemini_severity(gemini)]
-    for name in ("low", "medium", "high"):  # cleanest budget first
-        t = tiers[name]
-        if sev > _SEV.get(t.get("gemini_max_artifact_severity", "high"), 3):
-            continue
-        if t.get("gemini_overall", "pass_or_fail") == "pass" and overall != "pass":
-            continue
-        if lpips_delta is not None and lpips_delta > t.get("lpips_delta_max", 1.0):
-            continue
-        return name
-    return None  # fails even the high budget -> reject
+        return None
+    if not speedup:
+        return None
+    targets = tiers.get("targets", {})
+    if speedup >= targets.get("high_speedup", 3.0):
+        return "high"
+    if speedup >= targets.get("medium_speedup", 2.0):
+        return "medium"
+    if speedup >= targets.get("low_speedup", 1.5):
+        return "low"
+    return None
+
+
+def promotion_note(tier, quality_blockers, speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
+    """Human-readable reason a candidate did not reach a delivery speed bucket."""
+    if tier:
+        return None
+    if quality_blockers:
+        return (
+            "missing or blocked quality evidence: "
+            + ", ".join(quality_blockers)
+            + " -> retain/backfill frontier evidence, but do not select final profile yet"
+        )
+
+    improved = (speedup and speedup > 1.0 + 1e-6) or (
+        peak_mem_ratio and peak_mem_ratio < 1.0 - 1e-6
+    )
+    if not improved:
+        return (
+            "no latency/mem improvement vs baseline -> not a tier winner "
+            "(expected until a technique is wired into the model runtime)"
+        )
+
+    target = (tiers.get("targets") or {}).get("low_speedup", 1.5)
+    if speedup:
+        return (
+            f"speed/mem improved, but speedup {speedup:.4g}x is below the "
+            f"lowest delivery target {target}x -> retained frontier evidence, "
+            "not a final speed-bucket winner"
+        )
+    return "memory improved but no speed target bucket reached -> retained frontier evidence"
 
 
 def render_candidate(profile: dict, technique: str, cfg: dict, kind: str = "build_transform",
@@ -174,7 +233,8 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
     bench = json.load(open(bench_p)) if bench_p.exists() else {}
     qp = run_dir / "outputs/quality.json"
     quality = json.load(open(qp)) if qp.exists() else {}
-    quality_blockers = list(quality.get("promotion_blockers") or [])
+    collector_quality_status = quality.get("status")
+    collector_quality_blockers = list(quality.get("promotion_blockers") or [])
     base = profile.get("baseline", {})
     cand_total = bench.get("total_s") or bench.get("denoise_s")
     base_total = base.get("total_s")
@@ -184,10 +244,12 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
     # baseline frames); fall back to the collector's quality.json verdict.
     gem = None
     cand_frames = sorted((run_dir / "outputs/frames").glob("*.png"))
-    if gemini and base_fr and cand_frames:
+    pj = run_dir / "outputs/quality_pairwise.json"
+    if gemini:
+        gem = _load_json_if_present(pj)
+    if gemini and gem is None and base_fr and cand_frames:
         total = min(len(base_fr), len(cand_frames))
         n = min(total, 32)
-        pj = run_dir / "outputs/quality_pairwise.json"
         cmd = [sys.executable, str(REPO / "tools/vision/nvidia_gemini_judge.py"),
                "--out", str(pj), "--max-tokens", "4096",
                "--context",
@@ -199,13 +261,17 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
         for i in indices:
             cmd += ["--baseline-frame", str(base_fr[i]), "--candidate-frame", str(cand_frames[i])]
         subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
-        if pj.exists():
-            gem = json.load(open(pj))
+        gem = _load_json_if_present(pj)
     if gem is None and qp.exists():  # fall back to the collector's gemini verdict (nested)
         gem = ((quality.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
     lpips_result = ((quality.get("judges") or {}).get("lpips") or {}).get("result") or {}
     lpips_delta = lpips_result.get("max") if lpips_result.get("status") == "ok" else None
+    quality_blockers = reconcile_quality_blockers(collector_quality_blockers, gem)
+    quality_status = collector_quality_status
+    if collector_quality_blockers and not quality_blockers and usable_gemini_verdict(gem):
+        quality_status = "available"
     tier = None if quality_blockers else tier_of(speedup, None, gem, tiers, lpips_delta=lpips_delta)
+    note = promotion_note(tier, quality_blockers, speedup, None, gem, tiers, lpips_delta=lpips_delta)
     return {
         "run_dir": str(run_dir),
         "baseline_total_s": base_total,
@@ -213,18 +279,13 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
         "speedup": round(speedup, 4) if speedup else None,
         "gemini_overall": (gem or {}).get("overall"),
         "max_artifact_severity": max_gemini_severity(gem) if gem else None,
-        "quality_status": quality.get("status"),
+        "quality_status": quality_status,
         "quality_blockers": quality_blockers,
+        "collector_quality_status": collector_quality_status,
+        "collector_quality_blockers": collector_quality_blockers,
         "lpips_max": lpips_delta,
         "tier": tier,
-        "note": (
-            None if tier else (
-                "quality gates blocked promotion: " + ", ".join(quality_blockers)
-                if quality_blockers
-                else "no latency/mem improvement vs baseline -> not a tier winner "
-                "(expected until a technique is wired into the model runtime)"
-            )
-        ),
+        "note": note,
     }
 
 
@@ -253,11 +314,17 @@ if __name__ == "__main__":
     ap.add_argument("--assess", metavar="RUN_DIR", help="assess an already-completed run dir")
     ap.add_argument("--baseline-frames", default=None, help="baseline frames dir for the Gemini judge")
     ap.add_argument("--no-gemini", action="store_true")
+    ap.add_argument("--out", default=None, help="write the assess verdict JSON to this path")
     args = ap.parse_args()
     prof, tiers = load_profile(args.model), load_tiers()
     if args.assess:
         verdict = assess(args.assess, prof, tiers, baseline_frames=args.baseline_frames,
                          gemini=not args.no_gemini)
-        print(json.dumps(verdict, indent=2))
+        text = json.dumps(verdict, indent=2)
+        if args.out:
+            out = Path(args.out)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(text + "\n")
+        print(text)
     else:
         print("provide --assess RUN_DIR (GPU search_loop orchestration: see docstring)")

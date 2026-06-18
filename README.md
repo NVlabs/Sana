@@ -3,7 +3,7 @@
 </p>
 
 <h3 align="center">
-<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
+<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
 
 <a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
 
@@ -20,13 +20,13 @@
 <p align="center">
   <a href="https://replicate.com/chenxwh/sana"><img src="https://img.shields.io/static/v1?label=API:H100&message=Replicate&color=pink"></a> &ensp;
   <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
-  <a href="https://sana-streaming.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-Streaming&color=yellow"></a> &ensp;
   <a href="https://sana-wm.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-WM&color=yellow"></a> &ensp;
+  <a href="https://sana-streaming.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-Streaming&color=yellow"></a> &ensp;
 </p>
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
 
-**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
+**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
 
 Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with the community! If you have any questions, run into issues, or are interested in contributing, don't hesitate to reach out!
 
@@ -101,9 +101,9 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/)**: Efficient training-time and inference-time compute scaling for better quality.
 - **[SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/)**: One/few-step generation via sCM distillation, **0.1s per 1024px image** on H100.
 - **[SANA-Video/LongSANA](https://nvlabs.github.io/Sana/Video/)**: Efficient video generation with Block Linear Attention / with [LongLive](https://github.com/NVlabs/LongLive).
-- **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
 - **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 - **[SANA-WM](https://nvlabs.github.io/Sana/WM/)**: 2.6B parameter controllable world model, generating 720p, 1-minute video worlds with 6-DoF camera control.
+- **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
 
 **Key Techniques:**
 
@@ -169,9 +169,9 @@ image[0].save("sana.png")
 - [Sana Inference & Training](https://nvlabs.github.io/Sana/docs/sana/)
 - [SANA-Sprint](https://nvlabs.github.io/Sana/docs/sana_sprint/)
 - [SANA-Video](https://nvlabs.github.io/Sana/docs/sana_video/)
-- [SANA-Streaming](https://nvlabs.github.io/Sana/docs/sana_streaming/)
 - [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/)
 - [SANA-WM](https://nvlabs.github.io/Sana/docs/sana_wm/)
+- [SANA-Streaming](https://nvlabs.github.io/Sana/docs/sana_streaming/)
 - [ControlNet](https://nvlabs.github.io/Sana/docs/sana_controlnet/)
 - [LoRA / DreamBooth](https://nvlabs.github.io/Sana/docs/sana_lora_dreambooth/)
 - [Sol-RL Post-Training](https://nvlabs.github.io/Sana/docs/sol_rl/)
@@ -333,5 +333,15 @@ Thanks go to these wonderful contributors:
       archivePrefix={arXiv},
       primaryClass={cs.CV},
       url={https://arxiv.org/abs/2605.15178},
+}
+
+@misc{zhao2026sanastreamingrealtimestreamingvideo,
+      title={SANA-Streaming: Real-time Streaming Video Editing with Hybrid Diffusion Transformer},
+      author={Yuyang Zhao and Yicheng Pan and Qiyuan He and Jincheng Yu and Junsong Chen and Tian Ye and Haozhe Liu and Enze Xie and Song Han},
+      year={2026},
+      eprint={2605.30409},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2605.30409},
 }
 ```

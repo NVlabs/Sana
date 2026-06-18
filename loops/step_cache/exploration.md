@@ -1,6 +1,6 @@
 # Open-Ended Exploration: Caching
 
-Start from `search_space/01_cache.md`, then inspect the Cosmos3 inference code
+Start from `search_space/01_cache.md`, then inspect the target-model inference code
 directly. If `search_space/` is missing, stop and ask the main agent to repair
 the search-space contract.
 
@@ -15,10 +15,11 @@ Explore caching as a family of model-specific mechanisms, not a fixed grid:
 
 Required exploration behavior:
 
-- Inspect Cosmos3 traces/code to choose signals, layers, step windows, thresholds,
+- Inspect target-model traces/code to choose signals, layers, step windows, thresholds,
   and schedules.
-- Do not use predefined thresholds or schedules. Discover them from Cosmos3
+- Do not use predefined thresholds or schedules. Discover them from target-model
   code, traces, and artifacts.
 - Record rejected mechanisms and why they failed.
 - Prove OFF identity before claiming speedup.
-- Produce a runnable candidate manifest or a structured negative result.
+- Produce a runnable candidate manifest or a structured-negative proposal for
+  orchestrator review; do not use the proposal to stop the fixed-budget loop.

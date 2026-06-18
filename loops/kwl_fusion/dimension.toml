@@ -5,16 +5,22 @@
 # directly; this file is not a fixed hyperparameter grid.
 
 id = "kwl_fusion"
-title = "KWL operator-fusion flag bundle"
+title = "Exact kernel and operator fusion"
 kind = "build_transform"
 
 [[technique]]
 name = "kwl_fusions"
 search_axes = [
   "hot operator pattern",
+  "method family",
   "fusion boundary",
   "kernel/backend choice",
   "compile mode",
+  "graph capture mode",
+  "layout/copy elimination",
+  "launch-overhead reduction",
+  "stream overlap",
+  "fallback policy",
   "numeric tolerance",
   "warm/cold cache state",
 ]
@@ -27,10 +33,14 @@ min_speedup_for_promotion = 1.10
 [loop]
 granularity = "per_strategy"                       # axis this dimension searches: per_step | per_module | per_strategy
 objective = ["min_latency", "min_peak_mem"]  # improvement vs models/<id>.toml [baseline]; either counts
-max_iters = 20                           # search budget per dimension (hyperparameter)
-early_stop_patience = 5                  # stop after this many iters with no Pareto improvement
-keep = "best_per_tier"                   # keep the best (latency, peak_mem) config in EACH risk tier
-tiers = "evals/tiers.toml"               # quality budgets that define low / medium / high
-# A candidate counts only if it (a) beats baseline on latency or peak_mem AND (b) meets a
-# tier's quality budget; it is binned into the tightest (cleanest, low-first) tier it satisfies. Quality is a hard,
-# per-tier constraint (never trade quality for speed beyond the tier budget).
+max_iters = 40                           # search budget per dimension (hyperparameter)
+early_stop_patience = 0                  # fixed-budget frontier mode; 0 disables patience early stop
+keep = "frontier_candidates"             # keep exact candidates that improve quality OR speed/memory
+tiers = "evals/tiers.toml"               # speed targets: low=1.5x, medium=2.0x, high=3.0x
+# KWL is lossless/exact: speed or memory candidates are retained only when OFF
+# identity passes and ON quality/numeric evidence does not regress. Numeric or
+# quality candidates are retained only when speed does not meaningfully regress.
+# Discard candidates with no quality/numeric improvement and no speed/memory
+# improvement; reject semantic changes, broken OFF identity, or silent fallback.
+# Structured-negative is logged as a proposal/failure signature; it does not stop this default loop.
+# After the loop, the main agent selects 1.5x/2.0x/3.0x winners by Gemini+LPIPS quality ranking.

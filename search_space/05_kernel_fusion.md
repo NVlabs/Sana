@@ -1,85 +1,255 @@
 # Search Space: Kernel Fusion and Lossless Operator Optimization
 
-**Scope**: Identify kernel-level fusion and optimization opportunities that are **algorithmically lossless** (bit-exact or numerically equivalent up to floating-point accumulation order). Results may not be bit-exact due to reordering of additions or fused multiply-adds, which is acceptable.
+**Scope**: Find kernel-level and graph-level implementation optimizations that
+preserve the same model algorithm. KWL candidates may change floating-point
+operation order, fused-multiply-add behavior, launch grouping, memory layout, or
+backend implementation, but must not change the scheduler, step count, token
+set, prompt/guidance state, LoRA state, resolution, frame count, attention
+semantics, cache semantics, pruning semantics, or quantization policy.
 
----
+The `KWLFusions` transform is a build-time helper that emits
+`SGLANG_HQ_KWL_*` flags. It is useful for ablations, but it is not the whole
+search space. Subagents should inspect the target-model hot path directly and
+may implement exact fused operators, backend swaps, compile wrappers, graph
+capture, or layout fixes in the execution repo.
 
-## Background
+## Exactness Contract
 
-The `KWLFusions` transform applies a bundle of operator fusions at model-build time. Each fusion is gated by an environment flag (`SGLANG_HQ_KWL_*`) and can be ablated independently.
+KWL is a lossless implementation dimension:
 
----
+- OFF path must be identity to baseline for guarded code paths.
+- ON path must be algorithmically equivalent. Small BF16/FP16 differences from
+  accumulation order, fused epilogues, or FMA are allowed only when the
+  authoritative quality gate shows no aligned visual/numeric regression.
+- A speed or memory win is retainable only when OFF identity passes and ON
+  quality/numeric evidence does not regress.
+- A numeric-stability or quality improvement is retainable only when speed does
+  not meaningfully regress.
+- Any candidate that changes sampling, denoising steps, token count, attention
+  density, cache reuse, precision format, prompt handling, or output shape is
+  not KWL. Route it to the appropriate approximate dimension instead.
 
-## 1. Example Fusion Directions
+## Required Preflight
 
-The following are example patterns worth exploring. Each is a direction, not a prescription — whether it helps depends on profiling the specific model and hardware setup.
+Before proposing the first runnable candidate, record:
 
----
+- hot-path profile or code-inspection evidence: dominant kernel families,
+  launch count, memory traffic, tensor shapes, dtype, and repeated operator
+  chains;
+- environment and backend availability: PyTorch/CUDA versions, available
+  attention kernels, Triton/Inductor availability, CUTLASS/cuBLASLt/FlashInfer
+  or project-local fused kernels when relevant;
+- compile/graph state: cold compile cost, warm steady-state timing, graph
+  breaks, dynamic-shape guards, CUDA graph compatibility, and whether timing is
+  cold, warm, or cache-reused;
+- identity proof: OFF flag leaves the baseline path byte-identical or otherwise
+  proves no guarded code executes;
+- risk list: shape polymorphism, dtype casts, aliasing/in-place writes,
+  stream/event ordering, RNG use, host-device syncs, and fallback path behavior.
 
-### FFN Residual as GEMM Epilogue
+## Method Families
 
-**Pattern**: Fuse the residual add and gate multiply into the GEMM epilogue of FFN proj_out, using the cuBLAS / cuDNN epilogue API (`output = alpha * A @ B + beta * C` where C is the residual tensor). This avoids a separate elementwise kernel for the residual add.
+These are method families, not a fixed grid. Each candidate should select one
+family, prove why it is hot for the target model, implement one mechanism, and
+record the expected numerical tolerance.
 
-- **Numerical character**: Accumulation order changes slightly; not bit-exact, within normal FP rounding.
-- **Example forms**: `torch.addmm` with residual as bias term; custom CUTLASS `LinearCombinationResidual` epilogue; `out = proj_out(ffn_hidden) * gate + residual` mapped to scaled addmm.
+### 1. GEMM Epilogue Fusion
 
----
+Fuse post-GEMM work into the GEMM epilogue or into the closest available backend
+primitive.
 
-### QK Norm + RoPE Extension to Other Attention Types
+Possible targets:
 
-**Pattern**: `FUSED_QKNORM_ROPE` currently handles the main self-attention path. If cross-attention Q/K also go through QK norm before RoPE, the same fusion pattern applies.
+- FFN `proj_out + bias + residual + gate` epilogues;
+- `linear + bias + GELU/SwiGLU` epilogues;
+- residual add as the GEMM `beta * C` operand when layout allows;
+- cuBLASLt epilogues such as bias, ReLU, or GELU variants when the backend path
+  exposes them;
+- CUTLASS/Triton custom epilogues for patterns not covered by library enums.
 
-- **Numerical character**: Same as existing fusion (max_diff ~0.125 in BF16).
-- **Example**: Check cross-attention forward; if `rms_norm(Q) → rope(Q)` appears, wrap with the same fused kernel.
+Evidence to collect:
 
----
+- GEMM shape and stride stability;
+- whether output layout can avoid extra contiguous/copy kernels;
+- separate timing for GEMM, epilogue elementwise kernels, and fused path;
+- max/mean diff and aligned quality gate result.
 
-### Attention Score Bias Fusion
+### 2. Norm, Modulation, and Residual Fusion
 
-**Pattern**: If an additive attention bias (positional bias, learnable bias, sliding-window mask) is applied before softmax, fuse it into the FlashAttention kernel via `attn_bias` argument instead of a separate elementwise add.
+Fuse exact transformer block elementwise chains around normalization and
+modulation.
 
-- **Numerical character**: Exact same result (fewer kernel dispatches only).
-- **Example**: `flash_attn_func(q, k, v, attn_bias=bias_tensor)`.
+Possible targets:
 
----
+- RMSNorm/LayerNorm with scale/shift;
+- AdaLN scale, shift, and gate application;
+- dual modulation and cross-attention modulation;
+- residual add plus gate/multiply chains;
+- repeated norm-factor reuse when the same input is modulated multiple ways.
 
-### AdaLN Norm Reuse Across Multiple Modulation Passes
+Guardrails:
 
-**Pattern**: Each transformer block typically applies modulation (scale/shift) multiple times (e.g., pre-attention, post-attention, pre-FFN). Each recomputes the RMSNorm factor. Fusing all passes into one kernel computes the norm factor once and applies multiple scale/shift pairs.
+- reduction order may differ, but epsilon, dtype promotion, and affine
+  parameters must match baseline semantics;
+- in-place outputs must not alias tensors consumed later by the baseline graph;
+- compare both module-level tensor diffs and full generated output quality.
 
-- **Numerical character**: Bit-exact (same norm factor reused; no accumulation reordering).
-- **Example**: Single kernel takes `x` and three `(scale, shift)` pairs; outputs three modulated tensors.
+### 3. Attention-Adjacent Exact Fusion
 
----
+Optimize work around attention without changing which tokens attend to which
+tokens.
 
-### QKV Projection Batching
+Possible targets:
 
-**Pattern**: Q, K, V are currently three separate linear projections (three GEMM calls, each reading `x` from memory). Concatenating the weight matrices and issuing one GEMM reduces memory reads of `x`.
+- Q/K RMSNorm plus RoPE fusion;
+- QKV projection packing or batching when weights and bias layout permit;
+- bias or mask placement inside an attention backend that already supports the
+  same dense attention semantics;
+- packed QKV layout conversion removal;
+- dense FlashAttention/FlashInfer/backend selection for the same mask, causal
+  mode, scale, dropout-off state, and dtype.
 
-- **Numerical character**: Identical to separate GEMMs.
-- **Example**: `W_qkv = cat([Wq, Wk, Wv], dim=0)`; `qkv = x @ W_qkv.T`; split output.
+Hard boundary:
 
----
+- changing attention sparsity, windowing, token dropping, or approximate masks
+  belongs to sparse attention or token pruning, not KWL.
 
-### Compile-Based Fusion for Elementwise Chains
+### 4. Compile and Graph Capture
 
-**Pattern**: Elementwise sequences (e.g., `x = x + residual; x = rms_norm(x); x = x * scale + shift`) not covered by existing fusions can be handed to `torch.compile` for automatic kernel fusion via Inductor.
+Use compiler or capture mechanisms to reduce launch overhead while preserving
+the eager graph.
 
-- **Numerical character**: Equivalent semantics; minor FP reordering in reduction ops.
-- **Example**: Wrap norm + modulate chains not yet patched with `torch.compile(mode="reduce-overhead")`.
+Possible targets:
 
----
+- `torch.compile(..., mode="reduce-overhead")` for stable elementwise-heavy
+  callables;
+- `torch.compile` fullgraph or regional compile for stable submodules;
+- CUDA graph capture for static-shape repeated denoising blocks;
+- pre-warmed graph replay for repeated step shapes;
+- graph-break repair around Python control flow, `.item()`, syncs, dynamic
+  allocations, or shape-dependent branches.
 
-### Parallel Execution of Independent Sub-Sequences
+Evidence to collect:
 
-**Pattern**: When a block contains two independent computation paths (e.g., processing different token types or modalities), launching them on separate CUDA streams allows overlap when the GPU has spare SM capacity.
+- graph break count and reason;
+- cold compile time and warm timing after adequate warmup;
+- memory pool or static-address constraints;
+- fallback behavior when shape, dtype, or device changes.
 
-- **Numerical character**: Exact (stream ordering does not affect arithmetic for independent GEMMs).
-- **Example**: `with torch.cuda.stream(stream_a): out_a = module_a(x_a)` alongside `with torch.cuda.stream(stream_b): out_b = module_b(x_b)`.
+### 5. Memory Layout and Copy Elimination
 
----
+Remove exact no-op layout churn, dtype churn, and avoidable allocation/copy
+kernels.
 
-## 2. Profiling Setup
+Possible targets:
+
+- redundant `.contiguous()`, `reshape`, `permute`, `view`, and layout conversion
+  chains;
+- repeated dtype casts between equal-precision tensors;
+- preallocated output/workspace buffers for stable shapes;
+- fused transpose plus projection layout;
+- pinned host transfer or device-local staging only when semantics are
+  unchanged.
+
+Guardrails:
+
+- views must preserve aliasing expectations;
+- removing a copy must not expose later in-place mutation differences;
+- allocator improvements must be measured separately from compute improvements.
+
+### 6. Launch Overhead Reduction
+
+Reduce the number of small kernels without changing math.
+
+Possible targets:
+
+- batch identical small kernels over heads, modalities, or blocks;
+- combine scalar arithmetic and pointwise post-processing;
+- persistent buffers for repeated step-local temporaries;
+- precomputed static metadata such as shape descriptors, offsets, or launch
+  parameters;
+- move Python-side loops into a vectorized or fused callable when the loop body
+  is semantically identical.
+
+Evidence to collect:
+
+- launch count before/after;
+- CPU-side enqueue time and GPU timeline gaps;
+- whether the speedup persists under warm repeated runs.
+
+### 7. Overlap, Streams, and Pipeline Scheduling
+
+Overlap independent work only when dependency proofs are explicit.
+
+Possible targets:
+
+- independent modality branches;
+- asynchronous H2D/D2H transfers that are not on the critical path;
+- VAE/postprocess overlap with next independent stage when outputs are not read
+  early;
+- separate CUDA streams with events for exact dependency ordering.
+
+Guardrails:
+
+- no data race, aliasing conflict, RNG reordering, or hidden sync;
+- deterministic outputs must remain within the same numeric tolerance as the
+  single-stream baseline;
+- timeline evidence must show actual overlap rather than shifted idle time.
+
+### 8. Decode, VAE, and Postprocess Fusion
+
+Apply exact fusions outside the denoiser when profiling shows they matter.
+
+Possible targets:
+
+- tiled VAE compile/capture;
+- decoder norm/activation chains;
+- exact pixel-space postprocessing, scaling, clamp, cast, and layout conversion;
+- chunk/tile loop overhead reduction with identical tile boundaries.
+
+Guardrails:
+
+- frame count, tile overlap, blending weights, color transform, and output dtype
+  must match baseline semantics;
+- postprocess fusions cannot hide missing or reordered frames.
+
+### 9. Backend Selection and Fallback Policy
+
+Try an equivalent backend only when the semantic contract is proven.
+
+Possible targets:
+
+- dense attention backend selection among project-local kernels,
+  FlashAttention/FlashInfer, Triton, or framework SDPA;
+- GEMM backend selection among cuBLASLt, CUTLASS, Triton, or TorchInductor;
+- exact fallback for unsupported shape/dtype/device combinations;
+- warm cache and autotune-state management.
+
+Guardrails:
+
+- fallback must be visible in logs/manifests;
+- a candidate cannot report speedup from silently skipping work or falling back
+  to a different algorithm;
+- autotune and compile state must be labelled in every timing result.
+
+## Search Axes
+
+- hot operator pattern: GEMM epilogue, norm/modulate, attention-adjacent,
+  layout/copy, compile/graph, launch batching, stream overlap, decode/postprocess
+- scope: one module, one block family, attention-only, FFN-only, VAE-only,
+  postprocess-only, whole repeated denoising region
+- backend path: eager PyTorch, TorchInductor, Triton, cuBLASLt, CUTLASS,
+  project-local CUDA/C++ op, FlashAttention/FlashInfer, CUDA graph
+- guard: env flag, module flag, shape/dtype guard, warm-cache guard, fallback
+  policy
+- numerical tolerance: bit-exact, dtype-rounding-only, reduction-order drift,
+  FMA/epilogue drift
+- timing state: cold compile, warm compile, autotuned, CUDA graph replay,
+  cache-reused
+- validation surface: module tensor diff, OFF identity, full render gate,
+  launch/profile evidence
+
+## Profiling Setup
 
 ```bash
 # nsys for timeline:
@@ -92,6 +262,34 @@ ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed \
 ```
 
 Key metrics:
-- Time per kernel type (GEMM, elementwise, softmax, norm)
-- Memory bandwidth vs. compute utilization
-- Number of kernel launches per transformer block
+
+- latency and peak memory versus model baseline;
+- time per kernel type: GEMM, elementwise, softmax/attention, norm, layout/copy,
+  VAE/postprocess;
+- kernel launch count per block and per denoising step;
+- host enqueue gaps, host-device syncs, graph breaks, and dynamic-shape guards;
+- memory bandwidth versus compute utilization;
+- cold compile/autotune time versus warm steady-state time.
+
+## Structured Negative Standard
+
+A structured negative is acceptable only after the subagent records:
+
+- at least six exact/lossless method families considered and why each is unsafe,
+  unavailable, already fused, or not hot enough;
+- profile or code evidence for the top remaining hot spots;
+- backend availability and fallback evidence;
+- OFF identity results for any touched guard path;
+- expected speed ceiling explaining why more KWL work is unlikely to produce a
+  useful retained frontier candidate.
+
+## Primary References
+
+- PyTorch `torch.compile` and CUDA graph behavior:
+  <https://docs.pytorch.org/docs/stable/generated/torch.compile.html>
+- NVIDIA CUDA Graphs programming guide:
+  <https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cuda-graphs.html>
+- NVIDIA cuBLASLt epilogue enum reference:
+  <https://docs.nvidia.com/cuda/nvmath-python/0.1.0/bindings/generated/nvmath.bindings.cublasLt.Epilogue.html>
+- NVIDIA CUTLASS GEMM API and epilogue/mainloop fusion surface:
+  <https://docs.nvidia.com/cutlass/latest/media/docs/cpp/gemm_api_3x.html>

@@ -2,7 +2,7 @@
 
 A search dimension for whole-denoise-step and internal feature caching. Native
 subagents should read `search_space/01_cache.md`, then inspect and modify the
-Cosmos3 inference path directly in their isolated worktree.
+target-model inference path directly in their isolated worktree.
 
 ## What it searches
 Two cache flavors from the `efficiency` engine (generic, written once):
@@ -36,6 +36,6 @@ that this dimension stays model-agnostic lives in `search/test_search.py`.
 
 ## Run it in the search
 ```bash
-python search/search.py --model cosmos3   # lists this dimension's composable candidates
+python search/search.py --model <model-id>   # lists this dimension's composable candidates
 ```
 See `acceptance.md` for promotion gates.

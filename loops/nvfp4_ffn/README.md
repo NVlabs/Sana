@@ -2,7 +2,7 @@
 
 A search dimension for low-precision FFN or linear-layer experiments. Native
 subagents should read `search_space/03_quantization.md`, then inspect and
-modify Cosmos3 module loading and inference code directly in their isolated
+modify target-model module loading and inference code directly in their isolated
 worktree.
 
 ## What it searches
@@ -11,21 +11,58 @@ worktree.
 `NVFP4FFN` is a load-time diagnostic helper, not a runtime `Technique`: it
 delegates to the model loader via the existing TE NVFP4 FFN environment contract.
 
-The search grid in `dimension.toml` covers the transform's real class params:
+The transform exposes a search surface rather than a fixed grid. Some axes are
+already consumed by the current target runtime; others are metadata until a
+candidate explicitly wires and validates them in the loader.
 
-- `disable_rht`
-- `disable_stochastic_rounding`
-- `disable_2d_quantization`
+Already wired for the current target path:
+
+- TE recipe flags: `disable_rht`, `disable_stochastic_rounding`,
+  `disable_2d_quantization`
+- fused TE epilogues: `fused_proj_in_gelu`, `fused_proj_out_bias_gate`
+- row padding policy: `pad_m_to`
+- FP4 GEMM backend override: `fp4_gemm_backend`
+
+Candidate-wired axes that must be proven before they count:
+
+- `module_scope`: FFN only, attention projections, output projections, or a
+  profiled subset
+- `dense_layers`: BF16 fallback layers or block windows
+- `dense_steps`: BF16 fallback denoising steps
+- `row_scaled_activation`: TE recipe variant when supported by the installed
+  TransformerEngine version
+- `fallback_policy`: BF16 fallback and unsupported-hardware behavior
 
 Current exploration starts from `search_space/` plus model-specific module
 profiling. Subagents choose module scope, dense guards, precision format, and
 fallback policy from evidence gathered in code/traces.
+
+## Required Preflight
+
+Before spending GPU iterations, record a preflight note in `SEARCH_JOURNAL.md`:
+
+- GPU capability and whether it is Blackwell/SM100 or later.
+- TransformerEngine import/version and whether `NVFP4BlockScaling` is available.
+- A minimal `te.Linear` or target-loader smoke result.
+- Whether each planned env var is actually consumed by the target loader.
+- OFF path identity with NVFP4 disabled.
+
+If Blackwell-class NVFP4 or TransformerEngine support is missing, stop with a
+real blocker instead of running synthetic candidates.
 
 ## Exploration Mode
 
 Do not wait for a predeclared precision seam. Inspect the loader and FFN/linear
 modules directly, then implement the candidate where it is easiest to prove a
 clean OFF path and controlled ON behavior.
+
+Each candidate should name the exact module family it touches, for example:
+
+- FFN `proj_in` / `proj_out` only
+- fused `proj_in + GELU`
+- fused `proj_out + bias/gate`
+- attention projections only after profiling shows they matter
+- explicit exclusions for small or quality-sensitive layers
 
 ## Deploy requirement
 
@@ -36,9 +73,20 @@ coupling. The CPU loop test does not import TransformerEngine or run kernels.
 ## Quality policy
 
 NVFP4 FFN quantization is lossy. Disabled NVFP4 must recover the baseline path,
-but enabled NVFP4 is not expected to be byte-identical. Promotion requires
-`outputs/side_by_side.mp4` and the configured visual judge result. PSNR is
-recorded as a diagnostic only and is not a hard promotion gate.
+but enabled NVFP4 is not expected to be byte-identical. Frontier retention and
+final tier selection require `outputs/side_by_side.mp4` and the configured visual
+judge result. PSNR is recorded as a diagnostic only and is not a final selector.
+Reliable numeric/precision checks and silent-fallback detection may be hard
+gates; LPIPS and Gemini are both used for quality ranking inside speed targets.
+
+Retained frontier candidates must record:
+
+- quantized module list and any BF16 dense guard;
+- TE recipe flags and FP4 GEMM backend;
+- hardware, CUDA, and TransformerEngine version;
+- warm/cold compile state;
+- latency, peak memory, LPIPS, pairwise Gemini, and run artifacts;
+- fallback or blocker reason if the candidate could not exercise real NVFP4.
 
 ## Independent test
 
@@ -56,4 +104,4 @@ search-level check that this dimension stays model-agnostic lives in
 python search/search.py --model <id>
 ```
 
-See `acceptance.md` for promotion gates.
+See `acceptance.md` for frontier retention and final tier selection rules.

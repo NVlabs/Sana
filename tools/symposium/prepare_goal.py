@@ -304,6 +304,18 @@ def active_run_root(root: Path, run_id: str = "") -> Path | None:
     return (root / "output" / "fanout_runs" / run_id).resolve()
 
 
+def coordinator_root(root: Path) -> Path:
+    """Return the main checkout root when running inside a fanout worktree."""
+
+    resolved = root.resolve()
+    parts = resolved.parts
+    marker = ("output", "fanout_runs")
+    for idx in range(len(parts) - len(marker) + 1):
+        if tuple(parts[idx : idx + len(marker)]) == marker:
+            return Path(*parts[:idx])
+    return resolved
+
+
 def infer_run_id(root: Path, provided: str = "") -> str:
     if provided:
         return provided
@@ -450,6 +462,18 @@ candidate is wired, candidate-wired, runtime-patched, or probe-only.
             ]
         )
     return "\n".join(lines) + "\n"
+
+
+def runtime_repo_for_model(root: Path, model_id: str) -> str:
+    profile_path = root / "models" / f"{model_id}.toml"
+    try:
+        profile = tomllib.loads(profile_path.read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return "Sol-LTX-Infer/"
+    submodule = str(profile.get("submodule") or "").strip()
+    if submodule:
+        return submodule.rstrip("/") + "/"
+    return "Sol-LTX-Infer/"
 
 
 def implementation_loop_acceptance() -> list[str]:
@@ -618,6 +642,8 @@ def render_goal_md(
     method_baselines: list[dict],
 ) -> str:
     write_scope = resolved_write_scope(args)
+    runtime_repo = runtime_repo_for_model(project_root(), args.model_id)
+    runtime_repo_name = runtime_repo.rstrip("/")
     acceptance = "\n".join(f"- {item}" for item in dimension_acceptance(args.dimension, args.role))
     scope = "\n".join(f"- `{item}`" for item in write_scope)
     artifacts = "\n".join(f"- {item}" for item in required_artifacts(args.role))
@@ -626,6 +652,8 @@ def render_goal_md(
     loop_values = loop_contract_values(args)
     kwl_loop_note = dimension_loop_note(args.dimension, args.role)
     method_baseline_catalog = method_baseline_catalog_md(method_baselines)
+    if runtime_repo_name != "Sol-LTX-Infer":
+        method_baseline_catalog = method_baseline_catalog.replace("Sol-LTX-Infer", runtime_repo_name)
     return f"""# Goal: {args.goal_id}
 
 You are working in an isolated autovideo goal context.
@@ -712,9 +740,9 @@ search and hand the status to the main orchestrator. Watchers must treat
 ## Model And Runtime Context
 
 - Target model profile: `models/{args.model_id}.toml`
-- Execution repo: `Sol-LTX-Infer/`
+- Execution repo: `{runtime_repo}`
 - Primary implementation surface: inspect and modify the model inference path
-  under `Sol-LTX-Infer/` directly in this isolated worktree.
+  under `{runtime_repo}` directly in this isolated worktree.
 - Launcher: `python3 scripts/launch_candidate.py {candidate_rel} --mode dry-run`
 - Collector: `python3 scripts/collect_run.py runs/<run-id>`
 - Authoritative assess: `{SANA_PYTHON} search/plan_eval.py --assess <run_dir> --baseline-frames {CANONICAL_BASELINE_FRAMES} --out <run_dir>/assess_verdict.json`
@@ -777,7 +805,10 @@ def resolve_baseline_frames(root: Path, model_id: str, override: str = "") -> st
         return CANONICAL_BASELINE_FRAMES
     run_id = (profile.get("baseline") or {}).get("run_id")
     if run_id:
-        return str(root / "runs" / str(run_id) / "outputs" / "frames")
+        local_frames = root / "runs" / str(run_id) / "outputs" / "frames"
+        if local_frames.exists():
+            return str(local_frames)
+        return str(coordinator_root(root) / "runs" / str(run_id) / "outputs" / "frames")
     return CANONICAL_BASELINE_FRAMES
 
 

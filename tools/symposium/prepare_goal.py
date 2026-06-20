@@ -476,6 +476,20 @@ def runtime_repo_for_model(root: Path, model_id: str) -> str:
     return "Sol-LTX-Infer/"
 
 
+def method_baselines_for_runtime(method_baselines: list[dict], runtime_repo: str) -> list[dict]:
+    runtime_repo_name = runtime_repo.rstrip("/")
+    if runtime_repo_name == "Sol-LTX-Infer":
+        return method_baselines
+    rewritten = []
+    for item in method_baselines:
+        current = dict(item)
+        entrypoint = current.get("entrypoint")
+        if isinstance(entrypoint, str):
+            current["entrypoint"] = entrypoint.replace("Sol-LTX-Infer", runtime_repo_name)
+        rewritten.append(current)
+    return rewritten
+
+
 def implementation_loop_acceptance() -> list[str]:
     return [
         "run the fixed-budget fan-out loop; do not stop after a single candidate success or failure",
@@ -643,7 +657,6 @@ def render_goal_md(
 ) -> str:
     write_scope = resolved_write_scope(args)
     runtime_repo = runtime_repo_for_model(project_root(), args.model_id)
-    runtime_repo_name = runtime_repo.rstrip("/")
     acceptance = "\n".join(f"- {item}" for item in dimension_acceptance(args.dimension, args.role))
     scope = "\n".join(f"- `{item}`" for item in write_scope)
     artifacts = "\n".join(f"- {item}" for item in required_artifacts(args.role))
@@ -651,9 +664,9 @@ def render_goal_md(
     contract_text = INTEGRATION_LOOP_CONTRACT if args.role == "integration" else FANOUT_LOOP_CONTRACT
     loop_values = loop_contract_values(args)
     kwl_loop_note = dimension_loop_note(args.dimension, args.role)
-    method_baseline_catalog = method_baseline_catalog_md(method_baselines)
-    if runtime_repo_name != "Sol-LTX-Infer":
-        method_baseline_catalog = method_baseline_catalog.replace("Sol-LTX-Infer", runtime_repo_name)
+    method_baseline_catalog = method_baseline_catalog_md(
+        method_baselines_for_runtime(method_baselines, runtime_repo)
+    )
     return f"""# Goal: {args.goal_id}
 
 You are working in an isolated autovideo goal context.
@@ -876,6 +889,10 @@ def main() -> int:
     )
     dimension_metadata = read_dimension_metadata(root, args.dimension)
     method_baselines = dimension_metadata.get("method_baseline", [])
+    runtime_method_baselines = method_baselines_for_runtime(
+        method_baselines,
+        runtime_repo_for_model(root, args.model_id),
+    )
     model_profile = root / "models" / f"{args.model_id}.toml"
     if not model_profile.exists():
         raise SystemExit(f"Model profile does not exist: {model_profile}")
@@ -920,7 +937,7 @@ def main() -> int:
         "dimension": args.dimension,
         "search_space_root": search_space_rel,
         "search_space_doc": search_doc_rel,
-        "method_baselines": method_baselines,
+        "method_baselines": runtime_method_baselines,
         "model_id": args.model_id,
         "model_profile": str(model_profile.relative_to(root)),
         "write_scope": resolved_write_scope(args),

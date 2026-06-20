@@ -71,3 +71,38 @@ wall).
 `baseline_total_s=881.85, candidate_total_s=881.85, speedup=1.0,
 gemini_overall=pass, max_artifact_severity=none, lpips_max=0.0,
 quality_blockers=[]`. Non-null timing, identity LPIPS, reachable Gemini pass.
+
+## MI-6 — aligned pairwise Gemini hallucinates false-fails on near-identical frames
+- Observed during fan-out (run fanout_hunyuan_20260620T183315Z): kwl candidate
+  `native_cudnn_attention` had LPIPS `max=0.0, mean=0.0` (frames numerically
+  identical to baseline) and collector `quality.json` Gemini = pass/promote/0
+  artifacts, yet the aligned pairwise `quality_pairwise.json` returned
+  fail/reject with a hallucinated artifact ("candidate shows an entirely
+  different sunset/sunrise dock scene ... deviates from the baseline's forest").
+  Identical frames cannot be a different scene → the pairwise judge confabulated.
+- Mechanism: `plan_eval.conservative_gemini_verdict()` takes the WORSE of the
+  pairwise + collector Gemini, so one hallucinated pairwise fail dominates and
+  sets `quality_blockers=[nvidia_gemini:fail:high]`, `tier=null`.
+- Observed false-fail rate ~2/8 early candidates, all on near-identical
+  (LPIPS<=~0.02) runs; the judge still correctly fails real cliffs (LPIPS ~0.95)
+  and passes other low-LPIPS candidates. So it is a reliability caveat, not a
+  total failure.
+- Impact: speed numbers unaffected; mid-fan-out no winner is lost (agents retain
+  on speed). Real risk is at FINAL selection — a genuinely good fast candidate
+  could be excluded by a flaked pairwise fail.
+- Cannot fix the running agents' gate (each uses its worktree's frozen
+  `plan_eval`). Mitigation: (1) at tier selection / integration (run from the
+  coordinator) re-gate and treat `LPIPS<=~0.05 + pairwise fail + collector pass`
+  as a probable judge flake → re-run the pairwise judge before excluding;
+  (2) apply the contract's joint LPIPS+Gemini judgment rather than Gemini-alone.
+- MITIGATION IMPLEMENTED (coordinator `search/plan_eval.py`,
+  `_suppress_hallucinated_pairwise_fail`): when a pairwise Gemini FAIL coincides
+  with aligned LPIPS <= 0.05 and a clean collector verdict, re-run the pairwise
+  judge once; if the recheck clears, suppress the original fail; if LPIPS <= 0.01
+  (provably ~identical frames) suppress regardless. Real cliffs (LPIPS ~0.95) are
+  untouched (above threshold). Verified: re-assessing kwl `native_cudnn`
+  (LPIPS=0.0) flips gemini_overall fail->pass, blockers=[]; baseline self-gate
+  unchanged (1.0x, pass). Reproduced again live on kwl `static_mask_v2`
+  (LPIPS=0.0, 1.0011x). NOTE: running agents use their worktree's frozen
+  plan_eval (pre-fix); this hardening governs the orchestrator's selection +
+  the integration worktree (branched after the fix is committed).

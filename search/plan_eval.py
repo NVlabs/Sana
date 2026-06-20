@@ -283,6 +283,59 @@ def render_candidate(profile: dict, technique: str, cfg: dict, kind: str = "buil
     return manifest
 
 
+HALLUCINATION_TINY_LPIPS = 0.05
+
+
+def _gem_is_fail(gem: dict | None) -> bool:
+    if not usable_gemini_verdict(gem):
+        return False
+    return (gem or {}).get("overall") == "fail" or max_gemini_severity(gem) in ("high", "critical")
+
+
+def _suppress_hallucinated_pairwise_fail(
+    pairwise_gem, collector_gem, collector_blockers, lpips_delta,
+    gemini, base_fr, cand_frames, run_dir,
+):
+    """MI-6 mitigation: the pairwise Gemini judge sometimes hallucinates a
+    "different scene" FAIL on near-identical frames. When aligned LPIPS says the
+    frames are ~identical AND the collector Gemini is clean, such a pairwise fail
+    is almost certainly a hallucination. Re-run the pairwise judge once; if it
+    still fails keep it (consistent signal), otherwise suppress it (use the
+    recheck verdict). Returns the possibly-replaced pairwise verdict."""
+    if not (gemini and pairwise_gem is not None and _gem_is_fail(pairwise_gem)):
+        return pairwise_gem
+    if not isinstance(lpips_delta, (int, float)) or lpips_delta > HALLUCINATION_TINY_LPIPS:
+        return pairwise_gem
+    collector_clean = (
+        usable_gemini_verdict(collector_gem)
+        and not _gem_is_fail(collector_gem)
+        and not collector_blockers
+    )
+    if not collector_clean or not base_fr or not cand_frames:
+        return pairwise_gem
+    rj = Path(run_dir) / "outputs/quality_pairwise_recheck.json"
+    total = min(len(base_fr), len(cand_frames))
+    n = min(total, 32)
+    cmd = [sys.executable, str(REPO / "tools/vision/nvidia_gemini_judge.py"),
+           "--out", str(rj), "--max-tokens", "4096",
+           "--context",
+           "Recheck of two clips expected to be near-identical (aligned LPIPS~0). "
+           "Report a new artifact ONLY if the candidate genuinely differs; do not "
+           "infer a different scene from minor pixel noise or compression."]
+    indices = [0] if n == 1 else [round(i * (total - 1) / (n - 1)) for i in range(n)]
+    for i in indices:
+        cmd += ["--baseline-frame", str(base_fr[i]), "--candidate-frame", str(cand_frames[i])]
+    subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
+    recheck = _load_json_if_present(rj)
+    if usable_gemini_verdict(recheck) and not _gem_is_fail(recheck):
+        return recheck  # hallucination cleared on recheck -> suppress original fail
+    if lpips_delta <= 0.01:
+        # Frames are provably ~identical; a "different scene" fail cannot be real
+        # even if the recheck also hallucinated -> trust the clean collector verdict.
+        return collector_gem
+    return pairwise_gem
+
+
 def assess(
     run_dir,
     profile: dict,
@@ -333,9 +386,15 @@ def assess(
         subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
         pairwise_gem = _load_json_if_present(pj)
     collector_gem = ((quality.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
-    gem = conservative_gemini_verdict(pairwise_gem, collector_gem)
     lpips_result = ((quality.get("judges") or {}).get("lpips") or {}).get("result") or {}
     lpips_delta = lpips_result.get("max") if lpips_result.get("status") == "ok" else None
+    # MI-6 mitigation: suppress a hallucinated pairwise "different scene" FAIL when
+    # the frames are ~identical (tiny aligned LPIPS) and the collector judge is clean.
+    pairwise_gem = _suppress_hallucinated_pairwise_fail(
+        pairwise_gem, collector_gem, collector_quality_blockers, lpips_delta,
+        gemini, base_fr, cand_frames, run_dir,
+    )
+    gem = conservative_gemini_verdict(pairwise_gem, collector_gem)
     quality_blockers = reconcile_quality_blockers(collector_quality_blockers, pairwise_gem, collector_gem)
     quality_status = collector_quality_status
     if collector_quality_blockers and not quality_blockers and usable_gemini_verdict(gem):

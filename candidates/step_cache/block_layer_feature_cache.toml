@@ -1,0 +1,49 @@
+kind = "patch"
+purpose = "blocker_probe"
+description = "Public PAB MLP broadcast controller with a conservative Cosmos3 GEN MLP-output adapter."
+model_profile = "cosmos3"
+
+[id]
+name = "block_layer_feature_cache"
+dimension = "step_cache"
+family = "pab_mlp_broadcast"
+
+[references.external]
+paper = "PAB: https://arxiv.org/html/2408.12588v3"
+code = "VideoSys / PAB: https://github.com/NUS-HPC-AI-Lab/VideoSys"
+notes = "Closest open implementation for block-interval reuse; this uses the public VideoSys MLP start-timestep/block/skip-count controller and wires it to Cosmos3 MLP outputs."
+
+[references.local]
+generic_impl = "efficiency/techniques/payload_cache.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/ltx2_stage1_cache_core.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/ltx2_stage1_cache_core.py"
+
+[requirements]
+capabilities = ["has_transformer_blocks", "supports_step_cache"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "payload_cache"
+
+[efficiency.params]
+scope = "block_layer_feature"
+mode = "pab"
+mlp_broadcast = true
+mlp_spatial_broadcast_config = { "500" = { block = [2], skip_count = 2 } }
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "block_layer_feature_cache"
+SGLANG_HQ_CACHE_SCOPE = "block_layer_feature"
+SGLANG_HQ_PAYLOAD_CACHE_MODE = "pab"
+SGLANG_HQ_PAB_MODE = "pab"
+SGLANG_HQ_PAB_MLP_BROADCAST = "1"
+SGLANG_HQ_PAB_MLP_SPATIAL_CONFIG = "{\"500\":{\"block\":[2],\"skip_count\":2}}"
+SGLANG_HQ_PAB_ALL_TIMESTEPS = "500,499,498,497"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

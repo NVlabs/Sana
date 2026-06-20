@@ -1,0 +1,50 @@
+kind = "methodology"
+purpose = "frontier"
+description = "TeaCache controller profile: polynomial-rescaled signal distance drives block-residual replay."
+model_profile = "cosmos3"
+
+[id]
+name = "teacache_signal_reuse"
+dimension = "step_cache"
+family = "teacache"
+
+[references.external]
+paper = "TeaCache project: https://liewfeng.github.io/TeaCache/"
+code = "TeaCache: https://github.com/ali-vilab/TeaCache"
+notes = "Canonical TeaCache signal-accumulation reuse controller with the public Cosmos coefficients/profile; Cosmos3 consumes it through a block-residual replay adapter."
+
+[references.local]
+generic_impl = "efficiency/techniques/teacache.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/teacache.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/teacache.py"
+
+[requirements]
+capabilities = ["has_denoise_steps", "supports_step_cache"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "teacache_residual"
+
+[efficiency.params]
+threshold = 0.3
+start_step = 0
+coefficients = [271.156237, -91.9775607, 2.2443725, 2.08355751, 0.14177633]
+max_continuous_hits = 0
+periodic_recompute = 0
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "teacache_signal_reuse"
+SGLANG_HQ_TEACACHE_REPLAY = "block_residual"
+SGLANG_HQ_TEACACHE_THRESHOLD = "0.3"
+SGLANG_HQ_TEACACHE_START_STEP = "0"
+SGLANG_HQ_TEACACHE_COEFFICIENTS = "271.156237,-91.9775607,2.2443725,2.08355751,0.14177633"
+SGLANG_HQ_TEACACHE_MAX_HITS = "0"
+SGLANG_HQ_TEACACHE_PERIODIC_RECOMPUTE = "0"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

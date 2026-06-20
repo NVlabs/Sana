@@ -23,7 +23,11 @@ from efficiency import (  # noqa: E402
     compose,
     const,
 )
-from efficiency.techniques.token_prune import TokenPrune  # noqa: E402
+from efficiency.techniques.token_prune import (  # noqa: E402
+    TokenPrune,
+    tome_bipartite_soft_matching,
+    tomesd_random2d_matching,
+)
 
 ok = 0
 fail = 0
@@ -122,22 +126,73 @@ check("step1 gather: K=8 tokens", hg.shape[1] == 8)
 hs = plan.after_blocks(c1, hg, car)
 check("step1 scatter: back to S=16", hs.shape[1] == 16)
 
+# ToMe merge/unmerge is a real merge path, so it does not need a previous
+# hidden buffer before reducing the first active step.
+tp_tome = TokenPrune(
+    keep_ratio=0.75,
+    method="tome_merge_restore",
+    compensation="prev",
+    enabled=const(True),
+)
+plan_tome = compose([tp_tome], spec)
+c_tome = TechniqueContext(step=0, spec=spec, cache_key="tome", scratch={})
+hm, car = plan_tome.before_blocks(c_tome, hidden)
+check("ToMe merge: first active step reduces tokens", hm.shape[1] == 12)
+hr = plan_tome.after_blocks(c_tome, hm, car)
+check("ToMe unmerge: restores original token count", hr.shape[1] == 16)
+tome_plan = tome_bipartite_soft_matching(hidden, remove=4)
+check(
+    "ToMe helper: merge/unmerge plan exists",
+    tome_plan is not None and tome_plan.merge(hidden).shape[1] == 12,
+)
+shape_plan = tomesd_random2d_matching(hidden, remove=4, no_rand=True)
+check(
+    "ToMeSD random2D helper: merge/unmerge plan exists",
+    shape_plan is not None and shape_plan.merge(hidden).shape[1] == 12,
+)
+
+tp_shape = TokenPrune(
+    keep_ratio=0.75,
+    method="shape_stable_compute_mask",
+    compensation="prev",
+    enabled=const(True),
+)
+plan_shape = compose([tp_shape], spec)
+c_shape = TechniqueContext(step=0, spec=spec, cache_key="shape", scratch={})
+hs_m, hs_car = plan_shape.before_blocks(c_shape, hidden)
+check("shape-stable ToMeSD merge: first active step reduces tokens", hs_m.shape[1] == 12)
+hs_r = plan_shape.after_blocks(c_shape, hs_m, hs_car)
+check("shape-stable ToMeSD unmerge: restores original token count", hs_r.shape[1] == 16)
+
 # ---- 6. registry ----
 print("[6] registry")
 t = build_technique("token_prune", keep_ratio=0.7)
 check("build_technique('token_prune')", isinstance(t, TokenPrune))
 
-# ---- 7. LTX-2 full-opt assembly (the 5-component config) ----
-print("[7] ltx full-opt preset")
-from efficiency import get_model_spec  # noqa: E402
+# ---- 7. full-opt assembly (the 5-component config) ----
+print("[7] generic full-opt preset")
 from efficiency.presets import ltx_full_opt  # noqa: E402
 from efficiency.transform import TransformContext  # noqa: E402
+from efficiency.transforms.kwl_fusions import KWLFusions  # noqa: E402
+from efficiency.transforms.nvfp4_ffn import NVFP4FFN  # noqa: E402
 
-ltx_spec = get_model_spec("LTX2")
-check("LTX2 spec registered", ltx_spec is not None and ltx_spec.name == "LTX2")
+video_spec = ModelSpec(
+    name="VideoDiTManifestSpec",
+    capabilities=frozenset(
+        {
+            Capability.BLOCKS,
+            Capability.PRUNABLE_TOKENS,
+            Capability.SWAPPABLE_ATTENTION,
+            Capability.SUPPORTS_STEP_CACHE,
+            Capability.SUPPORTS_NVFP4_LINEAR,
+        }
+    ),
+    seq_dim=1,
+)
+check("generic video spec constructed", video_spec.name == "VideoDiTManifestSpec")
 
 items = ltx_full_opt()  # 2 techniques + 3 transforms
-plan = compose(items, ltx_spec)  # must NOT raise (all 5 compose cleanly)
+plan = compose(items, video_spec)  # must NOT raise (all 5 compose cleanly)
 check("full-opt composes (5 items, no conflict)",
       len(plan.transforms) == 3 and len(plan.techniques) == 2)
 
@@ -149,21 +204,56 @@ check("NVFP4 env set", env.get("SGLANG_HQ_ENABLE_TE_NVFP4_FFN") == "1")
 check("PISA backend = transformer_2 piecewise",
       "transformer_2=piecewise_attn" in env.get("SGLANG_HQ_COMPONENT_ATTENTION_BACKENDS", ""))
 
+# Generic transforms must not smuggle model-specific replay glue. The explicit
+# LTX2 preset may request that glue; the default model-agnostic transforms may
+# only expose neutral strategy axes.
+generic_kwl_env = {}
+compose([KWLFusions()], video_spec).apply_transforms(None, stage="stage2", env=generic_kwl_env)
+check("generic KWL: no LTX2 adapter marker",
+      "SGLANG_HQ_KWL_ADAPTER" not in generic_kwl_env)
+check("generic KWL: full bundle flags default off",
+      all(v == "0" for k, v in generic_kwl_env.items() if k.startswith("SGLANG_HQ_KWL_")))
+
+explicit_kwl_env = {}
+compose([KWLFusions(kwl_adapter="ltx2")], video_spec).apply_transforms(
+    None, stage="stage2", env=explicit_kwl_env
+)
+check("explicit KWL LTX2 adapter: marker set",
+      explicit_kwl_env.get("SGLANG_HQ_KWL_ADAPTER") == "ltx2")
+check("explicit KWL LTX2 adapter: bundle enabled",
+      explicit_kwl_env.get("SGLANG_HQ_KWL_FUSED_CA_DUAL_MODULATE") == "1")
+
+generic_nvfp4_env = {}
+compose([NVFP4FFN(fused_proj_in_gelu=True, fused_proj_out_bias_gate=True)], video_spec).apply_transforms(
+    None, stage="stage2", env=generic_nvfp4_env
+)
+check("generic NVFP4: no LTX2 TE adapter env",
+      not any(k.startswith("SGLANG_LTX2_TE_NVFP4_") for k in generic_nvfp4_env))
+
+explicit_nvfp4_env = {}
+compose([NVFP4FFN(fused_proj_in_gelu=True, fused_proj_out_bias_gate=True, te_adapter="ltx2")], video_spec).apply_transforms(
+    None, stage="stage2", env=explicit_nvfp4_env
+)
+check("explicit NVFP4 LTX2 adapter: env gated",
+      explicit_nvfp4_env.get("SGLANG_LTX2_TE_NVFP4_VIDEO_FFN") == "1"
+      and explicit_nvfp4_env.get("SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_IN_GELU") == "1"
+      and explicit_nvfp4_env.get("SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE") == "1")
+
 # per-stage gating: TokenPrune active in stage2 step1, inactive in stage1
 tp = [t for t in plan.techniques if t.name == "token_prune"][0]
 check("prune active stage2 step1",
-      tp.is_active(TechniqueContext(step=1, stage="stage2", spec=ltx_spec)))
+      tp.is_active(TechniqueContext(step=1, stage="stage2", spec=video_spec)))
 check("prune inactive stage1 step1",
-      not tp.is_active(TechniqueContext(step=1, stage="stage1", spec=ltx_spec)))
+      not tp.is_active(TechniqueContext(step=1, stage="stage1", spec=video_spec)))
 sc = [t for t in plan.techniques if t.name == "step_cache"][0]
 check("step_cache active stage1 step20 (skip cluster)",
-      sc.is_active(TechniqueContext(step=20, stage="stage1", spec=ltx_spec)))
+      sc.is_active(TechniqueContext(step=20, stage="stage1", spec=video_spec)))
 check("step_cache inactive stage2",
-      not sc.is_active(TechniqueContext(step=1, stage="stage2", spec=ltx_spec)))
+      not sc.is_active(TechniqueContext(step=1, stage="stage2", spec=video_spec)))
 
 # no-FP4 variant drops the NVFP4 transform
 env2 = {}
-compose(ltx_full_opt(nvfp4=False), ltx_spec).apply_transforms(None, "stage2", env2)
+compose(ltx_full_opt(nvfp4=False), video_spec).apply_transforms(None, "stage2", env2)
 check("no-fp4 variant: NVFP4 env NOT set", "SGLANG_HQ_ENABLE_TE_NVFP4_FFN" not in env2)
 
 print(f"\n=== {ok} passed, {fail} failed ===")

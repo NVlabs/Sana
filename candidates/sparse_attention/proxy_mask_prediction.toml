@@ -1,0 +1,46 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Pure SpargeAttn fused-quant mean-sim proxy mask policy on the generic sparse-attention adapter."
+model_profile = "cosmos3"
+
+[id]
+name = "proxy_mask_prediction"
+dimension = "sparse_attention"
+family = "proxy_mask_prediction"
+
+[references.external]
+paper = "SpargeAttn paper: https://arxiv.org/html/2502.18137v1"
+code = "SpargeAttn: https://github.com/thu-ml/SpargeAttn"
+notes = "Proxy-predicted masks reduce online search overhead in SpargeAttn-style systems; this candidate now records a pure Torch boundary for SpargeAttn's fused mean-sim block-map plus int8/scale proxy artifacts, without claiming the public CUDA sparse kernel."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.86
+block_size = 64
+component = "transformer"
+route_mode = "proxy_mask_prediction"
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "proxy_mask_prediction"
+SGLANG_HQ_SPARSE_ATTENTION_PATTERN = "proxy_mask_prediction"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

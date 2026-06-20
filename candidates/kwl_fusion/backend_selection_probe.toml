@@ -1,0 +1,46 @@
+kind = "env_only"
+purpose = "evidence"
+description = "Backend-selection policy candidate with explicit fallback and risk classification."
+model_profile = "cosmos3"
+
+[id]
+name = "backend_selection_probe"
+dimension = "kwl_fusion"
+family = "backend_selection"
+
+[references.external]
+paper = "FlashAttention: https://github.com/Dao-AILab/flash-attention"
+code = "CUTLASS: https://github.com/NVIDIA/cutlass"
+notes = "Alternate backend selection is a runtime/backend probe, not a public FlashAttention or CUTLASS implementation."
+
+[references.local]
+generic_impl = "efficiency/transforms/kwl_fusions.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/selector.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/selector.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "kwl_fusions"
+
+[efficiency.params]
+flags = []
+attention_backend_component = "transformer"
+attention_backend = "torch_sdpa"
+attention_backend_fallback = "fa"
+backend_policy_name = "cosmos3_transformer_torch_sdpa"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "backend_selection_probe"
+SGLANG_HQ_KWL_STRATEGY = "backend_selection_probe"
+SGLANG_HQ_BACKEND_SELECTION_PROBE = "1"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

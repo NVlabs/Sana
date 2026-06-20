@@ -33,6 +33,10 @@ def args() -> SimpleNamespace:
     return SimpleNamespace(mode="sbatch", confirm_submit=True, run_root="runs")
 
 
+def readiness_args(mode: str, allow_unsupported_gpu: bool = False) -> SimpleNamespace:
+    return SimpleNamespace(mode=mode, allow_unsupported_gpu=allow_unsupported_gpu)
+
+
 def expect_block(fn, needle: str) -> None:
     try:
         fn()
@@ -146,6 +150,124 @@ def test_profile_does_not_block_scored_candidate(module) -> None:
         )
 
 
+def test_sbatch_wrapper_forces_bash(module) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        launch = root / "launch.sh"
+        launch.write_text("#!/usr/bin/env bash\n")
+        job = module.write_sbatch_script(root, launch, {"job_name": "unit", "gpus_per_node": 4})
+        text = job.read_text()
+        assert text.startswith("#!/usr/bin/env bash")
+        assert "#SBATCH --export=ALL" in text
+        assert "set -euo pipefail" in text
+        assert "exec /usr/bin/env bash" in text
+
+
+def test_update_metadata_appends_status_history(module) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        write_json(
+            root / "metadata.json",
+            {
+                "status": "prepared",
+                "status_history": [{"status": "prepared", "at_utc": "t0"}],
+            },
+        )
+        module.update_metadata(root, {"status": "submitted", "status_reason": "unit"})
+        metadata = json.loads((root / "metadata.json").read_text())
+        assert metadata["status"] == "submitted"
+        assert metadata["status_history"][-1]["status"] == "submitted"
+        assert metadata["status_history"][-1]["reason"] == "unit"
+
+
+def test_unsupported_cosmos3_candidate_blocks_gpu_launch(module) -> None:
+    data = {
+        "id": {"name": "te_recipe_variant"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    expect_block(
+        lambda: module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data),
+        "unsupported Cosmos3 GPU candidate",
+    )
+
+
+def test_route_label_candidate_blocks_gpu_launch(module) -> None:
+    data = {
+        "id": {"name": "semantic_permutation"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    expect_block(
+        lambda: module.enforce_gpu_readiness_or_exit(readiness_args("local"), data),
+        "is missing required module(s)",
+    )
+
+
+def test_payload_cache_candidate_allows_gpu_launch_after_consumer_wiring(module) -> None:
+    data = {
+        "id": {"name": "attention_broadcast"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data)
+
+
+def test_nvfp4_candidate_allows_gpu_launch_after_online_quantizer_wiring(module) -> None:
+    data = {
+        "id": {"name": "conservative_ffn_nvfp4"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data)
+
+
+def test_sparse_policy_candidate_allows_gpu_launch_after_runtime_consumer(module) -> None:
+    data = {
+        "id": {"name": "spatial_temporal_head_routing"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data)
+
+
+def test_unsupported_cosmos3_candidate_allows_dry_run(module) -> None:
+    data = {
+        "id": {"name": "te_recipe_variant"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    module.enforce_gpu_readiness_or_exit(readiness_args("dry-run"), data)
+
+
+def test_unsupported_cosmos3_candidate_allows_explicit_override(module) -> None:
+    data = {
+        "id": {"name": "semantic_permutation"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    module.enforce_gpu_readiness_or_exit(
+        readiness_args("local", allow_unsupported_gpu=True), data
+    )
+
+
+def test_wired_cosmos3_candidate_allows_gpu_launch(module) -> None:
+    data = {
+        "id": {"name": "piecewise_pisa_env"},
+        "run_script": "scripts/run_cosmos3_sglang.sh",
+        "env": {"MODEL_REPO": "nvidia/Cosmos3-Super"},
+    }
+
+    module.enforce_gpu_readiness_or_exit(readiness_args("local"), data)
+
+
 def main() -> int:
     module = load_module()
     tests = [
@@ -153,6 +275,16 @@ def main() -> int:
         test_duplicate_control_blocks,
         test_baseline_does_not_block_on_scored_run,
         test_profile_does_not_block_scored_candidate,
+        test_sbatch_wrapper_forces_bash,
+        test_update_metadata_appends_status_history,
+        test_unsupported_cosmos3_candidate_blocks_gpu_launch,
+        test_route_label_candidate_blocks_gpu_launch,
+        test_payload_cache_candidate_allows_gpu_launch_after_consumer_wiring,
+        test_nvfp4_candidate_allows_gpu_launch_after_online_quantizer_wiring,
+        test_sparse_policy_candidate_allows_gpu_launch_after_runtime_consumer,
+        test_unsupported_cosmos3_candidate_allows_dry_run,
+        test_unsupported_cosmos3_candidate_allows_explicit_override,
+        test_wired_cosmos3_candidate_allows_gpu_launch,
     ]
     for test in tests:
         test(module)

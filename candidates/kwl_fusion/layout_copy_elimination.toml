@@ -1,0 +1,41 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Layout/copy elimination candidate for redundant reshape, permute, dtype, allocation, and contiguous churn."
+model_profile = "cosmos3"
+
+[id]
+name = "layout_copy_elimination"
+dimension = "kwl_fusion"
+family = "layout_copy_elimination"
+
+[references.external]
+paper = "CUTLASS: https://github.com/NVIDIA/cutlass"
+code = "FlashAttention: https://github.com/Dao-AILab/flash-attention"
+notes = "Layout-preserving kernels motivate this scaffold, but Cosmos3 already has the relevant pure layout-friendly pieces or the remaining sharing flags are LTX2-only; this row is a blocker probe with no new Cosmos3 algorithm delta."
+
+[references.local]
+generic_impl = "efficiency/transforms/kwl_fusions.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/elementwise.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/elementwise.py"
+
+[requirements]
+capabilities = ["has_transformer_blocks"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "kwl_fusions"
+
+[efficiency.params]
+flags = []
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "layout_copy_elimination"
+SGLANG_HQ_KWL_STRATEGY = "layout_copy_elimination"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

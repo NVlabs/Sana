@@ -11,6 +11,9 @@ description = "Official Cosmos3-Super baseline."
 submodule = "Sol-LTX-Infer"
 base_commit = "3a69b7788a055bed728ec367961c5f25b4ab48dc"
 run_script = "scripts/run_cosmos3_sglang.sh"
+# Optional but recommended. Used by launcher metadata, single-flight guards,
+# and integration status records.
+purpose = "control"
 ```
 
 ## Supported `kind`
@@ -52,6 +55,39 @@ SEED = "42"
 PROMPT = "..."
 NEGATIVE_PROMPT = ""
 ```
+
+`PYTHON_BIN` is the preferred runtime Python declaration. The launcher records
+it in `metadata.json.runtime_python` and validates it before local or Slurm
+execution. Do not rely on ambient `python3` for GPU or model-runtime checks.
+
+## `purpose`
+
+Supported purposes:
+
+- `control`: baseline, OFF identity, warmup, profile, or other non-scored run.
+- `delivery`: candidate with current public-alignment and quality/speed evidence
+  strong enough to become a gated tier delivery profile.
+- `frontier`: fan-out candidate retained for later tier selection.
+- `evidence`: measured support that should not become a tier winner.
+- `blocker_probe`: bounded probe used to prove a target blocker.
+- `unsafe_probe`: intentionally aggressive/unsafe diagnostic probe.
+
+Upper-bound and unsafe probes should be explicit here so single-flight guards,
+status records, and release reports do not accidentally promote them as delivery
+profiles.
+
+## Algorithm vs Model Glue
+
+Candidate manifests should preserve the model-agnostic algorithm or policy as
+the durable artifact. Cosmos3-specific run scripts, env bridges, dependency
+overlays, component names, and fallback plumbing are allowed as reproduction
+or validation glue, but they must not be reported as the public algorithm.
+
+Source visibility is not a blocker by itself. A candidate is blocked for
+meaningful GPU evidence only when the pure algorithm is not implemented, the
+Cosmos3 runtime does not consume it, the algorithm does not match Cosmos3's
+semantics, required quantized weights/online replacement are missing, or the
+GPU run lacks a behavior checker against the public boundary.
 
 ## `artifacts`
 
@@ -95,7 +131,6 @@ Patch candidates should add:
 [patch]
 summary = "Wire token pruning around the target model's denoise block loop."
 touch_points = [
-  "python/sglang/multimodal_gen/runtime/efficiency/models/cosmos3_spec.py",
   "python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py",
 ]
 off_identity_required = true
@@ -119,3 +154,105 @@ write_scope = [
 
 The orchestration layer should use this block to create isolated worktrees and
 avoid two agents editing the same submodule checkout.
+
+## Model-Agnostic Efficiency Candidates
+
+Efficiency candidates may use the layered schema below. The launcher accepts
+these manifests directly; `model_profile = "cosmos3"` fills the standard
+runtime, env, and Slurm defaults from `models/cosmos3.toml`.
+
+```toml
+kind = "methodology"
+purpose = "frontier"
+description = "Short runnable candidate summary."
+model_profile = "cosmos3"
+
+[id]
+name = "semantic_permutation"
+dimension = "sparse_attention"
+family = "svg2_semantic_permutation"
+
+[references.external]
+paper = "..."
+code = "..."
+notes = "Canonical paper/repo or closest open-source implementation."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/sparse_video_gen_2_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/sparse_video_gen_2_attn.py"
+
+[requirements]
+capabilities = [
+  "has_attention_layers",
+  "has_spatiotemporal_token_layout",
+  "has_attention_backend_switch",
+]
+
+[adapter]
+# Descriptive target label only. Dry-run validation now synthesizes a minimal
+# ModelSpec from [requirements].capabilities instead of importing built-in
+# per-model specs.
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+component = "transformer"
+route_mode = "semantic_permutation"
+backend = "sparse_video_gen_2_attn"
+svg2_num_q_centroids = 400
+svg2_num_k_centroids = 1000
+svg2_top_p_kmeans = 0.9
+svg2_min_kc_ratio = 0.1
+svg2_kmeans_iter_init = 50
+svg2_kmeans_iter_step = 2
+svg2_first_layers_fp = 0.03
+svg2_first_times_fp = 0.3
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"
+```
+
+Layer-1 dry-run validation checks schema, required capabilities, adapter
+discovery, compose compatibility, and transform env preview. For build/load
+transforms the preview is also merged into `launch.sh`, so the generated run
+bundle is inspectable before GPU submission.
+
+## Cosmos3 GPU Readiness Gate
+
+`verification.mode = "gpu"` means the candidate ultimately needs GPU evidence.
+It does not mean the current Cosmos3 runtime already consumes every advertised
+optimization. `scripts/launch_candidate.py` therefore allows `--mode dry-run`
+for all valid candidates, but refuses `--mode local` and `--mode sbatch` for
+Cosmos3 candidates that are currently only pure policies without runtime
+consumers, wiring probes, unconsumed env/config adapters, or wired paths with
+missing runtime dependencies.
+
+Use `--allow-unsupported-gpu` only for an explicit diagnostic env/export run.
+Those runs must not be reported as proof that the public-reference technique is
+implemented or active.
+
+## Public Reference Alignment Gate
+
+`scripts/audit_public_reference_alignment.py` records each candidate's actual
+scope relative to its public/canonical references. This is separate from URL
+validation:
+
+- A public URL proves provenance, not full implementation equivalence.
+- Public source access means an implementation can be attempted; it does not
+  prove the local candidate already implements or consumes that algorithm.
+- Baselines, pure policy layers, env adapters, and blocker probes must not be
+  promoted as line-for-line public-reference ports.
+- A candidate with any current public-alignment `true_blocker` must not use
+  `purpose = "delivery"`. At minimum the Cosmos3 runtime must consume the
+  advertised env/config, a GPU run must prove that path is active, and current
+  quality/speed evidence must not be blocked.
+
+The review matrix is generated on demand with
+`scripts/audit_public_reference_alignment.py --markdown-out <path>`; it is not
+required to live in the repository.

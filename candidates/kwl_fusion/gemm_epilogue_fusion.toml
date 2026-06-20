@@ -1,0 +1,41 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "GEMM epilogue fusion blocker probe; Cosmos3 has no new pure algorithm delta for the LTX2-shaped bias/GELU or residual-gate flags."
+model_profile = "cosmos3"
+
+[id]
+name = "gemm_epilogue_fusion"
+dimension = "kwl_fusion"
+family = "gemm_epilogue_fusion"
+
+[references.external]
+paper = "CUTLASS: https://github.com/NVIDIA/cutlass"
+code = "TransformerEngine fused ops: https://github.com/NVIDIA/TransformerEngine"
+notes = "CUTLASS and TE motivate fused epilogues, but Cosmos3 already fuses gate/up activation-multiply and the remaining bias/GELU or residual-gate flags are LTX2-only; this row is a blocker probe with no new Cosmos3 algorithm delta."
+
+[references.local]
+generic_impl = "efficiency/transforms/kwl_fusions.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+
+[requirements]
+capabilities = ["has_transformer_blocks", "has_ffn_linear_modules"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "kwl_fusions"
+
+[efficiency.params]
+flags = []
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "gemm_epilogue_fusion"
+SGLANG_HQ_KWL_STRATEGY = "gemm_epilogue_fusion"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

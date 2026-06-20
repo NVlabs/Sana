@@ -76,6 +76,7 @@ GEMINI_WORST_CASE_PAIRS = 8
 GEMINI_VIDEO_MAX_FRAMES = 32
 GEMINI_VIDEO_FRAME_INTERVAL = 0.5
 PATCH_BOUNDARY_SIZES = (8, 16, 32)
+GEMINI_SEVERITY_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3}
 
 
 def project_root() -> Path:
@@ -101,6 +102,46 @@ def load_toml(path: Path) -> dict[str, Any]:
 def write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+
+
+def max_gemini_severity(result: dict[str, Any] | None) -> str:
+    artifacts = (result or {}).get("new_artifacts") or []
+    if not artifacts:
+        return "none"
+    return max(
+        (str(artifact.get("severity", "low")) for artifact in artifacts),
+        key=lambda severity: GEMINI_SEVERITY_RANK.get(severity, 1),
+    )
+
+
+def gemini_quality_blocker(judge: dict[str, Any]) -> str | None:
+    if judge.get("status") != "complete":
+        return None
+    result = judge.get("result") or {}
+    overall = result.get("overall")
+    severity = max_gemini_severity(result)
+    if overall == "fail":
+        return f"nvidia_gemini:fail:{severity}"
+    if GEMINI_SEVERITY_RANK.get(severity, 0) >= GEMINI_SEVERITY_RANK["medium"]:
+        return f"nvidia_gemini:artifact:{severity}"
+    return None
+
+
+def append_status_history(metadata: dict[str, Any], status: str, reason: str = "") -> None:
+    previous = metadata.get("status")
+    if previous == status:
+        return
+    history = metadata.setdefault("status_history", [])
+    if not isinstance(history, list):
+        history = []
+        metadata["status_history"] = history
+    history.append(
+        {
+            "status": status,
+            "at_utc": datetime.now(timezone.utc).isoformat(),
+            "reason": reason,
+        }
+    )
 
 
 def rel(path: Path, root: Path) -> str:
@@ -875,6 +916,9 @@ def build_quality(
     for name, result in judges.items():
         if name in STRICT_QUALITY_JUDGES and result.get("status") != "complete":
             promotion_blockers.append(f"{name}:{result.get('reason', result.get('status', 'missing'))}")
+    gemini_blocker = gemini_quality_blocker(judges["nvidia_gemini"])
+    if gemini_blocker:
+        promotion_blockers.append(gemini_blocker)
     if pixel_metrics.get("status") != "ok" and not skip_judges:
         promotion_blockers.append(f"pixel_metrics:{pixel_metrics.get('reason', pixel_metrics.get('status'))}")
     return {
@@ -1097,6 +1141,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     )
     paths["patch_summary"].write_text(patch_summary)
 
+    append_status_history(metadata, status, "; ".join(notes))
     metadata.update(
         {
             "status": status,

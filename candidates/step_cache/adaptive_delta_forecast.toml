@@ -1,0 +1,43 @@
+kind = "methodology"
+purpose = "evidence"
+description = "Predictive step-cache baseline that reuses cached output with a measured delta forecast."
+model_profile = "cosmos3"
+
+[id]
+name = "adaptive_delta_forecast"
+dimension = "step_cache"
+family = "predictive_delta_cache"
+
+[references.external]
+paper = "PAB: https://arxiv.org/html/2408.12588v3"
+code = "VideoSys / PAB: https://github.com/NUS-HPC-AI-Lab/VideoSys"
+notes = "PAB/VideoSys motivate cache/reuse exploration, but this row is a local whole-step delta-forecast baseline, not a public PAB implementation."
+
+[references.local]
+generic_impl = "efficiency/techniques/step_cache.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/ltx2_stage1_cache_core.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/ltx2_stage1_cache_core.py"
+
+[requirements]
+capabilities = ["has_denoise_steps", "supports_step_cache"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "step_cache"
+
+[efficiency.params]
+skip = "16-28"
+delta_scale = 0.5
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "adaptive_delta_forecast"
+SGLANG_HQ_STEP_CACHE_SKIP = "16-28"
+SGLANG_HQ_STEP_CACHE_DELTA = "0.5"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

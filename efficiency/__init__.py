@@ -9,10 +9,11 @@
 #   * ModelSpec    -- a model's declaration of structural seams (capabilities).
 #   * compose()    -- type-checks capabilities, rejects structural conflicts
 #                     (effect system), orders by phase -> an executable Plan.
-#   * registry     -- register_technique / register_model_spec (BlockAdapter idiom).
+#   * registry     -- register_technique / register_transform.
 #
-# Adapt a new model by writing ONE ModelSpec; reuse every technique. See
-# techniques/ for the concrete techniques (token_prune is the first).
+# Candidate dry-runs synthesize a minimal ModelSpec from manifest capabilities.
+# External adapters may still register a ModelSpec, but this package no longer
+# ships unvalidated per-model specs.
 
 from __future__ import annotations
 
@@ -58,10 +59,9 @@ from efficiency.technique import (
     TechniqueContext,
 )
 
-# register built-in techniques, transforms, and model specs (import side-effects)
+# register built-in techniques and transforms (import side-effects)
 from efficiency import techniques  # noqa: E402,F401
 from efficiency import transforms  # noqa: E402,F401
-from efficiency import models  # noqa: E402,F401
 
 __all__ = [
     "Schedule", "as_schedule", "at_steps", "before", "by_stage", "const",

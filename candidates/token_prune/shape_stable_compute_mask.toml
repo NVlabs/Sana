@@ -1,0 +1,46 @@
+kind = "methodology"
+purpose = "frontier"
+description = "Shape-stable ToMeSD random-2D bipartite merge/unmerge core with full-shape restoration."
+model_profile = "cosmos3"
+
+[id]
+name = "shape_stable_compute_mask"
+dimension = "token_prune"
+family = "tomesd_random2d_shape_stable"
+
+[references.external]
+paper = "ToMeSD: https://github.com/dbolya/tomesd"
+code = "ToMeSD: https://github.com/dbolya/tomesd"
+notes = "Uses the public ToMeSD random-2D bipartite merge/unmerge boundary with deterministic no_rand selection; it does not claim the full ToMeSD diffusion patching/runtime schedule."
+
+[references.local]
+generic_impl = "efficiency/techniques/token_prune.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
+
+[requirements]
+capabilities = ["has_token_sequence_axis", "has_spatiotemporal_token_layout", "supports_token_gather_scatter"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "token_prune"
+
+[efficiency.params]
+keep_ratio = 0.75
+method = "shape_stable_compute_mask"
+compensation = "prev"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "shape_stable_compute_mask"
+SGLANG_HQ_TOKEN_PRUNE_KEEP_RATIO = "0.75"
+SGLANG_HQ_TOKEN_PRUNE_METHOD = "shape_stable_compute_mask"
+SGLANG_HQ_TOKEN_PRUNE_COMP = "prev"
+SGLANG_HQ_TOKEN_PRUNE_STEPS = "1-2"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

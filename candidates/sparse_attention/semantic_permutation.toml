@@ -1,0 +1,58 @@
+kind = "env_only"
+purpose = "evidence"
+description = "Sparse VideoGen2/SAP semantic permutation pure plan with Cosmos3 sparse-attention consumer glue."
+model_profile = "cosmos3"
+
+[id]
+name = "semantic_permutation"
+dimension = "sparse_attention"
+family = "svg2_semantic_permutation"
+
+[references.external]
+paper = "Sparse VideoGen project: https://svg-project.github.io/"
+code = "Sparse VideoGen: https://github.com/svg-project/Sparse-VideoGen"
+notes = "Sparse VideoGen is the canonical semantic-permutation reference; this candidate keeps a pure Sparse-VideoGen SAP plan for the public kmeans/dynamic-map/permutation stages, while the Cosmos3 runtime adapter glue remains validation wiring, not a full public implementation."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/sparse_video_gen_2_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/sparse_video_gen_2_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.9
+block_size = 64
+component = "transformer"
+route_mode = "semantic_permutation"
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+backend = "sparse_video_gen_2_attn"
+svg2_num_q_centroids = 400
+svg2_num_k_centroids = 1000
+svg2_top_p_kmeans = 0.9
+svg2_min_kc_ratio = 0.1
+svg2_kmeans_iter_init = 50
+svg2_kmeans_iter_step = 2
+svg2_zero_step_kmeans_init = false
+svg2_first_layers_fp = 0.03
+svg2_first_times_fp = 0.3
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "semantic_permutation"
+SGLANG_HQ_SPARSE_ATTENTION_PATTERN = "semantic_permutation"
+SGLANG_HQ_SPARSE_ATTENTION_BACKEND = "sparse_video_gen_2_attn"
+SGLANG_HQ_EXTRA_PYTHONPATH = "/home/haozhel/.cache/autovideo/Sparse-VideoGen-public-f0abc563:/home/haozhel/.local/lib/python3.12/site-packages"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

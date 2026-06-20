@@ -1,0 +1,42 @@
+kind = "env_only"
+purpose = "evidence"
+description = "Compile and CUDA-graph-capture candidate for stable repeated regions."
+model_profile = "cosmos3"
+
+[id]
+name = "compile_graph_capture"
+dimension = "kwl_fusion"
+family = "compile_or_cuda_graph"
+
+[references.external]
+paper = "CUDA/CUTLASS kernels: https://github.com/NVIDIA/cutlass"
+code = "TransformerEngine fused ops: https://github.com/NVIDIA/TransformerEngine"
+notes = "Graph/compile capture is a runtime probe with explicit fallback accounting, not a public CUTLASS or TransformerEngine implementation."
+
+[references.local]
+generic_impl = "efficiency/transforms/kwl_fusions.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/platforms/cuda.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/platforms/cuda.py"
+
+[requirements]
+capabilities = ["has_transformer_blocks", "supports_cuda_graph_probe"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "kwl_fusions"
+
+[efficiency.params]
+flags = ["COMPILE_GATE_TO_OUT", "COMPILE_TILED_VAE"]
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "compile_graph_capture"
+SGLANG_HQ_KWL_STRATEGY = "compile_graph_capture"
+SGLANG_HQ_CUDA_GRAPH_PROBE = "1"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

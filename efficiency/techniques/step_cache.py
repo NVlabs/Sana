@@ -31,7 +31,7 @@ class StepCache(Technique):
     skip : Schedule[bool] | str | bool -- True on steps whose compute is
         skipped and replaced by the cached (optionally delta-extrapolated)
         previous output. A *string* like ``"16-28"`` / ``"1-2,5,7-9"`` is
-        parsed as a step set (the LTX-2.3 SCSP "late cluster skip" idiom);
+        parsed as a step set (for example, a late-cluster skip policy);
         ``""`` / ``False`` / ``None`` disables; a bare ``True`` skips every
         step. Pass a pre-built Schedule for stage/policy-aware skips (see
         ``efficiency.presets.ltx_full_opt`` for the stage-gated form).

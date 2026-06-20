@@ -1,0 +1,41 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Conservative FFN-only NVFP4 candidate with BF16 fallback policy."
+model_profile = "cosmos3"
+
+[id]
+name = "conservative_ffn_nvfp4"
+dimension = "nvfp4_ffn"
+family = "conservative_ffn_nvfp4"
+
+[references.external]
+paper = "TransformerEngine docs: https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/"
+code = "TransformerEngine: https://github.com/NVIDIA/TransformerEngine"
+notes = "Canonical NVIDIA FP4/NVFP4 stack for load-time FFN precision experiments."
+
+[references.local]
+generic_impl = "efficiency/transforms/nvfp4_ffn.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+
+[requirements]
+capabilities = ["has_ffn_linear_modules", "supports_nvfp4_linear"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "nvfp4_ffn"
+
+[efficiency.params]
+module_scope = "video_ffn"
+fallback_policy = "bf16"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "conservative_ffn_nvfp4"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

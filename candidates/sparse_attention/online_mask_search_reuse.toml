@@ -1,0 +1,46 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "SpargeAttn-inspired pure online sparse-mask search/reuse policy on the generic sparse-attention adapter."
+model_profile = "cosmos3"
+
+[id]
+name = "online_mask_search_reuse"
+dimension = "sparse_attention"
+family = "online_mask_reuse"
+
+[references.external]
+paper = "SpargeAttn paper: https://arxiv.org/html/2502.18137v1"
+code = "SpargeAttn: https://github.com/thu-ml/SpargeAttn"
+notes = "Canonical online sparse-attention mask search and reuse family; this candidate now has a pure local policy but is not a full public-original port."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.9
+block_size = 64
+component = "transformer"
+route_mode = "online_mask_search_reuse"
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "online_mask_search_reuse"
+SGLANG_HQ_SPARSE_ATTENTION_PATTERN = "online_mask_search_reuse"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

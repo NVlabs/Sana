@@ -1,8 +1,8 @@
 # Copyright 2025 SGLang authors
 #
-# Presets -- named assemblies of techniques + transforms that reproduce a known
-# optimization configuration. ltx_full_opt() reproduces the LTX-2.3 HQ full-opt
-# (the 2.39x config) as a single composed list:
+# Presets -- named assemblies of techniques + transforms. These are replay
+# helpers for known optimization bundles; candidate manifests remain the
+# authoritative entry point for current Cosmos3 work.
 #
 #   build/load transforms (exact -- delegate to the existing env mechanism):
 #     KWLFusions     (KWL operator fusions)
@@ -40,12 +40,12 @@ def ltx_full_opt(
     prune_steps: str = "1-2",
     pisa_sparsity: float = 0.9,
 ) -> list:
-    """Return the LTX-2.3 full-opt item list (compose() it against the LTX2 spec).
+    """Return the historical LTX-2.3 full-opt item list.
 
-    Set ``nvfp4=False`` for the no-FP4 variant (~2.15x). ``prune_ratio>=1`` or
+    Set ``nvfp4=False`` for the no-FP4 variant. ``prune_ratio>=1`` or
     empty ``prune_steps`` disables token-prune (== full-opt minus midpoint)."""
     items = [
-        KWLFusions(),
+        KWLFusions(kwl_adapter="ltx2"),
         SparseAttention(
             sparsity=pisa_sparsity,
             component="transformer_2",  # stage-2 only

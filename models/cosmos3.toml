@@ -1,14 +1,11 @@
-# Model profile — the ONLY place Cosmos3 specifics live.
+# Model profile for Cosmos3 runtime defaults.
 #
-# The acceleration search is model-agnostic: it reads this profile + the generic
-# search dimensions in loops/*/dimension.toml, and composes candidates against
-# the model's declared seams (efficiency/models/cosmos3_spec.py). To add a new
-# served model, drop in a ModelSpec (efficiency/models/<x>_spec.py) + a profile
-# like this one; the search auto-applies every eligible dimension. See
-# models/README.md and docs/search-architecture.md.
+# Candidate manifests declare required capabilities; dry-run validation creates
+# a minimal manifest-derived ModelSpec rather than importing a built-in
+# per-model spec file. Runtime-specific glue stays in Sol-LTX-Infer.
 
 id = "cosmos3"
-spec = "Cosmos3"                 # efficiency get_model_spec() key (the registered ModelSpec)
+spec = "Cosmos3"                 # descriptive target label in generated metadata
 display_name = "nvidia/Cosmos3-Super"
 family = "video_t2v"
 submodule = "Sol-LTX-Infer"
@@ -47,14 +44,13 @@ SEED = "42"
 PROMPT = "A serene mountain lake at sunrise, mist rising off the still water, pine trees reflected on the surface, a small wooden boat drifting slowly, cinematic, high detail"
 NEGATIVE_PROMPT = ""
 
-# Per-seam wiring status — drives which search dimensions are runnable on Cosmos3
-# now vs need a one-time ModelSpec/forward wiring. "compose-eligible" means the
-# search can build the candidate; "runtime-todo" means it still needs a seam wired
-# in cosmos3_spec.py / cosmos3video.py before a real GPU run.
+# Per-seam wiring status. Candidate dry-run checks use manifest-declared
+# capabilities; real GPU usefulness still depends on the runtime consuming the
+# corresponding env/config/path in Cosmos3 code.
 [seam_status]
 blocks = "wired"                 # get_blocks -> Cosmos3OmniTransformer.gen_layers
 prunable_tokens = "declared"     # prunable_segment defaults to whole seq; refine to video-token span
 swappable_attention = "declared"     # seam exists (supported_attention_backends->gen_layers); piecewise kernel+component-map = GPU-validated
 residual_tuple = "todo"
-ffn_precision = "transform-env"  # nvfp4 / kwl drive via SGLANG_HQ_* env (build transforms)
+ffn_precision = "partial"       # KWL-style fused pieces are partly baseline; online NVFP4 has GPU evidence but remains speed/backend limited
 teacache_signal = "wired"        # cosmos3video.forward stashes time_embed under ctx.scratch[("teacache_signal", "step_pred")]; cosmos3.py denoise sets/clears self.transformer._efficiency_scratch around each step

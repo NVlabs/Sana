@@ -1,0 +1,47 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Pure rotating anchor-window route policy on the generic sparse-attention adapter."
+model_profile = "cosmos3"
+
+[id]
+name = "rotating_anchor_windows"
+dimension = "sparse_attention"
+family = "sparse_videogen_first_frame_temporal_window"
+
+[references.external]
+paper = "AdaSpa paper: https://openaccess.thecvf.com/content/ICCV2025/html/Xia_Training-free_and_Adaptive_Sparse_Attention_for_Efficient_Long_Video_Generation_ICCV_2025_paper.html"
+code = "Sparse VideoGen: https://github.com/svg-project/Sparse-VideoGen"
+notes = "Uses the public Sparse-VideoGen first-frame sink/anchor plus temporal sliding-window mask core in a dependency-light policy. The Cosmos3 piecewise_attn consumer still emits boolean block masks rather than public FlashInfer/FlexAttention kernels."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.85
+block_size = 64
+frame_size = 2
+component = "transformer"
+route_mode = "rotating_anchor_windows"
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "rotating_anchor_windows"
+SGLANG_HQ_SPARSE_ATTENTION_PATTERN = "rotating_anchor_windows"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

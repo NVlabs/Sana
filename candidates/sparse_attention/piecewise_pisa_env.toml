@@ -1,0 +1,48 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "PISA piecewise sparse-attention env baseline using the existing sparse-attention transform."
+model_profile = "cosmos3"
+
+[id]
+name = "piecewise_pisa_env"
+dimension = "sparse_attention"
+family = "piecewise_pisa"
+
+[references.external]
+paper = "PISA: https://github.com/xie-lab-ml/piecewise-sparse-attention"
+code = "PISA implementation: https://github.com/xie-lab-ml/piecewise-sparse-attention"
+notes = "Canonical piecewise sparse-attention reference."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.5
+block_size = 64
+component = "transformer"
+route_mode = "score"
+route_bias = false
+allow_qk_mismatch = true
+allow_gqa = true
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "piecewise_pisa_env"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

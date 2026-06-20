@@ -1,0 +1,43 @@
+kind = "env_only"
+purpose = "frontier"
+description = "NVFP4 backend and padding-policy candidate for Blackwell narrow-precision GEMM paths."
+model_profile = "cosmos3"
+
+[id]
+name = "backend_padding_policy"
+dimension = "nvfp4_ffn"
+family = "backend_padding_policy"
+
+[references.external]
+paper = "CUTLASS NVFP4 example: https://github.com/NVIDIA/cutlass/blob/main/examples/72_blackwell_narrow_precision_gemm/72b_blackwell_nvfp4_nvfp4_gemm.cu"
+code = "CUTLASS: https://github.com/NVIDIA/cutlass"
+notes = "CUTLASS Blackwell narrow-precision examples define the canonical backend/padding search target."
+
+[references.local]
+generic_impl = "efficiency/transforms/nvfp4_ffn.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+
+[requirements]
+capabilities = ["has_ffn_linear_modules", "supports_nvfp4_linear"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "nvfp4_ffn"
+
+[efficiency.params]
+module_scope = "video_ffn"
+pad_m_to = 32
+fp4_gemm_backend = "cudnn"
+fallback_policy = "bf16_on_shape_miss"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "backend_padding_policy"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

@@ -24,6 +24,18 @@ try:
 except ModuleNotFoundError as exc:  # pragma: no cover - Python < 3.11
     raise SystemExit("Python 3.11+ is required for tomllib TOML support") from exc
 
+REPO_FOR_IMPORT = Path(__file__).resolve().parents[1]
+if str(REPO_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(REPO_FOR_IMPORT))
+
+from efficiency.candidate_manifest import (  # noqa: E402
+    dry_run_manifest,
+    load_model_profile as load_efficiency_model_profile,
+    manifest_id,
+    model_spec_key,
+    write_dry_run,
+)
+
 
 VALID_ID = re.compile(r"[^A-Za-z0-9_.-]+")
 CANONICAL_ARTIFACT_DEFAULTS = {
@@ -36,6 +48,51 @@ CANONICAL_ARTIFACT_DEFAULTS = {
     "patch_summary": "patch_summary.md",
     "frames_dir": "frames",
 }
+NONBLOCKING_RUN_STATUSES = {
+    "prepared",
+    "failed",
+    "submission_failed",
+    "canceled",
+    "cancelled",
+    "canceled_by_watchdog",
+    "cancelled_by_watchdog",
+    "canceled_by_orchestrator_release",
+    "cancelled_by_orchestrator_release",
+}
+COSMOS3_UNSUPPORTED_GPU_REASONS = {
+    "te_recipe_variant": (
+        "Cosmos3 already has an online ModelOpt FP4 linear consumer, but this "
+        "TE recipe row still has no Cosmos3-equivalent bias-free SwiGLU fused "
+        "epilogue adapter. The LTX2 GELU/bias-gate fused flags are disabled in "
+        "the manifest; only run a TE fused-epilogue diagnostic after adding and "
+        "validating a Cosmos3 adapter"
+    ),
+    "env_flag_kwl_bundle": (
+        "Cosmos3 already uses several pure KWL-style kernels as baseline, while "
+        "LTX2-only KWL flags such as audio/VAE/guidance sharing do not map to "
+        "Cosmos3; this bundle does not create an isolated candidate delta"
+    ),
+    "gemm_epilogue_fusion": (
+        "Cosmos3 already fuses gate/up projection and SiluAndMul in its MLP, "
+        "while the LTX2 bias+GELU and residual-gate epilogue flags do not map "
+        "to Cosmos3's SwiGLU/no-bias MLP and fused add+RMSNorm residual path; "
+        "those replay flags are disabled in the manifest"
+    ),
+    "norm_modulation_residual_fusion": (
+        "Cosmos3 GEN already uses fused add+RMSNorm and does not have LTX2-style "
+        "AdaLN/modulation semantics for these flags; those replay flags are "
+        "disabled in the manifest"
+    ),
+    "layout_copy_elimination": (
+        "Cosmos3 already keeps some layout-friendly RoPE/MLP dataflow, and this "
+        "row's old LTX2 sharing flags do not identify an extra Cosmos3 change; "
+        "those replay flags are disabled in the manifest"
+    ),
+}
+COSMOS3_DYNAMIC_GPU_READINESS_CANDIDATES = {
+    "semantic_permutation",
+}
+SEMANTIC_PERMUTATION_REQUIRED_MODULES = ("svg", "flashinfer", "cuvs")
 
 
 def repo_root() -> Path:
@@ -47,9 +104,164 @@ def load_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(f)
 
 
+def candidate_id(data: dict[str, Any]) -> str:
+    return manifest_id(data) or "candidate"
+
+
 def sanitize_id(value: str) -> str:
     cleaned = VALID_ID.sub("-", value.strip())
     return cleaned.strip("-") or "candidate"
+
+
+def default_slurm(data: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    official = data.get("official_config") or profile.get("official_config") or {}
+    return {
+        "account": "nvr_elm_llm",
+        "partition": "batch",
+        "nodes": 1,
+        "gpus_per_node": official.get("num_gpus", 4),
+        "cpus_per_task": 64,
+        "mem": "0",
+        "time": "04:00:00",
+        "job_name": f"autovideo-{sanitize_id(candidate_id(data))}",
+        "exclusive": True,
+    }
+
+
+def merge_model_profile(data: dict[str, Any]) -> dict[str, Any]:
+    profile = load_efficiency_model_profile(data, repo_root())
+    if not profile:
+        return data
+
+    merged = dict(data)
+    for key in ("submodule", "base_commit", "run_script", "eval_profile", "official_config"):
+        if key not in merged and key in profile:
+            merged[key] = profile[key]
+    merged["env"] = {**profile.get("env", {}), **data.get("env", {})}
+    merged["slurm"] = {
+        **default_slurm(merged, profile),
+        **profile.get("slurm", {}),
+        **data.get("slurm", {}),
+    }
+    return merged
+
+
+def is_cosmos3_candidate(data: dict[str, Any]) -> bool:
+    try:
+        spec = model_spec_key(data, repo_root())
+    except Exception:
+        spec = ""
+    if spec.lower() == "cosmos3":
+        return True
+
+    env = data.get("env", {})
+    model_repo = env.get("MODEL_REPO", "") if isinstance(env, dict) else ""
+    run_script = str(data.get("run_script", ""))
+    return "cosmos3" in f"{model_repo} {run_script}".lower()
+
+
+def cosmos3_gpu_readiness_blocker(data: dict[str, Any], mode: str) -> str | None:
+    if mode == "dry-run":
+        return None
+    if not is_cosmos3_candidate(data):
+        return None
+
+    reason = COSMOS3_UNSUPPORTED_GPU_REASONS.get(candidate_id(data))
+    if reason:
+        return (
+            f"Refusing to run unsupported Cosmos3 GPU candidate {candidate_id(data)!r}: "
+            f"{reason}. The candidate remains valid for manifest/dry-run/public-alignment "
+            "audits, but a Cosmos3 GPU job would not prove the intended public-reference "
+            "technique. Pass --allow-unsupported-gpu only for an explicit diagnostic "
+            "env/export run."
+        )
+
+    if candidate_id(data) == "semantic_permutation":
+        env = data.get("env", {}) if isinstance(data.get("env"), dict) else {}
+        runtime_python = resolve_runtime_python(data, env)
+        missing = missing_python_modules(
+            runtime_python,
+            SEMANTIC_PERMUTATION_REQUIRED_MODULES,
+            str(env.get("SGLANG_HQ_EXTRA_PYTHONPATH", "") or ""),
+        )
+        if missing:
+            return (
+                "Refusing to run Cosmos3 GPU candidate 'semantic_permutation': "
+                f"the Sparse VideoGen2/SAP consumer is wired, but runtime python "
+                f"{runtime_python!r} is missing required module(s): "
+                f"{', '.join(missing)}. Install Sparse-VideoGen plus its "
+                "FlashInfer/cuVS runtime dependencies, then rerun without "
+                "--allow-unsupported-gpu."
+            )
+        return None
+
+    return None
+
+
+def cosmos3_blocked_candidate_ids() -> set[str]:
+    blocked = set(COSMOS3_UNSUPPORTED_GPU_REASONS)
+    candidates_root = repo_root() / "candidates"
+    try:
+        paths = sorted(candidates_root.glob("*/*.toml"))
+        for path in paths:
+            data = merge_model_profile(load_toml(path))
+            cid = candidate_id(data)
+            if cid not in COSMOS3_DYNAMIC_GPU_READINESS_CANDIDATES:
+                continue
+            if cosmos3_gpu_readiness_blocker(data, "local"):
+                blocked.add(cid)
+    except Exception:
+        blocked.update(COSMOS3_DYNAMIC_GPU_READINESS_CANDIDATES)
+    return blocked
+
+
+def python_module_available(
+    python: str, module: str, extra_pythonpath: str = ""
+) -> bool:
+    env = None
+    if extra_pythonpath:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = (
+            f"{extra_pythonpath}:{env.get('PYTHONPATH', '')}"
+            if env.get("PYTHONPATH")
+            else extra_pythonpath
+        )
+    try:
+        proc = subprocess.run(
+            [
+                python,
+                "-c",
+                (
+                    "import importlib.util, sys; "
+                    f"sys.exit(0 if importlib.util.find_spec({module!r}) else 1)"
+                ),
+            ],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return proc.returncode == 0
+
+
+def missing_python_modules(
+    python: str, modules: tuple[str, ...], extra_pythonpath: str = ""
+) -> list[str]:
+    return [
+        module
+        for module in modules
+        if not python_module_available(python, module, extra_pythonpath)
+    ]
+
+
+def enforce_gpu_readiness_or_exit(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    if getattr(args, "allow_unsupported_gpu", False):
+        return
+    blocker = cosmos3_gpu_readiness_blocker(data, args.mode)
+    if blocker:
+        raise SystemExit(blocker)
 
 
 def shell_export(key: str, value: Any) -> str:
@@ -149,13 +361,15 @@ def write_sbatch_script(run_dir: Path, launch_script: Path, slurm: dict[str, Any
         lines.append(sbatch_line("-t", slurm["time"]))
     if slurm.get("job_name"):
         lines.append(sbatch_line("-J", slurm["job_name"]))
+    lines.append(sbatch_line("--export", "ALL"))
     lines.append(sbatch_line("-o", out_path))
     lines.append(sbatch_line("-e", err_path))
     lines.extend(
         [
             "",
             "set -euo pipefail",
-            f"bash {shlex.quote(str(launch_script))}",
+            "export SHELL=/usr/bin/env bash",
+            f"exec /usr/bin/env bash {shlex.quote(str(launch_script))}",
         ]
     )
     job_path.write_text("\n".join(lines) + "\n")
@@ -176,16 +390,21 @@ def write_metadata(
     launch_script: Path,
     job_script: Path,
     artifact_paths: dict[str, str],
+    runtime_python: str,
+    candidate_dry_run: dict[str, Any] | None = None,
 ) -> None:
+    now = datetime.now(timezone.utc).isoformat()
     metadata = {
-        "candidate_id": data["id"],
+        "candidate_id": candidate_id(data),
         "kind": data.get("kind"),
+        "purpose": candidate_purpose(data),
         "mode": mode,
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "created_at_utc": now,
         "candidate_manifest": str(candidate_path),
         "run_dir": str(run_dir),
         "submodule": str(source_root),
         "runtime_root": str(runtime_root),
+        "runtime_python": runtime_python,
         "base_commit": data.get("base_commit"),
         "source_commit": source_commit,
         "runtime_commit": runtime_commit,
@@ -194,14 +413,29 @@ def write_metadata(
         "job_script": str(job_script),
         "artifact_contract": artifact_paths,
         "status": "prepared",
+        "status_history": [{"status": "prepared", "at_utc": now, "reason": "bundle_created"}],
     }
+    if candidate_dry_run is not None:
+        metadata["candidate_dry_run"] = candidate_dry_run
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
 
 def update_metadata(run_dir: Path, updates: dict[str, Any]) -> None:
     metadata_path = run_dir / "metadata.json"
     metadata = json.loads(metadata_path.read_text())
+    old_status = metadata.get("status")
     metadata.update(updates)
+    new_status = metadata.get("status")
+    if new_status and new_status != old_status:
+        history = metadata.setdefault("status_history", [])
+        if isinstance(history, list):
+            history.append(
+                {
+                    "status": new_status,
+                    "at_utc": datetime.now(timezone.utc).isoformat(),
+                    "reason": updates.get("status_reason", ""),
+                }
+            )
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
 
 
@@ -213,13 +447,16 @@ def parse_sbatch_job_id(stdout: str) -> str | None:
 
 
 def is_scored_candidate(data: dict[str, Any]) -> bool:
+    purpose = str(data.get("purpose", "")).lower()
+    if purpose in {"control", "evidence", "blocker_probe", "unsafe_probe"}:
+        return False
     kind = str(data.get("kind", "")).lower()
     if kind == "baseline":
         return False
 
     slurm = data.get("slurm", {})
     job_name = slurm.get("job_name", "") if isinstance(slurm, dict) else ""
-    label = f"{data.get('id', '')} {job_name}".lower()
+    label = f"{candidate_id(data)} {job_name}".lower()
     non_scored_markers = (
         "baseline_off",
         "trace_off",
@@ -261,7 +498,48 @@ def load_manifest_for_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
         manifest_path = Path(str(manifest))
         if manifest_path.exists():
             return load_toml(manifest_path)
-    return {"id": metadata.get("candidate_id", ""), "kind": metadata.get("kind", "")}
+    return {
+        "id": metadata.get("candidate_id", ""),
+        "kind": metadata.get("kind", ""),
+        "purpose": metadata.get("purpose", ""),
+    }
+
+
+def candidate_purpose(data: dict[str, Any]) -> str:
+    raw = str(data.get("purpose") or "").strip().lower()
+    if raw:
+        return raw
+    kind = str(data.get("kind", "")).lower()
+    if kind == "baseline":
+        return "control"
+    label = f"{candidate_id(data)} {data.get('description', '')}".lower()
+    if "upper-bound" in label or "upper_bound" in label:
+        return "blocker_probe"
+    return "delivery"
+
+
+def resolve_runtime_python(data: dict[str, Any], env: dict[str, Any]) -> str:
+    runtime = data.get("runtime", {})
+    if isinstance(runtime, dict) and runtime.get("python"):
+        return str(runtime["python"])
+    for key in ("PYTHON_BIN", "SGLANG_HQ_RUNTIME_PYTHON", "RUNTIME_PYTHON"):
+        if env.get(key):
+            return str(env[key])
+    return sys.executable
+
+
+def validate_runtime_python(value: str, mode: str) -> None:
+    if not value:
+        return
+    path = Path(value).expanduser()
+    if path.is_absolute() or "/" in value:
+        if not path.exists():
+            if mode == "dry-run":
+                print(f"Warning: runtime python does not exist yet: {path}", file=sys.stderr)
+                return
+            raise SystemExit(f"Runtime python does not exist: {path}")
+        if not os.access(path, os.X_OK):
+            raise SystemExit(f"Runtime python is not executable: {path}")
 
 
 def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]) -> None:
@@ -280,14 +558,7 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
         return
 
     recorded = recorded_run_dirs(root, status_path)
-    nonblocking_statuses = {
-        "prepared",
-        "failed",
-        "submission_failed",
-        "canceled",
-        "canceled_by_watchdog",
-    }
-    candidate_id = str(data.get("id", ""))
+    current_candidate_id = candidate_id(data)
     current_is_scored = is_scored_candidate(data)
     blockers: list[str] = []
     for metadata_path in sorted(runs_root.glob("*/metadata.json")):
@@ -299,10 +570,13 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
         run_dir = (run_dir if run_dir.is_absolute() else root / run_dir).resolve()
         if run_dir in recorded:
             continue
-        if metadata.get("status") in nonblocking_statuses:
+        if metadata.get("status") in NONBLOCKING_RUN_STATUSES:
             continue
         existing_data = load_manifest_for_metadata(metadata)
-        if str(existing_data.get("id", metadata.get("candidate_id", ""))) == candidate_id:
+        existing_candidate_id = candidate_id(existing_data) or str(
+            metadata.get("candidate_id", "")
+        )
+        if existing_candidate_id == current_candidate_id:
             blockers.append(
                 f"{run_dir} status={metadata.get('status')} job={metadata.get('slurm_job_id')}"
             )
@@ -328,16 +602,16 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
 def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, Any]]:
     root = repo_root()
     candidate_path = Path(args.candidate).resolve()
-    data = load_toml(candidate_path)
+    data = merge_model_profile(load_toml(candidate_path))
 
     for field in ("id", "kind", "submodule", "run_script"):
         if field not in data:
             raise SystemExit(f"Missing required field: {field}")
 
-    candidate_id = sanitize_id(str(data["id"]))
+    safe_candidate_id = sanitize_id(candidate_id(data))
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     suffix = f"-{sanitize_id(args.name_suffix)}" if args.name_suffix else ""
-    run_dir = (root / args.run_root / f"{stamp}-{candidate_id}{suffix}").resolve()
+    run_dir = (root / args.run_root / f"{stamp}-{safe_candidate_id}{suffix}").resolve()
     run_dir.mkdir(parents=True, exist_ok=False)
 
     source_root = (root / str(data["submodule"])).resolve()
@@ -371,12 +645,23 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
         for key, default in CANONICAL_ARTIFACT_DEFAULTS.items()
     }
 
-    env = dict(data.get("env", {}))
+    candidate_dry_run = None
+    try:
+        candidate_dry_run = dry_run_manifest(data, root)
+    except Exception as exc:
+        raise SystemExit(f"Candidate dry-run validation failed: {exc}") from exc
+
+    env = {}
+    if candidate_dry_run:
+        env.update(candidate_dry_run.get("env_preview", {}))
+    env.update(data.get("env", {}))
     for item in args.env or []:
         if "=" not in item:
             raise SystemExit(f"--env expects KEY=VALUE, got: {item}")
         key, value = item.split("=", 1)
         env[key] = value
+    runtime_python = resolve_runtime_python(data, env)
+    validate_runtime_python(runtime_python, args.mode)
 
     source_commit = run_git_commit(source_root)
     runtime_commit = run_git_commit(runtime_root)
@@ -420,7 +705,10 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
         launch_script,
         job_script,
         artifact_paths,
+        runtime_python,
+        candidate_dry_run,
     )
+    write_dry_run(run_dir / "candidate_dry_run.json", candidate_dry_run)
     return run_dir, launch_script, job_script, data
 
 
@@ -429,9 +717,9 @@ def main() -> int:
     parser.add_argument("candidate", help="Path to a candidate TOML manifest")
     parser.add_argument(
         "--mode",
-        choices=("dry-run", "local", "sbatch"),
+        choices=("dry-run", "local", "sbatch", "slurm"),
         default="dry-run",
-        help="Prepare only, execute locally, or submit with sbatch",
+        help="Prepare only, execute locally, or submit with sbatch/slurm",
     )
     parser.add_argument("--run-root", default="runs", help="Run bundle root")
     parser.add_argument("--name-suffix", default="", help="Optional run ID suffix")
@@ -454,13 +742,25 @@ def main() -> int:
         action="store_true",
         help="Actually submit when --mode sbatch is selected. Without this flag, sbatch mode renders only.",
     )
+    parser.add_argument(
+        "--allow-unsupported-gpu",
+        action="store_true",
+        help=(
+            "Allow local/sbatch launch for a Cosmos3 candidate whose current runtime "
+            "does not consume the advertised optimization. Use only for explicit "
+            "diagnostic env/export checks."
+        ),
+    )
     args = parser.parse_args()
+    if args.mode == "slurm":
+        args.mode = "sbatch"
 
-    candidate_data = load_toml(Path(args.candidate).resolve())
+    candidate_data = merge_model_profile(load_toml(Path(args.candidate).resolve()))
+    enforce_gpu_readiness_or_exit(args, candidate_data)
     enforce_single_flight_or_exit(args, candidate_data)
 
     run_dir, launch_script, job_script, data = prepare_run(args)
-    print(f"candidate: {data['id']}")
+    print(f"candidate: {candidate_id(data)}")
     print(f"run_dir: {run_dir}")
     print(f"launch_script: {launch_script}")
     print(f"job_script: {job_script}")

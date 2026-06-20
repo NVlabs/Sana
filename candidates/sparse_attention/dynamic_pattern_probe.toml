@@ -1,0 +1,47 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Pure MInference-style dynamic sparse-attention pattern-bank selector with explicit dense fallback."
+model_profile = "cosmos3"
+
+[id]
+name = "dynamic_pattern_probe"
+dimension = "sparse_attention"
+family = "minference_dynamic_patterns"
+
+[references.external]
+paper = "MInference paper: https://arxiv.org/abs/2407.02490"
+code = "MInference: https://github.com/microsoft/MInference"
+notes = "Pure dependency-light pattern-bank core inspired by MInference A-shape, vertical/slash, and block-sparse sparse attention. Cosmos3 runtime glue consumes a boolean block mask only and is not a public CUDA-kernel or LLM causal-runtime port."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.92
+block_size = 64
+component = "transformer"
+route_mode = "dynamic_pattern_probe"
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "dynamic_pattern_probe"
+SGLANG_HQ_SPARSE_ATTENTION_PATTERN = "dynamic_pattern_probe"
+SGLANG_HQ_SPARSE_ATTENTION_PROBE = "1"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

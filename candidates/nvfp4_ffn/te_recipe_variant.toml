@@ -1,0 +1,48 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "TransformerEngine recipe variant preserving only generic NVFP4 recipe axes; model-specific fused epilogues stay disabled until a Cosmos3-equivalent adapter exists."
+model_profile = "cosmos3"
+
+[id]
+name = "te_recipe_variant"
+dimension = "nvfp4_ffn"
+family = "te_recipe_variant"
+
+[references.external]
+paper = "TransformerEngine docs: https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/"
+code = "TransformerEngine: https://github.com/NVIDIA/TransformerEngine"
+notes = "TE recipe flags are a canonical route for FP4 scaling, stochastic rounding, and fused epilogue variants."
+
+[references.local]
+generic_impl = "efficiency/transforms/nvfp4_ffn.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/linear.py"
+
+[requirements]
+capabilities = ["has_ffn_linear_modules", "supports_nvfp4_linear"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "nvfp4_ffn"
+
+[efficiency.params]
+module_scope = "video_ffn"
+disable_rht = false
+disable_stochastic_rounding = false
+disable_2d_quantization = false
+row_scaled_activation = true
+fused_proj_in_gelu = false
+fused_proj_out_bias_gate = false
+te_adapter = ""
+fallback_policy = "bf16"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "te_recipe_variant"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

@@ -1,0 +1,44 @@
+kind = "env_only"
+purpose = "frontier"
+description = "Profile-derived hot-linear NVFP4 candidate with selector-derived dense guards."
+model_profile = "cosmos3"
+
+[id]
+name = "profiled_hot_linear_nvfp4"
+dimension = "nvfp4_ffn"
+family = "profiled_hot_linear"
+
+[references.external]
+paper = "NVIDIA ModelOpt examples: https://github.com/NVIDIA/TensorRT-Model-Optimizer/blob/main/examples/llm_ptq/README.md"
+code = "NVIDIA ModelOpt: https://github.com/NVIDIA/Model-Optimizer"
+notes = "ModelOpt and TE provide the canonical profiling/PTQ route for selecting hot linear modules."
+
+[references.local]
+generic_impl = "efficiency/nvfp4_profile.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/quantization/modelopt_quant.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/quantization/modelopt_quant.py"
+
+[requirements]
+capabilities = ["has_ffn_linear_modules", "supports_nvfp4_linear"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "nvfp4_ffn"
+
+[efficiency.params]
+module_scope = "profiled_hot_ffn"
+profile_layer_scores = "0-1:0.05,2-29:1.0,30-31:0.05"
+profile_keep_ratio = 0.875
+profile_guard_unselected = true
+fallback_policy = "bf16_on_profile_miss"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "profiled_hot_linear_nvfp4"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

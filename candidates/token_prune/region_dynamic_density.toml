@@ -1,0 +1,46 @@
+kind = "methodology"
+purpose = "evidence"
+description = "Region-density token pruning baseline that balances feature importance by local token density."
+model_profile = "cosmos3"
+
+[id]
+name = "region_dynamic_density"
+dimension = "token_prune"
+family = "region_density"
+
+[references.external]
+paper = "Cluster-Aware Token Pruning: https://arxiv.org/html/2502.00433v1"
+code = "Token reduction survey repo: https://github.com/ZLKong/Awesome-Collection-Token-Reduction"
+notes = "Region-aware pruning is a local density-normalized scorer baseline; the cited references are motivation/provenance, not a public CAT implementation."
+
+[references.local]
+generic_impl = "efficiency/techniques/token_prune.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
+
+[requirements]
+capabilities = ["has_token_sequence_axis", "has_spatiotemporal_token_layout", "supports_token_gather_scatter"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "token_prune"
+
+[efficiency.params]
+keep_ratio = 0.7
+method = "region_dynamic_density"
+compensation = "prev"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "region_dynamic_density"
+SGLANG_HQ_TOKEN_PRUNE_KEEP_RATIO = "0.7"
+SGLANG_HQ_TOKEN_PRUNE_METHOD = "region_dynamic_density"
+SGLANG_HQ_TOKEN_PRUNE_COMP = "prev"
+SGLANG_HQ_TOKEN_PRUNE_STEPS = "1-2"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

@@ -1,0 +1,37 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Existing KWL env-flag bundle baseline."
+model_profile = "cosmos3"
+
+[id]
+name = "env_flag_kwl_bundle"
+dimension = "kwl_fusion"
+family = "existing_kwl_flags"
+
+[references.external]
+paper = "TransformerEngine fused ops: https://github.com/NVIDIA/TransformerEngine"
+code = "FlashAttention: https://github.com/Dao-AILab/flash-attention"
+notes = "Fused-kernel references motivate this scaffold, but Cosmos3 already covers the relevant pure fused pieces or the remaining flags are LTX2-only; this row is a blocker probe with no new Cosmos3 algorithm delta."
+
+[references.local]
+generic_impl = "efficiency/transforms/kwl_fusions.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/fused_scale_shift_gate.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/fused_scale_shift_gate.py"
+
+[requirements]
+capabilities = ["has_transformer_blocks"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "kwl_fusions"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "env_flag_kwl_bundle"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

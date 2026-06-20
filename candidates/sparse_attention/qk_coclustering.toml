@@ -1,0 +1,46 @@
+kind = "env_only"
+purpose = "blocker_probe"
+description = "Pure SpargeAttn Q/K mean-similarity block-map route policy on the generic sparse-attention adapter."
+model_profile = "cosmos3"
+
+[id]
+name = "qk_coclustering"
+dimension = "sparse_attention"
+family = "spargeattn_qk_meansim_block_map"
+
+[references.external]
+paper = "SpargeAttn paper: https://arxiv.org/html/2502.18137v1"
+code = "SpargeAttn: https://github.com/thu-ml/SpargeAttn"
+notes = "Uses the public SpargeAttn mean-similarity Q/K block-map selection core as a dependency-light policy boundary. Cosmos3 runtime adapters still consume only the boolean block mask and padded indices, not SpargeAttn's CUDA sparse kernel."
+
+[references.local]
+generic_impl = "efficiency/transforms/sparse_attention.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "has_spatiotemporal_token_layout", "has_attention_backend_switch"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "sparse_attention"
+
+[efficiency.params]
+sparsity = 0.88
+block_size = 64
+component = "transformer"
+route_mode = "qk_coclustering"
+dense_fallback = "fa"
+stage2_dense_layers = "0-1"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "qk_coclustering"
+SGLANG_HQ_SPARSE_ATTENTION_PATTERN = "qk_coclustering"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

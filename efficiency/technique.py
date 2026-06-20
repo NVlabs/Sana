@@ -69,6 +69,17 @@ class Capability(enum.Enum):
     PRUNABLE_TOKENS = "prunable_tokens"  # a separable prunable token segment
     RESIDUAL_TUPLE = "residual_tuple"  # block forward returns a residual-compatible tuple
     SWAPPABLE_ATTENTION = "swappable_attention"  # attention goes through the backend layer
+    HAS_DENOISE_STEPS = "has_denoise_steps"
+    HAS_TRANSFORMER_BLOCKS = "has_transformer_blocks"
+    HAS_ATTENTION_LAYERS = "has_attention_layers"
+    HAS_ATTENTION_BACKEND_SWITCH = "has_attention_backend_switch"
+    HAS_FFN_LINEAR_MODULES = "has_ffn_linear_modules"
+    HAS_TOKEN_SEQUENCE_AXIS = "has_token_sequence_axis"
+    HAS_SPATIOTEMPORAL_TOKEN_LAYOUT = "has_spatiotemporal_token_layout"
+    SUPPORTS_TOKEN_GATHER_SCATTER = "supports_token_gather_scatter"
+    SUPPORTS_STEP_CACHE = "supports_step_cache"
+    SUPPORTS_CUDA_GRAPH_PROBE = "supports_cuda_graph_probe"
+    SUPPORTS_NVFP4_LINEAR = "supports_nvfp4_linear"
 
 
 @dataclass

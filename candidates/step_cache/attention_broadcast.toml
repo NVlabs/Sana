@@ -1,0 +1,54 @@
+kind = "patch"
+purpose = "blocker_probe"
+description = "Public PAB cross-attention broadcast controller with a conservative Cosmos3 GEN attention-output adapter."
+model_profile = "cosmos3"
+
+[id]
+name = "attention_broadcast"
+dimension = "step_cache"
+family = "pab_attention_broadcast"
+
+[references.external]
+paper = "PAB: https://arxiv.org/html/2408.12588v3"
+code = "VideoSys / PAB: https://github.com/NUS-HPC-AI-Lab/VideoSys"
+notes = "Attention broadcast is the canonical PAB cache target; this manifest uses the public VideoSys cross-attention threshold/range/count controller and wires it to a conservative Cosmos3 payload consumer."
+
+[references.local]
+generic_impl = "efficiency/techniques/payload_cache.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/ltx2_pab.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/cache/ltx2_pab.py"
+
+[requirements]
+capabilities = ["has_attention_layers", "supports_step_cache"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "payload_cache"
+
+[efficiency.params]
+scope = "attention_broadcast"
+mode = "pab"
+attention_kind = "cross"
+steps = 35
+cross_broadcast = true
+cross_threshold = [100, 900]
+cross_range = 3
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "attention_broadcast"
+SGLANG_HQ_CACHE_SCOPE = "attention_broadcast"
+SGLANG_HQ_PAYLOAD_CACHE_MODE = "pab"
+SGLANG_HQ_PAB_MODE = "pab"
+SGLANG_HQ_PAB_ATTENTION_KIND = "cross"
+SGLANG_HQ_PAB_STEPS = "35"
+SGLANG_HQ_PAB_CROSS_BROADCAST = "1"
+SGLANG_HQ_PAB_CROSS_THRESHOLD = "100,900"
+SGLANG_HQ_PAB_CROSS_RANGE = "3"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

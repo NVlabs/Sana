@@ -4,6 +4,7 @@
 # via @register_technique.
 
 from efficiency.techniques import (  # noqa: F401
+    payload_cache,
     step_cache,
     teacache,
     token_prune,

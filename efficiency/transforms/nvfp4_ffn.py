@@ -1,10 +1,10 @@
 # Copyright 2025 SGLang authors
 #
-# NVFP4FFN -- LOAD-time transform that quantizes selected linear layers to TE
-# NVFP4. The quantization is baked into the weights at load; there is no
-# per-step decision, so this is a ModelTransform (not a Technique). set_env()
-# emits the existing SGLANG_HQ_ENABLE_TE_NVFP4_FFN recipe consumed by the loader,
-# plus metadata env for search axes that a candidate may wire explicitly.
+# NVFP4FFN -- LOAD-time transform that quantizes selected linear layers to
+# NVIDIA FP4/NVFP4. The quantization is baked into the weights at load; optional
+# dense-layer and dense-step guards are consumed by compatible loaders.
+# set_env() emits model-agnostic SGLANG_HQ_NVFP4_* recipe/search axes. Optional
+# model-specific compatibility env is emitted only when explicitly requested.
 
 from __future__ import annotations
 
@@ -15,6 +15,10 @@ from efficiency.transform import (
     TransformContext,
     TransformPhase,
 )
+from efficiency.nvfp4_profile import (
+    format_int_ranges,
+    select_profiled_nvfp4_layers,
+)
 
 
 @register_transform("nvfp4_ffn")
@@ -22,9 +26,9 @@ class NVFP4FFN(ModelTransform):
     """Quantize selected video linear layers to NVFP4 at load.
 
     The default values preserve the historical FFN-only recipe. Extra parameters
-    expose search axes for recipe variants, fused epilogues, padding policy, and
-    candidate metadata. A target loader may ignore metadata env until a candidate
-    explicitly wires and validates it.
+    expose search axes for recipe variants, optional model-matched fused
+    epilogues, padding policy, and candidate metadata. A target loader may
+    ignore metadata env until a candidate explicitly wires and validates it.
     """
 
     name = "nvfp4_ffn"
@@ -45,6 +49,13 @@ class NVFP4FFN(ModelTransform):
         dense_layers: str = "",
         dense_steps: str = "",
         fallback_policy: str = "bf16",
+        te_adapter: str = "",
+        profiled_layers: str = "",
+        profile_layer_scores: str = "",
+        profile_keep_ratio: float = 0.0,
+        profile_keep_count: int = 0,
+        profile_min_score: str = "",
+        profile_guard_unselected: bool = True,
     ):
         self.module_scope = module_scope
         self.disable_rht = disable_rht
@@ -58,17 +69,45 @@ class NVFP4FFN(ModelTransform):
         self.dense_layers = dense_layers
         self.dense_steps = dense_steps
         self.fallback_policy = fallback_policy
+        self.te_adapter = te_adapter
+        self.profiled_layers = profiled_layers
+        self.profile_layer_scores = profile_layer_scores
+        self.profile_keep_ratio = profile_keep_ratio
+        self.profile_keep_count = profile_keep_count
+        self.profile_min_score = profile_min_score
+        self.profile_guard_unselected = profile_guard_unselected
+
+    def _profile_selection_env(self) -> tuple[str, str]:
+        profiled_layers = str(self.profiled_layers or "").strip()
+        dense_layers = str(self.dense_layers or "").strip()
+        if not self.profile_layer_scores or profiled_layers:
+            return profiled_layers, dense_layers
+
+        min_score_text = str(self.profile_min_score or "").strip()
+        min_score = float(min_score_text) if min_score_text else None
+        selection = select_profiled_nvfp4_layers(
+            self.profile_layer_scores,
+            keep_ratio=float(self.profile_keep_ratio or 0.0),
+            keep_count=int(self.profile_keep_count or 0),
+            min_score=min_score,
+            guard_unselected=bool(self.profile_guard_unselected),
+        )
+        profiled_layers = format_int_ranges(selection.profiled_layers)
+        if not dense_layers:
+            dense_layers = format_int_ranges(selection.dense_layers)
+        return profiled_layers, dense_layers
 
     def set_env(self, ctx: TransformContext) -> None:
         e = ctx.env
+        profiled_layers, dense_layers = self._profile_selection_env()
+        e["SGLANG_HQ_VARIANT"] = "dense"
         e["SGLANG_HQ_ENABLE_TE_NVFP4_FFN"] = "1"
-        e["SGLANG_LTX2_TE_NVFP4_VIDEO_FFN"] = "1"
         e["SGLANG_HQ_NVFP4_MODULE_SCOPE"] = self.module_scope
-        e["SGLANG_LTX2_TE_NVFP4_DISABLE_RHT"] = "1" if self.disable_rht else "0"
-        e["SGLANG_LTX2_TE_NVFP4_DISABLE_STOCHASTIC_ROUNDING"] = (
+        e["SGLANG_HQ_NVFP4_DISABLE_RHT"] = "1" if self.disable_rht else "0"
+        e["SGLANG_HQ_NVFP4_DISABLE_STOCHASTIC_ROUNDING"] = (
             "1" if self.disable_stochastic_rounding else "0"
         )
-        e["SGLANG_LTX2_TE_NVFP4_DISABLE_2D_QUANTIZATION"] = (
+        e["SGLANG_HQ_NVFP4_DISABLE_2D_QUANTIZATION"] = (
             "1" if self.disable_2d_quantization else "0"
         )
         e["SGLANG_HQ_NVFP4_ROW_SCALED_ACTIVATION"] = (
@@ -80,17 +119,36 @@ class NVFP4FFN(ModelTransform):
         e["SGLANG_HQ_ENABLE_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE"] = (
             "1" if self.fused_proj_out_bias_gate else "0"
         )
-        e["SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_IN_GELU"] = (
-            "1" if self.fused_proj_in_gelu else "0"
-        )
-        e["SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE"] = (
-            "1" if self.fused_proj_out_bias_gate else "0"
-        )
-        e["SGLANG_LTX2_TE_NVFP4_PAD_M_TO"] = str(int(self.pad_m_to))
+        e["SGLANG_HQ_NVFP4_PAD_M_TO"] = str(int(self.pad_m_to))
+        if self.te_adapter == "ltx2":
+            e["SGLANG_LTX2_TE_NVFP4_VIDEO_FFN"] = "1"
+            e["SGLANG_LTX2_TE_NVFP4_DISABLE_RHT"] = (
+                "1" if self.disable_rht else "0"
+            )
+            e["SGLANG_LTX2_TE_NVFP4_DISABLE_STOCHASTIC_ROUNDING"] = (
+                "1" if self.disable_stochastic_rounding else "0"
+            )
+            e["SGLANG_LTX2_TE_NVFP4_DISABLE_2D_QUANTIZATION"] = (
+                "1" if self.disable_2d_quantization else "0"
+            )
+            e["SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_IN_GELU"] = (
+                "1" if self.fused_proj_in_gelu else "0"
+            )
+            e["SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_OUT_BIAS_GATE"] = (
+                "1" if self.fused_proj_out_bias_gate else "0"
+            )
+            e["SGLANG_LTX2_TE_NVFP4_PAD_M_TO"] = str(int(self.pad_m_to))
         if self.fp4_gemm_backend:
             e["SGLANG_DIFFUSION_FLASHINFER_FP4_GEMM_BACKEND"] = self.fp4_gemm_backend
-        if self.dense_layers:
-            e["SGLANG_HQ_NVFP4_DENSE_LAYERS"] = self.dense_layers
+        if profiled_layers:
+            e["SGLANG_HQ_NVFP4_PROFILED_LAYERS"] = profiled_layers
+        if self.profile_layer_scores:
+            e["SGLANG_HQ_NVFP4_PROFILE_SOURCE"] = "manifest_layer_scores"
+            e["SGLANG_HQ_NVFP4_PROFILE_KEEP_RATIO"] = str(
+                float(self.profile_keep_ratio or 0.0)
+            )
+        if dense_layers:
+            e["SGLANG_HQ_NVFP4_DENSE_LAYERS"] = dense_layers
         if self.dense_steps:
             e["SGLANG_HQ_NVFP4_DENSE_STEPS"] = self.dense_steps
         if self.fallback_policy:

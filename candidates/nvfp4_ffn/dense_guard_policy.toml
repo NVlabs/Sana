@@ -1,0 +1,43 @@
+kind = "env_only"
+purpose = "frontier"
+description = "NVFP4 candidate with explicit dense guard layers and dense warmup steps."
+model_profile = "cosmos3"
+
+[id]
+name = "dense_guard_policy"
+dimension = "nvfp4_ffn"
+family = "dense_guard_policy"
+
+[references.external]
+paper = "NVIDIA ModelOpt examples: https://github.com/NVIDIA/TensorRT-Model-Optimizer/blob/main/examples/llm_ptq/README.md"
+code = "NVIDIA ModelOpt: https://github.com/NVIDIA/Model-Optimizer"
+notes = "Dense guards bound numerical risk when only a subset of modules or steps tolerate NVFP4."
+
+[references.local]
+generic_impl = "efficiency/transforms/nvfp4_ffn.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/quantization/modelopt_quant.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/quantization/modelopt_quant.py"
+
+[requirements]
+capabilities = ["has_ffn_linear_modules", "supports_nvfp4_linear"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "build_transform"
+name = "nvfp4_ffn"
+
+[efficiency.params]
+module_scope = "video_ffn"
+dense_layers = "0-1,30-31"
+dense_steps = "0-2,32-34"
+fallback_policy = "bf16_on_guard"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "dense_guard_policy"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

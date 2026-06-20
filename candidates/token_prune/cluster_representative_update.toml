@@ -1,0 +1,46 @@
+kind = "methodology"
+purpose = "frontier"
+description = "CAT-style cluster/staleness token-update selector using cached-noise deltas."
+model_profile = "cosmos3"
+
+[id]
+name = "cluster_representative_update"
+dimension = "token_prune"
+family = "cat_convergence_stale_cpp"
+
+[references.external]
+paper = "Cluster-Aware Token Pruning: https://arxiv.org/html/2502.00433v1"
+code = "CAT-Pruning: https://github.com/ada-cheng/CAT-Pruning"
+notes = "Uses the public CAT convergence_stale_cpp selector boundary: cached-noise delta, cluster ranking, stale-token refresh, and cached replacement."
+
+[references.local]
+generic_impl = "efficiency/techniques/token_prune.py"
+model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
+runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
+
+[requirements]
+capabilities = ["has_token_sequence_axis", "has_spatiotemporal_token_layout", "supports_token_gather_scatter"]
+
+[adapter]
+model_spec = "Cosmos3"
+
+[efficiency]
+kind = "runtime_technique"
+name = "token_prune"
+
+[efficiency.params]
+keep_ratio = 0.3
+method = "cat_convergence_stale_cpp"
+compensation = "prev"
+
+[env]
+SGLANG_HQ_CANDIDATE_ID = "cluster_representative_update"
+SGLANG_HQ_TOKEN_PRUNE_KEEP_RATIO = "0.3"
+SGLANG_HQ_TOKEN_PRUNE_METHOD = "cat_convergence_stale_cpp"
+SGLANG_HQ_TOKEN_PRUNE_COMP = "prev"
+SGLANG_HQ_TOKEN_PRUNE_STEPS = "1-2"
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "baseline-comparable"

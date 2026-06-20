@@ -1,0 +1,95 @@
+id = "official_video_t2v_hunyuan"
+description = "Official hunyuanvideo-community/HunyuanVideo diffusers text-to-video evaluation profile."
+
+[official_config]
+model = "hunyuanvideo-community/HunyuanVideo"
+width = 1280
+height = 720
+frames = 129
+fps = 24
+steps = 50
+guidance_scale = 6.0
+true_cfg_scale = 1.0
+max_sequence_length = 256
+seed = 42
+num_gpus = 1
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/patch_summary.md",
+  "outputs/benchmark.json",
+  "outputs/quality.json",
+  "outputs/risk_notes.md",
+  "outputs/collection.json",
+]
+optional = [
+  "outputs/frames",
+  "outputs/side_by_side.mp4",
+]
+
+[performance]
+baseline_candidate = "hunyuan_diffusers_baseline"
+# Generation convention (matches Cosmos3): the speedup metric is generation
+# time, EXCLUDING one-time model load/placement. For the HunyuanVideo diffusers
+# pipe() the single generate call (denoise + VAE decode) is reported as
+# denoise_s == total_s in the collected benchmark.
+primary_metric = "denoise_s"
+secondary_metric = "total_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "OFF should recover baseline path. Exact byte identity is preferred for guarded code paths; otherwise report the first non-identical boundary."
+
+[quantitative_quality]
+enabled = true
+metrics = [
+  "frame_count",
+  "duration_s",
+  "mean_abs_pixel_diff",
+  "mse",
+  "psnr",
+  "sharpness_ratio",
+  "patch_boundary_ratio",
+  "temporal_delta_error",
+  "temporal_jitter_ratio",
+]
+frame_count_expected = 129
+duration_tolerance_s = 0.25
+sharpness_ratio_min = 0.95
+sharpness_ratio_max = 1.08
+temporal_jitter_ratio_min = 0.85
+temporal_jitter_ratio_max = 1.20
+notes = "PSNR is recorded but not used as a hard gate because diffusion has a bf16 chaos floor."
+
+[visual_artifact]
+enabled = true
+provider = "nvidia_gemini"
+base_url = "https://inference-api.nvidia.com/v1"
+model = "gcp/google/gemini-3.5-flash"
+api_key_env = "NVIDIA_API_KEY"
+rubric = "evals/rubrics/gemini_visual_artifact_gate.md"
+max_tokens = 4096
+sample_fps = 2
+side_by_side_required = true
+fail_on_new_artifacts = [
+  "snow_static_speckle",
+  "blur_detail_loss",
+  "mosaic_blocking_patch_artifacts",
+  "patch_boundary_discontinuity",
+  "banding_posterization",
+  "ghosting_smearing",
+  "melting_morphing_structure",
+  "temporal_flicker_popping",
+  "loss_of_temporal_coherence",
+  "degraded_text_faces_hands",
+  "composition_or_motion_regression",
+]

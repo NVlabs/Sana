@@ -186,6 +186,35 @@ def parse_existing_benchmark(path: Path) -> dict[str, Any]:
         if isinstance(value, (int, float)):
             timing[field] = float(value)
 
+    # Diffusers-style runners (e.g. HunyuanVideo gpu_infer.py) write timings
+    # NESTED under "timings" and memory under "memory", reporting a single
+    # end-to-end generation call ("generate_s") plus a wall-clock "total_s" that
+    # INCLUDES one-time model load/placement. The framework's speedup convention
+    # (see Cosmos3 models/cosmos3.toml [baseline]: total_s == denoise_s + decode_s,
+    # model load excluded) measures GENERATION time, so map generate_s ->
+    # total_s/denoise_s and preserve the raw nested timings + memory as evidence
+    # rather than overwriting them or adopting the load-inclusive wall total.
+    nested = data.get("timings")
+    if isinstance(nested, dict):
+        generate_s = nested.get("generate_s")
+        if isinstance(generate_s, (int, float)):
+            if timing["total_s"] is None:
+                timing["total_s"] = float(generate_s)
+            if timing["denoise_s"] is None:
+                timing["denoise_s"] = float(generate_s)
+        timing["timings"] = {
+            str(key): float(value)
+            for key, value in nested.items()
+            if isinstance(value, (int, float))
+        }
+    memory = data.get("memory")
+    if isinstance(memory, dict):
+        timing["memory"] = {
+            str(key): float(value)
+            for key, value in memory.items()
+            if isinstance(value, (int, float))
+        }
+
     stage_seconds = data.get("stage_seconds")
     if isinstance(stage_seconds, dict):
         timing["stage_seconds"] = {
@@ -229,7 +258,7 @@ def parse_existing_benchmark(path: Path) -> dict[str, Any]:
     return timing
 
 
-def build_benchmark(benchmark_path: Path, log_path: Path) -> dict[str, Any]:
+def build_benchmark(benchmark_path: Path, log_path: Path, model_hint: str = "") -> dict[str, Any]:
     existing = parse_existing_benchmark(benchmark_path)
     log_timing = parse_run_log_timing(log_path)
     stage_seconds = dict(existing.get("stage_seconds") or {})
@@ -244,13 +273,27 @@ def build_benchmark(benchmark_path: Path, log_path: Path) -> dict[str, Any]:
             benchmark[field] = existing.get(field)
             sources[field] = "benchmark.json" if existing.get(field) is not None else None
 
+    # Stage label must match the model so reports do not drift. The Cosmos3
+    # reference audits key off "Cosmos3DenoisingStage"/"Cosmos3DecodingStage";
+    # other models (e.g. HunyuanVideo, whose diffusers pipe() is a single fused
+    # generation call covering denoise + VAE decode) use a generic key.
+    is_cosmos = "cosmos" in (model_hint or "").lower()
+    denoise_label = "Cosmos3DenoisingStage" if is_cosmos else "generation"
+    decode_label = "Cosmos3DecodingStage" if is_cosmos else "decode"
     if benchmark["denoise_s"] is not None:
-        stage_seconds.setdefault("Cosmos3DenoisingStage", benchmark["denoise_s"])
+        stage_seconds.setdefault(denoise_label, benchmark["denoise_s"])
     if benchmark["decode_s"] is not None:
-        stage_seconds.setdefault("Cosmos3DecodingStage", benchmark["decode_s"])
+        stage_seconds.setdefault(decode_label, benchmark["decode_s"])
 
     benchmark["stage_seconds"] = stage_seconds
     benchmark["sources"] = sources
+    # Preserve the runner's raw nested timings + memory as durable evidence so a
+    # collect pass never discards wall-clock/load/peak-memory data (the prior
+    # failure: collecting the Hunyuan baseline nulled its runner timings).
+    if existing.get("timings"):
+        benchmark["timings"] = existing["timings"]
+    if existing.get("memory"):
+        benchmark["memory"] = existing["memory"]
     benchmark["collected_at_utc"] = datetime.now(timezone.utc).isoformat()
     return benchmark
 
@@ -386,44 +429,13 @@ def extract_frames(
         old.unlink()
 
     duration_s = probe_video_duration(video_path, ffmpeg_path)
-    errors: list[str] = []
-    if duration_s:
-        for index, timestamp in enumerate(sample_timestamps(duration_s, frame_count), start=1):
-            out_path = frames_dir / f"f_{index:03d}.png"
-            proc = subprocess.run(
-                [
-                    ffmpeg_path,
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-ss",
-                    f"{timestamp:.3f}",
-                    "-i",
-                    str(video_path),
-                    "-frames:v",
-                    "1",
-                    str(out_path),
-                ],
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            if proc.returncode != 0:
-                errors.append(proc.stderr.strip())
-        created = sorted(frames_dir.glob("f_*.png"))
-        if created:
-            result: dict[str, Any] = {
-                "status": "created",
-                "count": len(created),
-                "ffmpeg": ffmpeg_path,
-                "ffmpeg_source": ffmpeg["source"],
-                "duration_s": duration_s,
-            }
-            if errors:
-                result["partial_errors"] = [error for error in errors if error]
-            return result
-
+    # Single-pass passthrough decode (-vsync 0) yields exactly the video's native
+    # frames in chronological order (frame-accurate). This avoids the trailing
+    # frame that per-timestamp input seeking drops near end-of-stream, so a
+    # 129-frame HunyuanVideo output produces a 129-frame set (not 128). Baseline
+    # and candidate runs use the identical policy, so aligned LPIPS/Gemini frame
+    # pairs stay index-matched. frame_count caps below native via even subsample.
+    tmp_glob = "f_*.png"
     cmd = [
         ffmpeg_path,
         "-hide_banner",
@@ -432,24 +444,45 @@ def extract_frames(
         "-y",
         "-i",
         str(video_path),
-        "-vf",
-        f"fps={fps:g}",
-        "-frames:v",
-        str(max(1, frame_count)),
-        str(frames_dir / "f_%03d.png"),
+        "-vsync",
+        "0",
+        str(frames_dir / "f_%05d.png"),
     ]
     proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if proc.returncode != 0:
+    produced = sorted(frames_dir.glob(tmp_glob))
+    if proc.returncode != 0 or not produced:
         return {
             "status": "failed",
-            "count": 0,
+            "count": len(produced),
             "ffmpeg": ffmpeg_path,
             "ffmpeg_source": ffmpeg["source"],
             "stderr": proc.stderr.strip(),
         }
+
+    target = max(1, frame_count)
+    if len(produced) > target:
+        if target == 1:
+            keep_indices = {0}
+        else:
+            keep_indices = {
+                round(i * (len(produced) - 1) / (target - 1)) for i in range(target)
+            }
+        keep = {produced[i] for i in keep_indices}
+        for frame_path in produced:
+            if frame_path not in keep:
+                frame_path.unlink()
+        produced = sorted(frames_dir.glob(tmp_glob))
+
+    # Renumber to contiguous zero-padded f_001.. (sortable, matches f_*.png glob
+    # used by the LPIPS/Gemini pairing in plan_eval and collect_run).
+    for new_index, frame_path in enumerate(sorted(produced), start=1):
+        dest = frames_dir / f"f_{new_index:03d}.png"
+        if frame_path != dest:
+            frame_path.rename(dest)
+    final = sorted(frames_dir.glob("f_*.png"))
     return {
         "status": "created",
-        "count": len(list(frames_dir.glob("f_*.png"))),
+        "count": len(final),
         "ffmpeg": ffmpeg_path,
         "ffmpeg_source": ffmpeg["source"],
         "duration_s": duration_s,
@@ -1084,8 +1117,29 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     }
     frames_dir = output_dir / artifacts.get("frames_dir", "frames")
 
+    # The run self-describes its model and frame count via run_config.json
+    # (written by the runner). Frame extraction defaults to the run's actual
+    # num_frames so aligned LPIPS/Gemini frame sets match the model contract
+    # (HunyuanVideo=129, Cosmos3=189) instead of a single hardcoded count.
+    run_config = load_json(output_dir / "run_config.json")
+    model_hint = ""
+    if isinstance(run_config, dict):
+        model_hint = str(run_config.get("model_path") or "")
+    if not model_hint:
+        model_hint = str(manifest.get("model_profile") or metadata.get("candidate_id") or "")
+
+    if args.frame_count is not None:
+        effective_frame_count = args.frame_count
+    else:
+        num_frames = run_config.get("num_frames") if isinstance(run_config, dict) else None
+        effective_frame_count = (
+            int(num_frames)
+            if isinstance(num_frames, (int, float)) and num_frames
+            else DEFAULT_FRAME_COUNT
+        )
+
     log_errors = detect_log_errors(paths["log"])
-    benchmark = build_benchmark(paths["benchmark"], paths["log"])
+    benchmark = build_benchmark(paths["benchmark"], paths["log"], model_hint=model_hint)
     write_json(paths["benchmark"], benchmark)
 
     status, notes = determine_status(
@@ -1101,7 +1155,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
             paths["video"],
             frames_dir,
             args.frame_fps,
-            args.frame_count,
+            effective_frame_count,
             args.overwrite_frames,
             args.ffmpeg,
         )
@@ -1201,8 +1255,12 @@ def main() -> int:
     parser.add_argument(
         "--frame-count",
         type=int,
-        default=DEFAULT_FRAME_COUNT,
-        help="Maximum frames to extract for all-frame metrics; defaults to the official Cosmos3 189-frame profile.",
+        default=None,
+        help=(
+            "Frames to extract for all-frame metrics. Default: the run's own "
+            "num_frames from run_config.json (model-agnostic; HunyuanVideo=129, "
+            "Cosmos3=189), falling back to DEFAULT_FRAME_COUNT when unknown."
+        ),
     )
     parser.add_argument("--ffmpeg", help="ffmpeg executable path override")
     parser.add_argument(

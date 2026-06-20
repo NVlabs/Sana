@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from efficiency import Capability, ModelSpec, compose, get_model_spec  # noqa: E402
+from efficiency import Capability, ModelSpec, compose  # noqa: E402
 from efficiency.transforms.sparse_attention import SparseAttention  # noqa: E402
 
 
@@ -40,16 +40,7 @@ def local_sparse_spec() -> ModelSpec:
 
 
 def main() -> int:
-    cosmos = get_model_spec("Cosmos3")
-    check("Cosmos3 spec is registered", cosmos is not None)
-    check(
-        "Cosmos3 declares SWAPPABLE_ATTENTION",
-        cosmos.has(Capability.SWAPPABLE_ATTENTION),
-    )
-
     transform = SparseAttention(dense_steps=3, stage2_dense_layers="0")
-    cosmos_plan = compose([transform], cosmos)
-    check("Cosmos3 composes sparse attention", len(cosmos_plan.transforms) == 1)
 
     spec = local_sparse_spec()
     plan = compose([transform], spec)
@@ -64,12 +55,17 @@ def main() -> int:
     expected_config = (
         "piecewise_sparsity=0.9,"
         "piecewise_block_size=64,"
+        "piecewise_frame_size=0,"
         "piecewise_only_video_self_attention=true,"
         "piecewise_stage1_schedule=false,"
         "piecewise_stage1_dense_steps=3,"
         "piecewise_stage2_dense_layers=0,"
         "piecewise_approx_remainder=true,"
         "piecewise_route_mode=score,"
+        "piecewise_route_bias=true,"
+        "piecewise_allow_qk_mismatch=false,"
+        "piecewise_allow_gqa=false,"
+        "piecewise_policy_family=piecewise_score_topk,"
         "piecewise_dense_fallback=fa"
     )
     check(

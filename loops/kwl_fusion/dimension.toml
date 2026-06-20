@@ -5,7 +5,7 @@
 # directly; this file is not a fixed hyperparameter grid.
 
 id = "kwl_fusion"
-title = "Exact kernel and operator fusion"
+title = "Quality-gated kernel and operator optimization"
 kind = "build_transform"
 
 [[technique]]
@@ -25,6 +25,60 @@ search_axes = [
   "warm/cold cache state",
 ]
 
+[[method_baseline]]
+id = "env_flag_kwl_bundle"
+family = "existing_kwl_flags"
+tier = "wired"
+status = "env_ready"
+description = "Existing KWLFusions helper emits SGLANG_HQ_KWL_* flags for runtime ablations."
+entrypoint = "efficiency/transforms/kwl_fusions.py"
+required_work = "Verify the target runtime consumes each flag; use as a diagnostic baseline, not the whole KWL search."
+
+[[method_baseline]]
+id = "gemm_epilogue_fusion"
+family = "gemm_epilogue_fusion"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Fuse post-GEMM bias, activation, residual, gate, or output layout work into a backend epilogue."
+entrypoint = "Sol-LTX-Infer hot linear/GEMM path"
+required_work = "Patch backend or custom op path; record tolerance class, tensor diffs when practical, and aligned quality evidence."
+
+[[method_baseline]]
+id = "norm_modulation_residual_fusion"
+family = "norm_modulation_residual_fusion"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Fuse RMSNorm/LayerNorm, AdaLN modulation, residual, scale/shift, or gate chains around transformer blocks."
+entrypoint = "Sol-LTX-Infer block elementwise path"
+required_work = "Patch fused elementwise path; prove semantic boundary and record warm timing versus launch count."
+
+[[method_baseline]]
+id = "compile_graph_capture"
+family = "compile_or_cuda_graph"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Use Torch compile, regional compile, graph-break repair, or CUDA graph replay for stable repeated regions."
+entrypoint = "Sol-LTX-Infer denoising/block execution path"
+required_work = "Patch compile/capture boundaries; separate cold compile, warm compile, graph replay, and fallback timings."
+
+[[method_baseline]]
+id = "layout_copy_elimination"
+family = "layout_copy_elimination"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Remove redundant contiguous, reshape, permute, dtype, allocation, or copy churn from hot paths."
+entrypoint = "Sol-LTX-Infer tensor layout path"
+required_work = "Patch the live path; prove aliasing/in-place safety and measure copy-kernel reduction."
+
+[[method_baseline]]
+id = "backend_selection_probe"
+family = "backend_selection"
+tier = "upper_bound_probe"
+status = "probe_only"
+description = "Try quality-gated approximate or alternate dense backends only when fallback and semantic boundary are explicit."
+entrypoint = "Sol-LTX-Infer backend dispatch path"
+required_work = "Record as blocker_probe or unsafe_probe unless it has full quality evidence, fallback logs, and declared tolerance."
+
 [eval]
 profile = "evals/profiles/official_video_t2v.toml"
 min_speedup_for_experimental = 1.03
@@ -35,12 +89,13 @@ granularity = "per_strategy"                       # axis this dimension searche
 objective = ["min_latency", "min_peak_mem"]  # improvement vs models/<id>.toml [baseline]; either counts
 max_iters = 40                           # search budget per dimension (hyperparameter)
 early_stop_patience = 0                  # fixed-budget frontier mode; 0 disables patience early stop
-keep = "frontier_candidates"             # keep exact candidates that improve quality OR speed/memory
+keep = "frontier_candidates"             # keep candidates that improve quality OR speed/memory
 tiers = "evals/tiers.toml"               # speed targets: low=1.5x, medium=2.0x, high=3.0x
-# KWL is lossless/exact: speed or memory candidates are retained only when OFF
-# identity passes and ON quality/numeric evidence does not regress. Numeric or
-# quality candidates are retained only when speed does not meaningfully regress.
-# Discard candidates with no quality/numeric improvement and no speed/memory
-# improvement; reject semantic changes, broken OFF identity, or silent fallback.
+# KWL follows standard fixed-budget frontier retention: retain candidates that
+# improve latency, peak memory, aligned quality, or reliable numeric stability.
+# ON bit-exactness is not required; record the declared tolerance class and
+# aligned quality evidence. Discard candidates with no quality/numeric
+# improvement and no speed/memory improvement; reject semantic changes, broken
+# OFF identity, or silent fallback.
 # Structured-negative is logged as a proposal/failure signature; it does not stop this default loop.
 # After the loop, the main agent selects 1.5x/2.0x/3.0x winners by Gemini+LPIPS quality ranking.

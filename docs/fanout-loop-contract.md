@@ -24,9 +24,9 @@ budget, a real blocker, or explicit orchestrator release.
 
 A successful candidate also does not complete the dimension by itself. During
 fan-out, a candidate is retained when **quality improves** or **speed/memory
-improves**. It is discarded when quality does not improve and speed/memory does
-not improve or regresses. The loop continues until the fixed budget, a real
-blocker, or main-orchestrator release.
+improves**. It is discarded only when neither quality nor speed/memory improves.
+The loop continues until the fixed budget, a real blocker, or
+main-orchestrator release.
 
 Default fan-out budget is `max_iters = 40` and
 `early_stop_patience = 0`, which means patience early stop is disabled in the
@@ -46,19 +46,20 @@ higher speed as a tie-breaker. LPIPS alone is not the selector, and lossy
 generative dimensions do not use absolute LPIPS/Gemini thresholds as hard gates
 during loop retention or final target selection.
 
-Exact/lossless dimensions may specialize the frontier rule. In particular,
-`kwl_fusion` is not allowed to spend intentional quality loss: retain a
-speed or memory candidate only when OFF identity passes and ON quality/numeric
-evidence does not regress; retain a quality or numeric-stability candidate only
-when speed does not meaningfully regress. Semantic changes to scheduler, step
-count, tokens, attention density, cache/prune behavior, precision policy, prompt
-state, LoRA state, frame count, resolution, or output shape are rejects rather
-than lossy KWL candidates.
+KWL/kernel optimization follows the same fixed-budget frontier rule as the
+lossy dimensions: run the configured budget, retain candidates that improve
+latency, peak memory, aligned quality, or reliable numeric stability, then pick
+the low/medium/high winners after the budget closes. KWL does not require ON
+bit-exactness, but it still has a strict semantic boundary. Semantic changes to
+scheduler, step count, tokens, attention density, cache/prune behavior,
+quantization policy, prompt state, LoRA state, frame count, resolution, or output
+shape are rejects rather than KWL candidates.
 
-Low-precision numeric dimensions may also use reliable numeric checks as hard
-gates: OFF identity for disabled paths, BF16 fallback integrity, numeric
-non-regression, precision-support proof, and silent-fallback detection. They
-still record LPIPS and aligned pairwise Gemini for cross-profile quality ranking.
+Low-precision numeric dimensions may record reliable numeric checks such as OFF
+identity for disabled paths, BF16 fallback integrity, precision-support proof,
+and silent-fallback detection. They still record LPIPS and aligned pairwise
+Gemini for cross-profile quality ranking, and they should only promote a hard
+numeric gate when the candidate contract explicitly declares it.
 
 The whole experiment is not complete when the fan-out dimensions become idle or
 terminal. After fan-out closes, the main orchestrator must run the fan-in
@@ -130,8 +131,8 @@ Each implementation goal follows this loop:
 7. Decide and loop.
    If quality improves or speed/memory improves, retain the candidate in
    `frontier_candidates`, record the improvement axis, and continue to step 1. If
-   quality does not improve and speed/memory does not improve or regresses,
-   record `discarded_regression`, increment telemetry, and continue to step 1. If
+   neither quality nor speed/memory improves, record `discarded_regression`,
+   increment telemetry, and continue to step 1. If
    the candidate is hard-invalid, write a `rejected` failure signature and
    continue to step 1 with a meaningfully different hypothesis. If blocked, stop
    and write `SUMMARY.md`. If the agent believes the mechanism space is
@@ -146,11 +147,13 @@ Each implementation goal follows this loop:
      --candidate-id <id> \
      --decision <quality_improved|speed_improved|quality_and_speed_improved|discarded_regression|rejected|blocked|structured_negative> \
      --reason "<short reason>" \
+     --purpose <frontier|delivery|evidence|blocker_probe|unsafe_probe|control> \
      --improvement-axis <quality|speed|both|none> \
      --run-dir <run_dir> \
      --evidence <run_dir>/assess_verdict.json
    python3 tools/symposium/loop_control.py decide-next
    python3 tools/symposium/loop_control.py validate-status
+   python3 tools/symposium/loop_control.py status-summary
    ```
 
    For run-backed candidates, `record-candidate` requires a durable
@@ -171,6 +174,19 @@ Each implementation goal follows this loop:
 
    The agent may not continue candidate search when `decide-next` returns
    `terminal_pending_review` or `blocked`.
+
+   `purpose` keeps delivery records distinct from diagnostic evidence:
+
+   - `frontier`: normal fan-out candidate retained for later tier selection.
+   - `delivery`: composed integration candidate eligible for `best_per_tier`.
+   - `evidence`: measured supporting evidence that must not become a tier winner.
+   - `blocker_probe`: bounded probe used only to prove a target blocker.
+   - `unsafe_probe`: intentionally unsafe/aggressive probe, never a delivery winner.
+   - `control`: baseline, OFF identity, warmup, profile, or other non-scored run.
+
+   Watchers and monitors must use `status-summary` or JSON parsing rather than
+   grepping for one terminal string. Valid terminal states are `complete`,
+   `terminal_pending_review`, and `blocked`.
 
 When `max_iters` fires, the dimension enters
 `status=terminal_pending_review`, not global completion. The main orchestrator
@@ -217,6 +233,23 @@ one-shot merge.
    composition until the integration stop rules apply. If it fails, record an
    interaction failure signature and return to step 2 with a repaired merge, a
    reduced subset, or a different target plan.
+
+   Integration records should mark gated target profiles with
+   `--purpose delivery`. Non-delivery rows such as high-target upper-bound
+   probes should use `--purpose blocker_probe` or `--purpose unsafe_probe`; they
+   may support a blocker but must not update `best_per_tier`.
+
+7. Final audit.
+   Before reporting workflow completion, run:
+
+   ```bash
+   python3 tools/fanout_audit.py --run <fanout_run_id_or_path>
+   ```
+
+   The audit checks terminal integration status, release artifacts, pending
+   release-matrix rows, durable evidence files, manifest `source_runs`, live
+   Slurm jobs, live local assessment/launch processes, and run metadata
+   lifecycle history.
 
 Integration stops only when every 1.5x/2.0x/3.0x target has either a gated
 composed profile or an explicit blocker, or when `max_iters` or a real external

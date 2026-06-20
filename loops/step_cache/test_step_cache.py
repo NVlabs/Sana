@@ -12,7 +12,7 @@ import torch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from efficiency import TechniqueContext, at_steps, by_stage, compose, const, get_model_spec  # noqa: E402
+from efficiency import ModelSpec, TechniqueContext, at_steps, by_stage, compose, const  # noqa: E402
 from efficiency.techniques.step_cache import StepCache  # noqa: E402
 
 
@@ -24,13 +24,13 @@ def check(name: str, condition: bool) -> None:
 
 def main() -> int:
     print("[step_cache] compose and schedule")
-    spec = get_model_spec("Cosmos3")
-    check("Cosmos3 spec registered", spec is not None and spec.name == "Cosmos3")
+    spec = ModelSpec(name="StepCacheFixture")
+    check("fixture spec constructed", spec.name == "StepCacheFixture")
 
     skip = by_stage({"stage1": at_steps("16-28", True, False)}, default=False)
     step_cache = StepCache(skip=skip, delta_scale=0.0)
     plan = compose([step_cache], spec)
-    check("StepCache composes against Cosmos3", plan.techniques == [step_cache])
+    check("StepCache composes against fixture spec", plan.techniques == [step_cache])
 
     check(
         "active stage1 step20 (skip cluster)",

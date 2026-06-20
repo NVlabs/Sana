@@ -183,12 +183,13 @@ patterns are useful as probes when target attention maps show similar structure:
 Use the same frontier rule as step cache and token pruning:
 
 - Retain a candidate when quality improves or speed/memory improves.
-- Discard a candidate when quality does not improve and speed/memory does not
-  improve or regresses.
+- Discard a candidate only when neither quality nor speed/memory improves.
 - Reject hard-invalid candidates such as broken OFF identity, missing artifacts,
   metadata-only env with claimed runtime behavior, or non-reproducible masks.
-- Continue until max_iters, structured negative, real blocker, or orchestrator
-  release. Do not stop merely because one sparse pattern fails a tier gate.
+- Continue until max_iters, real blocker, or orchestrator release. A
+  structured-negative proposal is logged as evidence but does not stop the
+  default fixed-budget loop by itself. Do not stop merely because one sparse
+  pattern fails a tier gate.
 
 For retained candidates, record:
 

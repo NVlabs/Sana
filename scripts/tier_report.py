@@ -8,9 +8,9 @@ Reads one or more `--verdict path/to/plan_eval_assess.json` (the JSON emitted by
      for each speed target, choose the best-quality candidate/profile at or
      above the target speed.
 
-The composition step calls efficiency.compose() against the Cosmos3 spec, so
-exclusive-seam conflicts (two step_output writers / two FFN precisions / etc.)
-are surfaced instead of silently double-applying.
+The composition step calls efficiency.compose() against manifest-declared
+capabilities, so exclusive-seam conflicts (two step_output writers / two FFN
+precisions / etc.) are surfaced instead of silently double-applying.
 
 CLI:
   python scripts/tier_report.py --model cosmos3 --verdict v1.json --verdict v2.json

@@ -70,6 +70,9 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert "Cosmos3 inference code" not in text
     assert "target-model inference code" in text
     assert "## Fan-Out Loop Contract" in text
+    assert "## Method Baseline Catalog" in text
+    assert "`scheduled_step_reuse` [wired/compose_ready]" in text
+    assert "`attention_broadcast` [runtime_patch/not_wired]" in text
     assert "bounded per-dimension search loop" in text
     assert "quality improved or speed improved" in text
     assert "retained frontier candidates" in text
@@ -101,6 +104,8 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert context["model_profile"] == "models/cosmos3.toml"
     assert context["search_space_root"] == "search_space"
     assert context["search_space_doc"] == "search_space/01_cache.md"
+    assert any(item["tier"] == "wired" for item in context["method_baselines"])
+    assert any(item["tier"] == "runtime_patch" for item in context["method_baselines"])
     assert context["history_policy"]["mode"] == "clean_start_current_experiment_only"
     assert (
         context["history_policy"]["startup_enforcement"]
@@ -114,12 +119,12 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert context["loop_contract"]["loop_mode"] == "fixed_budget_frontier"
     assert context["loop_contract"]["failed_candidate_action"] == "discard_or_reject_log_and_loop"
     assert context["loop_contract"]["successful_candidate_action"] == "retain_frontier_candidate_and_loop"
-    assert context["loop_contract"]["candidate_retention"] == "retain_if_quality_improves_or_speed_improves_discard_if_neither_improves"
+    assert context["loop_contract"]["candidate_retention"] == "retain_if_quality_improves_or_speed_or_memory_improves_discard_if_neither_improves"
     assert context["loop_contract"]["early_stop_exit_status"] == "terminal_pending_review"
     assert context["loop_contract"]["speed_targets"] == {"low": 1.5, "medium": 2.0, "high": 3.0}
     assert "aligned_pairwise_gemini_max_artifact_severity" in context["loop_contract"]["quality_ranking"]
     assert "aligned_lpips_max" in context["loop_contract"]["quality_ranking"]
-    assert context["loop_contract"]["hard_quality_thresholds"].startswith("disabled_for_lossy")
+    assert context["loop_contract"]["hard_quality_thresholds"].startswith("disabled_by_default")
     assert "select_tiers_for_integration" in context["loop_contract"]["main_agent_review_actions"]
     assert "restart_with_new_direction" in context["loop_contract"]["main_agent_review_actions"]
     assert "aligned_lpips" in context["loop_contract"]["quality_source_of_truth"]
@@ -311,7 +316,50 @@ def test_prepare_goal_embeds_token_prune_search_space_only() -> None:
     assert context["search_space_doc"] == "search_space/02_token_pruning.md"
 
 
-def test_prepare_goal_embeds_kwl_exact_rules() -> None:
+def test_prepare_goal_embeds_sparse_attention_method_baselines() -> None:
+    goals_root = ROOT / ".symposium/scratch/test-goals"
+    goal_id = "unit-sparse-baselines-goal"
+    goal_dir = goals_root / goal_id
+    if goal_dir.exists():
+        shutil.rmtree(goal_dir)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(PREPARE),
+            "--goal-id",
+            goal_id,
+            "--candidate",
+            "candidates/baseline.toml",
+            "--objective",
+            "Explore sparse attention baselines beyond the wired helper.",
+            "--dimension",
+            "sparse_attention",
+            "--role",
+            "implementation",
+            "--goals-root",
+            str(goals_root.relative_to(ROOT)),
+        ],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.returncode == 0, proc.stderr
+    text = (goal_dir / "goal.md").read_text()
+    assert "`piecewise_pisa_env` [wired/compose_ready]" in text
+    assert "`online_mask_search_reuse` [runtime_patch/not_wired]" in text
+    assert "`dynamic_pattern_probe` [upper_bound_probe/probe_only]" in text
+    context = json.loads((goal_dir / "context.json").read_text())
+    baselines = context["method_baselines"]
+    assert len(baselines) >= 9
+    assert any(item["tier"] == "wired" for item in baselines)
+    assert any(item["tier"] == "runtime_patch" for item in baselines)
+    assert any(item["tier"] == "upper_bound_probe" for item in baselines)
+    assert any(item["family"] == "adaspa_mask_search_reuse" for item in baselines)
+    assert any(item["family"] == "haste_headwise_budgets" for item in baselines)
+
+
+def test_prepare_goal_embeds_kwl_quality_gated_rules() -> None:
     goals_root = ROOT / ".symposium/scratch/test-goals"
     goal_id = "unit-kwl-goal"
     goal_dir = goals_root / goal_id
@@ -326,7 +374,7 @@ def test_prepare_goal_embeds_kwl_exact_rules() -> None:
             "--candidate",
             "candidates/baseline.toml",
             "--objective",
-            "Explore exact KWL fusion as an open-ended goal.",
+            "Explore quality-gated KWL optimization as an open-ended goal.",
             "--dimension",
             "kwl_fusion",
             "--role",
@@ -342,17 +390,18 @@ def test_prepare_goal_embeds_kwl_exact_rules() -> None:
     assert proc.returncode == 0, proc.stderr
     text = (goal_dir / "goal.md").read_text()
     assert "Relevant search doc: `search_space/05_kernel_fusion.md`" in text
-    assert "## KWL Exactness Override" in text
-    assert "retain speed or memory wins only when OFF" in text
-    assert "identify at least six exact/lossless method families" in text
+    assert "## KWL Quality-Gated Frontier" in text
+    assert "run the full fixed-budget frontier loop" in text
+    assert "ON bit-exactness is not required" in text
+    assert "identify at least six KWL method families" in text
     assert "GEMM epilogues" in text
     assert "compile or CUDA graph capture" in text
     assert "layout/copy elimination" in text
     context = json.loads((goal_dir / "context.json").read_text())
     assert context["dimension"] == "kwl_fusion"
     assert context["search_space_doc"] == "search_space/05_kernel_fusion.md"
-    assert "retain_exact_kwl_candidate" in context["loop_contract"]["candidate_retention"]
-    assert "numeric_non_regression" in context["loop_contract"]["quality_source_of_truth"]
+    assert "retain_kwl_candidate" in context["loop_contract"]["candidate_retention"]
+    assert "declared_numeric_tolerance" in context["loop_contract"]["quality_source_of_truth"]
     assert "module_level_tensor_diff_when_available" in context["loop_contract"]["quality_source_of_truth"]
 
 
@@ -498,7 +547,8 @@ def main() -> None:
     test_prepare_goal_can_clean_stale_records()
     test_prepare_goal_can_create_integration_goal()
     test_prepare_goal_embeds_token_prune_search_space_only()
-    test_prepare_goal_embeds_kwl_exact_rules()
+    test_prepare_goal_embeds_sparse_attention_method_baselines()
+    test_prepare_goal_embeds_kwl_quality_gated_rules()
     test_session_start_sends_native_goal_follow()
     test_session_start_can_run_in_isolated_worktree()
     test_search_space_import_records_source_metadata()

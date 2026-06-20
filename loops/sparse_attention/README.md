@@ -43,8 +43,8 @@ Before spending GPU iterations, record an attention preflight:
 - dense fallback behavior and OFF identity.
 
 Use the same frontier rule as step cache: retain a candidate when quality
-improves or speed/memory improves; discard it when neither improves or
-speed/memory regresses. A failed target-selection check is not a dimension-level
+improves or speed/memory improves; discard it only when neither quality nor
+speed/memory improves. A failed target-selection check is not a dimension-level
 stop.
 
 ## Independent test

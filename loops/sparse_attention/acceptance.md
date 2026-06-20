@@ -35,8 +35,8 @@ proposal/failure signature; it does not stop the default fixed-budget loop.
 ## Frontier retention and final tier selection
 During the 40-iteration search, keep a candidate in the retained frontier if it
 improves **quality** or improves **latency/peak memory**. It does not need to pass
-a low/medium/high tier at retention time. Discard it if quality does not improve
-and speed/memory does not improve or regresses. Hard-invalid candidates, such as
+a low/medium/high tier at retention time. Discard it only when neither quality
+nor speed/memory improves. Hard-invalid candidates, such as
 missing artifacts, broken OFF identity, or runtime failure, are rejected with a
 failure signature.
 
@@ -68,7 +68,7 @@ validate, drop, or mark blocked.
 
 ## Reject
 - OFF path not byte-identical on guarded paths / baseline path altered.
-- Quality does not improve and speed/mem does not improve or regresses.
+- Quality does not improve and speed/mem does not improve.
 - Sparse mask/search/permutation overhead erases the attention-kernel speedup.
 - Candidate claims sparse runtime behavior from metadata-only env/config.
 - Sparse path changes token layout without exact restoration.

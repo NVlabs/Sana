@@ -248,6 +248,81 @@ def test_frontier_retention_and_review_selects_tiers() -> None:
         assert review["dimensions"][0]["frontier_count"] == 1
 
 
+def test_delivery_purpose_updates_best_per_tier_but_blocker_probe_does_not() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        run([PY, str(LOOP), "init", "--dimension", "integration", "--max-iters", "4"], root)
+        delivery_gate = write_gate_artifact(root, "runs/low")
+        run(
+            [
+                PY,
+                str(LOOP),
+                "record-candidate",
+                "--candidate-id",
+                "low",
+                "--decision",
+                "speed_improved",
+                "--improvement-axis",
+                "speed",
+                "--purpose",
+                "delivery",
+                "--tier",
+                "low",
+                "--run-dir",
+                "runs/low",
+                "--evidence",
+                delivery_gate,
+                "--reason",
+                "low delivery",
+                "--speedup",
+                "1.7",
+            ],
+            root,
+        )
+        blocker_gate = write_gate_artifact(root, "runs/high-probe")
+        run(
+            [
+                PY,
+                str(LOOP),
+                "record-candidate",
+                "--candidate-id",
+                "high-probe",
+                "--decision",
+                "speed_improved",
+                "--improvement-axis",
+                "speed",
+                "--purpose",
+                "blocker_probe",
+                "--tier",
+                "high",
+                "--run-dir",
+                "runs/high-probe",
+                "--evidence",
+                blocker_gate,
+                "--reason",
+                "unsafe high evidence",
+                "--speedup",
+                "2.5",
+            ],
+            root,
+        )
+        status = load_status(root)
+        assert status["best_per_tier"]["low"]["candidate_id"] == "low"
+        assert "high" not in status["best_per_tier"]
+        assert [item["candidate_id"] for item in status["frontier_candidates"]] == ["low"]
+
+
+def test_status_summary_marks_terminal_pending_review_as_terminal() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        make_terminal_frontier_dimension(root, "step_cache")
+        out = run([PY, str(LOOP), "status-summary"], root / "step_cache")
+        summary = json.loads(out.stdout)
+        assert summary["status"] == "terminal_pending_review"
+        assert summary["is_terminal"] is True
+        assert "terminal_pending_review" in summary["terminal_statuses"]
+
+
 def test_structured_negative_does_not_stop_fixed_budget_loop() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -598,7 +673,7 @@ def test_ensure_integration_noops_while_dimension_running() -> None:
         assert result["reason"] == "continue_monitoring"
 
 
-def test_ensure_integration_noops_when_integration_complete() -> None:
+def test_ensure_integration_noops_when_integration_terminal() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         fanout_root = root / "output/fanout_runs/unit"
@@ -606,7 +681,7 @@ def test_ensure_integration_noops_when_integration_complete() -> None:
         integration = fanout_root / "integration"
         integration.mkdir(parents=True)
         (integration / "INTEGRATION-STATUS.json").write_text(
-            json.dumps({"status": "complete"}) + "\n"
+            json.dumps({"status": "terminal_pending_review"}) + "\n"
         )
 
         out = run(
@@ -622,11 +697,14 @@ def test_ensure_integration_noops_when_integration_complete() -> None:
         )
         result = json.loads(out.stdout)
         assert result["decision"] == "already_complete"
+        assert result["status"] == "terminal_pending_review"
 
 
 def main() -> None:
     test_fixed_budget_discards_do_not_early_stop()
     test_frontier_retention_and_review_selects_tiers()
+    test_delivery_purpose_updates_best_per_tier_but_blocker_probe_does_not()
+    test_status_summary_marks_terminal_pending_review_as_terminal()
     test_structured_negative_does_not_stop_fixed_budget_loop()
     test_record_rejects_run_dir_without_authoritative_gate()
     test_add_evidence_backfills_existing_record()
@@ -636,7 +714,7 @@ def main() -> None:
     test_validate_rejects_frontier_candidate_with_discarded_source()
     test_ensure_integration_dry_run_starts_after_tier_selection()
     test_ensure_integration_noops_while_dimension_running()
-    test_ensure_integration_noops_when_integration_complete()
+    test_ensure_integration_noops_when_integration_terminal()
     print("loop control tests passed")
 
 

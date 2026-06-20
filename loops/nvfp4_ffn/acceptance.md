@@ -28,8 +28,8 @@ proposal/failure signature; it does not stop the default fixed-budget loop.
 ## Frontier retention and final tier selection
 During the 40-iteration search, keep a candidate in the retained frontier if it
 improves **quality** or improves **latency/peak memory**. It does not need to pass
-a low/medium/high tier at retention time. Discard it if quality does not improve
-and speed/memory does not improve or regresses. Hard-invalid candidates, such as
+a low/medium/high tier at retention time. Discard it only when neither quality
+nor speed/memory improves. Hard-invalid candidates, such as
 missing artifacts, broken OFF identity, or runtime failure, are rejected with a
 failure signature.
 
@@ -43,8 +43,9 @@ Quality evidence comes from OFF identity (when applicable), aligned LPIPS on the
 canonical baseline frames, and aligned pairwise Gemini. Collector `quality.json`
 is telemetry and cannot override the aligned gate during final selection. For
 low-precision numeric transforms, reliable numeric/precision checks, BF16
-fallback integrity, and silent-fallback detection may be hard gates; LPIPS and
-Gemini are still joint ranking signals for final target selection.
+fallback integrity, and silent-fallback detection are diagnostics unless the
+candidate contract explicitly declares a hard gate; LPIPS and Gemini are still
+joint ranking signals for final target selection.
 
 ## Keep / output
 Keep retained frontier candidates with their quality evidence, speed/memory
@@ -61,7 +62,7 @@ validate, drop, or mark blocked.
 
 ## Reject
 - OFF path not byte-identical on guarded paths / baseline path altered.
-- Quality does not improve and speed/mem does not improve or regresses.
+- Quality does not improve and speed/mem does not improve.
 - Env flag is metadata-only but the candidate claims it changed runtime behavior.
 - Hardware or TransformerEngine support is missing and no real blocker is recorded.
 - State (cache/prune/etc.) leaks across samples or stages.

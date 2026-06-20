@@ -87,6 +87,7 @@ def main() -> int:
         goal = (goal_dir / "goal.md").read_text()
         context = json.loads((goal_dir / "context.json").read_text())
         check(f"{dim} goal has search-space section", "## Search Space Start" in goal)
+        check(f"{dim} goal has method baseline catalog", "## Method Baseline Catalog" in goal)
         check(f"{dim} goal has history policy", "## Historical Record Policy" in goal)
         check(f"{dim} goal exposes inference repo", "Sol-LTX-Infer/" in goal)
         check(f"{dim} goal says direct modify", "modify" in goal and "inference code" in goal)
@@ -95,6 +96,8 @@ def main() -> int:
         check(f"{dim} goal has acceptance criteria", bool(context["acceptance_criteria"]))
         check(f"{dim} context search_space_root", context["search_space_root"] == "search_space")
         check(f"{dim} context search_space_doc", context["search_space_doc"] == f"search_space/{DIMENSIONS[dim]}")
+        check(f"{dim} context method baselines", bool(context["method_baselines"]))
+        check(f"{dim} has at least one wired/candidate baseline", any(item["tier"] in {"wired", "candidate_wired"} for item in context["method_baselines"]))
         check(f"{dim} context history policy", context["history_policy"]["mode"] == "clean_start_current_experiment_only")
         check(f"{dim} goal uses relevant search doc", f"Relevant search doc: `search_space/{DIMENSIONS[dim]}`" in goal)
         check(f"{dim} context max_iters", context["loop_contract"]["max_iters"] == 40)
@@ -110,6 +113,7 @@ def main() -> int:
     search_out = run([SEARCH_PY, "search/search.py", "--model", "cosmos3"]).stdout
     check("search reports launchable families", "launchable technique-dimensions" in search_out)
     check("search reports compose diagnostic", "compose-diagnostic" in search_out)
+    check("search reports method baselines", "method_baselines:" in search_out)
 
     print("e2e workflow smoke passed")
     return 0

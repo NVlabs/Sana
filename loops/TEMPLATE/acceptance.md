@@ -16,7 +16,7 @@ contradicts the aligned gate.
 ## Frontier Retention
 
 Retain a candidate when quality improves or speed/memory improves. Discard it
-when quality does not improve and speed/memory does not improve or regresses.
+only when neither quality nor speed/memory improves.
 Final low/medium/high selection happens after the loop budget closes as 1.5x,
 2.0x, and 3.0x speed targets. Within a target, choose the best joint quality
 profile using aligned pairwise Gemini severity/status and aligned LPIPS together;
@@ -26,7 +26,7 @@ LPIPS alone is not the selector.
 
 - output video missing or empty
 - official config changed without a separate baseline
-- no quality improvement and no speed/memory improvement, or speed/memory regression
+- no quality improvement and no speed/memory improvement
 - implementation cannot be disabled cleanly
 
 Each rejected candidate must be logged in `SEARCH_JOURNAL.md` with root cause and

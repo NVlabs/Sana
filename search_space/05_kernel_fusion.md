@@ -1,4 +1,4 @@
-# Search Space: Kernel Fusion and Lossless Operator Optimization
+# Search Space: Kernel Fusion and Quality-Gated Operator Optimization
 
 **Scope**: Find kernel-level and graph-level implementation optimizations that
 preserve the same model algorithm. KWL candidates may change floating-point
@@ -13,21 +13,29 @@ search space. Subagents should inspect the target-model hot path directly and
 may implement exact fused operators, backend swaps, compile wrappers, graph
 capture, or layout fixes in the execution repo.
 
-## Exactness Contract
+## Quality-Gated Frontier Contract
 
-KWL is a lossless implementation dimension:
+KWL is an implementation optimization dimension with a strict semantic boundary,
+not a bit-exact-only dimension. Bit-exact or dtype-rounding-only candidates are
+preferred when they exist, but non-bit-exact kernel/backend paths are valid
+frontier candidates when their drift is declared and the authoritative visual
+evidence is recorded.
 
 - OFF path must be identity to baseline for guarded code paths.
-- ON path must be algorithmically equivalent. Small BF16/FP16 differences from
-  accumulation order, fused epilogues, or FMA are allowed only when the
-  authoritative quality gate shows no aligned visual/numeric regression.
-- A speed or memory win is retainable only when OFF identity passes and ON
-  quality/numeric evidence does not regress.
-- A numeric-stability or quality improvement is retainable only when speed does
-  not meaningfully regress.
+- ON path may change floating-point order, FMA/epilogue behavior, compiler
+  lowering, backend implementation, or use a declared approximate kernel path.
+- Every candidate must record its expected tolerance class: bit-exact,
+  dtype-rounding-only, reduction-order drift, FMA/epilogue drift, fast-math
+  drift, or approximate-kernel drift.
+- Use the standard fixed-budget frontier rule: retain a candidate when quality
+  improves, latency improves, peak memory improves, or both quality and
+  efficiency improve. Do not discard a speed/memory win only because it is not
+  bit-exact; keep the aligned quality evidence for final tier selection.
+- Final low/medium/high winners are selected after the 40-iteration budget by
+  speed target and aligned quality ranking, the same as other dimensions.
 - Any candidate that changes sampling, denoising steps, token count, attention
-  density, cache reuse, precision format, prompt handling, or output shape is
-  not KWL. Route it to the appropriate approximate dimension instead.
+  density, cache reuse, quantization policy, prompt handling, or output shape is
+  not KWL. Route it to the appropriate dimension instead.
 
 ## Required Preflight
 
@@ -51,7 +59,7 @@ Before proposing the first runnable candidate, record:
 
 These are method families, not a fixed grid. Each candidate should select one
 family, prove why it is hot for the target model, implement one mechanism, and
-record the expected numerical tolerance.
+record the expected numerical tolerance and aligned quality evidence.
 
 ### 1. GEMM Epilogue Fusion
 
@@ -92,9 +100,11 @@ Guardrails:
 - reduction order may differ, but epsilon, dtype promotion, and affine
   parameters must match baseline semantics;
 - in-place outputs must not alias tensors consumed later by the baseline graph;
-- compare both module-level tensor diffs and full generated output quality.
+- compare both module-level tensor diffs and full generated output quality when
+  tensor diffs are practical; full aligned quality evidence is required for
+  retained candidates.
 
-### 3. Attention-Adjacent Exact Fusion
+### 3. Attention-Adjacent Fusion
 
 Optimize work around attention without changing which tokens attend to which
 tokens.
@@ -159,7 +169,8 @@ Guardrails:
 
 ### 6. Launch Overhead Reduction
 
-Reduce the number of small kernels without changing math.
+Reduce the number of small kernels without changing the model-level semantic
+boundary.
 
 Possible targets:
 
@@ -198,7 +209,7 @@ Guardrails:
 
 ### 8. Decode, VAE, and Postprocess Fusion
 
-Apply exact fusions outside the denoiser when profiling shows they matter.
+Apply fusions outside the denoiser when profiling shows they matter.
 
 Possible targets:
 
@@ -215,7 +226,8 @@ Guardrails:
 
 ### 9. Backend Selection and Fallback Policy
 
-Try an equivalent backend only when the semantic contract is proven.
+Try an equivalent or quality-gated approximate backend only when the semantic
+boundary and fallback policy are proven.
 
 Possible targets:
 
@@ -243,7 +255,7 @@ Guardrails:
 - guard: env flag, module flag, shape/dtype guard, warm-cache guard, fallback
   policy
 - numerical tolerance: bit-exact, dtype-rounding-only, reduction-order drift,
-  FMA/epilogue drift
+  FMA/epilogue drift, fast-math drift, approximate-kernel drift
 - timing state: cold compile, warm compile, autotuned, CUDA graph replay,
   cache-reused
 - validation surface: module tensor diff, OFF identity, full render gate,
@@ -275,7 +287,8 @@ Key metrics:
 
 A structured negative is acceptable only after the subagent records:
 
-- at least six exact/lossless method families considered and why each is unsafe,
+- at least six KWL method families considered, including exact-preferred and
+  quality-gated approximate variants where relevant, and why each is unsafe,
   unavailable, already fused, or not hot enough;
 - profile or code evidence for the top remaining hot spots;
 - backend availability and fallback evidence;

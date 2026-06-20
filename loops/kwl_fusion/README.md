@@ -1,4 +1,4 @@
-# Dimension: kwl_fusion - exact operator fusion
+# Dimension: kwl_fusion - kernel and operator optimization
 
 A search dimension for kernel and operator fusion experiments. Native subagents
 should read `search_space/05_kernel_fusion.md`, then inspect and modify target-model
@@ -11,10 +11,11 @@ build-time diagnostic helper that can emit `SGLANG_HQ_KWL_*` build flags. This
 helper can be reused, replaced, or ignored by subagents. `dimension.toml`
 records search axes only; it does not define a fixed flag bundle to copy.
 
-KWL means exact implementation optimization. Candidate mechanisms include GEMM
-epilogues, norm/modulation fusion, attention-adjacent dense fusion, compile or
-CUDA graph capture, layout/copy elimination, launch batching, stream overlap,
-decode/postprocess fusion, and backend selection with exact fallback.
+KWL means guarded implementation optimization. Candidate mechanisms include
+GEMM epilogues, norm/modulation fusion, attention-adjacent dense fusion, compile
+or CUDA graph capture, layout/copy elimination, launch batching, stream overlap,
+decode/postprocess fusion, backend selection, and quality-gated approximate
+kernel/backend paths.
 
 ## Exploration Mode
 
@@ -23,16 +24,16 @@ chains, module construction, and compile behavior, then implement the candidate
 where it is easiest to prove OFF identity and warm-speed benefit.
 
 KWL is treated as operator-only: it must not change scheduler, step count,
-prompting, guidance, LoRA state, resolution, frame count, token set, or attention
-semantics. OFF is expected to be identity; ON may differ at low-order numeric
-levels because fused kernels change floating-point operation ordering, so
-side-by-side visual review remains part of retention and speed-target selection.
+prompting, guidance, LoRA state, resolution, frame count, token set, attention
+semantics, cache/prune semantics, or quantization policy. OFF is expected to be
+identity; ON may be non-bit-exact because fused or approximate kernels can
+change floating-point behavior, so side-by-side visual review is required for
+retention and speed-target selection.
 
-Unlike cache, pruning, sparse attention, or quantization dimensions, KWL does
-not spend intentional quality loss. A speed or memory candidate is retained
-only if OFF identity passes and ON quality/numeric evidence does not regress. A
-numeric-stability candidate is retained only if speed does not meaningfully
-regress.
+KWL uses the same fixed-budget frontier rule as other dimensions. A candidate is
+retained when latency improves, peak memory improves, aligned quality improves,
+or reliable numeric stability improves. Bit-exactness is useful ranking and risk
+metadata, not the default promotion requirement.
 
 Required preflight before the first runnable candidate:
 

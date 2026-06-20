@@ -21,6 +21,22 @@ loops/<loop-id>/
 
 `runs/` and `scratch/` are ignored by git.
 
+## Method Baseline Catalog
+
+Each `dimension.toml` may declare `[[method_baseline]]` entries. These are not
+fixed hyperparameter grids and are not delivery winners by themselves. They are
+method-family starting points that tell goal agents whether a baseline is:
+
+- `wired`: existing helper/runtime path can launch after normal manifest work;
+- `candidate_wired`: helper/env exists, but target-runtime consumption still
+  needs proof or a small adapter;
+- `runtime_patch`: the method family must patch the live inference path;
+- `upper_bound_probe`: diagnostic speed-ceiling probe that must not become a
+  delivery winner without full quality evidence and safe fallback behavior.
+
+The catalog exists to keep open-ended agents from only tuning the first wired
+helper when the search-space markdown describes broader method families.
+
 ## Loop IDs
 
 Suggested first loops:

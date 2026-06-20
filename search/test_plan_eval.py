@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from search.plan_eval import assess, load_profile, load_tiers, promotion_note, quality_ranking_key, tier_of, render_candidate  # noqa: E402
+from search.plan_eval import assess, gemini_quality_blockers, load_profile, load_tiers, promotion_note, quality_ranking_key, tier_of, render_candidate  # noqa: E402
 from tools.vision.nvidia_gemini_judge import extract_json  # noqa: E402
 
 ok = fail = 0
@@ -95,6 +95,17 @@ check("note: blocked quality evidence asks for backfill",
           {"overall": "inconclusive", "new_artifacts": []},
           tiers,
       ))
+check("gemini fail becomes hard quality blocker",
+      gemini_quality_blockers({"overall": "fail", "new_artifacts": [{"severity": "high"}]}) == ["nvidia_gemini:fail:high"])
+check("note: gemini fail says quality failed",
+      "quality failed" in promotion_note(
+          None,
+          ["nvidia_gemini:fail:high"],
+          2.0,
+          None,
+          {"overall": "fail", "new_artifacts": [{"severity": "high"}]},
+          tiers,
+      ))
 check("note: no speedup still says no latency/mem improvement",
       "no latency/mem improvement" in promotion_note(
           None,
@@ -142,6 +153,44 @@ with tempfile.TemporaryDirectory() as tmp:
     check("assess: pairwise override can speed-bucket despite collector Gemini block",
           verdict["tier"] == "low")
 
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp) / "run"
+    (root / "outputs").mkdir(parents=True)
+    (root / "outputs/benchmark.json").write_text(json.dumps({"total_s": 80.0}) + "\n")
+    (root / "outputs/quality.json").write_text(json.dumps({
+        "status": "ok",
+        "promotion_blockers": [],
+        "judges": {
+            "nvidia_gemini": {
+                "status": "complete",
+                "result": {
+                    "overall": "fail",
+                    "new_artifacts": [{"severity": "high"}],
+                },
+            },
+        },
+    }) + "\n")
+    (root / "outputs/quality_pairwise.json").write_text(
+        json.dumps({"overall": "pass", "new_artifacts": []}) + "\n"
+    )
+    verdict = assess(root, load_profile("cosmos3"), tiers, baseline_frames=None, gemini=True)
+    check("assess: collector Gemini fail is not hidden by pairwise pass",
+          "nvidia_gemini:fail:high" in verdict["quality_blockers"])
+    check("assess: conflicting Gemini fail blocks speed bucket", verdict["tier"] is None)
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp) / "run"
+    (root / "outputs").mkdir(parents=True)
+    (root / "outputs/benchmark.json").write_text(json.dumps({"total_s": 80.0}) + "\n")
+    (root / "outputs/quality.json").write_text(json.dumps({"status": "ok", "judges": {}}) + "\n")
+    (root / "outputs/quality_pairwise.json").write_text(
+        json.dumps({"overall": "fail", "new_artifacts": [{"severity": "high"}]}) + "\n"
+    )
+    verdict = assess(root, load_profile("cosmos3"), tiers, baseline_frames=None, gemini=True)
+    check("assess: pairwise Gemini fail blocks quality", "nvidia_gemini:fail:high" in verdict["quality_blockers"])
+    check("assess: pairwise Gemini fail blocks speed bucket", verdict["tier"] is None)
+    check("assess: pairwise Gemini fail note is explicit", "quality failed" in verdict["note"])
+
 # --- render_candidate produces a launcher-valid sparse manifest ---
 try:
     prof = load_profile("cosmos3")
@@ -165,10 +214,26 @@ try:
         kind="build_transform",
     )
     check("render nvfp4: enables primary env", q["env"].get("SGLANG_HQ_ENABLE_TE_NVFP4_FFN") == "1")
-    check("render nvfp4: recipe flag propagated", q["env"].get("SGLANG_LTX2_TE_NVFP4_DISABLE_RHT") == "0")
-    check("render nvfp4: fused path propagated", q["env"].get("SGLANG_LTX2_TE_NVFP4_FUSED_PROJ_IN_GELU") == "1")
+    check("render nvfp4: recipe flag propagated", q["env"].get("SGLANG_HQ_NVFP4_DISABLE_RHT") == "0")
+    check("render nvfp4: fused path propagated", q["env"].get("SGLANG_HQ_ENABLE_TE_NVFP4_FUSED_PROJ_IN_GELU") == "1")
+    check("render nvfp4: no implicit LTX2 adapter env",
+          not any(key.startswith("SGLANG_LTX2_TE_NVFP4_") for key in q["env"]))
     check("render nvfp4: backend propagated", q["env"].get("SGLANG_DIFFUSION_FLASHINFER_FP4_GEMM_BACKEND") == "cudnn")
     check("render nvfp4: dense guard metadata propagated", q["env"].get("SGLANG_HQ_NVFP4_DENSE_LAYERS") == "0-1")
+    p = render_candidate(
+        prof,
+        "nvfp4_ffn",
+        {
+            "module_scope": "profiled_hot_ffn",
+            "profile_layer_scores": "0-1:0.05,2-29:1.0,30-31:0.05",
+            "profile_keep_ratio": 0.875,
+        },
+        kind="build_transform",
+    )
+    check("render nvfp4 profile: selector-derived profiled layers propagated",
+          p["env"].get("SGLANG_HQ_NVFP4_PROFILED_LAYERS") == "2-29")
+    check("render nvfp4 profile: selector-derived dense guards propagated",
+          p["env"].get("SGLANG_HQ_NVFP4_DENSE_LAYERS") == "0-1,30-31")
 except Exception as e:  # torch/efficiency import issues shouldn't fail the tier logic
     print(f"  SKIP  render_candidate ({type(e).__name__}: {e})")
 

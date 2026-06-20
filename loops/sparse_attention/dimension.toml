@@ -26,6 +26,87 @@ search_axes = [
   "mask-search overhead",
 ]
 
+[[method_baseline]]
+id = "piecewise_pisa_env"
+family = "piecewise_pisa"
+tier = "wired"
+status = "compose_ready"
+description = "Existing SparseAttention transform sets SGLANG_HQ component backend/config for the piecewise/PISA-style runtime path."
+entrypoint = "efficiency/transforms/sparse_attention.py"
+required_work = "Generate a candidate manifest, compose, launch, and gate; prove target runtime consumes the env/config."
+
+[[method_baseline]]
+id = "spatial_temporal_head_routing"
+family = "sparse_videogen_head_routing"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Profile heads/layers as spatial, temporal, mixed, or dense, then route each class to a matching sparse pattern."
+entrypoint = "Sol-LTX-Infer attention dispatch path"
+required_work = "Patch the attention path or backend selector; record head classification, layout cost, dense fallback, and OFF identity."
+
+[[method_baseline]]
+id = "semantic_permutation"
+family = "svg2_semantic_permutation"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Group semantically or feature-similar tokens into contiguous blocks before sparse attention, then scatter back exactly."
+entrypoint = "Sol-LTX-Infer attention/token layout path"
+required_work = "Implement gather/permutation/scatter instrumentation; measure permutation overhead separately from sparse kernel time."
+
+[[method_baseline]]
+id = "online_mask_search_reuse"
+family = "adaspa_mask_search_reuse"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Run precise online block-mask search on selected steps and reuse masks while Q/K or LSE drift stays low."
+entrypoint = "Sol-LTX-Infer attention mask construction path"
+required_work = "Patch mask search/cache state; record refresh policy, mask-search overhead, drift signal, and dense fallback."
+
+[[method_baseline]]
+id = "proxy_mask_prediction"
+family = "spargeattn_proxy_mask"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Predict sparse blocks from compressed representative query/key blocks with softmax-aware filtering."
+entrypoint = "Sol-LTX-Infer attention score or sparse-index path"
+required_work = "Patch proxy block generation and filtering; prove uncertain blocks fall back to dense or conservative sparse."
+
+[[method_baseline]]
+id = "rotating_anchor_windows"
+family = "lvsa_rotating_anchors"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Use local spatial/temporal windows plus rotating global anchors to reduce long-range attention cost."
+entrypoint = "Sol-LTX-Infer attention mask or sparse-index path"
+required_work = "Patch window/anchor index construction; check long-range temporal repetition, frozen motion, and anchor coverage."
+
+[[method_baseline]]
+id = "qk_coclustering"
+family = "svoo_qk_coclustering"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Use layer-wise sensitivity plus online Q/K block co-clustering to keep coupled query-key regions."
+entrypoint = "Sol-LTX-Infer attention score or sparse-index path"
+required_work = "Add Q/K block clustering and per-layer budgets; record clustering overhead and quality-speed frontier."
+
+[[method_baseline]]
+id = "headwise_adaptive_budgets"
+family = "haste_headwise_budgets"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Assign per-head sparse budgets and reuse masks when query-key drift is small."
+entrypoint = "Sol-LTX-Infer attention head routing path"
+required_work = "Patch per-head budget policy; record mask reuse criteria, unstable-head fallback, and overhead."
+
+[[method_baseline]]
+id = "dynamic_pattern_probe"
+family = "minference_dynamic_patterns"
+tier = "upper_bound_probe"
+status = "probe_only"
+description = "Try A-shape, vertical/slash, or block-sparse dynamic patterns only when target attention maps show matching structure."
+entrypoint = "Sol-LTX-Infer attention sparse-index path"
+required_work = "Record as blocker_probe or unsafe_probe unless it has full quality evidence and a safe dense fallback."
+
 # Eval binding (model-agnostic; the model profile supplies the baseline to beat).
 [eval]
 profile = "evals/profiles/official_video_t2v.toml"
@@ -40,6 +121,6 @@ early_stop_patience = 0                  # fixed-budget frontier mode; 0 disable
 keep = "frontier_candidates"             # keep candidates that improve quality OR speed/memory
 tiers = "evals/tiers.toml"               # speed targets: low=1.5x, medium=2.0x, high=3.0x
 # Retain a candidate during the 40-iteration loop if quality improves OR latency/peak_mem improves.
-# Discard it when quality does not improve and speed/memory does not improve or regresses.
+# Discard it only when neither quality nor speed/memory improves.
 # Structured-negative is logged as a proposal/failure signature; it does not stop this default loop.
 # After the loop, the main agent selects 1.5x/2.0x/3.0x winners by Gemini+LPIPS quality ranking.

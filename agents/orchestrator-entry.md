@@ -34,8 +34,8 @@ subagents that the main agent creates under `goals/<goal-id>/`.
 
 ## 2. End-to-end procedure
 ```
-0. ONBOARD/FREEZE  ensure models/<id>.toml + efficiency/models/<id>_spec.py
-                   (model-onboarding.md). Run the official-config baseline and
+0. ONBOARD/FREEZE  ensure models/<id>.toml and the runtime env/code path are
+                   current. Run the official-config baseline and
                    record it in the profile [baseline]. The profile [env] must
                    carry the working runtime env (PYTHON_BIN, HF_HOME/HF_HUB_CACHE,
                    COSMOS3_CACHE, HF_HUB_OFFLINE) or the cluster run fails.
@@ -252,7 +252,7 @@ Integration acceptance:
 | What | Where |
 | --- | --- |
 | search harness | `search/search.py` (scan), `search/plan_eval.py` (render/assess/tier) |
-| model adapter | `models/<id>.toml`, `efficiency/models/<id>_spec.py` |
+| model adapter | `models/<id>.toml`, runtime code under `Sol-LTX-Infer/` |
 | dimensions | `loops/<dim>/{dimension.toml, exploration.md, acceptance.md}` |
 | search space | `search_space/` |
 | engine | `efficiency/` (`selftest.py` = compose/seam test) |

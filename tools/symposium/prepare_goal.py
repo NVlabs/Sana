@@ -11,6 +11,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    import tomllib  # py3.11+
+except ModuleNotFoundError:  # pragma: no cover - used by py3.10 envs
+    import tomli as tomllib
+
 
 def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -154,9 +159,9 @@ treating the dimension as globally complete. The main orchestrator selects
 quality-best winners for the 1.5x, 2.0x, and 3.0x speed targets from retained
 frontier candidates, using Gemini artifact severity/status and LPIPS together,
 or reopens the dimension with a new direction, requests validation, drops it, or
-marks a blocker. Exact/numeric dimensions such as kernel/operator fusion and
-low-precision numeric transforms may enforce OFF identity, numeric tolerance,
-silent-fallback, or precision-specific non-regression as hard gates. Collector
+marks a blocker. Numeric checks, tolerance declarations, OFF identity,
+silent-fallback detection, and precision-support proof are diagnostics unless a
+candidate contract explicitly declares a reliable hard gate. Collector
 `quality.json` is telemetry; the authoritative gate provides quality and speed
 evidence for frontier retention and final speed-target selection."""
 
@@ -198,8 +203,8 @@ def loop_contract_values(args: argparse.Namespace) -> dict:
         "max_iters": args.max_iters,
         "early_stop_patience": args.early_stop_patience,
         "loop_mode": "fixed_budget_frontier",
-        "frontier_keep_rule": "keep_if_quality_improves_or_speed_improves",
-        "frontier_discard_rule": "discard_if_no_quality_improvement_and_no_speed_improvement_or_speed_regresses",
+        "frontier_keep_rule": "keep_if_quality_improves_or_speed_or_memory_improves",
+        "frontier_discard_rule": "discard_if_no_quality_improvement_and_no_speed_or_memory_improvement",
         "tier_selection": "after_budget_select_1p5x_2x_3x_speed_targets_by_best_gemini_and_lpips_quality",
         "failed_candidate_action": "record_interaction_failure_and_loop"
         if args.role == "integration"
@@ -211,8 +216,8 @@ def loop_contract_values(args: argparse.Namespace) -> dict:
     if args.role != "integration" and args.dimension == "kwl_fusion":
         values.update(
             {
-                "frontier_keep_rule": "keep_exact_candidate_if_speed_or_memory_improves_with_identity_and_no_quality_regression_or_numeric_quality_improves_without_speed_regression",
-                "frontier_discard_rule": "discard_if_no_quality_or_numeric_improvement_and_no_speed_or_memory_improvement_or_if_speed_regresses_without_numeric_gain",
+                "frontier_keep_rule": "keep_if_quality_improves_or_latency_or_peak_memory_improves_with_kwl_semantic_boundary",
+                "frontier_discard_rule": "discard_if_no_quality_or_numeric_improvement_and_no_speed_or_memory_improvement",
             }
         )
     return values
@@ -221,11 +226,10 @@ def loop_contract_values(args: argparse.Namespace) -> dict:
 def candidate_retention_rule(args: argparse.Namespace) -> str:
     if args.role != "integration" and args.dimension == "kwl_fusion":
         return (
-            "retain_exact_kwl_candidate_if_off_identity_passes_and_"
-            "speed_or_memory_improves_without_quality_or_numeric_regression_"
-            "or_quality_numeric_improves_without_meaningful_speed_regression"
+            "retain_kwl_candidate_if_quality_improves_or_latency_or_peak_memory_"
+            "improves_with_off_identity_and_semantic_boundary"
         )
-    return "retain_if_quality_improves_or_speed_improves_discard_if_neither_improves"
+    return "retain_if_quality_improves_or_speed_or_memory_improves_discard_if_neither_improves"
 
 
 def quality_source_of_truth(args: argparse.Namespace) -> list[str]:
@@ -237,9 +241,9 @@ def quality_source_of_truth(args: argparse.Namespace) -> list[str]:
     ]
     if args.role != "integration" and args.dimension == "kwl_fusion":
         source.insert(1, "module_level_tensor_diff_when_available")
-        source.insert(2, "numeric_non_regression")
+        source.insert(2, "declared_numeric_tolerance")
     if args.role != "integration" and args.dimension == "nvfp4_ffn":
-        source.insert(1, "numeric_or_precision_non_regression_when_reliable")
+        source.insert(1, "numeric_or_precision_checks_when_reliable")
     return source
 
 
@@ -248,15 +252,17 @@ def dimension_loop_note(dimension: str, role: str) -> str:
         return ""
     if dimension != "kwl_fusion":
         return ""
-    return """## KWL Exactness Override
+    return """## KWL Quality-Gated Frontier
 
 For `kwl_fusion`, apply the KWL-specific retention rule from
-`loops/kwl_fusion/acceptance.md`: retain speed or memory wins only when OFF
-identity passes and ON quality/numeric evidence does not regress. Retain
-quality or numeric-stability wins only when speed does not meaningfully regress.
+`loops/kwl_fusion/acceptance.md`: run the full fixed-budget frontier loop,
+retain candidates that improve latency, peak memory, aligned quality, or
+reliable numeric stability, then let final low/medium/high selection pick the
+best retained profiles by speed target and quality ranking. ON bit-exactness is
+not required; record the declared tolerance class and aligned quality evidence.
 Reject candidates that change scheduler, step count, token set, attention
-semantics, cache/prune semantics, precision policy, prompt/guidance, LoRA state,
-resolution, frame count, or output shape.
+semantics, cache/prune semantics, quantization policy, prompt/guidance, LoRA
+state, resolution, frame count, or output shape.
 """
 
 
@@ -406,13 +412,53 @@ def read_search_space_summary(root: Path, search_space_root: str, dimension: str
     return rel_space, summary_rel, summary
 
 
+def read_dimension_metadata(root: Path, dimension: str) -> dict:
+    dim_file = root / "loops" / dimension / "dimension.toml"
+    if not dim_file.exists():
+        return {}
+    with dim_file.open("rb") as handle:
+        return tomllib.load(handle)
+
+
+def method_baseline_catalog_md(method_baselines: list[dict]) -> str:
+    if not method_baselines:
+        return """## Method Baseline Catalog
+
+No method-baseline catalog is declared for this dimension. Treat the
+search-space document as authoritative, but explicitly record whether each
+candidate is wired, candidate-wired, runtime-patched, or probe-only.
+"""
+    lines = [
+        "## Method Baseline Catalog",
+        "",
+        "Use this catalog to avoid overfitting the search to the first wired helper.",
+        "`tier=wired` means a candidate can start from existing code; `candidate_wired`",
+        "means a helper/env exists but target-runtime consumption still needs proof;",
+        "`runtime_patch` means the candidate must patch the live inference path;",
+        "`upper_bound_probe` is diagnostic and must not become a delivery winner unless",
+        "it later gains full quality evidence and safe fallback behavior.",
+        "",
+    ]
+    for item in method_baselines:
+        lines.extend(
+            [
+                f"- `{item.get('id', 'unknown')}` [{item.get('tier', 'unknown')}/{item.get('status', 'unknown')}]",
+                f"  family: `{item.get('family', 'unknown')}`",
+                f"  description: {item.get('description', '').strip()}",
+                f"  entrypoint: `{item.get('entrypoint', 'unspecified')}`",
+                f"  required work: {item.get('required_work', '').strip()}",
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
 def implementation_loop_acceptance() -> list[str]:
     return [
         "run the fixed-budget fan-out loop; do not stop after a single candidate success or failure",
         "write a hypothesis before each candidate explaining the expected improvement and the prior failure it avoids",
         "record each candidate in `SEARCH_JOURNAL.md` with quality evidence, speed evidence, retention decision, and next-hypothesis requirement",
-        "retain a candidate when quality improves or speed improves, even if it is not yet selected for a 1.5x/2.0x/3.0x speed target",
-        "discard a candidate when quality does not improve and speed does not improve or regresses; reject hard-invalid candidates with a failure signature",
+        "retain a candidate when quality improves or speed/memory improves, even if it is not yet selected for a 1.5x/2.0x/3.0x speed target",
+        "discard a candidate only when neither quality nor speed/memory improves; reject hard-invalid candidates with a failure signature",
         "after a discard or reject, generate a meaningfully different hypothesis instead of repeating the same mechanism with cosmetic parameters",
         "continue searching until max_iters, real blocker, or explicit orchestrator release; a dimension-agent structured_negative proposal is logged but does not stop the default fixed-budget loop",
         "track `no_improve_count` as telemetry; it must not stop the default fixed-budget frontier loop",
@@ -433,7 +479,9 @@ def integration_acceptance() -> list[str]:
         "never report composed speedup or quality from single-dimension runs; launch and gate the merged profile itself",
         "run the authoritative `sana` `search/plan_eval.py --assess` gate with canonical baseline frames for every composed profile",
         "if a composed gate fails, record an interaction failure signature and loop with a repaired merge, reduced subset, or different tier plan",
+        "record composed delivery candidates with `--purpose delivery`; record upper-bound or unsafe high probes with `--purpose blocker_probe` or `--purpose unsafe_probe` so they cannot become tier incumbents",
         "write INTEGRATION-STATUS.json, INTEGRATION-JOURNAL.md, composed manifests, run artifacts, per-tier blockers, and a release matrix",
+        "run `python3 tools/fanout_audit.py --run <fanout_run_id_or_path>` before declaring the workflow complete",
         "finish only when every 1.5x/2.0x/3.0x target has a gated composed profile or an explicit blocker",
     ]
 
@@ -491,12 +539,12 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
         return common + [
             "inspect `search_space/03_quantization.md` before proposing implementations",
             "run and record NVFP4 preflight before GPU search: GPU architecture, TransformerEngine import/version, NVFP4BlockScaling availability, FP4 GEMM backend availability, minimal TE/loader smoke, OFF identity, and env-consumption proof",
-            "profile or inspect target-model FFN/linear modules to choose module scope, layer guards, step guards, TE recipe flags, fused epilogue path, backend, padding policy, and fallback policy",
+            "profile or inspect target-model hot linear modules, including FFN/MLP, attention projections, and output projections, to choose module scope, layer guards, step guards, TE recipe flags, fused epilogue path, backend, padding policy, and fallback policy",
             "separate already-wired runtime env axes from metadata-only axes that require candidate-side loader wiring",
             "record hardware/library prerequisites, warm/cold compile state, backend selection, and fallback policy explicitly",
             "modify the inference/loading code directly when needed; do not require a predeclared precision seam",
             "prove OFF identity against the BF16 baseline path before reporting speedup",
-            "for reliable numeric precision checks, enforce numeric/precision non-regression, silent-fallback detection, and BF16 fallback integrity as hard gates; still record LPIPS and aligned pairwise Gemini for final quality ranking",
+            "record reliable numeric precision checks, silent-fallback detection, and BF16 fallback integrity; only treat a numeric gate as hard when the candidate contract explicitly declares it",
             "produce at least one runnable candidate manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
         ]
@@ -504,14 +552,14 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
         return common + [
             "inspect `search_space/05_kernel_fusion.md` before proposing implementations",
             "run and record KWL preflight before GPU search: hot-path evidence, launch count, memory traffic, tensor shapes, dtype, backend availability, compile/graph state, OFF identity, fallback behavior, and semantic boundary proof",
-            "identify at least six exact/lossless method families, including GEMM epilogues, norm/modulation/residual fusion, attention-adjacent dense fusion, compile or CUDA graph capture, layout/copy elimination, launch batching, stream overlap, decode/postprocess fusion, or backend selection when applicable",
-            "profile or inspect target-model hot ops and choose exact or numerically equivalent fusion candidates from evidence",
-            "separate lossless operator fusions from approximate techniques; route cache, prune, sparse-attention, scheduler, or precision-policy changes to other dimensions",
-            "retain speed or memory candidates only when OFF identity passes and ON quality/numeric evidence does not regress",
-            "retain quality or numeric-stability candidates only when speed does not meaningfully regress",
-            "record expected numeric tolerance as bit-exact, dtype-rounding-only, reduction-order drift, or FMA/epilogue drift",
+            "identify at least six KWL method families, including exact-preferred and quality-gated approximate variants across GEMM epilogues, norm/modulation/residual fusion, attention-adjacent dense fusion, compile or CUDA graph capture, layout/copy elimination, launch batching, stream overlap, decode/postprocess fusion, or backend selection when applicable",
+            "profile or inspect target-model hot ops and choose exact, numerically tolerant, or quality-gated approximate kernel/backend candidates from evidence",
+            "separate KWL-safe kernel/backend approximations from algorithm changes; route cache, prune, sparse-attention, scheduler, or quantization-policy changes to other dimensions",
+            "retain speed or memory candidates when OFF identity passes and latency or peak memory improves; ON bit-exactness is not required",
+            "retain aligned quality or reliable numeric-stability candidates when those signals improve, even without a speedup",
+            "record expected numeric tolerance as bit-exact, dtype-rounding-only, reduction-order drift, FMA/epilogue drift, fast-math drift, or approximate-kernel drift",
             "record cold compile, warm compile, autotune, graph replay, and cache-reuse timing modes separately",
-            "reject semantic changes to scheduler, step count, token set, attention semantics, cache/prune semantics, precision policy, prompt/guidance, LoRA state, resolution, frame count, or output shape",
+            "reject semantic changes to scheduler, step count, token set, attention semantics, cache/prune semantics, quantization policy, prompt/guidance, LoRA state, resolution, frame count, or output shape",
             "modify the inference/build code directly when needed; do not require a predeclared kernel-fusion seam",
             "produce at least one runnable candidate manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
@@ -567,6 +615,7 @@ def render_goal_md(
     search_space_rel: str,
     search_doc_rel: str,
     search_space_summary: str,
+    method_baselines: list[dict],
 ) -> str:
     write_scope = resolved_write_scope(args)
     acceptance = "\n".join(f"- {item}" for item in dimension_acceptance(args.dimension, args.role))
@@ -576,6 +625,7 @@ def render_goal_md(
     contract_text = INTEGRATION_LOOP_CONTRACT if args.role == "integration" else FANOUT_LOOP_CONTRACT
     loop_values = loop_contract_values(args)
     kwl_loop_note = dimension_loop_note(args.dimension, args.role)
+    method_baseline_catalog = method_baseline_catalog_md(method_baselines)
     return f"""# Goal: {args.goal_id}
 
 You are working in an isolated autovideo goal context.
@@ -606,6 +656,8 @@ Relevant search-space summary:
 Do not use historical recipe archives or fixed grids as startup context.
 If `search_space/` is missing or unclear, stop exploration and ask the main
 orchestration agent to repair the search-space contract.
+
+{method_baseline_catalog}
 
 {historical_record_policy_md()}
 
@@ -639,10 +691,11 @@ Runtime controller commands:
 
 ```bash
 python3 tools/symposium/loop_control.py init --dimension {args.dimension} --goal-id {args.goal_id} --max-iters {loop_values["max_iters"]} --early-stop-patience {loop_values["early_stop_patience"]} --loop-mode fixed_budget_frontier
-python3 tools/symposium/loop_control.py record-candidate --candidate-id <id> --decision <quality_improved|speed_improved|quality_and_speed_improved|discarded_regression|rejected|blocked|structured_negative> --reason "<short reason>" [--improvement-axis quality|speed|both|none] [--tier low|medium|high] [--run-dir <run_dir>] [--evidence <run_dir>/assess_verdict.json]
+python3 tools/symposium/loop_control.py record-candidate --candidate-id <id> --decision <quality_improved|speed_improved|quality_and_speed_improved|discarded_regression|rejected|blocked|structured_negative> --reason "<short reason>" [--purpose frontier|delivery|evidence|blocker_probe|unsafe_probe|control] [--improvement-axis quality|speed|both|none] [--tier low|medium|high] [--run-dir <run_dir>] [--evidence <run_dir>/assess_verdict.json]
 python3 tools/symposium/loop_control.py add-evidence --candidate-id <id> --evidence <run_dir>/assess_verdict.json --reason "backfilled authoritative gate artifact"
 python3 tools/symposium/loop_control.py decide-next
 python3 tools/symposium/loop_control.py validate-status
+python3 tools/symposium/loop_control.py status-summary
 ```
 
 Call `record-candidate` after every authoritative gate. For run-backed
@@ -652,7 +705,9 @@ candidates, evidence must include a durable authoritative gate artifact:
 cannot by itself retain or reject a candidate. Use `add-evidence` only to
 backfill a current-experiment record after the durable gate artifact exists. If
 `decide-next` returns `terminal_pending_review` or `blocked`, stop candidate
-search and hand the status to the main orchestrator.
+search and hand the status to the main orchestrator. Watchers must treat
+`complete`, `terminal_pending_review`, and `blocked` as terminal states by using
+`status-summary` or JSON parsing; do not grep only for `status=complete`.
 
 ## Model And Runtime Context
 
@@ -666,9 +721,9 @@ search and hand the status to the main orchestrator.
 - Quality source of truth: OFF identity, aligned LPIPS, and aligned pairwise
   Gemini from the authoritative gate. `outputs/quality.json` is telemetry and
   not the quality source of truth when it contradicts aligned gate artifacts.
-  For lossy generative dimensions, LPIPS/Gemini are ranking evidence rather than
-  hard absolute thresholds; exact/numeric dimensions may add reliable numeric
-  hard gates.
+  For generative dimensions, LPIPS/Gemini are ranking evidence rather than hard
+  absolute thresholds; numeric checks are diagnostics unless a candidate
+  contract explicitly declares a reliable hard gate.
 
 ## Allowed Worktree Scope
 
@@ -760,6 +815,8 @@ def main() -> int:
         args.search_space_root,
         args.dimension,
     )
+    dimension_metadata = read_dimension_metadata(root, args.dimension)
+    method_baselines = dimension_metadata.get("method_baseline", [])
     model_profile = root / "models" / f"{args.model_id}.toml"
     if not model_profile.exists():
         raise SystemExit(f"Model profile does not exist: {model_profile}")
@@ -775,7 +832,14 @@ def main() -> int:
 
     shutil.copy2(candidate, goal_dir / "candidate.toml")
     (goal_dir / "goal.md").write_text(
-        render_goal_md(args, candidate_rel, search_space_rel, search_doc_rel, search_space_summary)
+        render_goal_md(
+            args,
+            candidate_rel,
+            search_space_rel,
+            search_doc_rel,
+            search_space_summary,
+            method_baselines,
+        )
     )
     context = {
         "goal_id": goal_id,
@@ -789,6 +853,7 @@ def main() -> int:
         "dimension": args.dimension,
         "search_space_root": search_space_rel,
         "search_space_doc": search_doc_rel,
+        "method_baselines": method_baselines,
         "model_id": args.model_id,
         "model_profile": str(model_profile.relative_to(root)),
         "write_scope": resolved_write_scope(args),
@@ -830,7 +895,7 @@ def main() -> int:
                 "aligned_lpips_max",
                 "higher_speedup_tie_breaker",
             ],
-            "hard_quality_thresholds": "disabled_for_lossy_generative_dimensions_except_exact_numeric_dimension_gates",
+            "hard_quality_thresholds": "disabled_by_default_numeric_gates_require_explicit_candidate_contract",
             "global_done_requires_integration": True,
         },
         "root_branch": args.root_branch,

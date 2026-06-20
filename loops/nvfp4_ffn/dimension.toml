@@ -1,11 +1,11 @@
-# Search dimension: NVFP4 FFN quantization (MODEL-AGNOSTIC)
+# Search dimension: NVFP4 hot-linear quantization (MODEL-AGNOSTIC)
 #
-# Metadata for the low-precision FFN exploration dimension. Native subagents
+# Metadata for the low-precision hot-linear exploration dimension. Native subagents
 # start from search_space/ and inspect the target model inference code directly;
 # this file is not a fixed hyperparameter grid.
 
 id = "nvfp4_ffn"
-title = "NVFP4 FFN quantization (load-time video FFN precision transform)"
+title = "NVFP4 hot-linear quantization (load-time video precision transform)"
 kind = "build_transform"
 
 [[technique]]
@@ -23,6 +23,51 @@ search_axes = [
   "hardware/runtime preflight",
 ]
 
+[[method_baseline]]
+id = "conservative_ffn_nvfp4"
+family = "ffn_only_nvfp4"
+tier = "wired"
+status = "env_ready"
+description = "Existing NVFP4 transform emits the TE NVFP4 env contract for conservative FFN/MLP module scopes."
+entrypoint = "efficiency/transforms/nvfp4_ffn.py"
+required_work = "Run hardware/runtime preflight, prove loader consumes env, and gate FFN-only quality-speed evidence."
+
+[[method_baseline]]
+id = "profiled_hot_linear_nvfp4"
+family = "selective_hot_linear_nvfp4"
+tier = "candidate_wired"
+status = "needs_loader_scope"
+description = "Quantize profiled hot linear subsets, including attention projections or output projections when evidence supports them."
+entrypoint = "Sol-LTX-Infer loader and module replacement path"
+required_work = "Patch or verify module_scope consumption; record quantized module list, dense guards, and fallback behavior."
+
+[[method_baseline]]
+id = "te_recipe_variant"
+family = "te_recipe_variants"
+tier = "wired"
+status = "env_ready"
+description = "Explore TE recipe flags such as RHT, stochastic rounding, 2D quantization, and row-scaled activation; keep fused epilogues disabled unless a model-matched adapter exists."
+entrypoint = "efficiency/transforms/nvfp4_ffn.py"
+required_work = "Verify which recipe env vars are consumed by the installed loader and TE version; gate each variant separately."
+
+[[method_baseline]]
+id = "dense_guard_policy"
+family = "dense_guard_policies"
+tier = "candidate_wired"
+status = "needs_loader_scope"
+description = "Keep sensitive layers or denoising steps in BF16 while using FP4 where speed or memory improves."
+entrypoint = "Sol-LTX-Infer loader and denoising-step guard path"
+required_work = "Patch or verify dense_layers/dense_steps support; record guarded scope and quality-speed tradeoff."
+
+[[method_baseline]]
+id = "backend_padding_policy"
+family = "backend_padding_policy"
+tier = "wired"
+status = "env_ready"
+description = "Search FP4 GEMM backend and row padding policy when the runtime exposes backend selection."
+entrypoint = "efficiency/transforms/nvfp4_ffn.py"
+required_work = "Prove real FP4 GEMM backend is exercised; label warm/cold compile state and padding overhead."
+
 # Eval binding (model-agnostic; the model profile supplies the baseline to beat).
 [eval]
 profile = "evals/profiles/official_video_t2v.toml"
@@ -37,7 +82,7 @@ early_stop_patience = 0                  # fixed-budget frontier mode; 0 disable
 keep = "frontier_candidates"             # keep candidates that improve quality OR speed/memory
 tiers = "evals/tiers.toml"               # speed targets: low=1.5x, medium=2.0x, high=3.0x
 # Retain a candidate during the 40-iteration loop if quality improves OR latency/peak_mem improves.
-# Discard it when quality does not improve and speed/memory does not improve or regresses.
+# Discard it only when neither quality nor speed/memory improves.
 # Structured-negative is logged as a proposal/failure signature; it does not stop this default loop.
-# Reliable numeric/precision checks may be hard gates; final ranking still uses Gemini+LPIPS.
+# Numeric/precision checks are diagnostics unless a candidate declares a hard gate.
 # After the loop, the main agent selects 1.5x/2.0x/3.0x winners by Gemini+LPIPS quality ranking.

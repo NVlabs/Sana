@@ -165,8 +165,8 @@ Then launch exactly one candidate, run the authoritative gate, and record one of
 - `structured_negative`
 
 Do not treat "failed tier budget" as loop completion. Retain a candidate when
-quality improves or speed/memory improves; discard it when neither improves or
-speed/memory regresses.
+quality improves or speed/memory improves; discard it only when neither quality
+nor speed/memory improves.
 
 ---
 

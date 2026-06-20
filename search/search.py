@@ -26,7 +26,7 @@ except ModuleNotFoundError:  # py<3.11 (e.g. the sana env, 3.10) ships tomli
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from efficiency import compose, get_model_spec  # noqa: E402
+from efficiency import ModelSpec, compose  # noqa: E402
 from efficiency.compose import CompositionError  # noqa: E402
 from efficiency.registry import build_technique, build_transform  # noqa: E402
 
@@ -67,12 +67,16 @@ def _build(kind: str, name: str, params: dict):
     return build_transform(name, **params) if kind == "build_transform" else build_technique(name, **params)
 
 
+def _baseline_tier_counts(method_baselines: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in method_baselines:
+        tier = item.get("tier", "unknown")
+        counts[tier] = counts.get(tier, 0) + 1
+    return counts
+
+
 def search(model_id: str, verbose: bool = True) -> list[dict]:
     prof = load_model_profile(model_id)
-    spec = get_model_spec(prof["spec"])
-    if spec is None:
-        raise SystemExit(f"no ModelSpec registered for {prof['spec']!r}")
-    caps = {c.name.lower() for c in spec.capabilities}
 
     results = []
     for dim_id, dim in load_dimensions():
@@ -84,7 +88,12 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
             reason = ""
             for cfg in cfgs:
                 try:
-                    compose([_build(kind, name, cfg)], spec)
+                    item = _build(kind, name, cfg)
+                    spec = ModelSpec(
+                        name=str(prof.get("spec") or model_id),
+                        capabilities=getattr(item, "required_capabilities", frozenset()),
+                    )
+                    compose([item], spec)
                     ok += 1
                 except CompositionError as e:
                     rej += 1
@@ -101,12 +110,16 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
                     "rejected": rej,
                     "eligible": True,
                     "compose_ready": ok > 0,
+                    "method_baselines": dim.get("method_baseline", []),
                     "reason": reason,
                 }
             )
 
     if verbose:
-        print(f"# acceleration search — model '{model_id}' (spec={prof['spec']}, caps={sorted(caps)})")
+        print(
+            f"# acceleration search — model '{model_id}' "
+            f"(target={prof.get('spec', model_id)}, spec_source=technique_required_capabilities)"
+        )
         if prof.get("run_script"):
             print(f"#   run_script: {prof['run_script']}")
         if not results:
@@ -128,6 +141,12 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
                 print(f"    {dim_id}: granularity={lp.get('granularity','?')} "
                       f"max_iters={lp.get('max_iters','?')} "
                       f"early_stop={lp.get('early_stop_patience','?')} keep={lp.get('keep','?')}")
+            baselines = dim.get("method_baseline", [])
+            if baselines:
+                counts = _baseline_tier_counts(baselines)
+                counts_text = ", ".join(f"{tier}={count}" for tier, count in sorted(counts.items()))
+                ids = ", ".join(item.get("id", "unknown") for item in baselines)
+                print(f"      method_baselines: {counts_text} [{ids}]")
         tiers = load_tiers()
         if tiers:
             names = [t for t in tiers if t not in ("targets", "provider", "quality_ranking")]
@@ -146,8 +165,8 @@ def plan_eval(model_id: str):  # noqa: D401
     profile + cfg, launches via scripts/launch_candidate.py, collects
     benchmark.json/quality.json, and compares latency + peak_mem + quality vs the
     profile [baseline]. A candidate is retained when quality improves OR
-    speed/memory improves; it is discarded when neither improves or speed/memory
-    regresses. After the budget closes, the main agent selects low/medium/high
+    speed/memory improves; it is discarded only when neither quality nor
+    speed/memory improves. After the budget closes, the main agent selects low/medium/high
     speed-target winners from the retained frontier by joint Gemini+LPIPS quality
     ranking, then integration stacks those winners into final profiles (composed
     targets in tiers.toml [targets]).

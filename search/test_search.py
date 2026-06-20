@@ -38,6 +38,8 @@ for r in results:
     check(f"{r['dimension']}/{r['technique']} has a verdict",
           r["composable"] + r["rejected"] == r["candidates"])
     check(f"{r['dimension']}/{r['technique']} is launchable", r["eligible"])
+    check(f"{r['dimension']}/{r['technique']} exposes method baselines",
+          bool(r.get("method_baselines")))
 
 # the dimensions on disk must be model-agnostic: no model id / no SGLANG_<MODEL>_ env
 import pathlib  # noqa: E402
@@ -69,6 +71,23 @@ for dim_id, dim in load_dimensions():
     )
     fixed_grid = any("search_space" in tech for tech in dim.get("technique", []))
     check(f"loops/{dim_id} has no fixed hyperparameter grid", not fixed_grid)
+    baselines = dim.get("method_baseline", [])
+    check(f"loops/{dim_id} declares method baselines", bool(baselines))
+    check(
+        f"loops/{dim_id} declares a wired or candidate-wired baseline",
+        any(item.get("tier") in {"wired", "candidate_wired"} for item in baselines),
+    )
+
+sparse_dim = dict(load_dimensions()).get("sparse_attention", {})
+sparse_baselines = sparse_dim.get("method_baseline", [])
+check(
+    "sparse_attention includes runtime-patch baselines beyond PISA",
+    any(item.get("tier") == "runtime_patch" for item in sparse_baselines),
+)
+check(
+    "sparse_attention includes an upper-bound probe baseline",
+    any(item.get("tier") == "upper_bound_probe" for item in sparse_baselines),
+)
 
 # the three delivery tiers are speed targets; quality ranking uses Gemini+LPIPS
 tiers = load_tiers()

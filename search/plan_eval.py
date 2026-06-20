@@ -13,6 +13,7 @@ already-completed run dir (no GPU) — used to validate the harness on an existi
 
 CLI:
   python search/plan_eval.py --assess RUN_DIR [--baseline-frames DIR] [--model cosmos3] [--out RUN_DIR/assess_verdict.json]
+  python search/plan_eval.py --assess RUN_DIR --no-refresh-collection --out RUN_DIR/assess_verdict.json
 """
 from __future__ import annotations
 
@@ -90,12 +91,61 @@ def usable_gemini_verdict(gemini: dict | None) -> bool:
     return (gemini or {}).get("overall") not in (None, "inconclusive")
 
 
-def reconcile_quality_blockers(blockers: list[str], gemini: dict | None) -> list[str]:
-    """Pairwise Gemini from plan_eval overrides collector-only Gemini failures."""
+def gemini_quality_blockers(gemini: dict | None) -> list[str]:
+    """Return hard quality blockers from an aligned pairwise Gemini verdict."""
 
     if not usable_gemini_verdict(gemini):
-        return blockers
-    return [blocker for blocker in blockers if not blocker.startswith("nvidia_gemini:")]
+        return []
+    overall = (gemini or {}).get("overall")
+    severity = max_gemini_severity(gemini)
+    if overall == "fail":
+        return [f"nvidia_gemini:fail:{severity}"]
+    if _SEV.get(severity, 0) >= _SEV["medium"]:
+        return [f"nvidia_gemini:artifact:{severity}"]
+    return []
+
+
+def reconcile_quality_blockers(
+    blockers: list[str],
+    gemini: dict | None,
+    collector_gemini: dict | None = None,
+) -> list[str]:
+    """Use usable Gemini verdicts while keeping any complete visual failure.
+
+    A usable pairwise pass clears collector-only blocked/missing Gemini status.
+    A complete fail from either the pairwise verdict or the collector verdict
+    remains a hard blocker, so conflicting judges are handled conservatively.
+    """
+
+    if usable_gemini_verdict(gemini) or usable_gemini_verdict(collector_gemini):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if not blocker.startswith("nvidia_gemini:")
+        ]
+    combined = blockers + gemini_quality_blockers(gemini) + gemini_quality_blockers(collector_gemini)
+    return list(dict.fromkeys(combined))
+
+
+def conservative_gemini_verdict(*verdicts: dict | None) -> dict | None:
+    """Return the most conservative usable Gemini verdict from several sources."""
+
+    usable = [verdict for verdict in verdicts if usable_gemini_verdict(verdict)]
+    if not usable:
+        return None
+
+    def key(verdict: dict) -> tuple[int, int]:
+        overall = verdict.get("overall")
+        severity = _SEV.get(max_gemini_severity(verdict), 0)
+        if overall == "fail":
+            return (3, severity)
+        if severity >= _SEV["medium"]:
+            return (2, severity)
+        if overall == "inconclusive":
+            return (1, severity)
+        return (0, severity)
+
+    return max(usable, key=key)
 
 
 def load_profile(model_id: str) -> dict:
@@ -154,6 +204,16 @@ def promotion_note(tier, quality_blockers, speedup, peak_mem_ratio, gemini, tier
     if tier:
         return None
     if quality_blockers:
+        if any(
+            blocker.startswith("nvidia_gemini:fail:")
+            or blocker.startswith("nvidia_gemini:artifact:")
+            for blocker in quality_blockers
+        ):
+            return (
+                "quality failed: "
+                + ", ".join(quality_blockers)
+                + " -> reject or retain only as risk evidence, not a final profile"
+            )
         return (
             "missing or blocked quality evidence: "
             + ", ".join(quality_blockers)
@@ -183,11 +243,14 @@ def render_candidate(profile: dict, technique: str, cfg: dict, kind: str = "buil
                      candidate_id: str | None = None, out_path: Path | None = None) -> dict:
     """Model profile + the composed technique env -> a launcher-valid manifest."""
     sys.path.insert(0, str(REPO))
-    from efficiency import compose, get_model_spec
+    from efficiency import ModelSpec, compose
     from efficiency.registry import build_technique, build_transform
 
-    spec = get_model_spec(profile["spec"])
     item = build_transform(technique, **cfg) if kind == "build_transform" else build_technique(technique, **cfg)
+    spec = ModelSpec(
+        name=str(profile.get("spec") or profile.get("id") or "manifest"),
+        capabilities=getattr(item, "required_capabilities", frozenset()),
+    )
     plan = compose([item], spec)
     tech_env: dict = {}
     if kind == "build_transform":
@@ -220,15 +283,22 @@ def render_candidate(profile: dict, technique: str, cfg: dict, kind: str = "buil
     return manifest
 
 
-def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = None,
-           gemini: bool = True) -> dict:
+def assess(
+    run_dir,
+    profile: dict,
+    tiers: dict,
+    baseline_frames: str | None = None,
+    gemini: bool = True,
+    refresh_collection: bool = True,
+) -> dict:
     """Collect a finished run, judge quality vs baseline, bin into a tier."""
     run_dir = Path(run_dir)
-    collect_cmd = [sys.executable, str(REPO / "scripts/collect_run.py"), str(run_dir)]
     base_fr = sorted(Path(baseline_frames).glob("*.png")) if baseline_frames else []
-    for frame in base_fr:
-        collect_cmd.extend(["--baseline-frame", str(frame)])
-    subprocess.run(collect_cmd, cwd=str(REPO), capture_output=True, text=True)
+    if refresh_collection:
+        collect_cmd = [sys.executable, str(REPO / "scripts/collect_run.py"), str(run_dir)]
+        for frame in base_fr:
+            collect_cmd.extend(["--baseline-frame", str(frame)])
+        subprocess.run(collect_cmd, cwd=str(REPO), capture_output=True, text=True)
     bench_p = run_dir / "outputs/benchmark.json"
     bench = json.load(open(bench_p)) if bench_p.exists() else {}
     qp = run_dir / "outputs/quality.json"
@@ -240,14 +310,14 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
     base_total = base.get("total_s")
     speedup = (base_total / cand_total) if (cand_total and base_total) else None
 
-    # Gemini verdict: prefer a rigorous pairwise judge (candidate frames vs the real
-    # baseline frames); fall back to the collector's quality.json verdict.
-    gem = None
+    # Gemini verdicts can come from both the durable pairwise artifact and the
+    # collector. Prefer complete evidence but combine conflicts conservatively.
+    pairwise_gem = None
     cand_frames = sorted((run_dir / "outputs/frames").glob("*.png"))
     pj = run_dir / "outputs/quality_pairwise.json"
     if gemini:
-        gem = _load_json_if_present(pj)
-    if gemini and gem is None and base_fr and cand_frames:
+        pairwise_gem = _load_json_if_present(pj)
+    if gemini and pairwise_gem is None and base_fr and cand_frames:
         total = min(len(base_fr), len(cand_frames))
         n = min(total, 32)
         cmd = [sys.executable, str(REPO / "tools/vision/nvidia_gemini_judge.py"),
@@ -261,12 +331,12 @@ def assess(run_dir, profile: dict, tiers: dict, baseline_frames: str | None = No
         for i in indices:
             cmd += ["--baseline-frame", str(base_fr[i]), "--candidate-frame", str(cand_frames[i])]
         subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
-        gem = _load_json_if_present(pj)
-    if gem is None and qp.exists():  # fall back to the collector's gemini verdict (nested)
-        gem = ((quality.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
+        pairwise_gem = _load_json_if_present(pj)
+    collector_gem = ((quality.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
+    gem = conservative_gemini_verdict(pairwise_gem, collector_gem)
     lpips_result = ((quality.get("judges") or {}).get("lpips") or {}).get("result") or {}
     lpips_delta = lpips_result.get("max") if lpips_result.get("status") == "ok" else None
-    quality_blockers = reconcile_quality_blockers(collector_quality_blockers, gem)
+    quality_blockers = reconcile_quality_blockers(collector_quality_blockers, pairwise_gem, collector_gem)
     quality_status = collector_quality_status
     if collector_quality_blockers and not quality_blockers and usable_gemini_verdict(gem):
         quality_status = "available"
@@ -314,12 +384,18 @@ if __name__ == "__main__":
     ap.add_argument("--assess", metavar="RUN_DIR", help="assess an already-completed run dir")
     ap.add_argument("--baseline-frames", default=None, help="baseline frames dir for the Gemini judge")
     ap.add_argument("--no-gemini", action="store_true")
+    ap.add_argument(
+        "--no-refresh-collection",
+        action="store_true",
+        help="reuse existing benchmark/quality artifacts instead of rerunning collect_run",
+    )
     ap.add_argument("--out", default=None, help="write the assess verdict JSON to this path")
     args = ap.parse_args()
     prof, tiers = load_profile(args.model), load_tiers()
     if args.assess:
         verdict = assess(args.assess, prof, tiers, baseline_frames=args.baseline_frames,
-                         gemini=not args.no_gemini)
+                         gemini=not args.no_gemini,
+                         refresh_collection=not args.no_refresh_collection)
         text = json.dumps(verdict, indent=2)
         if args.out:
             out = Path(args.out)

@@ -1,15 +1,16 @@
-# Dimension: nvfp4_ffn - NVFP4 FFN quantization
+# Dimension: nvfp4_ffn - NVFP4 hot-linear quantization
 
-A search dimension for low-precision FFN or linear-layer experiments. Native
-subagents should read `search_space/03_quantization.md`, then inspect and
-modify target-model module loading and inference code directly in their isolated
+A search dimension for low-precision hot-linear experiments across FFN/MLP,
+attention projection, output projection, or profiled linear subsets. Native
+subagents should read `search_space/03_quantization.md`, then inspect and modify
+target-model module loading and inference code directly in their isolated
 worktree.
 
 ## What it searches
 
 `efficiency/transforms/nvfp4_ffn.py` registers the `nvfp4_ffn` transform.
 `NVFP4FFN` is a load-time diagnostic helper, not a runtime `Technique`: it
-delegates to the model loader via the existing TE NVFP4 FFN environment contract.
+delegates to the model loader via the existing TE NVFP4 environment contract.
 
 The transform exposes a search surface rather than a fixed grid. Some axes are
 already consumed by the current target runtime; others are metadata until a
@@ -19,7 +20,6 @@ Already wired for the current target path:
 
 - TE recipe flags: `disable_rht`, `disable_stochastic_rounding`,
   `disable_2d_quantization`
-- fused TE epilogues: `fused_proj_in_gelu`, `fused_proj_out_bias_gate`
 - row padding policy: `pad_m_to`
 - FP4 GEMM backend override: `fp4_gemm_backend`
 
@@ -31,6 +31,8 @@ Candidate-wired axes that must be proven before they count:
 - `dense_steps`: BF16 fallback denoising steps
 - `row_scaled_activation`: TE recipe variant when supported by the installed
   TransformerEngine version
+- fused TE epilogues: disabled in the active Cosmos3 manifest unless a future
+  adapter preserves Cosmos3 bias-free SwiGLU semantics
 - `fallback_policy`: BF16 fallback and unsupported-hardware behavior
 
 Current exploration starts from `search_space/` plus model-specific module
@@ -52,15 +54,16 @@ real blocker instead of running synthetic candidates.
 
 ## Exploration Mode
 
-Do not wait for a predeclared precision seam. Inspect the loader and FFN/linear
-modules directly, then implement the candidate where it is easiest to prove a
-clean OFF path and controlled ON behavior.
+Do not wait for a predeclared precision seam. Inspect the loader and hot linear
+modules directly, including FFN/MLP, attention projections, and output
+projections, then implement the candidate where it is easiest to prove a clean
+OFF path and controlled ON behavior.
 
 Each candidate should name the exact module family it touches, for example:
 
 - FFN `proj_in` / `proj_out` only
-- fused `proj_in + GELU`
-- fused `proj_out + bias/gate`
+- fused `proj_in + GELU` only for a model whose FFN semantics actually match
+- fused `proj_out + bias/gate` only for a model whose residual/gate path matches
 - attention projections only after profiling shows they matter
 - explicit exclusions for small or quality-sensitive layers
 
@@ -72,12 +75,14 @@ coupling. The CPU loop test does not import TransformerEngine or run kernels.
 
 ## Quality policy
 
-NVFP4 FFN quantization is lossy. Disabled NVFP4 must recover the baseline path,
-but enabled NVFP4 is not expected to be byte-identical. Frontier retention and
-final tier selection require `outputs/side_by_side.mp4` and the configured visual
-judge result. PSNR is recorded as a diagnostic only and is not a final selector.
-Reliable numeric/precision checks and silent-fallback detection may be hard
-gates; LPIPS and Gemini are both used for quality ranking inside speed targets.
+NVFP4 hot-linear quantization is lossy. Disabled NVFP4 must recover the baseline
+path, but enabled NVFP4 is not expected to be byte-identical. Frontier retention
+and final tier selection require `outputs/side_by_side.mp4` and the configured
+visual judge result. PSNR is recorded as a diagnostic only and is not a final
+selector. Reliable numeric/precision checks and silent-fallback detection are
+recorded; they become hard gates only when the candidate contract explicitly
+declares them. LPIPS and Gemini are both used for quality ranking inside speed
+targets.
 
 Retained frontier candidates must record:
 

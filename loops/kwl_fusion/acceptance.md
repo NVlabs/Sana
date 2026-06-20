@@ -22,37 +22,39 @@ proposal/failure signature; it does not stop the default fixed-budget loop.
   rejected mechanism with cosmetic parameter changes.
 
 ## Frontier retention and final tier selection
-KWL uses the fixed-budget frontier loop, but its frontier rule is stricter than
-lossy dimensions. It is an exact implementation dimension, so speed is never
-allowed to buy intentional quality loss.
+KWL uses the same fixed-budget frontier rule as the other open-ended
+dimensions. It is no longer restricted to bit-exact or lossless-only
+implementations. Bit-exact candidates are preferred when they are competitive,
+but quality-gated non-bit-exact kernel/backend paths are valid candidates when
+they preserve the KWL semantic boundary and record aligned quality evidence.
 
 During the 40-iteration search, keep a candidate in the retained frontier when
 one of these is true:
 
-- **Speed/memory retention:** latency or peak memory improves, OFF identity
-  passes, and ON quality/numeric evidence does not regress against baseline.
-- **Quality/numeric retention:** tensor stability, aligned LPIPS/Gemini, or
-  visual output improves, and latency/peak memory does not meaningfully regress.
+- **Speed/memory retention:** latency or peak memory improves and OFF identity
+  passes. ON may be non-bit-exact; record the declared tolerance class and
+  aligned quality evidence for final selection.
+- **Quality retention:** aligned LPIPS/Gemini, visual output, or reliable
+  numeric stability improves, even when latency/peak memory does not improve.
 - **Both improved:** quality/numeric evidence and latency/peak memory improve.
 
 Discard a candidate if OFF identity passes but it has no quality/numeric
-improvement and no speed/memory improvement, or if the measured speed/memory path
-regresses without a compensating numeric improvement. Reject hard-invalid
-candidates, such as missing artifacts, broken OFF identity, runtime failure,
-silent fallback, or semantic changes, with a failure signature.
+improvement and no speed/memory improvement. Reject hard-invalid candidates,
+such as missing artifacts, broken OFF identity, runtime failure, silent
+fallback, or semantic changes, with a failure signature.
 
 After the loop exits, the main agent selects delivery winners from the retained
 frontier using `evals/tiers.toml`:
-- **low** — best-quality exact profile at or above 1.5x.
-- **medium** — best-quality exact profile at or above 2.0x.
-- **high** — best-quality exact profile at or above 3.0x.
+- **low** — best-quality retained profile at or above 1.5x.
+- **medium** — best-quality retained profile at or above 2.0x.
+- **high** — best-quality retained profile at or above 3.0x.
 
 Quality evidence comes from OFF identity, module-level tensor diff when
 available, aligned LPIPS on the canonical baseline frames, and aligned pairwise
 Gemini. Collector `quality.json` is telemetry and cannot override the aligned
-gate during final selection. KWL may enforce reliable exact/numeric gates as
-hard requirements; LPIPS and Gemini are still recorded and considered for final
-cross-profile quality ranking.
+gate during final selection. KWL may record reliable numeric checks and declared
+tolerance classes, but they are not bit-exact promotion requirements by default;
+LPIPS and Gemini drive final cross-profile quality ranking.
 
 ## Required KWL preflight
 - Record the hot-path evidence for the operator chain being fused: profile,
@@ -63,7 +65,8 @@ cross-profile quality ranking.
   replay. Do not mix these timing modes in one speedup number.
 - Prove OFF identity before reporting any speedup.
 - For ON, record expected numerical tolerance: bit-exact, dtype-rounding-only,
-  reduction-order drift, or FMA/epilogue drift.
+  reduction-order drift, FMA/epilogue drift, fast-math drift, or
+  approximate-kernel drift.
 
 ## Keep / output
 Keep retained frontier candidates with their quality evidence, speed/memory
@@ -82,10 +85,9 @@ validate, drop, or mark blocked.
 - OFF path not byte-identical on guarded paths / baseline path altered.
 - Scheduler, step count, token set, prompt/guidance, LoRA state, resolution,
   frame count, attention semantics, cache semantics, pruning semantics, or
-  precision policy changes.
-- Speed/memory improves but aligned quality or numeric evidence regresses.
-- Quality/numeric evidence does not improve and speed/mem does not improve or
-  regresses.
+  unrelated precision/quantization policy changes that belong in another
+  dimension.
+- Quality/numeric evidence does not improve and speed/mem does not improve.
 - Candidate reports speedup from silent backend fallback, skipped work, cold/warm
   timing mismatch, or changed output shape.
 - State (cache/prune/etc.) leaks across samples or stages.
@@ -96,7 +98,8 @@ not finish the dimension by itself.
 
 ## Structured negative
 A structured-negative proposal may be recorded only after evidence covers at
-least six exact/lossless method families from `search_space/05_kernel_fusion.md`,
+least six KWL method families from `search_space/05_kernel_fusion.md`,
+including exact-preferred and quality-gated approximate variants where relevant,
 the top remaining hot spots, backend availability, fallback behavior, and the
 expected speed ceiling. It does not terminate the default fixed-budget loop by
 itself; a single failed fused-kernel candidate is not enough.

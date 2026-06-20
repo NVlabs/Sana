@@ -21,7 +21,7 @@ one-candidate target.>
 - A failed candidate gate must be recorded and followed by a meaningfully
   different next hypothesis; it does not complete the goal.
 - Retain a candidate when quality improves or speed/memory improves; discard it
-  when quality does not improve and speed/memory does not improve or regresses.
+  only when neither quality nor speed/memory improves.
 - Default fan-out budget is fixed `max_iters = 40`; `early_stop_patience = 0`
   disables patience early stop. `no_improve_count` is telemetry.
 - A structured-negative decision is recorded as a proposal/failure signature; it

@@ -18,6 +18,16 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 VALID_STATUS = {"running", "terminal_pending_review", "blocked", "complete"}
+TERMINAL_STATUS = {"terminal_pending_review", "blocked", "complete"}
+INTEGRATION_TERMINAL_STATUS = {"terminal_pending_review", "blocked", "complete"}
+VALID_RECORD_PURPOSES = {
+    "frontier",
+    "delivery",
+    "evidence",
+    "blocker_probe",
+    "unsafe_probe",
+    "control",
+}
 KEEP_DECISIONS = {
     "quality_improved",
     "speed_improved",
@@ -161,6 +171,33 @@ def status_template(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def is_terminal_status(status: str) -> bool:
+    return status in TERMINAL_STATUS
+
+
+def status_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    status = str(payload.get("status") or "")
+    last = None
+    candidates = payload.get("candidates")
+    if isinstance(candidates, list) and candidates:
+        last = candidates[-1]
+    return {
+        "status": status,
+        "is_terminal": is_terminal_status(status),
+        "terminal_statuses": sorted(TERMINAL_STATUS),
+        "agent_recommendation": payload.get("agent_recommendation") or "",
+        "terminal_reason": payload.get("terminal_reason") or payload.get("early_stop_reason") or "",
+        "iters_used": payload.get("iters_used"),
+        "max_iters": payload.get("max_iters"),
+        "frontier_count": len(payload.get("frontier_candidates", []))
+        if isinstance(payload.get("frontier_candidates"), list)
+        else None,
+        "candidate_count": len(candidates) if isinstance(candidates, list) else None,
+        "last_candidate": last,
+        "next_commands": payload.get("next_commands", []),
+    }
+
+
 def resolve_evidence_path(raw_path: str, base_dir: Path | None, run_dir: str | None = None) -> Path:
     path = Path(raw_path)
     if path.is_absolute() or base_dir is None:
@@ -267,11 +304,39 @@ def validate_status_payload(
                 continue
             decision = record.get("decision", "")
             axis = record.get("improvement_axis", "")
+            purpose = record.get("purpose", "frontier")
+            if purpose not in VALID_RECORD_PURPOSES:
+                errors.append(
+                    f"{collection_name}[{idx}].purpose must be one of {sorted(VALID_RECORD_PURPOSES)}"
+                )
             needs_speedup = decision in {"speed_improved", "quality_and_speed_improved"} or axis in {"speed", "both"}
             if needs_speedup and not isinstance(record.get("speedup"), (int, float)):
                 errors.append(f"{collection_name}[{idx}].speedup must be numeric for speed-improved records")
+            if collection_name == "frontier_candidates" and purpose not in {"frontier", "delivery"}:
+                errors.append(
+                    f"{collection_name}[{idx}].purpose={purpose} cannot appear in frontier_candidates"
+                )
             if require_evidence:
                 errors.extend(validate_record_evidence(record, base_dir, f"{collection_name}[{idx}]"))
+
+    best_per_tier = payload.get("best_per_tier")
+    if isinstance(best_per_tier, dict):
+        candidate_keys = {
+            (str(record.get("candidate_id", "")), str(record.get("run_dir", "")))
+            for record in payload.get("candidates", [])
+            if isinstance(record, dict)
+        }
+        for tier, record in best_per_tier.items():
+            if not isinstance(record, dict):
+                errors.append(f"best_per_tier[{tier}] must be object")
+                continue
+            if record.get("purpose", "delivery") != "delivery":
+                errors.append(f"best_per_tier[{tier}].purpose must be delivery")
+            if record.get("decision") not in KEEP_DECISIONS:
+                errors.append(f"best_per_tier[{tier}].decision must be a keep decision")
+            key = (str(record.get("candidate_id", "")), str(record.get("run_dir", "")))
+            if key not in candidate_keys:
+                errors.append(f"best_per_tier[{tier}] has no matching candidates record")
 
     candidate_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for idx, record in enumerate(payload.get("candidates", [])):
@@ -330,6 +395,8 @@ def append_journal(path: Path, entry: dict[str, Any]) -> None:
         lines.append(f"- tier: `{entry['tier']}`")
     if entry.get("improvement_axis"):
         lines.append(f"- improvement_axis: `{entry['improvement_axis']}`")
+    if entry.get("purpose"):
+        lines.append(f"- purpose: `{entry['purpose']}`")
     if entry.get("run_dir"):
         lines.append(f"- run_dir: `{entry['run_dir']}`")
     if entry.get("manifest"):
@@ -348,7 +415,7 @@ def decide_status(payload: dict[str, Any]) -> dict[str, Any]:
             "reason": payload.get("blocker", {}).get("reason", "blocked"),
             "status": "blocked",
         }
-    if payload["status"] in {"terminal_pending_review", "complete"}:
+    if payload["status"] in TERMINAL_STATUS:
         return {
             "decision": payload["status"],
             "reason": payload.get("terminal_reason") or payload.get("early_stop_reason") or payload["status"],
@@ -417,6 +484,7 @@ def record_entry(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str,
         "speedup": args.speedup,
         "quality": args.quality,
         "improvement_axis": args.improvement_axis,
+        "purpose": args.purpose,
         "recorded_at_utc": utc_now(),
     }
     return entry
@@ -434,8 +502,31 @@ def retained_candidate(entry: dict[str, Any]) -> dict[str, Any]:
         "speedup": entry["speedup"],
         "quality": entry["quality"],
         "evidence": entry["evidence"],
+        "purpose": entry.get("purpose", "frontier"),
         "updated_at_utc": entry["recorded_at_utc"],
     }
+
+
+def should_retain_in_frontier(entry: dict[str, Any]) -> bool:
+    return entry.get("decision") in KEEP_DECISIONS and entry.get("purpose", "frontier") in {
+        "frontier",
+        "delivery",
+    }
+
+
+def update_best_per_tier(payload: dict[str, Any], entry: dict[str, Any]) -> None:
+    if entry.get("purpose") != "delivery" or entry.get("decision") not in KEEP_DECISIONS:
+        return
+    tier = str(entry.get("tier") or "")
+    if not tier:
+        return
+    if not isinstance(entry.get("speedup"), (int, float)):
+        return
+
+    best = payload.setdefault("best_per_tier", {})
+    current = best.get(tier)
+    if not isinstance(current, dict) or float(entry["speedup"]) >= float(current.get("speedup") or -1):
+        best[tier] = retained_candidate(entry)
 
 
 def cmd_record_candidate(args: argparse.Namespace) -> int:
@@ -461,7 +552,9 @@ def cmd_record_candidate(args: argparse.Namespace) -> int:
 
     if args.decision in KEEP_DECISIONS:
         payload["no_improve_count"] = 0
-        payload["frontier_candidates"].append(retained_candidate(entry))
+        if should_retain_in_frontier(entry):
+            payload["frontier_candidates"].append(retained_candidate(entry))
+            update_best_per_tier(payload, entry)
     elif args.decision == "blocked":
         payload["status"] = "blocked"
         payload["blocker"] = {
@@ -609,6 +702,22 @@ def cmd_validate_status(args: argparse.Namespace) -> int:
     return 0 if not errors else 1
 
 
+def cmd_status_summary(args: argparse.Namespace) -> int:
+    status_path = Path(args.status_file)
+    payload = read_json(status_path)
+    errors = validate_status_payload(payload, status_path.parent)
+    summary = status_summary(payload)
+    summary["ok"] = not errors
+    summary["errors"] = errors
+    summary["status_file"] = str(status_path)
+    print(json.dumps(summary, sort_keys=True))
+    if errors:
+        return 1
+    if args.require_terminal and not summary["is_terminal"]:
+        return 2
+    return 0
+
+
 def review_one(path: Path) -> dict[str, Any]:
     payload = read_json(path)
     errors = validate_status_payload(payload, path.parent)
@@ -686,8 +795,9 @@ def integration_state(integration_dir: Path) -> tuple[str, dict[str, Any]]:
     status_path = integration_dir / "INTEGRATION-STATUS.json"
     if status_path.exists():
         payload = read_json(status_path)
-        if payload.get("status") == "complete":
-            return "complete", payload
+        status = str(payload.get("status") or "")
+        if status in INTEGRATION_TERMINAL_STATUS:
+            return status, payload
         return "status_present", payload
     agent_path = integration_dir / "AGENT-STATUS.json"
     if agent_path.exists():
@@ -820,7 +930,7 @@ def cmd_ensure_integration(args: argparse.Namespace) -> int:
         "integration_state": state,
         "review": review,
     }
-    if state == "complete":
+    if state in INTEGRATION_TERMINAL_STATUS:
         result.update({"decision": "already_complete", "status": state_payload.get("status")})
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
@@ -878,6 +988,15 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--speedup", type=float)
     record.add_argument("--quality", default="")
     record.add_argument("--improvement-axis", choices=("quality", "speed", "both", "none"), default="")
+    record.add_argument(
+        "--purpose",
+        choices=sorted(VALID_RECORD_PURPOSES),
+        default="frontier",
+        help=(
+            "Classify why this candidate exists. Only frontier/delivery keep "
+            "records enter frontier_candidates; only delivery records update best_per_tier."
+        ),
+    )
     record.set_defaults(func=cmd_record_candidate)
 
     add_evidence = sub.add_parser("add-evidence", help="append evidence to an existing candidate record")
@@ -894,6 +1013,15 @@ def build_parser() -> argparse.ArgumentParser:
     validate = sub.add_parser("validate-status", help="validate AGENT-STATUS.json schema")
     validate.add_argument("--status-file", default="AGENT-STATUS.json")
     validate.set_defaults(func=cmd_validate_status)
+
+    summary = sub.add_parser("status-summary", help="print watcher-safe terminal-state summary")
+    summary.add_argument("--status-file", default="AGENT-STATUS.json")
+    summary.add_argument(
+        "--require-terminal",
+        action="store_true",
+        help="Return exit code 2 when status is valid but non-terminal.",
+    )
+    summary.set_defaults(func=cmd_status_summary)
 
     review = sub.add_parser("review-dimensions", help="main-agent review over multiple AGENT-STATUS.json files")
     review.add_argument("--status-file", action="append", default=[])

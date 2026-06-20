@@ -5,14 +5,15 @@ model, it searches the acceleration-config space across all dimensions and retur
 speed-targeted (low/mid/high) configs — without any dimension knowing which model it is.
 
 ## How it stays model-agnostic
-- **Dimensions** (`loops/<dim>/dimension.toml`) declare a technique + a param
-  search space + the capability a model must expose to be eligible. They never
-  name a model.
-- **Model** (`models/<id>.toml` + `efficiency/models/<id>_spec.py`) is the only
-  model-specific surface.
+- **Dimensions** (`loops/<dim>/dimension.toml`) declare techniques, search axes,
+  and optional `[[method_baseline]]` entries that classify method-family starting
+  points as `wired`, `candidate_wired`, `runtime_patch`, or
+  `upper_bound_probe`. They never name a model.
+- **Model** (`models/<id>.toml` + runtime code under `Sol-LTX-Infer/`) is the
+  model-specific surface. Candidate manifests declare required capabilities.
 - `search.py` gives the main agent a CPU-only diagnostic view. It can still run
-  compose checks, but those checks do not gate subagent launch; subagents inspect
-  and edit inference code directly.
+  compose checks and print the method-baseline catalog, but those checks do not
+  gate subagent launch; subagents inspect and edit inference code directly.
 
 ## Run
 ```bash
@@ -23,13 +24,13 @@ speed-targeted (low/mid/high) configs — without any dimension knowing which mo
 
 ## Pipeline (this skeleton = the CPU half)
 ```
-load model profile + ModelSpec
+load model profile + candidate capability contract
   -> for each method family the main agent decides to wake:
        start from search_space + loops/<dim>/exploration.md
        run the bounded fan-out loop:
          observe current-experiment results -> hypothesize -> implement one candidate
          -> preflight -> launch -> authoritative gate -> retain/discard/reject and loop
-       compose([technique(cfg)], spec)        # optional diagnostic, not the driver
+       compose([technique(cfg)], manifest-derived spec)  # diagnostic, not driver
   -> [GPU stage, stubbed — plan_eval()]:
        render run bundle from profile + cfg -> scripts/launch_candidate.py
        collect benchmark.json/quality.json -> authoritative aligned assess

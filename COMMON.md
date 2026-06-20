@@ -10,7 +10,9 @@ there. This is not a one-candidate goal.
 ## Mental model
 - The **acceleration engine** (`efficiency/`) + the **search harness** (`search/`)
   + the **per-dimension specs** (`loops/<dim>/dimension.toml`) are model-agnostic.
-- A model plugs in via **`models/<id>.toml`** + **`efficiency/models/<id>_spec.py`**.
+- A model plugs in via **`models/<id>.toml`** plus the live inference/runtime
+  code under `Sol-LTX-Infer/`; candidate manifests declare the capabilities
+  they require.
 - A *dimension* declares method families, search axes, required capabilities,
   and loop metadata. It is not a fixed candidate grid.
 - A candidate is **rendered** from the model profile + the technique cfg via
@@ -110,13 +112,19 @@ Concrete command skeleton:
 - **WARMUP before quoting timings.** SGLang's `--warmup` is off by default in
   the run script; if you need warmed timings, run an extra prompt first or use
   the existing `benchmark.json` denoise_s (which already excludes loader time).
-- **No model identity in the dimension or the engine.** All model-specific
-  knowledge stays in `models/<id>.toml` + `efficiency/models/<id>_spec.py`
-  + (when wiring a model-side seam) the submodule `Sol-LTX-Infer/`. Never edit
-  `loops/<dim>/` to reference a model.
+- **No model identity in the dimension or the engine.** Model-specific
+  knowledge stays in `models/<id>.toml`, candidate manifests, and the runtime
+  code under `Sol-LTX-Infer/`. Never edit `loops/<dim>/` to reference a model.
 - **Bounded loops.** max_iters=40, early_stop_patience=0; log any truncation and
   distinguish `terminal_pending_review`, `structured_negative`, `blocked`, and
-  `complete`.
+  `complete`. Use `python3 tools/symposium/loop_control.py status-summary`
+  for watcher logic; do not grep only for `status=complete`.
+- Record candidate `purpose` explicitly when it is not a normal fan-out
+  frontier point. Integration delivery profiles use `--purpose delivery`;
+  upper-bound/high-blocker probes use `--purpose blocker_probe` or
+  `--purpose unsafe_probe`; controls use `--purpose control`.
+- Before final workflow completion, run `python3 tools/fanout_audit.py --run
+  <fanout_run_id_or_path>` and fix any errors it reports.
 - **No editing other dimensions or the engine in your worktree.** If your
   dimension needs a new framework primitive, surface it in `SUMMARY.md` and let
   the orchestrator handle the engine edit on `main`.

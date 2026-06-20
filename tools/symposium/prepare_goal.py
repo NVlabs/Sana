@@ -761,6 +761,26 @@ Produce a final Seed with:
 """
 
 
+def resolve_baseline_frames(root: Path, model_id: str, override: str = "") -> str:
+    """Canonical aligned-gate baseline frames for a model.
+
+    Order: explicit override -> the model profile's [baseline].run_id ->
+    runs/<run_id>/outputs/frames -> the legacy Cosmos constant. This keeps the
+    gate model-specific instead of hardcoding one model's baseline.
+    """
+    if override:
+        return override
+    profile_path = root / "models" / f"{model_id}.toml"
+    try:
+        profile = tomllib.loads(profile_path.read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return CANONICAL_BASELINE_FRAMES
+    run_id = (profile.get("baseline") or {}).get("run_id")
+    if run_id:
+        return str(root / "runs" / str(run_id) / "outputs" / "frames")
+    return CANONICAL_BASELINE_FRAMES
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-stale-records", action="store_true")
@@ -773,6 +793,14 @@ def main() -> int:
     parser.add_argument("--dimension", default="general")
     parser.add_argument("--search-space-root", default="search_space")
     parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
+    parser.add_argument(
+        "--baseline-frames",
+        default="",
+        help=(
+            "Canonical baseline frames dir for the aligned gate. Default: "
+            "derived from the model profile [baseline].run_id."
+        ),
+    )
     parser.add_argument("--write-scope", action="append", default=[])
     parser.add_argument("--root-branch", default="")
     parser.add_argument("--submodule-branch", default="")
@@ -831,16 +859,24 @@ def main() -> int:
     goal_dir.mkdir(parents=True, exist_ok=True)
 
     shutil.copy2(candidate, goal_dir / "candidate.toml")
-    (goal_dir / "goal.md").write_text(
-        render_goal_md(
-            args,
-            candidate_rel,
-            search_space_rel,
-            search_doc_rel,
-            search_space_summary,
-            method_baselines,
-        )
+    baseline_frames = resolve_baseline_frames(root, args.model_id, args.baseline_frames)
+    goal_md = render_goal_md(
+        args,
+        candidate_rel,
+        search_space_rel,
+        search_doc_rel,
+        search_space_summary,
+        method_baselines,
     )
+    # The goal templates bake the legacy (Cosmos) baseline-frames path and omit
+    # --model from the assess command. Rewrite both so each goal gates against its
+    # own model's canonical baseline frames with the correct model profile.
+    if baseline_frames != CANONICAL_BASELINE_FRAMES or args.model_id != DEFAULT_MODEL_ID:
+        goal_md = goal_md.replace(
+            f"{CANONICAL_BASELINE_FRAMES} --out",
+            f"{baseline_frames} --model {args.model_id} --out",
+        ).replace(CANONICAL_BASELINE_FRAMES, baseline_frames)
+    (goal_dir / "goal.md").write_text(goal_md)
     context = {
         "goal_id": goal_id,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -884,7 +920,7 @@ def main() -> int:
                 "drop_dimension",
             ],
             "authoritative_python": SANA_PYTHON,
-            "canonical_baseline_frames": CANONICAL_BASELINE_FRAMES,
+            "canonical_baseline_frames": baseline_frames,
             "quality_source_of_truth": quality_source_of_truth(args),
             "candidate_retention": candidate_retention_rule(args),
             "collector_quality_json": "telemetry_not_promotion_authority_when_contradicted",

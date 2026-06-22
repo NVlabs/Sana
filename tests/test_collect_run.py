@@ -125,13 +125,24 @@ def test_lpips_missing_baseline_is_blocked() -> None:
 
 def test_lpips_unavailable_dependency_is_blocked() -> None:
     collect_run = load_collect_run()
-    result = collect_run.run_lpips_judge(
-        frame_paths=[Path("candidate.png")],
-        baseline_frames=["baseline.png"],
-        skip=False,
-    )
-    assert result["status"] == "blocked"
-    assert result["reason"] == "dependencies_missing"
+    original_find_spec = collect_run.importlib.util.find_spec
+
+    def fake_find_spec(module: str):
+        if module == "lpips":
+            return None
+        return original_find_spec(module)
+
+    collect_run.importlib.util.find_spec = fake_find_spec
+    try:
+        result = collect_run.run_lpips_judge(
+            frame_paths=[Path("candidate.png")],
+            baseline_frames=["baseline.png"],
+            skip=False,
+        )
+        assert result["status"] == "blocked"
+        assert result["reason"] == "dependencies_missing"
+    finally:
+        collect_run.importlib.util.find_spec = original_find_spec
 
 
 def test_targeted_quality_defaults_and_rubric() -> None:

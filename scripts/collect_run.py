@@ -657,6 +657,7 @@ def run_lpips_judge(frame_paths: list[Path], baseline_frames: list[str], skip: b
         if proc.returncode != 0:
             return {
                 "status": "blocked",
+                "reason": "lpips_judge_failed",
                 "returncode": proc.returncode,
                 "stderr": proc.stderr.strip(),
                 "result": payload,

@@ -20,14 +20,14 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_SPARGE = Path("/home/haozhel/.cache/autovideo/public_refs/SpargeAttn")
+PUBLIC_SPARGE = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/SpargeAttn")
 PUBLIC_SPARGE_CORE = PUBLIC_SPARGE / "spas_sage_attn" / "core.py"
 PUBLIC_SPARGE_UTILS = PUBLIC_SPARGE / "spas_sage_attn" / "utils.py"
-PUBLIC_SVG = Path("/home/haozhel/.cache/autovideo/Sparse-VideoGen-public-f0abc563")
+PUBLIC_SVG = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/Sparse-VideoGen-public-f0abc563")
 PUBLIC_SVG_COSMOS_ATTN = PUBLIC_SVG / "svg" / "models" / "cosmos" / "attention.py"
 PUBLIC_SVG_COSMOS_UTILS = PUBLIC_SVG / "svg" / "models" / "cosmos" / "utils.py"
 PUBLIC_SVG_COSMOS_PLACEMENT = PUBLIC_SVG / "svg" / "models" / "cosmos" / "placement.py"
-PUBLIC_MINFERENCE = Path("/home/haozhel/.cache/autovideo/public_refs/MInference")
+PUBLIC_MINFERENCE = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/MInference")
 PUBLIC_MINFERENCE_README = PUBLIC_MINFERENCE / "README.md"
 PUBLIC_MINFERENCE_FORWARD = PUBLIC_MINFERENCE / "minference" / "modules" / "minference_forward.py"
 PUBLIC_MINFERENCE_PIT = PUBLIC_MINFERENCE / "minference" / "ops" / "pit_sparse_flash_attention.py"

@@ -36,7 +36,7 @@ one-candidate target.>
 3. Implement exactly one candidate.
 4. Run preflight and OFF identity when applicable.
 5. Launch, collect, and assess with the canonical `sana` gate:
-   `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames --out <run_dir>/assess_verdict.json`
+   `/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/runs/20260613-175619-baseline/outputs/frames --out <run_dir>/assess_verdict.json`
 6. Retain frontier, discard/log/loop, reject/log/loop, block, or log a structured-negative proposal and continue.
 
 ## Done When

@@ -26,7 +26,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_ROOT = ROOT / "Sol-LTX-Infer" / "python"
-PUBLIC_PISA = Path("/home/haozhel/.cache/autovideo/public_refs/piecewise-sparse-attention")
+PUBLIC_PISA = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/piecewise-sparse-attention")
 PUBLIC_KERNEL = PUBLIC_PISA / "piecewise_attn" / "kernels" / "piecewise_sparse_attn_tma.py"
 MANIFEST = ROOT / "candidates" / "sparse_attention" / "piecewise_pisa_env.toml"
 

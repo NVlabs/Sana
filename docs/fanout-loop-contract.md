@@ -114,9 +114,9 @@ Each implementation goal follows this loop:
    baseline frames:
 
    ```bash
-   /home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py \
+   /lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py \
      --assess <run_dir> \
-     --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames \
+     --baseline-frames /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/runs/20260613-175619-baseline/outputs/frames \
      --out <run_dir>/assess_verdict.json
    ```
 

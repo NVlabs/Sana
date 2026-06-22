@@ -8,7 +8,9 @@ id = "hunyuan_diffusers"
 spec = "HunyuanVideoDiffusers"
 display_name = "hunyuanvideo-community/HunyuanVideo"
 family = "video_t2v"
-submodule = "Hunyuan-Diffusers"
+# Reconstructed local runtime replaces the unobtainable haozhel Hunyuan-Diffusers
+# submodule. All rendered/hand candidates resolve run_script against this path.
+submodule = "runtime/hunyuan_diffusers_baseline"
 base_commit = "7638072479d7740f039bc9717273d4bdf0d2c787"
 run_script = "scripts/run_hunyuan_diffusers_gpu.sh"
 eval_profile = "evals/profiles/official_video_t2v_hunyuan.toml"
@@ -48,10 +50,10 @@ max_memory_reserved_gib = 62.212890625
 
 [env]
 PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python"
-HF_HOME = "/home/haozhel/.cache/huggingface"
-HF_HUB_CACHE = "/home/haozhel/.cache/huggingface/hub"
+HF_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/huggingface"
+HF_HUB_CACHE = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/huggingface/hub"
 HF_HUB_OFFLINE = "1"
-HUNYUAN_CACHE = "/home/haozhel/.cache/hunyuanvideo"
+HUNYUAN_CACHE = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/hunyuanvideo"
 MODEL_REPO = "hunyuanvideo-community/HunyuanVideo"
 NUM_GPUS = "1"
 SEED = "42"

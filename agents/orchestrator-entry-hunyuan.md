@@ -152,7 +152,7 @@ Integration acceptance:
 - Collect:
   `python3 scripts/collect_run.py <run_dir>`
 - Assess:
-  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`
+  `/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`
 - Quality authority: OFF identity where applicable, aligned LPIPS, and aligned
   pairwise NVIDIA-Gemini. Collector-only `quality.json` Gemini is telemetry.
 
@@ -198,7 +198,7 @@ Treat multi-GPU execution as an optimization target, not as baseline behavior.
 ```bash
 python3 search/search.py --model hunyuan_diffusers
 python3 scripts/launch_candidate.py candidates/hunyuan_diffusers_baseline.toml --mode sbatch --confirm-submit
-/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>
+/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>
 ~/lustre/miniconda3/envs/sana/bin/python efficiency/selftest.py
 ```
 
@@ -209,7 +209,7 @@ python3 scripts/launch_candidate.py candidates/hunyuan_diffusers_baseline.toml -
 - Runtime: local `Hunyuan-Diffusers/` submodule at
   `7638072479d7740f039bc9717273d4bdf0d2c787`.
 - Checkpoint snapshot:
-  `/home/haozhel/.cache/huggingface/hub/models--hunyuanvideo-community--HunyuanVideo/snapshots/e8c2aaa66fe3742a32c11a6766aecbf07c56e773`.
+  `/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/huggingface/hub/models--hunyuanvideo-community--HunyuanVideo/snapshots/e8c2aaa66fe3742a32c11a6766aecbf07c56e773`.
 - `search --model hunyuan_diffusers`: **6 launchable method families** —
   `step_cache`, `teacache`, `token_prune`, `nvfp4_ffn`, `kwl_fusion`,
   `sparse_attention`.

@@ -27,9 +27,9 @@ def sanitize(value: str) -> str:
     return out.strip("-") or "goal"
 
 
-SANA_PYTHON = "/home/haozhel/lustre/miniconda3/envs/sana/bin/python"
+SANA_PYTHON = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python"
 CANONICAL_BASELINE_FRAMES = (
-    "/home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames"
+    "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/runs/20260613-175619-baseline/outputs/frames"
 )
 DEFAULT_MAX_ITERS = 40
 DEFAULT_EARLY_STOP_PATIENCE = 0

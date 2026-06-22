@@ -45,9 +45,9 @@ state, not a blind grid point:
    (HSG `batch`, 4 GPU/node; the profile [env] supplies cache + python).
 7. wait for terminal (sacct State in COMPLETED/FAILED/CANCELLED/TIMEOUT).
 8. authoritative assess:
-      /home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py \
+      /lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py \
           --assess <run_dir> \
-          --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames
+          --baseline-frames /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/runs/20260613-175619-baseline/outputs/frames
    -> speedup, LPIPS, aligned pairwise Gemini, speed-target bucket, and
       quality-ranking evidence.
 9. decision:
@@ -76,8 +76,8 @@ Concrete command skeleton:
    (HSG `batch`, 4 GPU/node; the profile [env] supplies cache + python).
 5. wait for terminal (sacct State in COMPLETED/FAILED/CANCELLED/TIMEOUT).
 6. python scripts/collect_run.py <run_dir>     -> benchmark.json + frames.
-7. /home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames \
-        /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames
+7. /lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames \
+        /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/runs/20260613-175619-baseline/outputs/frames
    -> {speedup, gemini_overall, max_artifact_severity, speed-target bucket}.
 8. retain/discard/reject through tools/symposium/loop_control.py.
 9. after max_iters, the main agent selects low/medium/high winners from retained

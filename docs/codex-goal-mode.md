@@ -180,7 +180,7 @@ You are working in an isolated autovideo worktree.
 - Launch with: `python3 scripts/launch_candidate.py <candidate> --mode dry-run`
 - Collect with: `python3 scripts/collect_run.py runs/<run-id>`
 - Authoritative assess with:
-  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /home/haozhel/lustre/auto-video/runs/20260613-175619-baseline/outputs/frames --out <run_dir>/assess_verdict.json`
+  `/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/runs/20260613-175619-baseline/outputs/frames --out <run_dir>/assess_verdict.json`
 
 ## Fan-Out Loop Contract
 

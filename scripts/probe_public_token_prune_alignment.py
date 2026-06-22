@@ -21,11 +21,11 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_CAT = Path("/home/haozhel/.cache/autovideo/public_refs/CAT-Pruning")
+PUBLIC_CAT = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/CAT-Pruning")
 PUBLIC_CAT_PROJ_OUT = PUBLIC_CAT / "qcache" / "modules" / "proj_out.py"
 PUBLIC_CAT_ATTN = PUBLIC_CAT / "qcache" / "modules" / "attn.py"
 PUBLIC_CAT_EXAMPLE = PUBLIC_CAT / "example_sd3.py"
-PUBLIC_TOMESD = Path("/home/haozhel/.cache/autovideo/public_refs/tomesd")
+PUBLIC_TOMESD = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/tomesd")
 PUBLIC_TOMESD_MERGE = PUBLIC_TOMESD / "tomesd" / "merge.py"
 LOCAL_TOKEN_PRUNE = ROOT / "efficiency" / "techniques" / "token_prune.py"
 MANIFESTS = {

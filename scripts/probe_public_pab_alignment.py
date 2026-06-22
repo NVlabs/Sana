@@ -28,7 +28,7 @@ if str(ROOT) not in sys.path:
 
 from efficiency.techniques.payload_cache import PABBroadcastController  # noqa: E402
 
-PUBLIC_VIDEOSYS = Path("/home/haozhel/.cache/autovideo/public_refs/VideoSys")
+PUBLIC_VIDEOSYS = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/VideoSys")
 PUBLIC_PAB_MGR = PUBLIC_VIDEOSYS / "videosys" / "core" / "pab" / "pab_mgr.py"
 PUBLIC_PAB_DOC = PUBLIC_VIDEOSYS / "docs" / "pab.md"
 STEP_CACHE_CANDIDATES = {

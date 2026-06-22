@@ -1,8 +1,15 @@
 id = "hunyuan_diffusers_baseline"
 kind = "baseline"
 purpose = "control"
-description = "HunyuanVideo vanilla diffusers GPU baseline in the local Hunyuan-Diffusers submodule."
+description = "HunyuanVideo vanilla diffusers GPU baseline (reconstructed runtime: runtime/hunyuan_diffusers_baseline)."
 model_profile = "hunyuan_diffusers"
+
+# The canonical Hunyuan-Diffusers submodule is unobtainable on this machine, so
+# the baseline runs from a from-scratch stock-diffusers reconstruction. This
+# overrides runtime_root (run_script resolves against it); the submodule gitlink
+# is left untouched. See runtime/hunyuan_diffusers_baseline/README.md.
+[runtime]
+root = "runtime/hunyuan_diffusers_baseline"
 
 [artifacts]
 output_dir = "outputs"

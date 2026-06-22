@@ -19,8 +19,8 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_TOME = Path("/home/haozhel/.cache/autovideo/public_refs/tome")
-PUBLIC_TOMESD = Path("/home/haozhel/.cache/autovideo/public_refs/tomesd")
+PUBLIC_TOME = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/tome")
+PUBLIC_TOMESD = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/tomesd")
 PUBLIC_TOME_MERGE = PUBLIC_TOME / "tome" / "merge.py"
 PUBLIC_TOMESD_MERGE = PUBLIC_TOMESD / "tomesd" / "merge.py"
 MANIFEST = ROOT / "candidates" / "token_prune" / "tome_merge_restore.toml"

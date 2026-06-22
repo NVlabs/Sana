@@ -31,7 +31,7 @@ from efficiency.sparse_attention_policies import (  # noqa: E402
     sparse_videogen_sap_plan,
 )
 
-PUBLIC_SVG = Path("/home/haozhel/.cache/autovideo/Sparse-VideoGen-public-f0abc563")
+PUBLIC_SVG = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/Sparse-VideoGen-public-f0abc563")
 PUBLIC_COSMOS_ATTN = PUBLIC_SVG / "svg" / "models" / "cosmos" / "attention.py"
 PUBLIC_COSMOS_SCRIPT = PUBLIC_SVG / "scripts" / "cosmos" / "cosmos_t2v_sap.sh"
 PUBLIC_COSMOS_INFER = PUBLIC_SVG / "cosmos_t2v_inference.py"

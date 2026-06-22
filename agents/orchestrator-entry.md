@@ -210,7 +210,7 @@ Integration acceptance:
 - Runs: `scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit`
   (HSG `batch`, 4 GPU/node). The profile `[env]` supplies the cache/python.
 - Collect: `scripts/collect_run.py <run_dir>` -> `benchmark.json` + frames.
-- Assess + speed-target bucket: `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`.
+- Assess + speed-target bucket: `/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`.
 - Quality authority: OFF identity + aligned LPIPS + aligned pairwise Gemini.
   `quality.json` collector Gemini can be logged, but it cannot override the
   aligned gate.
@@ -260,7 +260,7 @@ Integration acceptance:
 | docs | `docs/{search-architecture,model-onboarding}.md` |
 ```bash
 python search/search.py --model <id>                  # method families + diagnostics + speed targets
-/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>   # benchmark+aligned quality+speed bucket
+/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>   # benchmark+aligned quality+speed bucket
 python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 ~/lustre/miniconda3/envs/sana/bin/python efficiency/selftest.py        # 23/23
 ```
@@ -275,7 +275,7 @@ python scripts/launch_candidate.py <candidate> --mode sbatch --confirm-submit
 - GPU eval harness: **VERIFIED end-to-end** (job 3294303, `runs/20260613-175619-baseline`):
   launch (sbatch) -> GPU run (127.83s) -> `collect_run.py` (`benchmark.json`, denoise 119.18s)
   -> Gemini pairwise judge (`overall=pass`, no artifacts) -> `tier_of` -> speed bucket, via
-  `/home/haozhel/lustre/miniconda3/envs/sana/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`. NOTE: that candidate
+  `/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/hunyuanvideo15/bin/python search/plan_eval.py --assess <run_dir> --baseline-frames <canonical-frames>`. NOTE: that candidate
   *is* the baseline config (no technique wired into the Cosmos3 denoise loop yet) -> 1.02x is
   run-variance and below the 1.5x low target. Real speedups need a technique wired into the runtime.
 

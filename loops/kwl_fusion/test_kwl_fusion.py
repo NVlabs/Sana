@@ -71,6 +71,13 @@ def main() -> None:
         "SGLANG_HQ_VARIANT": "kwl",
         "SGLANG_HQ_KWL_ADAPTER": "ltx2",
         **{key: "1" for key in KWL_KEYS},
+        "SGLANG_HQ_KWL_COMPILE_CAPTURE_POLICY": "shape_stable_regions",
+        "SGLANG_HQ_KWL_COMPILE_CAPTURE_REGIONS": "gate_to_out,tiled_vae",
+        "SGLANG_HQ_KWL_COMPILE_CAPTURE_FALLBACK": "eager",
+        "SGLANG_HQ_KWL_COMPILE_CAPTURE_PUBLIC_FAMILIES": (
+            "CUDA graph,CUTLASS,TransformerEngine"
+        ),
+        "SGLANG_HQ_KWL_COMPILE_CAPTURE_BOUNDARY": "policy_not_kernel_port",
     }
     check("explicit LTX2 KWL adapter env exact", ltx2_env == expected_ltx2)
 

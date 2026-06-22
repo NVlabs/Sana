@@ -147,4 +147,3 @@ def select_profiled_nvfp4_layers(
         keep_count=len(selected),
         cutoff_score=cutoff,
     )
-

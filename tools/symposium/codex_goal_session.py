@@ -190,9 +190,9 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
         ]
     )
     time.sleep(args.startup_delay)
-    follow_command = f"/goal follow {goal_file}"
-    run_tmux(["send-keys", "-t", session, "--", follow_command])
-    run_tmux(["send-keys", "-t", session, "Enter"])
+    # Exec mode: start_codex_goal.sh runs `codex exec` with the goal.md as its
+    # prompt, so there is no interactive `/goal follow` slash command to send.
+    follow_command = f"(exec mode) codex exec -C {worktree} with {goal_file}"
 
     data = {
         "session": session,

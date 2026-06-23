@@ -65,24 +65,34 @@ if [[ -z "${TERM:-}" || "$TERM" == "dumb" ]]; then
   export TERM=xterm-256color
 fi
 
-if [[ ! -t 0 || ! -t 1 ]]; then
-  echo "Codex goal mode requires an interactive TTY; refusing non-interactive launch." >&2
-  exit 4
-fi
+# Exec mode: codex runs NON-INTERACTIVELY with the goal as its prompt.
+# Rationale: the interactive TUI goal-mode does not render/accept input headless
+# in a detached tmux pane (codex 0.133.0); `codex exec` does. No TTY is required,
+# and stdin is /dev/null so exec never blocks reading stdin. The goal text is
+# passed as the prompt instead of an interactive `/goal follow` slash command.
 
+# Resolve the codex binary (first token of CODEX_GOAL_COMMAND, else `codex`).
 if [[ -n "${CODEX_GOAL_COMMAND:-}" ]]; then
-  read -r -a CODEX_CMD <<< "$CODEX_GOAL_COMMAND"
+  read -r -a _CODEX_TOKENS <<< "$CODEX_GOAL_COMMAND"
+  CODEX_BIN="${_CODEX_TOKENS[0]}"
 elif command -v codex >/dev/null 2>&1; then
-  CODEX_CMD=(codex)
+  CODEX_BIN="codex"
 else
-  echo "No codex command found. Set CODEX_GOAL_COMMAND to the interactive Codex launcher." >&2
+  echo "No codex command found. Set CODEX_GOAL_COMMAND." >&2
   exit 4
 fi
 
-echo "Starting interactive Codex goal session for $GOAL_DIR"
+# Default: no sandbox (the worktree is the containment) so codex does not require
+# bubblewrap. Override via CODEX_EXEC_FLAGS when a usable sandbox/approval is set.
+CODEX_EXEC_FLAGS="${CODEX_EXEC_FLAGS:---dangerously-bypass-approvals-and-sandbox}"
+
+echo "Starting Codex EXEC goal session for $GOAL_DIR (non-interactive)"
 echo "Goal file: $GOAL_DIR/goal.md"
 echo "History policy: $AUTO_VIDEO_HISTORY_POLICY"
-echo "Run inside Codex: /goal follow $GOAL_DIR/goal.md"
+echo "codex bin: $CODEX_BIN | flags: $CODEX_EXEC_FLAGS"
 echo
 
-exec "${CODEX_CMD[@]}"
+# shellcheck disable=SC2086  # CODEX_EXEC_FLAGS is intentionally word-split
+exec "$CODEX_BIN" exec -C "$ROOT" $CODEX_EXEC_FLAGS \
+  -o "$GOAL_DIR/agent_last.md" \
+  "$(cat "$GOAL_DIR/goal.md")" </dev/null

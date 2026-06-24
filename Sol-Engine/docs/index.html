@@ -1951,8 +1951,8 @@
 <tr>
 <td><a href="pipelines/ltx/">LTX-2.3 (1xB200)</a></td>
 <td style="text-align: center;">22B</td>
-<td>KWL fusion + cache + PISA + NVFP4 + token-prune</td>
-<td style="text-align: center;">~2.4x</td>
+<td>cache + PISA + NVFP4 + token-prune ..</td>
+<td style="text-align: center;">2.40x</td>
 </tr>
 <tr>
 <td><a href="pipelines/sana/">SANA-Video (1xB200)</a></td>
@@ -1963,42 +1963,38 @@
 </tbody>
 </table>
 <h2 id="the-five-acceleration-methods">The five acceleration methods<a class="headerlink" href="#the-five-acceleration-methods" title="Permanent link">&para;</a></h2>
-<p>Video diffusion inference exposes redundancy at three complementary levels:</p>
-<ul>
-<li><strong>Algorithm level</strong>: adjacent denoising steps run structurally similar computation over slowly changing latents.</li>
-<li><strong>Model level</strong>: long spatiotemporal sequences contain redundant tokens and attention interactions.</li>
-<li><strong>Kernel level</strong>: DiT blocks repeatedly launch memory-bound work around GEMMs, layout movement, normalization, activation, and precision conversion.</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Implemented entries</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="techniques/cache/">Cache</a></td>
-<td>TeaCache, EasyCache, fixed-step cache</td>
-</tr>
-<tr>
-<td><a href="techniques/quant/">Quantization</a></td>
-<td>NVFP4</td>
-</tr>
-<tr>
-<td><a href="techniques/kernel/">Kernel fusion</a></td>
-<td>KWL fusion, QKV merge, compile</td>
-</tr>
-<tr>
-<td><a href="techniques/sparse/">Sparse attention</a></td>
-<td>PISA, SpargeAttention, Sparse VideoGen, ...</td>
-</tr>
-<tr>
-<td><a href="techniques/token_prune/">Token pruning</a></td>
-<td>Feature-norm pruning, ToMe-SD, Astraea, ...</td>
-</tr>
-</tbody>
+<p>Video diffusion inference exposes redundancy at three complementary levels: <strong>Algorithm level</strong>: adjacent denoising steps run structurally similar computation over slowly changing latents. <strong>Model level</strong>: long spatiotemporal sequences contain redundant tokens and attention interactions. <strong>Kernel level</strong>: DiT blocks repeatedly launch memory-bound work around GEMMs, layout movement, normalization, activation, and precision conversion.</p>
+<table class="sol-methods-table">
+  <thead>
+    <tr>
+      <th>Method</th>
+      <th>Implemented entries</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="techniques/cache/">Cache</a></td>
+      <td>TeaCache, EasyCache, fixed-step cache</td>
+    </tr>
+    <tr>
+      <td><a href="techniques/quant/">Quantization</a></td>
+      <td>NVFP4</td>
+    </tr>
+    <tr>
+      <td><a href="techniques/kernel/">Kernel fusion</a></td>
+      <td>KWL fusion, QKV merge, compile</td>
+    </tr>
+    <tr>
+      <td><a href="techniques/sparse/">Sparse attention</a></td>
+      <td>PISA, SpargeAttention, Sparse VideoGen, ...</td>
+    </tr>
+    <tr>
+      <td><a href="techniques/token_prune/">Token pruning</a></td>
+      <td>Feature-norm pruning, ToMe-SD, Astraea, ...</td>
+    </tr>
+  </tbody>
 </table>
+
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <p>In Claude Code or Codex, run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/goal Execute the inference code for the three models using both baseline and full-opt

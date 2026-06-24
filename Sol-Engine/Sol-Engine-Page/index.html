@@ -342,7 +342,7 @@
             <p class="eyebrow">LTX-2.3 Progress Demo</p>
             <figure class="sol-demo-highlight">
               <video src="video_demo_gen/output/ltx_progress_demo_static.mp4" autoplay muted loop playsinline preload="auto" controls></video>
-              <figcaption class="caption">Baseline versus Sol-Engine denoise progress across eight LTX-2.3 prompts.</figcaption>
+              <figcaption class="caption" aria-hidden="true">&nbsp;</figcaption>
             </figure>
           `;
           firstFeaturesSection.parentNode.insertBefore(demoSection, firstFeaturesSection);
@@ -412,9 +412,16 @@
         }
 
         const figureCaptions = root.querySelectorAll('figcaption, .caption');
-        if (!fullPatched && figureCaptions[0]) {
-          figureCaptions[0].innerHTML = 'Acceleration breakdown across different optimization methods. Cache, sparse attention and token pruning, and kernel-level optimization progressively reduce end-to-end latency.';
-        }
+        figureCaptions.forEach((caption) => {
+          const text = caption.textContent || '';
+          if (
+            text.includes('Acceleration breakdown across different optimization methods') ||
+            text.includes('Cache, sparse attention and token pruning') ||
+            text.includes('Baseline versus Sol-Engine denoise progress')
+          ) {
+            caption.remove();
+          }
+        });
         if (!fullPatched && figureCaptions[1]) {
           figureCaptions[1].innerHTML = 'Agentic acceleration stack. Sol Video Inference Engine exposes each technique as a bounded design space. Parallel skill agents test technique applicability, an agent integrator composes selected candidates into a deployment stack, and a human validator provides efficiency--quality feedback.';
         }

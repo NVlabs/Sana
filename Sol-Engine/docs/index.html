@@ -1930,39 +1930,38 @@
 
 
 <h1 id="sol-engine">Sol-Engine<a class="headerlink" href="#sol-engine" title="Permanent link">&para;</a></h1>
-<p>Sol-Engine is an efficiency-oriented inference codebase for high-resolution video diffusion. It wraps Cosmos3-Super, LTX-2.3, and SANA-Video with one explicit acceleration line per model.</p>
+<p>Sol-Engine is an efficiency-oriented inference framework for high-resolution video diffusion. It wraps Cosmos3-Super, LTX-2.3, and SANA-Video with one explicit acceleration line per model.</p>
 <h2 id="models-and-speedups">Models and speedups<a class="headerlink" href="#models-and-speedups" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Model</th>
-<th style="text-align: right;">Params</th>
+<th style="text-align: center;">Params</th>
 <th>Acceleration line</th>
-<th style="text-align: right;">Speedup</th>
+<th style="text-align: center;">Speedup</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="pipelines/cosmos3/">Cosmos3-Super (4xB200)</a></td>
-<td style="text-align: right;">64B</td>
+<td style="text-align: center;">64B</td>
 <td>TeaCache + NVFP4</td>
-<td style="text-align: right;">~2.26x</td>
+<td style="text-align: center;">~2.26x</td>
 </tr>
 <tr>
 <td><a href="pipelines/ltx/">LTX-2.3 (1xB200)</a></td>
-<td style="text-align: right;">22B</td>
+<td style="text-align: center;">22B</td>
 <td>KWL fusion + cache + PISA + NVFP4 + token-prune</td>
-<td style="text-align: right;">~2.4x</td>
+<td style="text-align: center;">~2.4x</td>
 </tr>
 <tr>
 <td><a href="pipelines/sana/">SANA-Video (1xB200)</a></td>
-<td style="text-align: right;">2B</td>
+<td style="text-align: center;">2B</td>
 <td>EasyCache + fusion + compile</td>
-<td style="text-align: right;">2.77x</td>
+<td style="text-align: center;">2.77x</td>
 </tr>
 </tbody>
 </table>
-<p>GB200 timings, warmup excluded. Cosmos3 uses 1280x720, 189 frames, 35 steps; LTX uses 1088x1920, 241 frames; SANA uses 480p, 81 frames, 50 steps.</p>
 <h2 id="the-five-acceleration-methods">The five acceleration methods<a class="headerlink" href="#the-five-acceleration-methods" title="Permanent link">&para;</a></h2>
 <p>Video diffusion inference exposes redundancy at three complementary levels:</p>
 <ul>
@@ -1992,11 +1991,11 @@
 </tr>
 <tr>
 <td><a href="techniques/sparse/">Sparse attention</a></td>
-<td><code>sparse_attention.py</code>, <code>piecewise_attn.py</code>, <code>video_sparse_attn.py</code>, <code>sparse_video_gen_2_attn.py</code>, <code>sparse_linear_attn.py</code>, <code>block_sparse_attn.py</code></td>
+<td>PISA, SpargeAttention, Sparse VideoGen, ...</td>
 </tr>
 <tr>
 <td><a href="techniques/token_prune/">Token pruning</a></td>
-<td><code>token_prune.py</code>, <code>ltx_2_denoising.py</code>, <code>ltx2_spec.py</code>, <code>spec.py</code></td>
+<td>Feature-norm pruning, ToMe-SD, Astraea, ...</td>
 </tr>
 </tbody>
 </table>

@@ -1918,16 +1918,21 @@
 <li>Cosmos3-Super 64B uses 4xB200. LTX-2.3 and SANA-Video use 1xB200.</li>
 </ul>
 <h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>sol-engine<span class="w"> </span>https://github.com/NVlabs/Sana.git<span class="w"> </span>Sol-Engine
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>Sol-Engine
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/NVlabs/Sol-Video-Inference-Engine.git<span class="w"> </span>Sol-Video-Inference-Engine
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>Sol-Video-Inference-Engine
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">PYTHON_VERSION</span><span class="o">=</span><span class="m">3</span>.12<span class="w"> </span>bash<span class="w"> </span>scripts/create_code_conda_env.sh
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>conda<span class="w"> </span>activate<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/.conda/ltx23&quot;</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/python[diffusion]&quot;</span><span class="w"> </span>--prerelease<span class="o">=</span>allow
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="nv">PYTHON_BIN</span><span class="o">=</span>.conda/ltx23/bin/python<span class="w"> </span>bash<span class="w"> </span>scripts/postinstall_cuda_jit.sh
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/scripts/use_code_storage_env.sh&quot;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>conda<span class="w"> </span>activate<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/.conda/ltx23&quot;</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/python[diffusion]&quot;</span><span class="w"> </span>--prerelease<span class="o">=</span>allow
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nv">PYTHON_BIN</span><span class="o">=</span>.conda/ltx23/bin/python<span class="w"> </span>bash<span class="w"> </span>scripts/postinstall_cuda_jit.sh
 </code></pre></div>
+<p><code>scripts/create_code_conda_env.sh</code> creates <code>.conda/ltx23</code> by default, installs
+<code>pip</code> and <code>uv</code>, and installs conda activation hooks for <code>scripts/use_code_storage_env.sh</code>.
+The script defaults to Python 3.11 when <code>PYTHON_VERSION</code> is unset; the agent guide
+sets <code>PYTHON_VERSION=3.12</code> for this stack.</p>
 <p>Add <code>--with-te</code> to <code>scripts/postinstall_cuda_jit.sh</code> when using the NVFP4 path for Cosmos3-Super or LTX-2.3.</p>
 <h2 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>.conda/ltx23/bin/python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import torch, diffusers, sglang; print(torch.__version__, diffusers.__version__, torch.cuda.is_available())&quot;</span>

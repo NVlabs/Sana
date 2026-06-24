@@ -1027,6 +1027,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1104,14 +1108,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/kwl/" class="md-nav__link">
+      <a href="../kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1168,6 +1172,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1895,7 +1955,7 @@
 <p>Token pruning removes low-salience video tokens in selected steps. It targets model-level redundancy in long spatiotemporal sequences.</p>
 <p>The paper treats token pruning as a sequence-reduction family: the token-pruning agent tunes the pruning criterion, pruning ratio, layer schedule, timestep schedule, and reconstruction rule, then validates temporal coherence and late-step fidelity.</p>
 <h2 id="in-sol-engine">In Sol-Engine<a class="headerlink" href="#in-sol-engine" title="Permanent link">&para;</a></h2>
-<p>LTX-2.3 uses token pruning in the full optimization stack together with KWL fusion, cache, PISA sparse attention, and NVFP4.</p>
+<p>LTX-2.3 uses token pruning in the full optimization stack together with kernel fusion, cache, PISA sparse attention, and NVFP4.</p>
 <p>Implemented entries:</p>
 <ul>
 <li><code>python/sglang/multimodal_gen/runtime/efficiency/techniques/token_prune.py</code></li>

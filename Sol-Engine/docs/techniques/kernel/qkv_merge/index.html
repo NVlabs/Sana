@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/kernel/qkv_merge/">
       
       
-        <link rel="prev" href="../qknorm_rope/">
+        <link rel="prev" href="../residual_modulation/">
       
       
         <link rel="next" href="../torch_compile/">
@@ -1029,6 +1029,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1106,14 +1110,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../kwl/" class="md-nav__link">
+      <a href="../adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1170,6 +1174,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1894,22 +1954,8 @@
 <h1 id="qkv-merge">QKV merge<a class="headerlink" href="#qkv-merge" title="Permanent link">&para;</a></h1>
 <p>QKV merge combines separate query, key, and value projection work where the model and tensor layout allow it. In Sol-Engine, this is part of the SANA-Video full optimization path.</p>
 <h2 id="sol-engine-placement">Sol-Engine placement<a class="headerlink" href="#sol-engine-placement" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Pipeline</th>
-<th>Scope</th>
-<th>Role</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>SANA-Video</td>
-<td>attention projection path</td>
-<td>combines with EasyCache, BF16 linear-attention kernels, and compile</td>
-</tr>
-</tbody>
-</table>
+<p>Sol-Engine uses QKV merge in the SANA-Video attention projection path together
+with EasyCache, BF16 linear-attention kernels, and compile.</p>
 <h2 id="why-it-helps">Why it helps<a class="headerlink" href="#why-it-helps" title="Permanent link">&para;</a></h2>
 <p>Projection paths often launch multiple similar kernels and materialize intermediate tensors. Merging QKV work reduces launch overhead and improves data movement locality.</p>
 <h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>

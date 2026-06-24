@@ -18,7 +18,7 @@
         <link rel="prev" href="../gemm_epilogues/">
       
       
-        <link rel="next" href="../qkv_merge/">
+        <link rel="next" href="../attention_output_gate/">
       
       
         
@@ -1029,6 +1029,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1106,14 +1110,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../kwl/" class="md-nav__link">
+      <a href="../adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1258,6 +1262,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1892,7 +1952,9 @@
 
 
 <h1 id="qk-norm-rope-fusion">QK-norm + RoPE fusion<a class="headerlink" href="#qk-norm-rope-fusion" title="Permanent link">&para;</a></h1>
-<p>QK-norm + RoPE fusion combines normalization and rotary-position work on the attention Q/K path. This targets repeated small operators that otherwise launch separately and move intermediate tensors through memory.</p>
+<p>QK-norm + RoPE fusion combines Q/K normalization and rotary-position work on the
+attention Q/K path. This targets repeated small operators that otherwise launch
+separately and move intermediate tensors through memory.</p>
 <h2 id="role-in-sol-engine">Role in Sol-Engine<a class="headerlink" href="#role-in-sol-engine" title="Permanent link">&para;</a></h2>
 <p>This is part of the DiT attention-path fusion design space and is especially relevant when attention remains active after sparse attention choices are fixed.</p>
 <h2 id="search-knobs">Search knobs<a class="headerlink" href="#search-knobs" title="Permanent link">&para;</a></h2>

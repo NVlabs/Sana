@@ -18,7 +18,7 @@
         <link rel="prev" href="../quant/modelopt_fp8/">
       
       
-        <link rel="next" href="kwl/">
+        <link rel="next" href="adaln_residual_gate/">
       
       
         
@@ -1029,6 +1029,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1186,14 +1190,14 @@
   
   
     <li class="md-nav__item">
-      <a href="kwl/" class="md-nav__link">
+      <a href="adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1250,6 +1254,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1906,7 +1966,7 @@
 <tbody>
 <tr>
 <td>LTX-2.3</td>
-<td>KWL fusion</td>
+<td>kernel fusion</td>
 <td>Operator-level optimization before other methods</td>
 </tr>
 <tr>
@@ -1926,16 +1986,24 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="kwl/">KWL fusion</a></td>
-<td>Sol-Engine DiT glue fusion around AdaLN, gates, FFN, and attention paths</td>
+<td><a href="adaln_residual_gate/">AdaLN and residual gate fusion</a></td>
+<td>AdaLN normalization, scale, shift, and residual gate fusion</td>
 </tr>
 <tr>
 <td><a href="gemm_epilogues/">GEMM epilogues</a></td>
-<td>GEMM + GELU / bias / residual style fusion described by CUTLASS and ByteTransformer-style paths</td>
+<td>GEMM + activation / bias / FFN epilogue fusion described by CUTLASS and ByteTransformer-style paths</td>
 </tr>
 <tr>
 <td><a href="qknorm_rope/">QK-norm + RoPE fusion</a></td>
-<td>fused normalization and rotary-position work on attention Q/K paths</td>
+<td>fused Q/K normalization and rotary-position work on attention Q/K paths</td>
+</tr>
+<tr>
+<td><a href="attention_output_gate/">Attention output gate fusion</a></td>
+<td>attention output projection, gate application, and output-path glue fusion</td>
+</tr>
+<tr>
+<td><a href="residual_modulation/">Residual and modulation glue fusion</a></td>
+<td>residual update and modulation-path fusion around DiT blocks</td>
 </tr>
 <tr>
 <td><a href="qkv_merge/">QKV merge</a></td>

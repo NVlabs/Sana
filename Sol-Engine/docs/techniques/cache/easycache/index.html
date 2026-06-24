@@ -1109,6 +1109,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1186,14 +1190,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/kwl/" class="md-nav__link">
+      <a href="../../kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1250,6 +1254,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1894,22 +1954,8 @@
 <h1 id="easycache">EasyCache<a class="headerlink" href="#easycache" title="Permanent link">&para;</a></h1>
 <p>EasyCache is the cache policy selected for SANA-Video. It is a runtime-adaptive feature reuse method that balances speed and quality online instead of relying on a fixed offline schedule.</p>
 <h2 id="sol-engine-placement">Sol-Engine placement<a class="headerlink" href="#sol-engine-placement" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Pipeline</th>
-<th>Scope</th>
-<th>Configuration</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>SANA-Video</td>
-<td>denoising transformer path</td>
-<td><code>--easycache 0.1</code> in the full optimization stack</td>
-</tr>
-</tbody>
-</table>
+<p>Sol-Engine uses EasyCache in the SANA-Video denoising transformer path with
+<code>--easycache 0.1</code> in the full optimization stack.</p>
 <p>SANA-Video already uses an efficient linear-attention architecture, so EasyCache becomes the main algorithm-level acceleration component before kernel-level optimization is applied.</p>
 <h2 id="tunable-knobs">Tunable knobs<a class="headerlink" href="#tunable-knobs" title="Permanent link">&para;</a></h2>
 <ul>

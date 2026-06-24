@@ -12,13 +12,13 @@
         <meta name="author" content="Sol-Engine Team">
       
       
-        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/kernel/kwl/">
+        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/kernel/residual_modulation/">
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../attention_output_gate/">
       
       
-        <link rel="next" href="../gemm_epilogues/">
+        <link rel="next" href="../qkv_merge/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>KWL fusion - Sol-Engine Documentation</title>
+        <title>Residual and modulation glue fusion - Sol-Engine Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#kwl-fusion" class="md-skip">
+        <a href="#residual-and-modulation-glue-fusion" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              KWL fusion
+              Residual and modulation glue fusion
             
           </span>
         </div>
@@ -1029,6 +1029,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1103,44 +1107,17 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    KWL fusion
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1149,59 +1126,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#sol-engine-placement" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sol-Engine placement
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#candidate-fusions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Candidate fusions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#trade-off" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Trade-off
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1258,6 +1182,131 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#role-in-sol-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Role in Sol-Engine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1839,10 +1888,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#sol-engine-placement" class="md-nav__link">
+  <a href="#role-in-sol-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sol-Engine placement
+        Role in Sol-Engine
       
     </span>
   </a>
@@ -1850,21 +1899,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#candidate-fusions" class="md-nav__link">
+  <a href="#validation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Candidate fusions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#trade-off" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Trade-off
+        Validation
       
     </span>
   </a>
@@ -1891,35 +1929,16 @@
   
 
 
-<h1 id="kwl-fusion">KWL fusion<a class="headerlink" href="#kwl-fusion" title="Permanent link">&para;</a></h1>
-<p>KWL fusion is Sol-Engine's custom kernel-fusion path for DiT glue operators. It targets memory-bound work around GEMMs and attention paths.</p>
-<h2 id="sol-engine-placement">Sol-Engine placement<a class="headerlink" href="#sol-engine-placement" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Pipeline</th>
-<th>Scope</th>
-<th>Role</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>LTX-2.3</td>
-<td>DiT block glue operators</td>
-<td>operator-level optimization in the full stack</td>
-</tr>
-</tbody>
-</table>
-<h2 id="candidate-fusions">Candidate fusions<a class="headerlink" href="#candidate-fusions" title="Permanent link">&para;</a></h2>
-<ul>
-<li>AdaLN normalization, scale, shift, and residual gate.</li>
-<li>Q/K normalization and RoPE path.</li>
-<li>FFN projection plus activation.</li>
-<li>attention gate-to-output path.</li>
-<li>residual and modulation glue.</li>
-</ul>
-<h2 id="trade-off">Trade-off<a class="headerlink" href="#trade-off" title="Permanent link">&para;</a></h2>
-<p>KWL fusion should preserve the original block math apart from normal BF16 rounding. Keep it shape- and workload-specific; retain only fusions that improve the target deployment.</p>
+<h1 id="residual-and-modulation-glue-fusion">Residual and modulation glue fusion<a class="headerlink" href="#residual-and-modulation-glue-fusion" title="Permanent link">&para;</a></h1>
+<p>Residual and modulation glue fusion targets the small operators that connect
+normalization, gates, residual updates, and block outputs. These operators are
+often individually cheap but collectively memory-bound when launched separately.</p>
+<h2 id="role-in-sol-engine">Role in Sol-Engine<a class="headerlink" href="#role-in-sol-engine" title="Permanent link">&para;</a></h2>
+<p>This fusion is a local kernel-level optimization for DiT block glue. It is kept
+shape-specific and enabled only when profiling shows a real latency reduction.</p>
+<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
+<p>Confirm that residual accumulation order, dtype conversion, and modulation values
+match the unfused path within the expected precision envelope.</p>
 
 
 

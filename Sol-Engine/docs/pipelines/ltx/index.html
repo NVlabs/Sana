@@ -1107,6 +1107,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1184,14 +1188,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/kwl/" class="md-nav__link">
+      <a href="../../techniques/kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1248,6 +1252,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../techniques/kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../techniques/kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1890,25 +1950,10 @@
 
 
 <h1 id="ltx-23">LTX-2.3<a class="headerlink" href="#ltx-23" title="Permanent link">&para;</a></h1>
-<p>LTX-2.3 is the 22B high-resolution pipeline. The optimized path combines KWL fusion, cache, PISA sparse attention, NVFP4, and token pruning.</p>
+<p>LTX-2.3 is the 22B high-resolution pipeline. The optimized path combines kernel fusion, cache, PISA sparse attention, NVFP4, and token pruning.</p>
 <h2 id="speed">Speed<a class="headerlink" href="#speed" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Acceleration line</th>
-<th style="text-align: right;">Speedup</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Full optimization</td>
-<td>KWL fusion + cache + PISA + NVFP4 + token-prune</td>
-<td style="text-align: right;">~2.4x</td>
-</tr>
-</tbody>
-</table>
-<p>Measured on GB200 with 1088x1920, 241 frames, warmup excluded.</p>
+<p>Full optimization uses kernel fusion + cache + PISA + NVFP4 + token-prune and reaches 2.40x speedup.
+Measured on GB200 with 1088x1920, 241 frames, warmup excluded.</p>
 <h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bash<span class="w"> </span>scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh<span class="w"> </span>baseline
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>bash<span class="w"> </span>scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh<span class="w"> </span>fullopt
@@ -1916,7 +1961,7 @@
 <p><code>fullopt</code> is self-contained. Override <code>MODEL_PATH</code>, <code>DISTILLED_LORA</code>, or <code>SPATIAL_UPSAMPLER</code> when weights live outside the default cache location.</p>
 <h2 id="techniques">Techniques<a class="headerlink" href="#techniques" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../techniques/kernel/">Kernel fusion</a>: KWL fusion reduces DiT operator overhead.</li>
+<li><a href="../../techniques/kernel/">Kernel fusion</a>: kernel fusion reduces DiT operator overhead.</li>
 <li><a href="../../techniques/cache/">Cache</a>: stage-specific reuse avoids redundant work.</li>
 <li><a href="../../techniques/sparse/">Sparse attention</a>: PISA targets redundant video self-attention.</li>
 <li><a href="../../techniques/quant/">Quantization</a>: NVFP4 targets video FFN compute.</li>

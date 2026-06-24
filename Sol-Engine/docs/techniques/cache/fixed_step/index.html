@@ -1120,6 +1120,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1197,14 +1201,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/kwl/" class="md-nav__link">
+      <a href="../../kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1261,6 +1265,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1916,22 +1976,8 @@
 <h1 id="fixed-step-cache">Fixed-step cache<a class="headerlink" href="#fixed-step-cache" title="Permanent link">&para;</a></h1>
 <p>Fixed-step cache uses a deterministic fixed-step schedule rather than a learned or threshold-driven skip decision. The paper reports that the LTX-2.3 high-quality schedule required a custom fixed-step strategy because cache schedules tuned for Euler-style samplers did not transfer cleanly to the res_2s trajectory.</p>
 <h2 id="sol-engine-placement">Sol-Engine placement<a class="headerlink" href="#sol-engine-placement" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Pipeline</th>
-<th>Scope</th>
-<th>Role</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>LTX-2.3</td>
-<td>stage-specific denoising path</td>
-<td>selected cache component in the full optimization stack</td>
-</tr>
-</tbody>
-</table>
+<p>Sol-Engine uses fixed-step cache in the LTX-2.3 stage-specific denoising path
+as the selected cache component in the full optimization stack.</p>
 <h2 id="why-it-is-useful">Why it is useful<a class="headerlink" href="#why-it-is-useful" title="Permanent link">&para;</a></h2>
 <p>The LTX-2.3 pipeline has two stages and only a few high-resolution refinement steps. A deterministic schedule can be safer than threshold replay when the sampler trajectory is short, sensitive, or unlike the schedule assumed by generic cache heuristics.</p>
 <h2 id="tunable-knobs">Tunable knobs<a class="headerlink" href="#tunable-knobs" title="Permanent link">&para;</a></h2>

@@ -1027,6 +1027,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1104,14 +1108,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/kwl/" class="md-nav__link">
+      <a href="../../kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1168,6 +1172,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1894,22 +1954,8 @@
 <h1 id="pisa">PISA<a class="headerlink" href="#pisa" title="Permanent link">&para;</a></h1>
 <p>PISA is the sparse attention method selected for LTX-2.3. It uses piecewise sparse attention: important blocks are computed exactly, while less important blocks can be approximated or skipped depending on configuration.</p>
 <h2 id="sol-engine-placement">Sol-Engine placement<a class="headerlink" href="#sol-engine-placement" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Pipeline</th>
-<th>Scope</th>
-<th>Configuration role</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>LTX-2.3</td>
-<td>selected stage-2 video self-attention</td>
-<td>combines with cache, token pruning, NVFP4, and KWL fusion</td>
-</tr>
-</tbody>
-</table>
+<p>Sol-Engine uses PISA in selected LTX-2.3 stage-2 video self-attention blocks
+together with cache, token pruning, NVFP4, and kernel fusion.</p>
 <h2 id="tunable-knobs">Tunable knobs<a class="headerlink" href="#tunable-knobs" title="Permanent link">&para;</a></h2>
 <ul>
 <li>sparsity.</li>

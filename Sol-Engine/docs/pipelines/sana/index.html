@@ -1107,6 +1107,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1184,14 +1188,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/kwl/" class="md-nav__link">
+      <a href="../../techniques/kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1248,6 +1252,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../techniques/kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../techniques/kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1892,23 +1952,8 @@
 <h1 id="sana-video">SANA-Video<a class="headerlink" href="#sana-video" title="Permanent link">&para;</a></h1>
 <p>SANA-Video is the 2B text-to-video path in Sol-Engine. The optimized configuration uses EasyCache, attention/kernel fusion, and <code>torch.compile</code>.</p>
 <h2 id="speed">Speed<a class="headerlink" href="#speed" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Acceleration line</th>
-<th style="text-align: right;">Speedup</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Full optimization</td>
-<td>EasyCache + fusion + compile</td>
-<td style="text-align: right;">2.77x</td>
-</tr>
-</tbody>
-</table>
-<p>Measured on GB200 with 832x480, 81 frames, and 50 denoising steps, warmup excluded.</p>
+<p>Full optimization uses EasyCache + fusion + compile and reaches 2.77x speedup.
+Measured on GB200 with 832x480, 81 frames, and 50 denoising steps, warmup excluded.</p>
 <h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PY</span><span class="o">=</span>.conda/ltx23/bin/python
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>

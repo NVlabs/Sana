@@ -1109,6 +1109,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1186,14 +1190,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/kwl/" class="md-nav__link">
+      <a href="../../kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    KWL fusion
+    AdaLN and residual gate fusion
   
 
     
@@ -1250,6 +1254,62 @@
     
   
     QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
   
 
     
@@ -1894,22 +1954,8 @@
 <h1 id="teacache">TeaCache<a class="headerlink" href="#teacache" title="Permanent link">&para;</a></h1>
 <p>TeaCache is the cross-step cache policy selected for Cosmos3-Super. It estimates how much the denoising hidden state changes from one timestep to the next and reuses a cached residual when the accumulated change stays below a threshold.</p>
 <h2 id="sol-engine-placement">Sol-Engine placement<a class="headerlink" href="#sol-engine-placement" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Pipeline</th>
-<th>Scope</th>
-<th>Configuration</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Cosmos3-Super</td>
-<td>generation-path transformer blocks</td>
-<td>threshold 1.15, start step 10, max 3 continuous hits</td>
-</tr>
-</tbody>
-</table>
+<p>Sol-Engine uses TeaCache in the Cosmos3-Super generation-path transformer
+blocks with threshold 1.15, start step 10, and max 3 continuous hits.</p>
 <p>The first cache hit skips repeated generation-path transformer work and replays the cached residual. A recompute refreshes the residual when the accumulated change crosses the threshold or the max-hit cap is reached.</p>
 <h2 id="tunable-knobs">Tunable knobs<a class="headerlink" href="#tunable-knobs" title="Permanent link">&para;</a></h2>
 <ul>

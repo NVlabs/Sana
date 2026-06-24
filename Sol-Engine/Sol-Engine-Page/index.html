@@ -251,14 +251,18 @@
         const venue = root.querySelector('.hero .venue');
         if (venue) venue.textContent = 'Technical Report · 2026';
 
-        const badges = root.querySelectorAll('.badges a');
-        if (badges.length >= 3) {
-          badges[0].textContent = 'Paper';
-          badges[0].href = 'main.pdf';
-          badges[1].textContent = 'Demos';
-          badges[1].href = '#demos';
-          badges[2].textContent = 'BibTeX';
-          badges[2].href = '#citation';
+        const badges = root.querySelector('.badges');
+        if (badges) {
+          badges.innerHTML = '';
+          const paperBadge = document.createElement('a');
+          paperBadge.textContent = 'Paper';
+          paperBadge.href = 'http://arxiv.org/abs/2606.23743';
+          paperBadge.target = '_blank';
+          paperBadge.rel = 'noopener noreferrer';
+          const codeBadge = document.createElement('a');
+          codeBadge.textContent = 'Code';
+          codeBadge.href = '';
+          badges.append(paperBadge, codeBadge);
         }
 
         const featureTitles = root.querySelectorAll('.feature-card h3');

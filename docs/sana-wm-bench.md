@@ -68,6 +68,32 @@ The rest of this guide assumes:
 BENCH=data/SANA-WM-Bench
 ```
 
+## Evaluation Dependencies
+
+Run the benchmark from a Sana-WM runtime environment with the extra evaluation
+packages installed:
+
+```bash
+python -m pip install vbench decord lpips pyiqa==0.1.10 facexlib==0.3.0
+```
+
+Camera pose accuracy additionally requires Pi3 to be importable:
+
+```bash
+python - <<'PY'
+from pi3.models.pi3 import Pi3
+print("Pi3 OK")
+PY
+```
+
+If the inference environment has strict package pins, keep the VBench/LPIPS
+extras in a separate evaluation environment or user site and use the same
+repository checkout and result directory.
+
+The first VBench/LPIPS run downloads the official evaluation weights into the
+user cache, including DINO, AMT, ViCLIP, and AlexNet checkpoints. Make sure the
+evaluation job has network access or a pre-populated cache.
+
 ## Run One Scene
 
 Download or point `BENCH` at the release directory:
@@ -237,7 +263,7 @@ conventions:
 - `TransErr` and `CamMC`: means of `TransErr_rel` and `CamMC_rel`.
 - `Delta IQ`: `temporal_degradation.json["trend"]["imaging_quality"]["degradation"]`.
 
-Use the evaluator scripts from your evaluation environment together with
+Use the bundled evaluator scripts under `tools/metrics/sana_wm/` together with
 this result layout:
 
 ```text
@@ -262,7 +288,7 @@ explicitly:
 ```bash
 BENCH=data/SANA-WM-Bench
 METHOD_DIR=results/sana_wm_bidirectional_refined
-PYTHONPATH="$PWD:${PYTHONPATH:-}" python /path/to/eval_unified.py \
+PYTHONPATH="$PWD:${PYTHONPATH:-}" python tools/metrics/sana_wm/eval_unified.py \
   --method_dir "$METHOD_DIR" \
   --split simple_60s \
   --benchmark_meta "$BENCH/benchmark_v2_smooth_60s/scene_trajectories_v2.json" \
@@ -275,7 +301,7 @@ PYTHONPATH="$PWD:${PYTHONPATH:-}" python /path/to/eval_unified.py \
   --window_sec 10 \
   --skip_first_frame auto
 
-PYTHONPATH="$PWD:${PYTHONPATH:-}" python /path/to/eval_unified.py \
+PYTHONPATH="$PWD:${PYTHONPATH:-}" python tools/metrics/sana_wm/eval_unified.py \
   --method_dir "$METHOD_DIR" \
   --split hard_60s \
   --benchmark_meta "$BENCH/benchmark_v2_hard_60s/scene_trajectories_v2.json" \
@@ -290,9 +316,8 @@ PYTHONPATH="$PWD:${PYTHONPATH:-}" python /path/to/eval_unified.py \
 ```
 
 Camera accuracy is GPU-backed and should be run as a separate 8-GPU Slurm job.
-Because the release manifest stores dataset-relative `camera_path` entries, run
-the pose script from the dataset root while using absolute result and output
-paths:
+Run the pose script from the repository root and point it at the downloaded
+benchmark manifest:
 
 ```bash
 cat > run_sana_wm_pose_eval.sbatch <<'EOF'
@@ -309,17 +334,18 @@ set -euo pipefail
 
 PY=/path/to/python
 ACCEL=/path/to/accelerate
+REPO=/path/to/Sana
 BENCH=data/SANA-WM-Bench
 METHOD_DIR=/path/to/results/sana_wm_bidirectional_refined
 
-cd "$BENCH"
+cd "$REPO"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 run_pose() {
   local split="$1"
   local split_dir="$2"
   "$ACCEL" launch --num_processes=8 --mixed_precision=bf16 \
-    /path/to/eval_benchmark_poses.py \
+    tools/metrics/sana_wm/eval_benchmark_poses.py \
     --result_folder "$METHOD_DIR/$split" \
     --manifest "$BENCH/$split_dir/sanawm_export_v2/run_manifest.jsonl" \
     --interval 4 \
@@ -331,7 +357,7 @@ run_pose() {
 run_pose simple_60s benchmark_v2_smooth_60s
 run_pose hard_60s benchmark_v2_hard_60s
 
-"$PY" /path/to/aggregate_results.py \
+"$PY" tools/metrics/sana_wm/aggregate_results.py \
   --results_root "$(dirname "$METHOD_DIR")" \
   --json_out "$METHOD_DIR/metrics_80scene/aggregate_results.json" \
   --md_out "$METHOD_DIR/metrics_80scene/aggregate_results.md"

@@ -12,31 +12,31 @@
         <meta name="author" content="Sol-Engine Team">
       
       
-        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/ltx/">
+        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/sparse/sparse_videogen2/">
       
       
-        <link rel="prev" href="../cosmos3/">
+        <link rel="prev" href="../sparse_videogen/">
       
       
-        <link rel="next" href="../sana/">
+        <link rel="next" href="../vsa/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/sol-engine-logo.png">
+      <link rel="icon" href="../../../assets/sol-engine-logo.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>LTX-2.3 - Sol-Engine Documentation</title>
+        <title>Sparse VideoGen2 - Sol-Engine Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,9 +55,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ltx-23" class="md-skip">
+        <a href="#sparse-videogen2" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +98,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Sol-Engine Documentation" class="md-header__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
+    <a href="../../.." title="Sol-Engine Documentation" class="md-header__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
       
-  <img src="../../assets/sol-engine-logo.png" alt="logo">
+  <img src="../../../assets/sol-engine-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              LTX-2.3
+              Sparse VideoGen2
             
           </span>
         </div>
@@ -235,9 +235,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Sol-Engine Documentation" class="md-nav__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
+    <a href="../../.." title="Sol-Engine Documentation" class="md-nav__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
       
-  <img src="../../assets/sol-engine-logo.png" alt="logo">
+  <img src="../../../assets/sol-engine-logo.png" alt="logo">
 
     </a>
     Sol-Engine Documentation
@@ -264,7 +264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -291,7 +291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
+      <a href="../../../installation/" class="md-nav__link">
         
   
   
@@ -315,10 +315,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -337,11 +335,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -362,7 +360,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -380,7 +378,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cosmos3/" class="md-nav__link">
+      <a href="../../../pipelines/cosmos3/" class="md-nav__link">
         
   
   
@@ -405,37 +403,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    LTX-2.3
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../pipelines/ltx/" class="md-nav__link">
         
   
   
@@ -451,59 +422,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#speed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Speed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#launch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Launch
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#techniques" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Techniques
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -516,7 +434,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sana/" class="md-nav__link">
+      <a href="../../../pipelines/sana/" class="md-nav__link">
         
   
   
@@ -548,8 +466,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -572,11 +492,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -597,7 +517,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -678,7 +598,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/cache/" class="md-nav__link">
+      <a href="../../cache/" class="md-nav__link">
         
   
   
@@ -706,7 +626,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/cache/teacache/" class="md-nav__link">
+      <a href="../../cache/teacache/" class="md-nav__link">
         
   
   
@@ -734,7 +654,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/cache/easycache/" class="md-nav__link">
+      <a href="../../cache/easycache/" class="md-nav__link">
         
   
   
@@ -762,7 +682,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/cache/taylorseer/" class="md-nav__link">
+      <a href="../../cache/taylorseer/" class="md-nav__link">
         
   
   
@@ -790,7 +710,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/cache/fixed_step/" class="md-nav__link">
+      <a href="../../cache/fixed_step/" class="md-nav__link">
         
   
   
@@ -818,7 +738,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/cache/cache_dit/" class="md-nav__link">
+      <a href="../../cache/cache_dit/" class="md-nav__link">
         
   
   
@@ -917,7 +837,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/quant/" class="md-nav__link">
+      <a href="../../quant/" class="md-nav__link">
         
   
   
@@ -945,7 +865,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/quant/nvfp4/" class="md-nav__link">
+      <a href="../../quant/nvfp4/" class="md-nav__link">
         
   
   
@@ -973,7 +893,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/quant/diffusion_ptq/" class="md-nav__link">
+      <a href="../../quant/diffusion_ptq/" class="md-nav__link">
         
   
   
@@ -1001,7 +921,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/quant/svdquant/" class="md-nav__link">
+      <a href="../../quant/svdquant/" class="md-nav__link">
         
   
   
@@ -1029,7 +949,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/quant/sageattention/" class="md-nav__link">
+      <a href="../../quant/sageattention/" class="md-nav__link">
         
   
   
@@ -1057,7 +977,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/quant/modelopt_fp8/" class="md-nav__link">
+      <a href="../../quant/modelopt_fp8/" class="md-nav__link">
         
   
   
@@ -1156,7 +1076,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/" class="md-nav__link">
+      <a href="../../kernel/" class="md-nav__link">
         
   
   
@@ -1184,7 +1104,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/kwl/" class="md-nav__link">
+      <a href="../../kernel/kwl/" class="md-nav__link">
         
   
   
@@ -1212,7 +1132,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/gemm_epilogues/" class="md-nav__link">
+      <a href="../../kernel/gemm_epilogues/" class="md-nav__link">
         
   
   
@@ -1240,7 +1160,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/qknorm_rope/" class="md-nav__link">
+      <a href="../../kernel/qknorm_rope/" class="md-nav__link">
         
   
   
@@ -1268,7 +1188,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/qkv_merge/" class="md-nav__link">
+      <a href="../../kernel/qkv_merge/" class="md-nav__link">
         
   
   
@@ -1296,7 +1216,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/kernel/torch_compile/" class="md-nav__link">
+      <a href="../../kernel/torch_compile/" class="md-nav__link">
         
   
   
@@ -1329,8 +1249,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -1352,11 +1274,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
@@ -1377,7 +1299,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1395,7 +1317,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/sparse/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1423,7 +1345,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/sparse/pisa/" class="md-nav__link">
+      <a href="../pisa/" class="md-nav__link">
         
   
   
@@ -1451,7 +1373,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/sparse/spargeattention/" class="md-nav__link">
+      <a href="../spargeattention/" class="md-nav__link">
         
   
   
@@ -1479,7 +1401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/sparse/sparse_videogen/" class="md-nav__link">
+      <a href="../sparse_videogen/" class="md-nav__link">
         
   
   
@@ -1504,10 +1426,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../techniques/sparse/sparse_videogen2/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sparse VideoGen2
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1523,6 +1472,59 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#role-in-sol-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Role in Sol-Engine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-knobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search knobs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1535,7 +1537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/sparse/vsa/" class="md-nav__link">
+      <a href="../vsa/" class="md-nav__link">
         
   
   
@@ -1634,7 +1636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/token_prune/" class="md-nav__link">
+      <a href="../../token_prune/" class="md-nav__link">
         
   
   
@@ -1662,7 +1664,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/token_prune/feature_norm/" class="md-nav__link">
+      <a href="../../token_prune/feature_norm/" class="md-nav__link">
         
   
   
@@ -1690,7 +1692,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/token_prune/tome_sd/" class="md-nav__link">
+      <a href="../../token_prune/tome_sd/" class="md-nav__link">
         
   
   
@@ -1718,7 +1720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/token_prune/astraea/" class="md-nav__link">
+      <a href="../../token_prune/astraea/" class="md-nav__link">
         
   
   
@@ -1746,7 +1748,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/token_prune/tape/" class="md-nav__link">
+      <a href="../../token_prune/tape/" class="md-nav__link">
         
   
   
@@ -1774,7 +1776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../techniques/token_prune/coredit/" class="md-nav__link">
+      <a href="../../token_prune/coredit/" class="md-nav__link">
         
   
   
@@ -1837,10 +1839,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#speed" class="md-nav__link">
+  <a href="#role-in-sol-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Speed
+        Role in Sol-Engine
       
     </span>
   </a>
@@ -1848,10 +1850,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#launch" class="md-nav__link">
+  <a href="#search-knobs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Launch
+        Search knobs
       
     </span>
   </a>
@@ -1859,10 +1861,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#techniques" class="md-nav__link">
+  <a href="#validation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Techniques
+        Validation
       
     </span>
   </a>
@@ -1889,39 +1891,19 @@
   
 
 
-<h1 id="ltx-23">LTX-2.3<a class="headerlink" href="#ltx-23" title="Permanent link">&para;</a></h1>
-<p>LTX-2.3 is the 22B high-resolution pipeline. The optimized path combines KWL fusion, cache, PISA sparse attention, NVFP4, and token pruning.</p>
-<h2 id="speed">Speed<a class="headerlink" href="#speed" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Acceleration line</th>
-<th style="text-align: right;">Speedup</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Full optimization</td>
-<td>KWL fusion + cache + PISA + NVFP4 + token-prune</td>
-<td style="text-align: right;">~2.4x</td>
-</tr>
-</tbody>
-</table>
-<p>Measured on GB200 with 1088x1920, 241 frames, warmup excluded.</p>
-<h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bash<span class="w"> </span>scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh<span class="w"> </span>baseline
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>bash<span class="w"> </span>scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh<span class="w"> </span>fullopt
-</code></pre></div>
-<p><code>fullopt</code> is self-contained. Override <code>MODEL_PATH</code>, <code>DISTILLED_LORA</code>, or <code>SPATIAL_UPSAMPLER</code> when weights live outside the default cache location.</p>
-<h2 id="techniques">Techniques<a class="headerlink" href="#techniques" title="Permanent link">&para;</a></h2>
+<h1 id="sparse-videogen2">Sparse VideoGen2<a class="headerlink" href="#sparse-videogen2" title="Permanent link">&para;</a></h1>
+<p>Sparse VideoGen2 improves sparse-token identification and GPU layout through semantic-aware permutation.</p>
+<h2 id="role-in-sol-engine">Role in Sol-Engine<a class="headerlink" href="#role-in-sol-engine" title="Permanent link">&para;</a></h2>
+<p>It is a candidate sparse backend when semantic grouping can make sparse execution more efficient or more stable than a purely geometric block pattern.</p>
+<h2 id="search-knobs">Search knobs<a class="headerlink" href="#search-knobs" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../techniques/kernel/">Kernel fusion</a>: KWL fusion reduces DiT operator overhead.</li>
-<li><a href="../../techniques/cache/">Cache</a>: stage-specific reuse avoids redundant work.</li>
-<li><a href="../../techniques/sparse/">Sparse attention</a>: PISA targets redundant video self-attention.</li>
-<li><a href="../../techniques/quant/">Quantization</a>: NVFP4 targets video FFN compute.</li>
-<li><a href="../../techniques/token_prune/">Token pruning</a>: low-salience tokens are removed in selected refine steps.</li>
+<li>semantic grouping policy.</li>
+<li>sparse-token identification threshold.</li>
+<li>layout permutation.</li>
+<li>dense fallback layers.</li>
 </ul>
+<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
+<p>Inspect whether semantic grouping preserves object boundaries and motion continuity across frames.</p>
 
 
 
@@ -1994,12 +1976,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../../stylesheets/extra.js"></script>
+        <script src="../../../stylesheets/extra.js"></script>
       
     
   </body>

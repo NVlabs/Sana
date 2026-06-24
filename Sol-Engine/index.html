@@ -3,13 +3,460 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Redirecting...</title>
-    <meta http-equiv="refresh" content="0; url=./Sol-Engine-Page/" />
-    <script>
-      window.location.replace('./Sol-Engine-Page/');
-    </script>
+    <meta
+      name="description"
+      content="Sol Video Inference Engine is an agent-native, training-free acceleration framework for efficient video diffusion inference."
+    />
+    <title>Sol Video Inference Engine | Agent-Native Full-Stack Acceleration</title>
+    <script type="module" crossorigin src="./WM/assets/index-DfbPTWSc.js"></script>
+    <link rel="stylesheet" crossorigin href="./WM/assets/index-ng7n7tEN.css">
+    <style>
+      .sol-placeholder {
+        width: 100%;
+        min-height: 220px;
+        display: grid;
+        place-items: center;
+        border: 2px dashed rgba(255,255,255,0.28);
+        border-radius: 14px;
+        color: rgba(255,255,255,0.72);
+        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-align: center;
+        padding: 24px;
+      }
+      .sol-compare-grid {
+        display: grid;
+        gap: 24px;
+      }
+      .sol-compare-group {
+        display: grid;
+        gap: 14px;
+      }
+      .sol-compare-group-title {
+        color: rgba(255,255,255,0.9);
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-top: 10px;
+      }
+      .sol-compare-group-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .sol-compare-card {
+        display: grid;
+        gap: 10px;
+        width: 100%;
+        max-width: 1360px;
+        margin: 0 auto;
+      }
+      .sol-compare-strip {
+        position: relative;
+        aspect-ratio: 32 / 9;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #050505;
+      }
+      .sol-compare-strip video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .sol-compare-label {
+        position: absolute;
+        top: 14px;
+        z-index: 2;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+      .sol-compare-label.left {
+        left: 14px;
+        color: rgba(255,255,255,0.96);
+        background: rgba(0,0,0,0.65);
+        border: 1px solid rgba(255,255,255,0.55);
+      }
+      .sol-compare-label.right {
+        right: 14px;
+        color: rgba(214,240,168,0.96);
+        background: rgba(118,185,0,0.12);
+        border: 1px solid rgba(166,219,90,0.65);
+      }
+      .sol-demo-highlight {
+        margin-top: 28px;
+      }
+      .sol-demo-highlight video {
+        width: 100%;
+        display: block;
+        border-radius: 12px;
+        box-shadow: 0 2px 18px rgba(0,0,0,0.18);
+        background: #000;
+      }
+      .sol-demo-highlight .caption {
+        margin-top: 10px;
+      }
+      #abstract,
+      .abstract-section {
+        max-width: 1220px !important;
+        width: min(1220px, calc(100% - 48px)) !important;
+      }
+      .abstract-body {
+        max-width: 1120px !important;
+        width: 100% !important;
+      }
+      .abstract-body p {
+        max-width: none !important;
+      }
+      .sol-authors-block {
+        display: block;
+        width: 100%;
+        max-width: 1100px;
+        line-height: 1.45;
+      }
+      .sol-authors-line {
+        display: block;
+        white-space: normal;
+      }
+      .sol-authors-line + .sol-authors-line {
+        margin-top: 4px;
+      }
+      .hero .authors {
+        display: block !important;
+        white-space: normal !important;
+      }
+      .sol-hero-authors {
+        position: absolute;
+        left: 50%;
+        bottom: 56px;
+        transform: translateX(-50%);
+        color: rgba(255,255,255,0.95);
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 1.02rem;
+        line-height: 1.45;
+        z-index: 50;
+        width: 100%;
+        max-width: 1100px;
+        text-align: center;
+        padding: 0 24px;
+        pointer-events: none;
+      }
+      .sol-hero-authors-mask {
+        position: absolute;
+        left: 50%;
+        bottom: 42px;
+        transform: translateX(-50%);
+        width: min(1120px, calc(100% - 32px));
+        height: 88px;
+        background: linear-gradient(180deg, rgba(8,8,10,0.76), rgba(8,8,10,0.52));
+        border-radius: 16px;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 45;
+        pointer-events: none;
+      }
+      .hero {
+        position: relative !important;
+      }
+      .hero-shell {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+      }
+      .hero-shell .hero-film {
+        filter: blur(4px) saturate(0.95) brightness(0.78);
+        transform: scale(1.02);
+        transform-origin: center;
+      }
+      .hero-shell .hero-shade {
+        background:
+          linear-gradient(180deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.56) 22%, rgba(0,0,0,0.18) 48%, rgba(0,0,0,0.42) 100%),
+          linear-gradient(105deg, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.34) 42%, rgba(0,0,0,0) 70%),
+          radial-gradient(62% 42% at 50% 18%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 65%) !important;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+      .hero-shell .hero-affiliations {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.1rem;
+        color: rgba(255,255,255,0.9) !important;
+        font-size: clamp(0.92rem, 1.05vw, 1rem) !important;
+        line-height: 1.45;
+        text-shadow: 0 1px 14px rgba(0,0,0,0.6);
+      }
+      .hero-shell .hero-affiliations li {
+        align-items: unset;
+        gap: 0;
+        display: block;
+      }
+      @media (max-width: 900px) {
+        .sol-compare-group-grid {
+          grid-template-columns: 1fr;
+        }
+        .hero-shell .hero-film {
+          filter: blur(3px) saturate(0.95) brightness(0.8);
+          transform: scale(1.01);
+        }
+      }
+    </style>
   </head>
   <body>
-    <p>Redirecting to <a href="./Sol-Engine-Page/">Sol Engine Page</a>...</p>
+    <div id="root"></div>
+    <script>
+      function replaceImageWithPlaceholder(img, label) {
+        const box = document.createElement('div');
+        box.className = 'sol-placeholder';
+        box.textContent = label;
+        if (img.parentElement && img.parentElement.tagName.toLowerCase() === 'figure') {
+          img.replaceWith(box);
+        } else {
+          img.replaceWith(box);
+        }
+      }
+
+      function patchWMPageToSol() {
+        const root = document.getElementById('root');
+        if (!root || !root.children.length) return false;
+        const fullPatched = root.dataset.solFullPatched === '1';
+
+        document.title = 'Sol Video Inference Engine | Agent-Native Full-Stack Acceleration';
+
+        const h1 = root.querySelector('.hero h1');
+        if (h1) h1.textContent = 'Sol Video Inference Engine';
+
+        const firstVideo = root.querySelector('video');
+        if (firstVideo && !fullPatched) {
+          if (!firstVideo.src.endsWith('video_demo_gen/output/hero_grid_demo.mp4')) {
+            firstVideo.src = 'video_demo_gen/output/hero_grid_demo.mp4';
+            firstVideo.load();
+          }
+          firstVideo.autoplay = true;
+          firstVideo.muted = true;
+          firstVideo.loop = true;
+          firstVideo.playsInline = true;
+          firstVideo.preload = 'auto';
+        }
+
+        const subtitle = root.querySelector('.hero .subtitle');
+        if (subtitle) subtitle.textContent = 'Agent-Native Full-Stack Acceleration Framework for Efficient Video Generation';
+
+        const tagline = root.querySelector('.hero .tagline');
+        if (tagline) {
+          tagline.textContent =
+            'A training-free acceleration framework that composes cache, sparse attention, token pruning, quantization, and kernel fusion into deployment-ready stacks for video diffusion inference.';
+        }
+
+        const heroEl = root.querySelector('.hero');
+
+        const venue = root.querySelector('.hero .venue');
+        if (venue) venue.textContent = 'Technical Report · 2026';
+
+        const badges = root.querySelector('.badges');
+        if (badges) {
+          badges.innerHTML = '';
+          const paperBadge = document.createElement('a');
+          paperBadge.textContent = 'Paper';
+          paperBadge.href = 'http://arxiv.org/abs/2606.23743';
+          paperBadge.target = '_blank';
+          paperBadge.rel = 'noopener noreferrer';
+          const codeBadge = document.createElement('a');
+          codeBadge.textContent = 'Code';
+          codeBadge.href = 'https://github.com/NVlabs/Sana/tree/sol-engine';
+          codeBadge.target = '_blank';
+          codeBadge.rel = 'noopener noreferrer';
+          badges.append(paperBadge, codeBadge);
+        }
+
+        const heroLinks = Array.from(root.querySelectorAll('.hero a, .hero-shell a'));
+        heroLinks.forEach((link) => {
+          const label = link.textContent.trim().replace(/\s+/g, ' ').toLowerCase();
+          if (label.includes('online demo') || label.includes('models')) {
+            link.remove();
+            return;
+          }
+          if (label.includes('paper')) {
+            link.href = 'http://arxiv.org/abs/2606.23743';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          }
+          if (label.includes('code')) {
+            link.href = 'https://github.com/NVlabs/Sana/tree/sol-engine';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          }
+        });
+
+        const featureTitles = root.querySelectorAll('.feature-card h3');
+        const featureBodies = root.querySelectorAll('.feature-card p:not(.feature-eyebrow)');
+        const featureEyebrows = root.querySelectorAll('.feature-card .feature-eyebrow');
+        const featureData = [
+          ['Instance specificity', 'Model × hardware × configuration aware acceleration', 'The framework optimizes each concrete deployment instance rather than assuming a single transferable acceleration recipe.'],
+          ['Full-stack techniques', 'Cache, sparse attention, token pruning, quantization, and kernel fusion', 'Sol Video Inference Engine organizes five broadly applicable acceleration techniques into a deployment-ready full-stack framework.'],
+          ['Local-to-global workflow', 'Parallel skill agents with global integration', 'Per-technique local tuning provides strong starting points that are later composed through a global integrator and validation loop.'],
+          ['Efficiency gains', '2×–3× end-to-end speedup', 'The full framework substantially reduces latency across Cosmos3-Super, LTX-2.3, and SANA-Video while preserving perceptual quality.']
+        ];
+        featureData.forEach((item, i) => {
+          if (featureEyebrows[i]) featureEyebrows[i].textContent = item[0];
+          if (featureTitles[i]) featureTitles[i].textContent = item[1];
+          if (featureBodies[i]) featureBodies[i].textContent = item[2];
+        });
+
+        const abstractBody = root.querySelector('.abstract-body');
+        if (abstractBody) {
+          const abstractTexts = [
+            'Sol Video Inference Engine is a training-free, agent-native acceleration framework for video diffusion inference that composes cache, sparse attention, token pruning, quantization, and kernel fusion into deployment-ready stacks tailored to each model, hardware target, and serving configuration. Across Cosmos3-Super, LTX-2.3, and SANA-Video, the framework delivers more than 2× end-to-end speedup while maintaining near-lossless visual quality.'
+          ];
+          abstractBody.innerHTML = abstractTexts.map(t => `<p>${t}</p>`).join('');
+        }
+
+        const sectionTitles = root.querySelectorAll('.section-title');
+        const sectionTitleMap = {
+          'Key features': 'Key Features',
+          'Abstract': 'Abstract',
+          'Efficiency at a glance': 'Figures',
+          'Citation': 'BibTeX'
+        };
+        sectionTitles.forEach(el => {
+          const text = el.textContent.trim();
+          if (sectionTitleMap[text]) el.textContent = sectionTitleMap[text];
+        });
+
+        const firstFeaturesSection = root.querySelector('#features');
+        if (!fullPatched && firstFeaturesSection && !root.querySelector('#ltx-progress-demo')) {
+          const demoSection = document.createElement('section');
+          demoSection.id = 'ltx-progress-demo';
+          demoSection.className = 'efficiency-section';
+          demoSection.innerHTML = `
+            <p class="eyebrow">LTX-2.3 Progress Demo</p>
+            <figure class="sol-demo-highlight">
+              <video src="video_demo_gen/output/ltx_progress_demo_static.mp4" autoplay muted loop playsinline preload="auto" controls></video>
+              <figcaption class="caption" aria-hidden="true">&nbsp;</figcaption>
+            </figure>
+          `;
+          firstFeaturesSection.parentNode.insertBefore(demoSection, firstFeaturesSection);
+        }
+
+        const galleryEyebrows = root.querySelectorAll('.gallery-eyebrow');
+        if (galleryEyebrows[0]) galleryEyebrows[0].textContent = 'Cosmos3-Super';
+        if (galleryEyebrows[1]) galleryEyebrows[1].textContent = 'LTX-2.3';
+        if (galleryEyebrows[2]) galleryEyebrows[2].textContent = 'SANA-Video';
+
+        const demosSection = root.querySelector('#demos');
+        if (!fullPatched && demosSection) {
+          const cosmosIds = ['02','03','12','22','24','26','27','30'];
+          const cosmosCompare = cosmosIds.map(id => `video_demo_gen/output/webpage_compare/cosmos_p${id}_compare.mp4`);
+          const ltxIds = ['048','033','007','009','013','016','018','027'];
+          const ltxCompare = ltxIds.map(id => `video_demo_gen/output/webpage_compare/ltx_p${id}_compare.mp4`);
+          const sanaRoot = 'video_source/sana64_baseline_vs_fullopt';
+          const sanaFiles = [
+            '00_Extreme_close_up_of_a_thoughtful_gray_haired_professor_in_his_60s_sitt.mp4',
+            '02_Minecraft_with_the_most_gorgeous_high_res_8K_texture_pack_ever_showca.mp4',
+            '11_A_hummingbird_hovers_beside_a_dewy_red_hibiscus_in_a_tropical_garden_w.mp4',
+            '24_Bioluminescent_jellyfish_drifting_in_the_deep_dark_ocean_glowing_blue.mp4',
+            '27_Stop_motion_felt_style_a_tiny_mouse_knitting_a_scarf_by_candlelight_in.mp4',
+            '44_A_vintage_hot_air_balloon_rising_over_Cappadocia_at_sunrise_dozens_mor.mp4',
+            '49_A_snowboarder_carving_down_a_fresh_powder_slope_snow_spraying_alpine_p.mp4',
+            '50_A_candle_flame_flickering_in_a_dark_room_wax_slowly_melting_down_the_s.mp4'
+          ];
+          const sanaCompare = sanaFiles.map(name => `video_demo_gen/output/webpage_compare/sana_${name.replace(/\.mp4$/, '')}_compare.mp4`);
+
+          const makeCard = (combinedSrc, speedup) => `
+            <div class="sol-compare-card">
+              <div class="sol-compare-strip">
+                <video src="${combinedSrc}" autoplay muted loop playsinline preload="auto"></video>
+                <div class="sol-compare-label left">SGLang · 1×</div>
+                <div class="sol-compare-label right">Sol-Engine · ${speedup}</div>
+              </div>
+            </div>`;
+
+          const makeGroup = (title, compareList, speedup) => `
+            <div class="sol-compare-group">
+              <div class="sol-compare-group-title">${title}</div>
+              <div class="sol-compare-group-grid">
+                ${compareList.map((src) => makeCard(src, speedup)).join('')}
+              </div>
+            </div>`;
+
+          demosSection.innerHTML = `
+            <p class="eyebrow">Demos</p>
+            <div class="sol-compare-grid">
+              ${makeGroup('Cosmos3-Super', cosmosCompare, '2.27×')}
+              ${makeGroup('LTX-2.3', ltxCompare, '2.38×')}
+              ${makeGroup('SANA-Video', sanaCompare, '2.77×')}
+            </div>`;
+        }
+
+        const citationPre = root.querySelector('.citation-block pre');
+        if (citationPre) {
+          citationPre.textContent = `@misc{li2026solvideoinferenceengine,
+  title={Sol Video Inference Engine: Agent-Native Full-Stack Acceleration Framework for Efficient Video Generation},
+  author={Yitong Li and Junsong Chen and Haopeng Li and Haozhe Liu and Jincheng Yu and Ligeng Zhu and Ping Luo and Song Han and Enze Xie},
+  year={2026},
+  eprint={2606.23743},
+  archivePrefix={arXiv},
+  primaryClass={cs.CV},
+  url={https://arxiv.org/abs/2606.23743}
+}`;
+        }
+
+        const figureCaptions = root.querySelectorAll('figcaption, .caption');
+        figureCaptions.forEach((caption) => {
+          const text = caption.textContent || '';
+          if (
+            text.includes('Acceleration breakdown across different optimization methods') ||
+            text.includes('Cache, sparse attention and token pruning') ||
+            text.includes('Baseline versus Sol-Engine denoise progress')
+          ) {
+            caption.remove();
+          }
+        });
+        if (!fullPatched && figureCaptions[1]) {
+          figureCaptions[1].innerHTML = 'Agentic acceleration stack. Sol Video Inference Engine exposes each technique as a bounded design space. Parallel skill agents test technique applicability, an agent integrator composes selected candidates into a deployment stack, and a human validator provides efficiency--quality feedback.';
+        }
+        if (!fullPatched && figureCaptions[2]) {
+          figureCaptions[2].innerHTML = '<span class="cap-label">Figure 5.</span> Local per-technique search is followed by global integration and a human validation loop.';
+        }
+
+        if (!fullPatched) {
+          const images = root.querySelectorAll('img');
+          let nonLogoIdx = 0;
+          images.forEach((img) => {
+            const src = img.getAttribute('src') || '';
+            if (src.includes('nvlogo') || src.includes('logo') || img.closest('.hero-nvidia-logo')) return;
+            if (nonLogoIdx === 0) {
+              img.src = 'figures/fig04_time_profile.png';
+              img.alt = 'Sol Video Inference Engine acceleration figure';
+              nonLogoIdx += 1;
+              return;
+            }
+            replaceImageWithPlaceholder(img, `Placeholder Figure ${nonLogoIdx}`);
+            nonLogoIdx += 1;
+          });
+
+          root.dataset.solFullPatched = '1';
+        }
+
+        return true;
+      }
+
+      let attempts = 0;
+      const timer = setInterval(() => {
+        attempts += 1;
+        patchWMPageToSol();
+        if (attempts > 200) clearInterval(timer);
+      }, 200);
+    </script>
   </body>
 </html>

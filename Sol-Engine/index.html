@@ -106,18 +106,6 @@
       .sol-demo-highlight .caption {
         margin-top: 10px;
       }
-      #abstract,
-      .abstract-section {
-        max-width: 1220px !important;
-        width: min(1220px, calc(100% - 48px)) !important;
-      }
-      .abstract-body {
-        max-width: 1120px !important;
-        width: 100% !important;
-      }
-      .abstract-body p {
-        max-width: none !important;
-      }
       .sol-authors-block {
         display: block;
         width: 100%;
@@ -130,6 +118,28 @@
       }
       .sol-authors-line + .sol-authors-line {
         margin-top: 4px;
+      }
+      .nav {
+        mix-blend-mode: normal !important;
+      }
+      .nav .brand {
+        letter-spacing: 0;
+        gap: 0.75rem;
+      }
+      .nav .brand-mark {
+        display: none !important;
+      }
+      .sol-brand-logo {
+        display: block;
+        width: min(218px, 42vw);
+        height: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 14px rgba(0,0,0,0.72));
+      }
+      @media (max-width: 640px) {
+        .sol-brand-logo {
+          width: min(168px, 48vw);
+        }
       }
       .hero .authors {
         display: block !important;
@@ -233,6 +243,17 @@
 
         document.title = 'Sol Video Inference Engine | Agent-Native Full-Stack Acceleration';
 
+        const brand = root.querySelector('.brand');
+        if (brand && !brand.querySelector('.sol-brand-logo')) {
+          brand.innerHTML = '';
+          const logo = document.createElement('img');
+          logo.className = 'sol-brand-logo';
+          logo.src = 'assets/logo.png';
+          logo.alt = 'Sol-Engine';
+          logo.decoding = 'async';
+          brand.appendChild(logo);
+        }
+
         const h1 = root.querySelector('.hero h1');
         if (h1) h1.textContent = 'Sol Video Inference Engine';
 
@@ -273,30 +294,9 @@
           paperBadge.rel = 'noopener noreferrer';
           const codeBadge = document.createElement('a');
           codeBadge.textContent = 'Code';
-          codeBadge.href = 'https://github.com/NVlabs/Sana/tree/sol-engine';
-          codeBadge.target = '_blank';
-          codeBadge.rel = 'noopener noreferrer';
+          codeBadge.href = '';
           badges.append(paperBadge, codeBadge);
         }
-
-        const heroLinks = Array.from(root.querySelectorAll('.hero a, .hero-shell a'));
-        heroLinks.forEach((link) => {
-          const label = link.textContent.trim().replace(/\s+/g, ' ').toLowerCase();
-          if (label.includes('online demo') || label.includes('models')) {
-            link.remove();
-            return;
-          }
-          if (label.includes('paper')) {
-            link.href = 'http://arxiv.org/abs/2606.23743';
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-          }
-          if (label.includes('code')) {
-            link.href = 'https://github.com/NVlabs/Sana/tree/sol-engine';
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-          }
-        });
 
         const featureTitles = root.querySelectorAll('.feature-card h3');
         const featureBodies = root.querySelectorAll('.feature-card p:not(.feature-eyebrow)');
@@ -342,7 +342,7 @@
             <p class="eyebrow">LTX-2.3 Progress Demo</p>
             <figure class="sol-demo-highlight">
               <video src="video_demo_gen/output/ltx_progress_demo_static.mp4" autoplay muted loop playsinline preload="auto" controls></video>
-              <figcaption class="caption" aria-hidden="true">&nbsp;</figcaption>
+              <figcaption class="caption">Baseline versus Sol-Engine denoise progress across eight LTX-2.3 prompts.</figcaption>
             </figure>
           `;
           firstFeaturesSection.parentNode.insertBefore(demoSection, firstFeaturesSection);
@@ -376,8 +376,8 @@
             <div class="sol-compare-card">
               <div class="sol-compare-strip">
                 <video src="${combinedSrc}" autoplay muted loop playsinline preload="auto"></video>
-                <div class="sol-compare-label left">SGLang · 1×</div>
-                <div class="sol-compare-label right">Sol-Engine · ${speedup}</div>
+                <div class="sol-compare-label left">Baseline · 1×</div>
+                <div class="sol-compare-label right">Optimized · ${speedup}</div>
               </div>
             </div>`;
 
@@ -392,36 +392,26 @@
           demosSection.innerHTML = `
             <p class="eyebrow">Demos</p>
             <div class="sol-compare-grid">
-              ${makeGroup('Cosmos3-Super', cosmosCompare, '2.27×')}
-              ${makeGroup('LTX-2.3', ltxCompare, '2.38×')}
-              ${makeGroup('SANA-Video', sanaCompare, '2.77×')}
+              ${makeGroup('Cosmos3-Super', cosmosCompare, '2.47×')}
+              ${makeGroup('LTX-2.3', ltxCompare, '2.88×')}
+              ${makeGroup('SANA-Video', sanaCompare, '3.23×')}
             </div>`;
         }
 
         const citationPre = root.querySelector('.citation-block pre');
         if (citationPre) {
-          citationPre.textContent = `@misc{li2026solvideoinferenceengine,
-  title={Sol Video Inference Engine: Agent-Native Full-Stack Acceleration Framework for Efficient Video Generation},
-  author={Yitong Li and Junsong Chen and Haopeng Li and Haozhe Liu and Jincheng Yu and Ligeng Zhu and Ping Luo and Song Han and Enze Xie},
-  year={2026},
-  eprint={2606.23743},
-  archivePrefix={arXiv},
-  primaryClass={cs.CV},
-  url={https://arxiv.org/abs/2606.23743}
+          citationPre.textContent = `@article{solvideo2026,
+  title   = {Sol Video Inference Engine: Agent-Native Full-Stack Acceleration Framework for Efficient Video Generation},
+  author  = {Yitong Li, Junsong Chen, Haopeng Li, Haozhe Liu, Jincheng Yu, Ligeng Zhu, Ping Luo, Song Han, Enze Xie},
+  journal = {Technical Report},
+  year    = {2026}
 }`;
         }
 
         const figureCaptions = root.querySelectorAll('figcaption, .caption');
-        figureCaptions.forEach((caption) => {
-          const text = caption.textContent || '';
-          if (
-            text.includes('Acceleration breakdown across different optimization methods') ||
-            text.includes('Cache, sparse attention and token pruning') ||
-            text.includes('Baseline versus Sol-Engine denoise progress')
-          ) {
-            caption.remove();
-          }
-        });
+        if (!fullPatched && figureCaptions[0]) {
+          figureCaptions[0].innerHTML = 'Acceleration breakdown across different optimization methods. Cache, sparse attention and token pruning, and kernel-level optimization progressively reduce end-to-end latency.';
+        }
         if (!fullPatched && figureCaptions[1]) {
           figureCaptions[1].innerHTML = 'Agentic acceleration stack. Sol Video Inference Engine exposes each technique as a bounded design space. Parallel skill agents test technique applicability, an agent integrator composes selected candidates into a deployment stack, and a human validator provides efficiency--quality feedback.';
         }

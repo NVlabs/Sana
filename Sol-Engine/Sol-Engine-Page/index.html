@@ -119,28 +119,6 @@
       .sol-authors-line + .sol-authors-line {
         margin-top: 4px;
       }
-      .nav {
-        mix-blend-mode: normal !important;
-      }
-      .nav .brand {
-        letter-spacing: 0;
-        gap: 0.75rem;
-      }
-      .nav .brand-mark {
-        display: none !important;
-      }
-      .sol-brand-logo {
-        display: block;
-        width: min(218px, 42vw);
-        height: auto;
-        object-fit: contain;
-        filter: drop-shadow(0 2px 14px rgba(0,0,0,0.72));
-      }
-      @media (max-width: 640px) {
-        .sol-brand-logo {
-          width: min(168px, 48vw);
-        }
-      }
       .hero .authors {
         display: block !important;
         white-space: normal !important;
@@ -242,17 +220,6 @@
         const fullPatched = root.dataset.solFullPatched === '1';
 
         document.title = 'Sol Video Inference Engine | Agent-Native Full-Stack Acceleration';
-
-        const brand = root.querySelector('.brand');
-        if (brand && !brand.querySelector('.sol-brand-logo')) {
-          brand.innerHTML = '';
-          const logo = document.createElement('img');
-          logo.className = 'sol-brand-logo';
-          logo.src = 'assets/logo.png';
-          logo.alt = 'Sol-Engine';
-          logo.decoding = 'async';
-          brand.appendChild(logo);
-        }
 
         const h1 = root.querySelector('.hero h1');
         if (h1) h1.textContent = 'Sol Video Inference Engine';

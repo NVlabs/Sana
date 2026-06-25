@@ -12,31 +12,31 @@
         <meta name="author" content="Sol-Engine Team">
       
       
-        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/token_prune/tape/">
+        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/status/">
       
       
-        <link rel="prev" href="../astraea/">
+        <link rel="prev" href="../../pipelines/sana/">
       
       
-        <link rel="next" href="../coredit/">
+        <link rel="next" href="../cache/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/sol-engine-logo.png">
+      <link rel="icon" href="../../assets/sol-engine-logo.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>TAPE - Sol-Engine Documentation</title>
+        <title>Audit status - Sol-Engine Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,9 +55,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#tape" class="md-skip">
+        <a href="#technique-audit-status" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +98,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Sol-Engine Documentation" class="md-header__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
+    <a href="../.." title="Sol-Engine Documentation" class="md-header__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
       
-  <img src="../../../assets/sol-engine-logo.png" alt="logo">
+  <img src="../../assets/sol-engine-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TAPE
+              Audit status
             
           </span>
         </div>
@@ -235,9 +235,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Sol-Engine Documentation" class="md-nav__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
+    <a href="../.." title="Sol-Engine Documentation" class="md-nav__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
       
-  <img src="../../../assets/sol-engine-logo.png" alt="logo">
+  <img src="../../assets/sol-engine-logo.png" alt="logo">
 
     </a>
     Sol-Engine Documentation
@@ -264,7 +264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -291,7 +291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -378,7 +378,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../pipelines/cosmos3/" class="md-nav__link">
+      <a href="../../pipelines/cosmos3/" class="md-nav__link">
         
   
   
@@ -406,7 +406,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../pipelines/ltx/" class="md-nav__link">
+      <a href="../../pipelines/ltx/" class="md-nav__link">
         
   
   
@@ -434,7 +434,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../pipelines/sana/" class="md-nav__link">
+      <a href="../../pipelines/sana/" class="md-nav__link">
         
   
   
@@ -472,6 +472,8 @@
   
     
     
+      
+        
       
         
       
@@ -532,44 +534,26 @@
                 
   
   
+    
   
   
-    
-    
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
       
         
       
-        
       
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
-        
+        <label class="md-nav__link md-nav__link--active" for="__toc">
           
-          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
-            
   
   
   <span class="md-ellipsis">
     
   
-    Cache
+    Audit status
   
 
     
@@ -577,35 +561,17 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_1">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Cache
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cache/" class="md-nav__link">
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
     
   
-    Overview
+    Audit status
   
 
     
@@ -614,153 +580,47 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cache/teacache/" class="md-nav__link">
+      
         
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
-  <span class="md-ellipsis">
+  
     
   
-    TeaCache
   
-
-    
-  </span>
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#end-to-end-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-to-end checks
+      
+    </span>
+  </a>
   
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#blocked-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Blocked dependencies
+      
+    </span>
+  </a>
   
-
-      </a>
-    </li>
+</li>
+      
+    </ul>
   
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cache/easycache/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    EasyCache
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cache/taylorseer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    TaylorSeer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cache/fixed_step/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Fixed-step cache
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cache/cache_dit/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Cache-DiT / DBCache
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
+</nav>
       
     </li>
   
@@ -808,7 +668,7 @@
   <span class="md-ellipsis">
     
   
-    Quantization
+    Cache
   
 
     
@@ -824,7 +684,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Quantization
+    Cache
   
 
           </label>
@@ -837,7 +697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quant/" class="md-nav__link">
+      <a href="../cache/" class="md-nav__link">
         
   
   
@@ -865,14 +725,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quant/nvfp4/" class="md-nav__link">
+      <a href="../cache/teacache/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NVFP4
+    TeaCache
   
 
     
@@ -893,14 +753,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quant/diffusion_ptq/" class="md-nav__link">
+      <a href="../cache/easycache/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Diffusion PTQ
+    EasyCache
   
 
     
@@ -921,14 +781,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quant/svdquant/" class="md-nav__link">
+      <a href="../cache/taylorseer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    SVDQuant / Nunchaku
+    TaylorSeer
   
 
     
@@ -949,14 +809,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quant/sageattention/" class="md-nav__link">
+      <a href="../cache/fixed_step/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    SageAttention
+    Fixed-step cache
   
 
     
@@ -977,14 +837,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quant/modelopt_fp8/" class="md-nav__link">
+      <a href="../cache/cache_dit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ModelOpt / FP8
+    Cache-DiT / DBCache
   
 
     
@@ -1021,16 +881,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
@@ -1051,7 +901,7 @@
   <span class="md-ellipsis">
     
   
-    Kernel fusion
+    Token pruning
   
 
     
@@ -1067,7 +917,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Kernel fusion
+    Token pruning
   
 
           </label>
@@ -1080,7 +930,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/" class="md-nav__link">
+      <a href="../token_prune/" class="md-nav__link">
         
   
   
@@ -1108,14 +958,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/adaln_residual_gate/" class="md-nav__link">
+      <a href="../token_prune/feature_norm/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    AdaLN and residual gate fusion
+    Feature-norm pruning
   
 
     
@@ -1136,154 +986,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kernel/gemm_epilogues/" class="md-nav__link">
+      <a href="../token_prune/tome_sd/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GEMM epilogues
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/qknorm_rope/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    QK-norm + RoPE fusion
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/attention_output_gate/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Attention output gate fusion
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/residual_modulation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Residual and modulation glue fusion
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/qkv_merge/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    QKV merge
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/torch_compile/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    torch.compile
+    ToMe-SD
   
 
     
@@ -1375,7 +1085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sparse/" class="md-nav__link">
+      <a href="../sparse/" class="md-nav__link">
         
   
   
@@ -1403,7 +1113,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sparse/pisa/" class="md-nav__link">
+      <a href="../sparse/pisa/" class="md-nav__link">
         
   
   
@@ -1431,7 +1141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sparse/spargeattention/" class="md-nav__link">
+      <a href="../sparse/spargeattention/" class="md-nav__link">
         
   
   
@@ -1459,7 +1169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sparse/sparse_videogen/" class="md-nav__link">
+      <a href="../sparse/sparse_videogen/" class="md-nav__link">
         
   
   
@@ -1487,7 +1197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sparse/sparse_videogen2/" class="md-nav__link">
+      <a href="../sparse/sparse_videogen2/" class="md-nav__link">
         
   
   
@@ -1515,7 +1225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sparse/vsa/" class="md-nav__link">
+      <a href="../sparse/vsa/" class="md-nav__link">
         
   
   
@@ -1548,10 +1258,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1573,11 +1281,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
         
           
           <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
@@ -1587,7 +1295,7 @@
   <span class="md-ellipsis">
     
   
-    Token pruning
+    Quantization
   
 
     
@@ -1598,12 +1306,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_5">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Token pruning
+    Quantization
   
 
           </label>
@@ -1616,7 +1324,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../quant/" class="md-nav__link">
         
   
   
@@ -1644,14 +1352,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../feature_norm/" class="md-nav__link">
+      <a href="../quant/nvfp4/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Feature-norm pruning
+    NVFP4
   
 
     
@@ -1672,14 +1380,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../tome_sd/" class="md-nav__link">
+      <a href="../quant/diffusion_ptq/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ToMe-SD
+    Diffusion PTQ
   
 
     
@@ -1700,14 +1408,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../astraea/" class="md-nav__link">
+      <a href="../quant/svdquant/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Astraea
+    SVDQuant / Nunchaku
   
 
     
@@ -1725,26 +1433,112 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../quant/sageattention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
     
   
+    SageAttention
+  
+
+    
+  </span>
   
   
-    <li class="md-nav__item md-nav__item--active">
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quant/modelopt_fp8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ModelOpt / FP8
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
       
         
       
+        
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
+        
           
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
     
   
-    TAPE
+    Kernel fusion
   
 
     
@@ -1752,17 +1546,35 @@
   
   
 
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Kernel fusion
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    TAPE
+    Overview
   
 
     
@@ -1771,59 +1583,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#role-in-sol-engine" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Role in Sol-Engine
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#search-knobs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Search knobs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1836,14 +1595,182 @@
   
   
     <li class="md-nav__item">
-      <a href="../coredit/" class="md-nav__link">
+      <a href="../kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    CoReDiT
+    AdaLN and residual gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/gemm_epilogues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM epilogues
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/qknorm_rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QK-norm + RoPE fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/attention_output_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention output gate fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/residual_modulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Residual and modulation glue fusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/qkv_merge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QKV merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kernel/torch_compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    torch.compile
   
 
     
@@ -1899,10 +1826,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#role-in-sol-engine" class="md-nav__link">
+  <a href="#end-to-end-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Role in Sol-Engine
+        End-to-end checks
       
     </span>
   </a>
@@ -1910,21 +1837,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#search-knobs" class="md-nav__link">
+  <a href="#blocked-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Search knobs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation
+        Blocked dependencies
       
     </span>
   </a>
@@ -1951,19 +1867,62 @@
   
 
 
-<h1 id="tape">TAPE<a class="headerlink" href="#tape" title="Permanent link">&para;</a></h1>
-<p>TAPE smooths token importance across frames to reduce temporal jitter in video diffusion token reduction.</p>
-<h2 id="role-in-sol-engine">Role in Sol-Engine<a class="headerlink" href="#role-in-sol-engine" title="Permanent link">&para;</a></h2>
-<p>TAPE is part of the token-pruning design space for long videos, where per-frame independent pruning decisions can create flicker.</p>
-<h2 id="search-knobs">Search knobs<a class="headerlink" href="#search-knobs" title="Permanent link">&para;</a></h2>
-<ul>
-<li>importance smoothing window.</li>
-<li>keep ratio.</li>
-<li>layer placement.</li>
-<li>timestep placement.</li>
-</ul>
-<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
-<p>Focus on temporal flicker, subject consistency, and motion smoothness. A method can look acceptable frame-by-frame but fail over time.</p>
+<h1 id="technique-audit-status">Technique audit status<a class="headerlink" href="#technique-audit-status" title="Permanent link">&para;</a></h1>
+<p>This page records the 2026-06-24 implementation and test pass for the Techniques section. The detailed machine-readable inventory is in <code>technique/manifest.json</code>; the full report is in <code>technique/status_report.md</code>.</p>
+<h2 id="end-to-end-checks">End-to-end checks<a class="headerlink" href="#end-to-end-checks" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Covered methods</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SANA-Video</td>
+<td>EasyCache, SANA fusion toggles, compile path</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>Cosmos3-Super</td>
+<td>TeaCache</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>LTX-2.3</td>
+<td>Fixed-step cache, feature-norm pruning, PISA, LTX fusion stack</td>
+<td>Passed</td>
+</tr>
+</tbody>
+</table>
+<h2 id="blocked-dependencies">Blocked dependencies<a class="headerlink" href="#blocked-dependencies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Missing dependency</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SpargeAttention</td>
+<td><code>spas_sage_attn</code></td>
+<td>Build failed in the shared CUDA 13/aarch64 environment</td>
+</tr>
+<tr>
+<td>VSA</td>
+<td><code>vsa</code>, <code>st_attn</code></td>
+<td>Build failed in the shared CUDA 13/aarch64 environment</td>
+</tr>
+<tr>
+<td>NVFP4</td>
+<td><code>transformer_engine</code></td>
+<td>True TE NVFP4 E2E not completed; BF16 fallback paths ran</td>
+</tr>
+</tbody>
+</table>
 
 
 
@@ -2036,12 +1995,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../../../stylesheets/extra.js"></script>
+        <script src="../../stylesheets/extra.js"></script>
       
     
   </body>

@@ -81,9 +81,7 @@ def _resolve_ltx2_two_stage_component_paths(
     if "distilled_lora" not in resolved:
         distilled_lora_candidates = [
             os.path.join(model_path, "ltx-2.3-20b-distilled-lora-384.safetensors"),
-            os.path.join(
-                model_path, "ltx-2.3-22b-distilled-lora-384-1.1.safetensors"
-            ),
+            os.path.join(model_path, "ltx-2.3-22b-distilled-lora-384-1.1.safetensors"),
             os.path.join(model_path, "ltx-2.3-22b-distilled-lora-384.safetensors"),
             os.path.join(model_path, "ltx-2-19b-distilled-lora-384.safetensors"),
         ]
@@ -767,8 +765,7 @@ class LTX2TwoStageResidencyController:
     def enter_phase(self, phase: str) -> bool:
         """Switch active two-stage DiT with minimal transfer/sync overhead."""
         if not (
-            self.should_use_premerged
-            or self.pipeline._use_explicit_stage2_transformer
+            self.should_use_premerged or self.pipeline._use_explicit_stage2_transformer
         ):
             return False
         if phase == self._active_phase:
@@ -924,10 +921,7 @@ class LTX2TwoStagePipeline(_BaseLTX2Pipeline):
                 distilled_lora_strength = self._get_stage_distilled_lora_strength(
                     phase, batch
                 )
-                if (
-                    distilled_lora_strength
-                    != self.STAGE_2_DISTILLED_LORA_STRENGTH
-                ):
+                if distilled_lora_strength != self.STAGE_2_DISTILLED_LORA_STRENGTH:
                     raise ValueError(
                         "Explicit transformer_2 is assumed to already include the "
                         "default stage-2 distilled LoRA. Per-request stage-2 "

@@ -181,34 +181,31 @@ struct Fp4GemmSm100 {
 };
 
 template <typename KernelConfig>
-using Fp4GemmSm100Linear =
-    Fp4GemmSm100<
-        KernelConfig,
-        cutlass::epilogue::fusion::LinearCombination<typename KernelConfig::OutputType, float, void, float>>;
+using Fp4GemmSm100Linear = Fp4GemmSm100<
+    KernelConfig,
+    cutlass::epilogue::fusion::LinearCombination<typename KernelConfig::OutputType, float, void, float>>;
 
 template <typename KernelConfig>
-using Fp4GemmSm100BiasGelu =
-    Fp4GemmSm100<
-        KernelConfig,
-        cutlass::epilogue::fusion::LinCombPerColBiasEltAct<
-            cutlass::epilogue::thread::GELU_taylor,
-            typename KernelConfig::OutputType,
-            float,
-            typename KernelConfig::OutputType,
-            void,
-            float>>;
+using Fp4GemmSm100BiasGelu = Fp4GemmSm100<
+    KernelConfig,
+    cutlass::epilogue::fusion::LinCombPerColBiasEltAct<
+        cutlass::epilogue::thread::GELU_taylor,
+        typename KernelConfig::OutputType,
+        float,
+        typename KernelConfig::OutputType,
+        void,
+        float>>;
 
 template <typename KernelConfig>
-using Fp4GemmSm100PerColResidualGate =
-    Fp4GemmSm100<
-        KernelConfig,
-        cutlass::epilogue::fusion::PerColResAddPerColBiasEltAct<
-            cutlass::epilogue::thread::Identity,
-            typename KernelConfig::OutputType,
-            float,
-            typename KernelConfig::OutputType,
-            typename KernelConfig::OutputType,
-            typename KernelConfig::OutputType>>;
+using Fp4GemmSm100PerColResidualGate = Fp4GemmSm100<
+    KernelConfig,
+    cutlass::epilogue::fusion::PerColResAddPerColBiasEltAct<
+        cutlass::epilogue::thread::Identity,
+        typename KernelConfig::OutputType,
+        float,
+        typename KernelConfig::OutputType,
+        typename KernelConfig::OutputType,
+        typename KernelConfig::OutputType>>;
 
 template <typename T>
 typename T::Gemm::Arguments args_from_options(
@@ -532,7 +529,8 @@ void runGemmPerColResidualGate(
     int64_t k,
     cudaStream_t stream) {
   typename T::Gemm gemm;
-  auto arguments = args_from_options_per_col_residual_gate<T>(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k);
+  auto arguments =
+      args_from_options_per_col_residual_gate<T>(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k);
 
   size_t workspace_size = T::Gemm::get_workspace_size(arguments);
   auto workspace_tensor = alloc_workspace_tensor(workspace_size, A.device());
@@ -630,9 +628,11 @@ void cutlassFp4GemmBiasGeluDispatchSm100(
   } else if (m <= 256) {
     runGemmBiasGelu<Fp4GemmSm100BiasGelu<KernelConfigM256<OutType>>>(D, A, B, A_sf, B_sf, alpha, bias, m, n, k, stream);
   } else if (m <= 1024) {
-    runGemmBiasGelu<Fp4GemmSm100BiasGelu<KernelConfigDefault<OutType>>>(D, A, B, A_sf, B_sf, alpha, bias, m, n, k, stream);
+    runGemmBiasGelu<Fp4GemmSm100BiasGelu<KernelConfigDefault<OutType>>>(
+        D, A, B, A_sf, B_sf, alpha, bias, m, n, k, stream);
   } else {
-    runGemmBiasGelu<Fp4GemmSm100BiasGelu<KernelConfigLargeM<OutType>>>(D, A, B, A_sf, B_sf, alpha, bias, m, n, k, stream);
+    runGemmBiasGelu<Fp4GemmSm100BiasGelu<KernelConfigLargeM<OutType>>>(
+        D, A, B, A_sf, B_sf, alpha, bias, m, n, k, stream);
   }
 }
 
@@ -652,13 +652,17 @@ void cutlassFp4GemmPerColResidualGateDispatchSm100(
     int64_t k,
     cudaStream_t stream) {
   if (m <= 128) {
-    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigM128<OutType>>>(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
+    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigM128<OutType>>>(
+        D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
   } else if (m <= 256) {
-    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigM256<OutType>>>(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
+    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigM256<OutType>>>(
+        D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
   } else if (m <= 1024) {
-    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigDefault<OutType>>>(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
+    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigDefault<OutType>>>(
+        D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
   } else {
-    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigLargeM<OutType>>>(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
+    runGemmPerColResidualGate<Fp4GemmSm100PerColResidualGate<KernelConfigLargeM<OutType>>>(
+        D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, m, n, k, stream);
   }
 }
 

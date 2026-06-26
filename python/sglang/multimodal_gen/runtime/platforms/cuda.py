@@ -121,7 +121,13 @@ class CudaPlatformBase(Platform):
             "sgl_kernel": "sgl_kernel",
             "auto": "auto",
         }.get(backend, backend)
-        if backend not in {"auto", "flashinfer", "flashinfer_cuda", "flashinfer_cute_dsl", "sgl_kernel"}:
+        if backend not in {
+            "auto",
+            "flashinfer",
+            "flashinfer_cuda",
+            "flashinfer_cute_dsl",
+            "sgl_kernel",
+        }:
             logger.warning(
                 "Unsupported SGLANG_DIFFUSION_FP4_QUANTIZE_BACKEND=%r. "
                 "Falling back to auto.",

@@ -27,7 +27,9 @@ from sglang.multimodal_gen.configs.pipeline_configs.base import (
 )
 
 
-def sana_video_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tensor:
+def sana_video_postprocess_text(
+    outputs: BaseEncoderOutput, _text_inputs
+) -> torch.Tensor:
     # SANA-Video uses the final hidden state of Gemma2 directly as text conditioning.
     return outputs.last_hidden_state
 

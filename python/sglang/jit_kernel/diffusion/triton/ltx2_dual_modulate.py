@@ -80,7 +80,9 @@ def _ltx2_rmsnorm_dual_modulate_kernel(
     tl.store(y1_ptr + row * hidden + cols, normed * (1.0 + scale1) + shift1, mask=mask)
 
 
-def _expand_param(param: torch.Tensor, batch: int, seq: int, hidden: int) -> torch.Tensor:
+def _expand_param(
+    param: torch.Tensor, batch: int, seq: int, hidden: int
+) -> torch.Tensor:
     if param.ndim == 2:
         param = param[:, None, :]
     if param.ndim != 3:
@@ -91,7 +93,9 @@ def _expand_param(param: torch.Tensor, batch: int, seq: int, hidden: int) -> tor
             f"to {(batch, seq, hidden)}"
         )
     if param.shape[2] != hidden:
-        raise ValueError(f"scale/shift hidden dim must be {hidden}, got {param.shape[2]}")
+        raise ValueError(
+            f"scale/shift hidden dim must be {hidden}, got {param.shape[2]}"
+        )
     return param.expand(batch, seq, hidden)
 
 
@@ -112,12 +116,13 @@ def ltx2_rmsnorm_dual_modulate(
 
     batch, seq, hidden = x.shape
     params = tuple(
-        _expand_param(t, batch, seq, hidden)
-        for t in (scale0, shift0, scale1, shift1)
+        _expand_param(t, batch, seq, hidden) for t in (scale0, shift0, scale1, shift1)
     )
     for param in params:
         if not param.is_cuda or param.dtype != x.dtype or param.stride(-1) != 1:
-            raise ValueError("scale/shift tensors must be CUDA, same dtype, last-dim contiguous")
+            raise ValueError(
+                "scale/shift tensors must be CUDA, same dtype, last-dim contiguous"
+            )
 
     y0 = torch.empty_like(x)
     y1 = torch.empty_like(x)
@@ -275,7 +280,9 @@ def ltx2_rmsnorm_ca_dual_modulate_from_temb(
         or scale_shift_table.dtype not in (torch.bfloat16, torch.float32)
         or scale_shift_table.stride(-1) != 1
     ):
-        raise ValueError("scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous")
+        raise ValueError(
+            "scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous"
+        )
 
     y0 = torch.empty_like(x)
     y1 = torch.empty_like(x)

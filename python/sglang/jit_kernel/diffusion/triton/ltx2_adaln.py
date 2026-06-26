@@ -37,11 +37,7 @@ def _ltx2_rms_norm_modulate_kernel(
     cols = tl.arange(0, BLOCK_C)
     mask = cols < hidden_size
 
-    x_offsets = (
-        batch * x_stride_b
-        + token * x_stride_t
-        + cols * x_stride_c
-    )
+    x_offsets = batch * x_stride_b + token * x_stride_t + cols * x_stride_c
     x = tl.load(x_ptr + x_offsets, mask=mask, other=0.0).to(tl.float32)
     x_masked = tl.where(mask, x, 0.0)
     mean_square = tl.sum(x_masked * x_masked, axis=0) / hidden_size
@@ -51,14 +47,10 @@ def _ltx2_rms_norm_modulate_kernel(
     if SCALE_SEQ_LEN != 1:
         scale_token = token
     scale_offsets = (
-        batch * scale_stride_b
-        + scale_token * scale_stride_t
-        + cols * scale_stride_c
+        batch * scale_stride_b + scale_token * scale_stride_t + cols * scale_stride_c
     )
     shift_offsets = (
-        batch * shift_stride_b
-        + scale_token * shift_stride_t
-        + cols * shift_stride_c
+        batch * shift_stride_b + scale_token * shift_stride_t + cols * shift_stride_c
     )
     scale = tl.load(scale_ptr + scale_offsets, mask=mask, other=0.0).to(tl.float32)
     shift = tl.load(shift_ptr + shift_offsets, mask=mask, other=0.0).to(tl.float32)
@@ -71,11 +63,7 @@ def _ltx2_rms_norm_modulate_kernel(
     scale = (scale + 1.0).to(tl.bfloat16).to(tl.float32)
     y = (norm * scale).to(tl.bfloat16).to(tl.float32) + shift
 
-    out_offsets = (
-        batch * out_stride_b
-        + token * out_stride_t
-        + cols * out_stride_c
-    )
+    out_offsets = batch * out_stride_b + token * out_stride_t + cols * out_stride_c
     tl.store(out_ptr + out_offsets, y, mask=mask)
 
 

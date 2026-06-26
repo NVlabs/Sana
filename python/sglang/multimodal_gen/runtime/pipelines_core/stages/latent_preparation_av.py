@@ -26,7 +26,6 @@ from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
 logger = init_logger(__name__)
 
 
-
 def _load_saved_latents(path: str, tensor_name: str) -> torch.Tensor:
     payload = torch.load(path, map_location="cpu")
     if isinstance(payload, torch.Tensor):

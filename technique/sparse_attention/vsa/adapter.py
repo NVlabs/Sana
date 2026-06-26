@@ -19,4 +19,3 @@ def dependency_status() -> dict[str, bool]:
         "vsa",
         "sglang.multimodal_gen.runtime.layers.attention.backends.video_sparse_attn",
     )
-

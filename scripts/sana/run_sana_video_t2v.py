@@ -7,6 +7,7 @@ Mirrors the official HF docs example:
 Recommended dtypes (per the model card): transformer + text_encoder in
 bfloat16, VAE in float32.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,7 +33,9 @@ DEFAULT_NEG = (
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="Efficient-Large-Model/SANA-Video_2B_480p_diffusers")
+    p.add_argument(
+        "--model", default="Efficient-Large-Model/SANA-Video_2B_480p_diffusers"
+    )
     p.add_argument("--prompt", default=DEFAULT_PROMPT)
     p.add_argument("--negative-prompt", default=DEFAULT_NEG)
     p.add_argument("--motion-scale", type=int, default=30)
@@ -44,16 +47,25 @@ def main() -> None:
     p.add_argument("--fps", type=int, default=16)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--output", default="outputs/sana_video/sana_video_t2v.mp4")
-    p.add_argument("--vae-tiling", action="store_true",
-                   help="enable VAE spatial tiling to bound decode memory at high resolution")
+    p.add_argument(
+        "--vae-tiling",
+        action="store_true",
+        help="enable VAE spatial tiling to bound decode memory at high resolution",
+    )
     args = p.parse_args()
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
 
-    print(f"[env] torch={torch.__version__} cuda_avail={torch.cuda.is_available()}", flush=True)
+    print(
+        f"[env] torch={torch.__version__} cuda_avail={torch.cuda.is_available()}",
+        flush=True,
+    )
     if torch.cuda.is_available():
-        print(f"[env] gpu={torch.cuda.get_device_name(0)} "
-              f"cap={torch.cuda.get_device_capability(0)}", flush=True)
+        print(
+            f"[env] gpu={torch.cuda.get_device_name(0)} "
+            f"cap={torch.cuda.get_device_capability(0)}",
+            flush=True,
+        )
 
     print(f"[load] {args.model}", flush=True)
     t0 = time.time()
@@ -69,8 +81,11 @@ def main() -> None:
     prompt = args.prompt + f" motion score: {args.motion_scale}."
     generator = torch.Generator(device="cuda").manual_seed(args.seed)
 
-    print(f"[infer] {args.width}x{args.height} frames={args.frames} "
-          f"steps={args.steps} guidance={args.guidance_scale} seed={args.seed}", flush=True)
+    print(
+        f"[infer] {args.width}x{args.height} frames={args.frames} "
+        f"steps={args.steps} guidance={args.guidance_scale} seed={args.seed}",
+        flush=True,
+    )
     t1 = time.time()
     video = pipe(
         prompt=prompt,

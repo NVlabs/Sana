@@ -18,4 +18,3 @@ def dependency_status() -> dict[str, bool]:
         "sglang.multimodal_gen.runtime.models.dits.sana_video",
         "sglang.multimodal_gen.runtime.cache.ltx2_stage1_cache_core",
     )
-

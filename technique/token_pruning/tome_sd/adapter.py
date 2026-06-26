@@ -20,4 +20,3 @@ def apply_tome_patch(*args, **kwargs):
     import tomesd
 
     return tomesd.apply_patch(*args, **kwargs)
-

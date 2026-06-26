@@ -50,14 +50,14 @@ def ltx2_qknorm_pair_inplace(
     eps: float,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     if q.ndim != 2 or k.ndim != 2:
-        raise ValueError('q and k must be flattened to [tokens, hidden]')
+        raise ValueError("q and k must be flattened to [tokens, hidden]")
     if q.shape[-1] != k.shape[-1]:
-        raise ValueError(f'q/k hidden mismatch: {q.shape[-1]} vs {k.shape[-1]}')
+        raise ValueError(f"q/k hidden mismatch: {q.shape[-1]} vs {k.shape[-1]}")
     if q.stride(-1) != 1 or k.stride(-1) != 1:
-        raise ValueError('q and k must be contiguous in the last dimension')
+        raise ValueError("q and k must be contiguous in the last dimension")
     hidden = int(q.shape[-1])
     if q_weight.numel() != hidden or k_weight.numel() != hidden:
-        raise ValueError('q/k RMSNorm weights must match q/k hidden size')
+        raise ValueError("q/k RMSNorm weights must match q/k hidden size")
 
     q_rows = int(q.shape[0])
     k_rows = int(k.shape[0])
@@ -124,10 +124,18 @@ def _ltx2_qknorm_split_rope_pair_kernel(
     q_active = row < q_rows
     k_active = row < k_rows
 
-    q_first = tl.load(q_ptr + row * hidden + first_col, mask=q_active & mask, other=0.0).to(tl.float32)
-    q_second = tl.load(q_ptr + row * hidden + second_col, mask=q_active & mask, other=0.0).to(tl.float32)
-    k_first = tl.load(k_ptr + row * hidden + first_col, mask=k_active & mask, other=0.0).to(tl.float32)
-    k_second = tl.load(k_ptr + row * hidden + second_col, mask=k_active & mask, other=0.0).to(tl.float32)
+    q_first = tl.load(
+        q_ptr + row * hidden + first_col, mask=q_active & mask, other=0.0
+    ).to(tl.float32)
+    q_second = tl.load(
+        q_ptr + row * hidden + second_col, mask=q_active & mask, other=0.0
+    ).to(tl.float32)
+    k_first = tl.load(
+        k_ptr + row * hidden + first_col, mask=k_active & mask, other=0.0
+    ).to(tl.float32)
+    k_second = tl.load(
+        k_ptr + row * hidden + second_col, mask=k_active & mask, other=0.0
+    ).to(tl.float32)
 
     q_w_first = tl.load(q_weight_ptr + first_col, mask=mask, other=0.0).to(tl.float32)
     q_w_second = tl.load(q_weight_ptr + second_col, mask=mask, other=0.0).to(tl.float32)
@@ -149,20 +157,48 @@ def _ltx2_qknorm_split_rope_pair_kernel(
     k_batch = row // k_seq
     k_token = row - k_batch * k_seq
 
-    q_pos = q_batch * q_cos_stride_b + head * q_cos_stride_h + q_token * q_cos_stride_t + dim
-    k_pos = k_batch * k_cos_stride_b + head * k_cos_stride_h + k_token * k_cos_stride_t + dim
-    q_sin_pos = q_batch * q_sin_stride_b + head * q_sin_stride_h + q_token * q_sin_stride_t + dim
-    k_sin_pos = k_batch * k_sin_stride_b + head * k_sin_stride_h + k_token * k_sin_stride_t + dim
+    q_pos = (
+        q_batch * q_cos_stride_b
+        + head * q_cos_stride_h
+        + q_token * q_cos_stride_t
+        + dim
+    )
+    k_pos = (
+        k_batch * k_cos_stride_b
+        + head * k_cos_stride_h
+        + k_token * k_cos_stride_t
+        + dim
+    )
+    q_sin_pos = (
+        q_batch * q_sin_stride_b
+        + head * q_sin_stride_h
+        + q_token * q_sin_stride_t
+        + dim
+    )
+    k_sin_pos = (
+        k_batch * k_sin_stride_b
+        + head * k_sin_stride_h
+        + k_token * k_sin_stride_t
+        + dim
+    )
 
     q_cos = tl.load(q_cos_ptr + q_pos, mask=q_active & mask, other=0.0)
     q_sin = tl.load(q_sin_ptr + q_sin_pos, mask=q_active & mask, other=0.0)
     k_cos = tl.load(k_cos_ptr + k_pos, mask=k_active & mask, other=0.0)
     k_sin = tl.load(k_sin_ptr + k_sin_pos, mask=k_active & mask, other=0.0)
 
-    q_out_first = (q_first * q_cos).to(tl.bfloat16).to(tl.float32) + (-q_second.to(tl.float32) * q_sin.to(tl.float32))
-    q_out_second = (q_second * q_cos).to(tl.bfloat16).to(tl.float32) + (q_first.to(tl.float32) * q_sin.to(tl.float32))
-    k_out_first = (k_first * k_cos).to(tl.bfloat16).to(tl.float32) + (-k_second.to(tl.float32) * k_sin.to(tl.float32))
-    k_out_second = (k_second * k_cos).to(tl.bfloat16).to(tl.float32) + (k_first.to(tl.float32) * k_sin.to(tl.float32))
+    q_out_first = (q_first * q_cos).to(tl.bfloat16).to(tl.float32) + (
+        -q_second.to(tl.float32) * q_sin.to(tl.float32)
+    )
+    q_out_second = (q_second * q_cos).to(tl.bfloat16).to(tl.float32) + (
+        q_first.to(tl.float32) * q_sin.to(tl.float32)
+    )
+    k_out_first = (k_first * k_cos).to(tl.bfloat16).to(tl.float32) + (
+        -k_second.to(tl.float32) * k_sin.to(tl.float32)
+    )
+    k_out_second = (k_second * k_cos).to(tl.bfloat16).to(tl.float32) + (
+        k_first.to(tl.float32) * k_sin.to(tl.float32)
+    )
 
     tl.store(q_out_ptr + row * hidden + first_col, q_out_first, mask=q_active & mask)
     tl.store(q_out_ptr + row * hidden + second_col, q_out_second, mask=q_active & mask)
@@ -182,17 +218,24 @@ def ltx2_qknorm_split_rope_pair(
     eps: float,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     if q.ndim != 3 or k.ndim != 3:
-        raise ValueError('q and k must have shape [batch, seq, hidden]')
+        raise ValueError("q and k must have shape [batch, seq, hidden]")
     if q.shape[0] != k.shape[0]:
-        raise ValueError(f'q/k batch mismatch: {q.shape[0]} vs {k.shape[0]}')
+        raise ValueError(f"q/k batch mismatch: {q.shape[0]} vs {k.shape[0]}")
     if q.shape[-1] != k.shape[-1]:
-        raise ValueError(f'q/k hidden mismatch: {q.shape[-1]} vs {k.shape[-1]}')
+        raise ValueError(f"q/k hidden mismatch: {q.shape[-1]} vs {k.shape[-1]}")
     if q.dtype != torch.bfloat16 or k.dtype != torch.bfloat16:
-        raise ValueError('fused qknorm+rope currently supports bfloat16 only')
+        raise ValueError("fused qknorm+rope currently supports bfloat16 only")
     if not q.is_contiguous() or not k.is_contiguous():
-        raise ValueError('q and k must be contiguous')
-    if q_cos.ndim != 4 or q_sin.shape != q_cos.shape or k_cos.ndim != 4 or k_sin.shape != k_cos.shape:
-        raise ValueError('cos/sin tensors must have shape [batch, heads, seq, half_dim]')
+        raise ValueError("q and k must be contiguous")
+    if (
+        q_cos.ndim != 4
+        or q_sin.shape != q_cos.shape
+        or k_cos.ndim != 4
+        or k_sin.shape != k_cos.shape
+    ):
+        raise ValueError(
+            "cos/sin tensors must have shape [batch, heads, seq, half_dim]"
+        )
 
     batch, q_seq, hidden = q.shape
     _, k_seq, _ = k.shape
@@ -209,11 +252,11 @@ def ltx2_qknorm_split_rope_pair(
         or hidden != num_heads * head_dim
     ):
         raise ValueError(
-            'LTX2 fused qknorm+rope shape mismatch: '
-            f'q={tuple(q.shape)}, k={tuple(k.shape)}, q_cos={tuple(q_cos.shape)}, k_cos={tuple(k_cos.shape)}'
+            "LTX2 fused qknorm+rope shape mismatch: "
+            f"q={tuple(q.shape)}, k={tuple(k.shape)}, q_cos={tuple(q_cos.shape)}, k_cos={tuple(k_cos.shape)}"
         )
     if q_weight.numel() != hidden or k_weight.numel() != hidden:
-        raise ValueError('q/k RMSNorm weights must match hidden size')
+        raise ValueError("q/k RMSNorm weights must match hidden size")
 
     q_out = torch.empty_like(q)
     k_out = torch.empty_like(k)

@@ -40,7 +40,6 @@ from sglang.multimodal_gen.runtime.distributed import (
     get_sp_group,
     get_sp_world_size,
     get_tp_group,
-    get_world_group,
     get_world_size,
 )
 from sglang.multimodal_gen.runtime.distributed.cfg_parallel_utils import (

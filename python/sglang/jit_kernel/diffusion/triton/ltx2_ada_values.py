@@ -83,7 +83,9 @@ def ltx2_ada_values3(
         or scale_shift_table.dtype not in (torch.bfloat16, torch.float32)
         or scale_shift_table.stride(-1) != 1
     ):
-        raise ValueError("scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous")
+        raise ValueError(
+            "scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous"
+        )
 
     total_params = int(scale_shift_table.shape[0])
     hidden = int(scale_shift_table.shape[1])
@@ -96,7 +98,9 @@ def ltx2_ada_values3(
 
     batch, seq, _ = timestep.shape
     rows = int(batch * seq)
-    out0 = torch.empty((batch, seq, hidden), device=timestep.device, dtype=timestep.dtype)
+    out0 = torch.empty(
+        (batch, seq, hidden), device=timestep.device, dtype=timestep.dtype
+    )
     out1 = torch.empty_like(out0)
     out2 = torch.empty_like(out0)
     _ltx2_ada_values3_kernel[(rows,)](
@@ -271,7 +275,9 @@ def ltx2_ada_values9(
         or scale_shift_table.dtype not in (torch.bfloat16, torch.float32)
         or scale_shift_table.stride(-1) != 1
     ):
-        raise ValueError("scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous")
+        raise ValueError(
+            "scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous"
+        )
 
     total_params = int(scale_shift_table.shape[0])
     hidden = int(scale_shift_table.shape[1])
@@ -367,19 +373,34 @@ def ltx2_rmsnorm_ada_scale_shift(
 ) -> torch.Tensor:
     if x.ndim != 3 or timestep.ndim != 3:
         raise ValueError("x and timestep must have shape [B,S,D] / [B,S,P*D]")
-    if not x.is_cuda or not timestep.is_cuda or x.dtype != torch.bfloat16 or timestep.dtype != x.dtype:
+    if (
+        not x.is_cuda
+        or not timestep.is_cuda
+        or x.dtype != torch.bfloat16
+        or timestep.dtype != x.dtype
+    ):
         raise ValueError("x/timestep must be CUDA bfloat16 tensors")
     if not x.is_contiguous() or not timestep.is_contiguous():
         raise ValueError("x/timestep must be contiguous")
     if scale_shift_table.ndim != 2 or not scale_shift_table.is_cuda:
         raise ValueError("scale_shift_table must have shape [P,D] on CUDA")
-    if scale_shift_table.dtype not in (torch.bfloat16, torch.float32) or scale_shift_table.stride(-1) != 1:
+    if (
+        scale_shift_table.dtype not in (torch.bfloat16, torch.float32)
+        or scale_shift_table.stride(-1) != 1
+    ):
         raise ValueError("scale_shift_table must be bf16/fp32 and last-dim contiguous")
     batch, seq, hidden = x.shape
     total_params = int(scale_shift_table.shape[0])
-    if scale_shift_table.shape[1] != hidden or timestep.shape != (batch, seq, total_params * hidden):
+    if scale_shift_table.shape[1] != hidden or timestep.shape != (
+        batch,
+        seq,
+        total_params * hidden,
+    ):
         raise ValueError("shape mismatch between x, table and timestep")
-    if min(shift_index, scale_index) < 0 or max(shift_index, scale_index) >= total_params:
+    if (
+        min(shift_index, scale_index) < 0
+        or max(shift_index, scale_index) >= total_params
+    ):
         raise ValueError("Ada parameter index out of range")
     if hidden % 256 != 0 or hidden > 8192:
         raise ValueError("hidden size is outside the supported LTX2 fast-path range")
@@ -403,7 +424,6 @@ def ltx2_rmsnorm_ada_scale_shift(
         num_warps=4 if hidden >= 4096 else 8,
     )
     return out
-
 
 
 @triton.jit
@@ -485,7 +505,9 @@ def ltx2_ada_values_indices3(
         or scale_shift_table.dtype not in (torch.bfloat16, torch.float32)
         or scale_shift_table.stride(-1) != 1
     ):
-        raise ValueError("scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous")
+        raise ValueError(
+            "scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous"
+        )
 
     total_params = int(scale_shift_table.shape[0])
     hidden = int(scale_shift_table.shape[1])
@@ -499,7 +521,9 @@ def ltx2_ada_values_indices3(
 
     batch, seq, _ = timestep.shape
     rows = int(batch * seq)
-    out0 = torch.empty((batch, seq, hidden), device=timestep.device, dtype=timestep.dtype)
+    out0 = torch.empty(
+        (batch, seq, hidden), device=timestep.device, dtype=timestep.dtype
+    )
     out1 = torch.empty_like(out0)
     out2 = torch.empty_like(out0)
     _ltx2_ada_values_indices3_kernel[(rows,)](
@@ -520,7 +544,6 @@ def ltx2_ada_values_indices3(
         num_warps=4 if hidden >= 4096 else 8,
     )
     return out0, out1, out2
-
 
 
 def ltx2_ada_values9_packed(
@@ -550,7 +573,9 @@ def ltx2_ada_values9_packed(
         or scale_shift_table.dtype not in (torch.bfloat16, torch.float32)
         or scale_shift_table.stride(-1) != 1
     ):
-        raise ValueError("scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous")
+        raise ValueError(
+            "scale_shift_table must be CUDA, bf16/fp32, last-dim contiguous"
+        )
 
     total_params = int(scale_shift_table.shape[0])
     hidden = int(scale_shift_table.shape[1])
@@ -561,7 +586,9 @@ def ltx2_ada_values9_packed(
 
     batch, seq, _ = timestep.shape
     rows = int(batch * seq)
-    packed = torch.empty((9, batch, seq, hidden), device=timestep.device, dtype=timestep.dtype)
+    packed = torch.empty(
+        (9, batch, seq, hidden), device=timestep.device, dtype=timestep.dtype
+    )
     outs = tuple(packed[i] for i in range(9))
     _ltx2_ada_values9_kernel[(rows,)](
         timestep,

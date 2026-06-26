@@ -256,10 +256,14 @@ class LTX2PABCoordinator:
         branch = "default"
         pass_id = "default"
         if forward_batch is not None:
-            branch = "negative" if getattr(forward_batch, "is_cfg_negative", False) else (
-                "positive"
-                if getattr(forward_batch, "do_classifier_free_guidance", False)
-                else "default"
+            branch = (
+                "negative"
+                if getattr(forward_batch, "is_cfg_negative", False)
+                else (
+                    "positive"
+                    if getattr(forward_batch, "do_classifier_free_guidance", False)
+                    else "default"
+                )
             )
             pass_id = str(getattr(forward_batch, "ltx2_pass_id", branch))
 
@@ -299,8 +303,7 @@ class LTX2PABCoordinator:
         }:
             return False
         if self.config.disable_when_perturbed and (
-            kwargs.get("all_perturbed")
-            or kwargs.get("perturbation_mask") is not None
+            kwargs.get("all_perturbed") or kwargs.get("perturbation_mask") is not None
         ):
             return False
         return True
@@ -326,9 +329,7 @@ class LTX2PABCoordinator:
             return False
         return True
 
-    def _window_for(
-        self, stage: str, attention_kind: LTX2PABAttentionKind
-    ) -> int:
+    def _window_for(self, stage: str, attention_kind: LTX2PABAttentionKind) -> int:
         override = self.config.per_kind_window_overrides.get(attention_kind)
         if override is not None:
             return max(1, int(override))
@@ -392,9 +393,7 @@ class LTX2PABAttentionWrapper(nn.Module):
 class LTX2PABMixin:
     """TeaCacheMixin-style state hooks for a model-native LTX-2 PAB path."""
 
-    def _init_ltx2_pab_state(
-        self, config: LTX2PABConfig | None = None
-    ) -> None:
+    def _init_ltx2_pab_state(self, config: LTX2PABConfig | None = None) -> None:
         self.ltx2_pab = LTX2PABCoordinator(config=config)
         install_ltx2_pab_hooks(self, coordinator=self.ltx2_pab)
 

@@ -694,10 +694,7 @@ class LTX2TextConnectors(nn.Module):
                 # Pad with a large negative value to mask out the new tokens
                 attention_mask = F.pad(attention_mask, (0, pad_len), value=-1000000.0)
 
-        if (
-            self.video_text_proj_in is not None
-            and self.audio_text_proj_in is not None
-        ):
+        if self.video_text_proj_in is not None and self.audio_text_proj_in is not None:
             video_hidden_states = text_encoder_hidden_states
             audio_hidden_states = text_encoder_hidden_states
             if video_hidden_states.dtype != self.video_text_proj_in.weight.dtype:

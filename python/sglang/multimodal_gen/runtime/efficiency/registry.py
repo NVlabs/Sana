@@ -58,9 +58,7 @@ def register_model_spec(*keys: str):
 
 def build_technique(name: str, **kwargs) -> Technique:
     if name not in _TECHNIQUES:
-        raise KeyError(
-            f"unknown technique {name!r}; registered: {sorted(_TECHNIQUES)}"
-        )
+        raise KeyError(f"unknown technique {name!r}; registered: {sorted(_TECHNIQUES)}")
     return _TECHNIQUES[name](**kwargs)
 
 

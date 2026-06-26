@@ -22,7 +22,6 @@ import torch
 from safetensors import safe_open
 from safetensors.torch import load_file, save_file
 
-
 INDEX_FILENAMES = (
     "model.safetensors.index.json",
     "diffusion_pytorch_model.safetensors.index.json",
@@ -44,12 +43,8 @@ LTX2_PARAM_NAMES_MAPPING = {
     r"^av_cross_attn_audio_scale_shift\.(.*)$": (
         r"av_ca_audio_scale_shift_adaln_single.\1"
     ),
-    r"^av_cross_attn_video_a2v_gate\.(.*)$": (
-        r"av_ca_a2v_gate_adaln_single.\1"
-    ),
-    r"^av_cross_attn_audio_v2a_gate\.(.*)$": (
-        r"av_ca_v2a_gate_adaln_single.\1"
-    ),
+    r"^av_cross_attn_video_a2v_gate\.(.*)$": (r"av_ca_a2v_gate_adaln_single.\1"),
+    r"^av_cross_attn_audio_v2a_gate\.(.*)$": (r"av_ca_v2a_gate_adaln_single.\1"),
     r"(.*)scale_shift_table_a2v_ca_video": (
         r"\1video_a2v_cross_attn_scale_shift_table"
     ),
@@ -72,12 +67,8 @@ LTX2_REVERSE_PARAM_NAMES_MAPPING = {
     r"^av_ca_audio_scale_shift_adaln_single\.(.*)$": (
         r"av_cross_attn_audio_scale_shift.\1"
     ),
-    r"^av_ca_a2v_gate_adaln_single\.(.*)$": (
-        r"av_cross_attn_video_a2v_gate.\1"
-    ),
-    r"^av_ca_v2a_gate_adaln_single\.(.*)$": (
-        r"av_cross_attn_audio_v2a_gate.\1"
-    ),
+    r"^av_ca_a2v_gate_adaln_single\.(.*)$": (r"av_cross_attn_video_a2v_gate.\1"),
+    r"^av_ca_v2a_gate_adaln_single\.(.*)$": (r"av_cross_attn_audio_v2a_gate.\1"),
     r"(.*)video_a2v_cross_attn_scale_shift_table": (
         r"\1scale_shift_table_a2v_ca_video"
     ),

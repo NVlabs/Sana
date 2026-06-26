@@ -25,4 +25,3 @@ def get_transform_class():
     )
 
     return SparseAttention
-

@@ -15,7 +15,6 @@ import PIL.Image
 import torch
 import torch.nn as nn
 
-from sglang.multimodal_gen import envs
 from sglang.multimodal_gen.configs.sample.sampling_params import DataType
 from sglang.multimodal_gen.runtime.distributed import get_local_torch_device
 from sglang.multimodal_gen.runtime.distributed.communication_op import (
@@ -24,11 +23,8 @@ from sglang.multimodal_gen.runtime.distributed.communication_op import (
 from sglang.multimodal_gen.runtime.distributed.parallel_state import (
     get_classifier_free_guidance_rank,
     get_classifier_free_guidance_world_size,
-    get_sp_group,
     get_sp_parallel_rank,
     get_sp_world_size,
-    get_tp_group,
-    get_world_size,
 )
 from sglang.multimodal_gen.runtime.managers.forward_context import set_forward_context
 from sglang.multimodal_gen.runtime.pipelines_core.schedule_batch import Req
@@ -481,6 +477,7 @@ class Cosmos3DenoisingStage(PipelineStage):
             # is only safe when the compiled region has no graph breaks / no
             # collective inside the captured graph, so it stays opt-in.
             import os as _os
+
             _mode = _os.environ.get("SGLANG_COSMOS3_COMPILE_MODE", "default")
             compile_kwargs = {
                 "mode": _mode,

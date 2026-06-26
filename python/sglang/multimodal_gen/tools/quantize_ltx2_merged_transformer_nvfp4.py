@@ -30,7 +30,6 @@ import torch
 from safetensors import safe_open
 from safetensors.torch import save_file
 
-
 INDEX_FILENAMES = (
     "model.safetensors.index.json",
     "diffusion_pytorch_model.safetensors.index.json",
@@ -62,12 +61,8 @@ LTX2_REVERSE_PARAM_NAMES_MAPPING = {
     r"^av_ca_audio_scale_shift_adaln_single\.(.*)$": (
         r"av_cross_attn_audio_scale_shift.\1"
     ),
-    r"^av_ca_a2v_gate_adaln_single\.(.*)$": (
-        r"av_cross_attn_video_a2v_gate.\1"
-    ),
-    r"^av_ca_v2a_gate_adaln_single\.(.*)$": (
-        r"av_cross_attn_audio_v2a_gate.\1"
-    ),
+    r"^av_ca_a2v_gate_adaln_single\.(.*)$": (r"av_cross_attn_video_a2v_gate.\1"),
+    r"^av_ca_v2a_gate_adaln_single\.(.*)$": (r"av_cross_attn_audio_v2a_gate.\1"),
     r"(.*)video_a2v_cross_attn_scale_shift_table": (
         r"\1scale_shift_table_a2v_ca_video"
     ),
@@ -270,9 +265,9 @@ def _discover_template_modules(
 
 def _make_global_scale(weight: torch.Tensor) -> torch.Tensor:
     max_abs = torch.amax(weight.abs()).clamp_min_(1e-6)
-    return (
-        torch.finfo(torch.float8_e4m3fn).max * FLOAT4_E2M1_MAX / max_abs
-    ).to(torch.float32)
+    return (torch.finfo(torch.float8_e4m3fn).max * FLOAT4_E2M1_MAX / max_abs).to(
+        torch.float32
+    )
 
 
 def _swap_fp4_nibbles(packed: torch.Tensor) -> torch.Tensor:

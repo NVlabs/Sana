@@ -260,7 +260,9 @@ class LTX2Stage1CacheCoreController:
             "total_calls": self.total_calls,
             "real_calls": self.real_calls,
             "skipped_calls": self.skipped_calls,
-            "hit_rate": 0.0 if eligible == 0 else round(self.skipped_calls / eligible, 4),
+            "hit_rate": (
+                0.0 if eligible == 0 else round(self.skipped_calls / eligible, 4)
+            ),
             "reuse_mode": self.params.get("reuse_mode"),
             "skip_indices": list(self.params.get("skip_indices", [])),
             "events": list(self.events),
@@ -351,8 +353,7 @@ class LTX2Stage1CacheCoreController:
             previous = self.x_prev_subsampled.float().to(current.device)
             input_change = (current - previous).abs().mean()
             approx = (
-                self.relative_transformation_rate.to(input_change.device)
-                * input_change
+                self.relative_transformation_rate.to(input_change.device) * input_change
             ) / self.output_prev_norm.to(input_change.device).clamp_min(1e-6)
             self.cumulative_change_rate += float(approx.item())
             return self.cumulative_change_rate < float(
@@ -399,9 +400,8 @@ class LTX2Stage1CacheCoreController:
             )
 
         if (
-            (self.method == "delta" or fixed_mode == "delta")
-            and self.previous_video_output is not None
-        ):
+            self.method == "delta" or fixed_mode == "delta"
+        ) and self.previous_video_output is not None:
             scale = float(self.params.get("delta_scale", 1.0))
             video_delta = self.last_video_output - self.previous_video_output.to(
                 self.last_video_output.device
@@ -410,8 +410,9 @@ class LTX2Stage1CacheCoreController:
             audio = None
             if audio_x is not None and self.last_audio_output is not None:
                 if self.previous_audio_output is not None:
-                    audio_delta = self.last_audio_output - self.previous_audio_output.to(
-                        self.last_audio_output.device
+                    audio_delta = (
+                        self.last_audio_output
+                        - self.previous_audio_output.to(self.last_audio_output.device)
                     )
                     audio = self.last_audio_output + scale * audio_delta
                 else:
@@ -421,12 +422,16 @@ class LTX2Stage1CacheCoreController:
                 _to_device_dtype(audio, audio_x) if audio_x is not None else None,
             )
 
-        if (self.method == "ema" or fixed_mode == "ema") and self.ema_video_output is not None:
+        if (
+            self.method == "ema" or fixed_mode == "ema"
+        ) and self.ema_video_output is not None:
             return (
                 self.ema_video_output.to(video_x.device, video_x.dtype),
-                _to_device_dtype(self.ema_audio_output, audio_x)
-                if audio_x is not None
-                else None,
+                (
+                    _to_device_dtype(self.ema_audio_output, audio_x)
+                    if audio_x is not None
+                    else None
+                ),
             )
 
         if (
@@ -436,16 +441,20 @@ class LTX2Stage1CacheCoreController:
             video = video_x + self.cache_video_diff.to(video_x.device, video_x.dtype)
             audio = None
             if audio_x is not None and self.cache_audio_diff is not None:
-                audio = audio_x + self.cache_audio_diff.to(audio_x.device, audio_x.dtype)
+                audio = audio_x + self.cache_audio_diff.to(
+                    audio_x.device, audio_x.dtype
+                )
             elif audio_x is not None and self.last_audio_output is not None:
                 audio = self.last_audio_output.to(audio_x.device, audio_x.dtype)
             return video, audio
 
         return (
             self.last_video_output.to(video_x.device, video_x.dtype),
-            _to_device_dtype(self.last_audio_output, audio_x)
-            if audio_x is not None
-            else None,
+            (
+                _to_device_dtype(self.last_audio_output, audio_x)
+                if audio_x is not None
+                else None
+            ),
         )
 
     def update(
@@ -508,12 +517,16 @@ class LTX2Stage1CacheCoreController:
                 ):
                     out_prev = self.output_prev_subsampled.to(video_output.device)
                     out_change = (
-                        _subsample(video_output, factor).float() - out_prev.float()
-                    ).abs().mean()
+                        (_subsample(video_output, factor).float() - out_prev.float())
+                        .abs()
+                        .mean()
+                    )
                     x_prev = self.x_prev_subsampled.to(video_x.device)
                     input_change = (
-                        _subsample(video_x, factor).float() - x_prev.float()
-                    ).abs().mean()
+                        (_subsample(video_x, factor).float() - x_prev.float())
+                        .abs()
+                        .mean()
+                    )
                     if float(input_change.item()) > 1e-12:
                         self.relative_transformation_rate = _clone_tensor(
                             out_change / input_change, device=cache_device

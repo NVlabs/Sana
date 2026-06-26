@@ -21,4 +21,3 @@ def dependency_status() -> dict[str, bool]:
         "modelopt",
         "sglang.multimodal_gen.runtime.layers.quantization.modelopt_quant",
     )
-

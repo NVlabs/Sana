@@ -51,14 +51,18 @@ def ltx_full_opt(
             component="transformer_2",  # stage-2 only
             stage2_dense_layers="0-1",
         ),
-        StepCache(skip=by_stage({"stage1": at_steps(_SCSP_SKIP_STEPS, True, False)},
-                                default=False)),
+        StepCache(
+            skip=by_stage(
+                {"stage1": at_steps(_SCSP_SKIP_STEPS, True, False)}, default=False
+            )
+        ),
         TokenPrune(
             keep_ratio=by_stage({"stage2": const(prune_ratio)}, default=1.0),
             method="feat_norm",
             compensation="prev",
-            enabled=by_stage({"stage2": at_steps(prune_steps, True, False)},
-                             default=False),
+            enabled=by_stage(
+                {"stage2": at_steps(prune_steps, True, False)}, default=False
+            ),
         ),
     ]
     if nvfp4:

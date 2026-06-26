@@ -17,4 +17,3 @@ def dependency_status() -> dict[str, bool]:
         "cache_dit",
         "sglang.multimodal_gen.runtime.cache.cache_dit_integration",
     )
-

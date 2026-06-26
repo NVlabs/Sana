@@ -14,7 +14,9 @@ from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
 logger = init_logger(__name__)
 
 
-def _dump_ltx2_upsample_debug_if_requested(name: str, tensor: torch.Tensor | None) -> None:
+def _dump_ltx2_upsample_debug_if_requested(
+    name: str, tensor: torch.Tensor | None
+) -> None:
     dump_dir = os.environ.get("SGLANG_LTX2_DUMP_UPSAMPLE_DEBUG_DIR")
     if not dump_dir or tensor is None:
         return
@@ -172,7 +174,9 @@ class LTX2UpsampleStage(PipelineStage):
     def forward(self, batch: Req, server_args: ServerArgs) -> Req:
         device = get_local_torch_device()
         _dump_ltx2_upsample_debug_if_requested("video_stage1_final", batch.latents)
-        _dump_ltx2_upsample_debug_if_requested("audio_stage1_final", batch.audio_latents)
+        _dump_ltx2_upsample_debug_if_requested(
+            "audio_stage1_final", batch.audio_latents
+        )
         latents = self._upsample_video_latents(batch.latents, server_args, device)
         _dump_ltx2_upsample_debug_if_requested("video_post_upsample_unpacked", latents)
         logger.info("Upsampled video latents: %s", list(latents.shape))

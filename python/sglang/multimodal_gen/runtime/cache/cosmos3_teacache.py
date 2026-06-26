@@ -9,8 +9,8 @@ unpatchify.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 from typing import Any
 
 import torch
@@ -196,8 +196,12 @@ class Cosmos3TeaCacheCoordinator:
         sp_size = get_sp_world_size()
         sp_group = get_sp_group() if sp_size > 1 else None
         if sp_group is not None and dist.is_available() and dist.is_initialized():
-            dist.all_reduce(diff_mean, op=dist.ReduceOp.AVG, group=sp_group.device_group)
-            dist.all_reduce(prev_mean, op=dist.ReduceOp.AVG, group=sp_group.device_group)
+            dist.all_reduce(
+                diff_mean, op=dist.ReduceOp.AVG, group=sp_group.device_group
+            )
+            dist.all_reduce(
+                prev_mean, op=dist.ReduceOp.AVG, group=sp_group.device_group
+            )
 
         return float((diff_mean / prev_mean).detach().cpu().item())
 
@@ -234,7 +238,10 @@ class Cosmos3TeaCacheCoordinator:
             stats.computed_steps.append(step)
             return Cosmos3TeaCacheDecision(False, key, "missing_cache")
 
-        if self.config.periodic_recompute_steps > 0 and entry.last_compute_step is not None:
+        if (
+            self.config.periodic_recompute_steps > 0
+            and entry.last_compute_step is not None
+        ):
             if step - entry.last_compute_step >= self.config.periodic_recompute_steps:
                 entry.continuous_hits = 0
                 stats.computes += 1
@@ -242,7 +249,10 @@ class Cosmos3TeaCacheCoordinator:
                 stats.computed_steps.append(step)
                 return Cosmos3TeaCacheDecision(False, key, "periodic_recompute")
 
-        if self.config.max_continuous_hits >= 0 and entry.continuous_hits >= self.config.max_continuous_hits:
+        if (
+            self.config.max_continuous_hits >= 0
+            and entry.continuous_hits >= self.config.max_continuous_hits
+        ):
             entry.continuous_hits = 0
             stats.computes += 1
             stats.periodic_recomputes += 1
@@ -284,7 +294,9 @@ class Cosmos3TeaCacheCoordinator:
         entry.continuous_hits += 1
         stats.hits += 1
         stats.skipped_steps.append(step)
-        residual = entry.residual.clone() if self.config.clone_on_hit else entry.residual
+        residual = (
+            entry.residual.clone() if self.config.clone_on_hit else entry.residual
+        )
         if self.config.log_decisions:
             logger.info(
                 "Cosmos3 TeaCache hit step=%s key=%s rel_l1=%.6f accum=%.6f",

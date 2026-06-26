@@ -190,9 +190,7 @@ class GPUWorker:
         if not current_platform.is_cuda():
             return
 
-        env_value = os.getenv(
-            "SGLANG_DISABLE_BF16_REDUCED_PRECISION_REDUCTION_FOR_SP"
-        )
+        env_value = os.getenv("SGLANG_DISABLE_BF16_REDUCED_PRECISION_REDUCTION_FOR_SP")
         if env_value is None:
             disable_bf16_reduced_reduction = self.server_args.sp_degree > 1
         else:

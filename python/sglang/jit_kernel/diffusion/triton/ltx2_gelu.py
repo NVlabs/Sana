@@ -117,13 +117,26 @@ def ltx2_bias_residual_gate(
 ) -> torch.Tensor:
     if update.shape != residual.shape or update.ndim != 3:
         raise ValueError("update and residual must have shape [B, T, D]")
-    if not update.is_cuda or not residual.is_cuda or not gate.is_cuda or not bias.is_cuda:
+    if (
+        not update.is_cuda
+        or not residual.is_cuda
+        or not gate.is_cuda
+        or not bias.is_cuda
+    ):
         raise ValueError("all inputs must be CUDA tensors")
-    if update.dtype != residual.dtype or update.dtype != gate.dtype or update.dtype != bias.dtype:
+    if (
+        update.dtype != residual.dtype
+        or update.dtype != gate.dtype
+        or update.dtype != bias.dtype
+    ):
         raise ValueError("all inputs must have the same dtype")
     if update.dtype not in (torch.float16, torch.bfloat16):
         raise ValueError("only fp16/bf16 are supported")
-    if not update.is_contiguous() or not residual.is_contiguous() or not bias.is_contiguous():
+    if (
+        not update.is_contiguous()
+        or not residual.is_contiguous()
+        or not bias.is_contiguous()
+    ):
         raise ValueError("update, residual, and bias must be contiguous")
     batch, tokens, hidden = update.shape
     if bias.ndim != 1 or bias.shape[0] != hidden:
@@ -136,7 +149,11 @@ def ltx2_bias_residual_gate(
         gate_stride_t = 0
         gate_stride_d = gate_view.stride(1)
     elif gate.ndim == 3:
-        if gate.shape[0] != batch or gate.shape[-1] != hidden or gate.shape[1] not in (1, tokens):
+        if (
+            gate.shape[0] != batch
+            or gate.shape[-1] != hidden
+            or gate.shape[1] not in (1, tokens)
+        ):
             raise ValueError("3D gate must have shape [B, 1|T, D]")
         gate_view = gate.contiguous() if not gate.is_contiguous() else gate
         gate_stride_b = gate_view.stride(0)

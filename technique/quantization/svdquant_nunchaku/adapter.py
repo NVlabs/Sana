@@ -20,4 +20,3 @@ def dependency_status() -> dict[str, bool]:
         "nunchaku",
         "sglang.multimodal_gen.runtime.layers.quantization.nunchaku_linear",
     )
-

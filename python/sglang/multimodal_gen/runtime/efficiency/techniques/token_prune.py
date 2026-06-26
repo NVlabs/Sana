@@ -65,7 +65,9 @@ def keep_indices(
         scores = hidden_states.float().var(-1).mean(0)
     elif method in ("random", "rand"):
         gen = torch.Generator(device=device).manual_seed(42)
-        return torch.sort(torch.randperm(num_tokens, generator=gen, device=device)[:keep]).values
+        return torch.sort(
+            torch.randperm(num_tokens, generator=gen, device=device)[:keep]
+        ).values
     else:  # uniform / unknown -> content-blind even stride
         return _uniform_indices(num_tokens, keep, device)
 
@@ -146,4 +148,6 @@ class TokenPrune(Technique):
             full = prev_full.to(dtype=kept_out.dtype, device=kept_out.device).clone()
         full[:, idx, :] = kept_out
         ctx.scratch[ctx.cache_key] = full.detach()
-        return torch.cat([hidden[:, :start, :], full, hidden[:, start + kept_len :, :]], dim=1)
+        return torch.cat(
+            [hidden[:, :start, :], full, hidden[:, start + kept_len :, :]], dim=1
+        )

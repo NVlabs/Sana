@@ -59,9 +59,7 @@ def _maybe_add_ltx2_vocoder_bwe_config(config: dict, vocoder_config) -> None:
     }
 
 
-def _remap_ltx2_vocoder_state_dict(
-    loaded: dict, target_keys: set[str]
-) -> dict:
+def _remap_ltx2_vocoder_state_dict(loaded: dict, target_keys: set[str]) -> dict:
     remapped = {}
     for key, value in loaded.items():
         mapped_key = key.replace(".downsample.filter", ".downsample.lowpass.filter")

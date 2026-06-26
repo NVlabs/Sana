@@ -16,6 +16,10 @@
 
 from __future__ import annotations
 
+# register built-in techniques, transforms, and model specs (import side-effects)
+from sglang.multimodal_gen.runtime.efficiency import models  # noqa: E402,F401
+from sglang.multimodal_gen.runtime.efficiency import techniques  # noqa: E402,F401
+from sglang.multimodal_gen.runtime.efficiency import transforms  # noqa: E402,F401
 from sglang.multimodal_gen.runtime.efficiency.compose import (
     CompositionError,
     Plan,
@@ -34,11 +38,6 @@ from sglang.multimodal_gen.runtime.efficiency.registry import (
     registered_techniques,
     registered_transforms,
 )
-from sglang.multimodal_gen.runtime.efficiency.transform import (
-    ModelTransform,
-    TransformContext,
-    TransformPhase,
-)
 from sglang.multimodal_gen.runtime.efficiency.schedule import (
     Schedule,
     as_schedule,
@@ -46,8 +45,8 @@ from sglang.multimodal_gen.runtime.efficiency.schedule import (
     before,
     by_stage,
     const,
-    predicate,
     parse_steps,
+    predicate,
 )
 from sglang.multimodal_gen.runtime.efficiency.spec import ModelSpec
 from sglang.multimodal_gen.runtime.efficiency.technique import (
@@ -57,21 +56,42 @@ from sglang.multimodal_gen.runtime.efficiency.technique import (
     Technique,
     TechniqueContext,
 )
-
-# register built-in techniques, transforms, and model specs (import side-effects)
-from sglang.multimodal_gen.runtime.efficiency import techniques  # noqa: E402,F401
-from sglang.multimodal_gen.runtime.efficiency import transforms  # noqa: E402,F401
-from sglang.multimodal_gen.runtime.efficiency import models  # noqa: E402,F401
+from sglang.multimodal_gen.runtime.efficiency.transform import (
+    ModelTransform,
+    TransformContext,
+    TransformPhase,
+)
 
 __all__ = [
-    "Schedule", "as_schedule", "at_steps", "before", "by_stage", "const",
-    "predicate", "parse_steps",
-    "Technique", "TechniqueContext", "Phase", "Seam", "Capability",
-    "ModelTransform", "TransformContext", "TransformPhase",
+    "Schedule",
+    "as_schedule",
+    "at_steps",
+    "before",
+    "by_stage",
+    "const",
+    "predicate",
+    "parse_steps",
+    "Technique",
+    "TechniqueContext",
+    "Phase",
+    "Seam",
+    "Capability",
+    "ModelTransform",
+    "TransformContext",
+    "TransformPhase",
     "ModelSpec",
-    "compose", "Plan", "CompositionError", "check_conflicts",
-    "register_technique", "register_transform", "register_model_spec",
-    "build_technique", "build_transform",
-    "get_model_spec", "is_supported",
-    "registered_techniques", "registered_transforms", "registered_models",
+    "compose",
+    "Plan",
+    "CompositionError",
+    "check_conflicts",
+    "register_technique",
+    "register_transform",
+    "register_model_spec",
+    "build_technique",
+    "build_transform",
+    "get_model_spec",
+    "is_supported",
+    "registered_techniques",
+    "registered_transforms",
+    "registered_models",
 ]

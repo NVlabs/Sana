@@ -27,7 +27,9 @@ def _tensor_hash(tensor: torch.Tensor) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def _tensor_summary(tensor: torch.Tensor, *, max_sample: int, hash_tensors: bool) -> dict[str, Any]:
+def _tensor_summary(
+    tensor: torch.Tensor, *, max_sample: int, hash_tensors: bool
+) -> dict[str, Any]:
     detached = tensor.detach()
     summary: dict[str, Any] = {
         "kind": "tensor",
@@ -38,7 +40,16 @@ def _tensor_summary(tensor: torch.Tensor, *, max_sample: int, hash_tensors: bool
         "requires_grad": bool(getattr(tensor, "requires_grad", False)),
     }
     if detached.numel() == 0:
-        summary.update({"mean": None, "std": None, "min": None, "max": None, "l2": None, "sample": []})
+        summary.update(
+            {
+                "mean": None,
+                "std": None,
+                "min": None,
+                "max": None,
+                "l2": None,
+                "sample": [],
+            }
+        )
         if hash_tensors:
             summary["sha256"] = _tensor_hash(detached)
         return summary
@@ -50,7 +61,10 @@ def _tensor_summary(tensor: torch.Tensor, *, max_sample: int, hash_tensors: bool
             "min": float(stats_tensor.min().detach().cpu()),
             "max": float(stats_tensor.max().detach().cpu()),
             "l2": float(torch.linalg.vector_norm(stats_tensor).detach().cpu()),
-            "sample": [float(x) for x in stats_tensor.flatten()[:max_sample].detach().cpu().tolist()],
+            "sample": [
+                float(x)
+                for x in stats_tensor.flatten()[:max_sample].detach().cpu().tolist()
+            ],
         }
     )
     if hash_tensors:
@@ -58,7 +72,9 @@ def _tensor_summary(tensor: torch.Tensor, *, max_sample: int, hash_tensors: bool
     return summary
 
 
-def summarize_value(value: Any, *, max_sample: int = 8, hash_tensors: bool = True, depth: int = 0) -> Any:
+def summarize_value(
+    value: Any, *, max_sample: int = 8, hash_tensors: bool = True, depth: int = 0
+) -> Any:
     if depth > 6:
         return {"kind": type(value).__name__, "truncated": True}
     if torch.is_tensor(value):
@@ -69,14 +85,21 @@ def summarize_value(value: Any, *, max_sample: int = 8, hash_tensors: bool = Tru
         return {
             "kind": type(value).__name__,
             "len": len(value),
-            "items": [summarize_value(v, max_sample=max_sample, hash_tensors=hash_tensors, depth=depth + 1) for v in value],
+            "items": [
+                summarize_value(
+                    v, max_sample=max_sample, hash_tensors=hash_tensors, depth=depth + 1
+                )
+                for v in value
+            ],
         }
     if isinstance(value, dict):
         return {
             "kind": "dict",
             "len": len(value),
             "items": {
-                str(k): summarize_value(v, max_sample=max_sample, hash_tensors=hash_tensors, depth=depth + 1)
+                str(k): summarize_value(
+                    v, max_sample=max_sample, hash_tensors=hash_tensors, depth=depth + 1
+                )
                 for k, v in value.items()
             },
         }
@@ -138,7 +161,9 @@ def summarize_value(value: Any, *, max_sample: int = 8, hash_tensors: bool = Tru
             "object_attrs": True,
             "len": len(attrs),
             "items": {
-                str(k): summarize_value(v, max_sample=max_sample, hash_tensors=hash_tensors, depth=depth + 1)
+                str(k): summarize_value(
+                    v, max_sample=max_sample, hash_tensors=hash_tensors, depth=depth + 1
+                )
                 for k, v in limited_items.items()
             },
         }
@@ -163,7 +188,9 @@ def clone_value_to_cpu(value: Any, *, depth: int = 0) -> Any:
     if isinstance(value, list):
         return [clone_value_to_cpu(v, depth=depth + 1) for v in value]
     if isinstance(value, dict):
-        return {str(k): clone_value_to_cpu(v, depth=depth + 1) for k, v in value.items()}
+        return {
+            str(k): clone_value_to_cpu(v, depth=depth + 1) for k, v in value.items()
+        }
     return repr(value)
 
 
@@ -225,11 +252,16 @@ class ActivationDumpContext:
             prefix=prefix,
             name_pattern=os.environ.get(f"{env_prefix}_PATTERN", ""),
             max_events=int(os.environ.get(f"{env_prefix}_MAX_EVENTS", "1000") or 1000),
-            include_root=os.environ.get(f"{env_prefix}_INCLUDE_ROOT", "0").lower() in ("1", "true", "yes", "on"),
-            save_tensors=os.environ.get(f"{env_prefix}_SAVE_TENSORS", "0").lower() in ("1", "true", "yes", "on"),
-            max_tensor_events=int(os.environ.get(f"{env_prefix}_MAX_TENSOR_EVENTS", "20") or 20),
+            include_root=os.environ.get(f"{env_prefix}_INCLUDE_ROOT", "0").lower()
+            in ("1", "true", "yes", "on"),
+            save_tensors=os.environ.get(f"{env_prefix}_SAVE_TENSORS", "0").lower()
+            in ("1", "true", "yes", "on"),
+            max_tensor_events=int(
+                os.environ.get(f"{env_prefix}_MAX_TENSOR_EVENTS", "20") or 20
+            ),
             max_sample=int(os.environ.get(f"{env_prefix}_MAX_SAMPLE", "8") or 8),
-            hash_tensors=os.environ.get(f"{env_prefix}_HASH_TENSORS", "1").lower() not in ("0", "false", "no", "off"),
+            hash_tensors=os.environ.get(f"{env_prefix}_HASH_TENSORS", "1").lower()
+            not in ("0", "false", "no", "off"),
         )
 
     def __enter__(self):
@@ -243,7 +275,9 @@ class ActivationDumpContext:
             display_name = name or "__root__"
             if self.name_re is not None and self.name_re.search(display_name) is None:
                 continue
-            self.handles.append(child.register_forward_hook(self._make_hook(display_name)))
+            self.handles.append(
+                child.register_forward_hook(self._make_hook(display_name))
+            )
         return self
 
     def __exit__(self, exc_type, exc, tb):
@@ -267,18 +301,26 @@ class ActivationDumpContext:
             payload = {
                 "forward_index": self.forward_index,
                 "module_class": mod.__class__.__name__,
-                "args": summarize_value(args, max_sample=self.max_sample, hash_tensors=False),
-                "kwargs": summarize_value(kwargs or {}, max_sample=self.max_sample, hash_tensors=False),
+                "args": summarize_value(
+                    args, max_sample=self.max_sample, hash_tensors=False
+                ),
+                "kwargs": summarize_value(
+                    kwargs or {}, max_sample=self.max_sample, hash_tensors=False
+                ),
             }
             assert self._input_file is not None
             self._input_file.write(json.dumps(payload, sort_keys=True) + "\n")
             self._input_file.flush()
 
         try:
-            self.handles.append(self.module.register_forward_pre_hook(pre_hook, with_kwargs=True))
+            self.handles.append(
+                self.module.register_forward_pre_hook(pre_hook, with_kwargs=True)
+            )
         except TypeError:
+
             def legacy_pre_hook(mod, args):
                 pre_hook(mod, args, {})
+
             self.handles.append(self.module.register_forward_pre_hook(legacy_pre_hook))
 
     def _make_hook(self, name: str):
@@ -292,10 +334,14 @@ class ActivationDumpContext:
                 "forward_index": self.forward_index,
                 "name": name,
                 "module_class": mod.__class__.__name__,
-                "output": summarize_value(output, max_sample=self.max_sample, hash_tensors=self.hash_tensors),
+                "output": summarize_value(
+                    output, max_sample=self.max_sample, hash_tensors=self.hash_tensors
+                ),
             }
             if self.save_tensors and self.tensor_event_count < self.max_tensor_events:
-                tensor_file = f"{self.prefix}.event_{event_id:06d}.{_safe_name(name)}.pt"
+                tensor_file = (
+                    f"{self.prefix}.event_{event_id:06d}.{_safe_name(name)}.pt"
+                )
                 torch.save(
                     {
                         "event_index": event_id,
@@ -310,6 +356,7 @@ class ActivationDumpContext:
                 self.tensor_event_count += 1
             assert self._index_file is not None
             self._index_file.write(json.dumps(payload, sort_keys=True) + "\n")
+
         return hook
 
 

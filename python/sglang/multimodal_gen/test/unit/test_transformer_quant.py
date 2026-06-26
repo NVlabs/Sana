@@ -62,8 +62,8 @@ from sglang.multimodal_gen.runtime.loader.transformer_load_utils import (
 from sglang.multimodal_gen.runtime.models.dits.flux import FluxSingleTransformerBlock
 from sglang.multimodal_gen.tools.build_modelopt_nvfp4_transformer import (
     _ltx2_runtime_module_name_variants,
-    _matches_any_pattern,
     _matches_any_module_variant,
+    _matches_any_pattern,
     _preset_patterns,
     _updated_quant_config,
     build_modelopt_nvfp4_transformer,
@@ -377,9 +377,7 @@ class TestTransformerQuantHelpers(unittest.TestCase):
         )
         self.assertIn(
             "transformer_blocks.43.ff.proj_in",
-            _ltx2_runtime_module_name_variants(
-                "transformer_blocks.43.ff.net.0.proj"
-            ),
+            _ltx2_runtime_module_name_variants("transformer_blocks.43.ff.net.0.proj"),
         )
 
     def test_builder_accepts_ltx2_nvfp4_preset_in_quant_config(self):
@@ -414,12 +412,8 @@ class TestTransformerQuantHelpers(unittest.TestCase):
             fallback_ff_key = (
                 "model.diffusion_model.transformer_blocks.47.audio_ff.net.2"
             )
-            runtime_fallback_ff_key = (
-                "transformer_blocks.47.audio_ff.proj_out"
-            )
-            quantized_attn_key = (
-                "model.diffusion_model.transformer_blocks.1.attn1.to_q"
-            )
+            runtime_fallback_ff_key = "transformer_blocks.47.audio_ff.proj_out"
+            quantized_attn_key = "model.diffusion_model.transformer_blocks.1.attn1.to_q"
             audio_vae_key = "audio_vae.decoder.conv_in.conv.weight"
             metadata = {
                 "config": json.dumps(
@@ -438,9 +432,7 @@ class TestTransformerQuantHelpers(unittest.TestCase):
 
             save_file(
                 {
-                    f"{patchify_key}.weight": torch.full(
-                        (2, 8), 1, dtype=torch.uint8
-                    ),
+                    f"{patchify_key}.weight": torch.full((2, 8), 1, dtype=torch.uint8),
                     f"{patchify_key}.weight_scale": torch.ones(
                         (2, 1), dtype=torch.float32
                     ),

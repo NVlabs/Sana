@@ -23,7 +23,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import combinations
 from typing import Sequence
 
@@ -31,7 +31,6 @@ from sglang.multimodal_gen.runtime.efficiency.spec import ModelSpec
 from sglang.multimodal_gen.runtime.efficiency.technique import (
     EXCLUSIVE_SEAMS,
     Phase,
-    Seam,
     Technique,
     TechniqueContext,
 )
@@ -108,8 +107,11 @@ class Plan:
 
     # ---- build/load: applied once ----
     def apply_transforms(self, transformer, stage: str = "", env=None):
-        ctx = TransformContext(stage=stage, spec=self.spec) if env is None else \
-            TransformContext(stage=stage, spec=self.spec, env=env)
+        ctx = (
+            TransformContext(stage=stage, spec=self.spec)
+            if env is None
+            else TransformContext(stage=stage, spec=self.spec, env=env)
+        )
         for t in self.transforms:  # already phase-ordered
             transformer = t.apply(transformer, ctx)
         return transformer

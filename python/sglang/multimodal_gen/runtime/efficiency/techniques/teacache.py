@@ -72,7 +72,13 @@ class TeaCache(Technique):
 
     def on_step(self, ctx: TechniqueContext, run_step):
         key = ("teacache", ctx.cache_key)
-        st = ctx.scratch.get(key) or {"prev": None, "acc": 0.0, "hits": 0, "out": None, "since": 0}
+        st = ctx.scratch.get(key) or {
+            "prev": None,
+            "acc": 0.0,
+            "hits": 0,
+            "out": None,
+            "since": 0,
+        }
         modulated = ctx.scratch.get(("teacache_signal", ctx.cache_key))
 
         force = (
@@ -90,7 +96,9 @@ class TeaCache(Technique):
             reuse = st["acc"] < self.threshold and st["hits"] < self.max_continuous_hits
 
         if modulated is not None:
-            st["prev"] = modulated.detach() if hasattr(modulated, "detach") else modulated
+            st["prev"] = (
+                modulated.detach() if hasattr(modulated, "detach") else modulated
+            )
 
         if reuse and st["out"] is not None:
             st["hits"] += 1

@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
-import os
 import re
 import shutil
 import struct
@@ -22,7 +21,6 @@ from typing import Mapping
 import torch
 from safetensors import safe_open
 from safetensors.torch import load_file, save_file
-
 
 INDEX_FILENAMES = (
     "model.safetensors.index.json",
@@ -130,7 +128,13 @@ def _read_safetensors_header(path: Path) -> dict:
 
 
 def _module_name_for_tensor(name: str) -> str:
-    for suffix in (".weight", ".bias", ".weight_scale", ".weight_scale_2", ".input_scale"):
+    for suffix in (
+        ".weight",
+        ".bias",
+        ".weight_scale",
+        ".weight_scale_2",
+        ".input_scale",
+    ):
         if name.endswith(suffix):
             return name[: -len(suffix)]
     return name
@@ -217,7 +221,9 @@ def _maybe_merge_lora(
         candidate_modules.append(runtime_module_name)
 
     for candidate_module in candidate_modules:
-        lora_a_key, lora_b_key = _lora_keys_for_module(candidate_module, lora_key_prefix)
+        lora_a_key, lora_b_key = _lora_keys_for_module(
+            candidate_module, lora_key_prefix
+        )
         lora_a = lora_tensors.get(lora_a_key)
         lora_b = lora_tensors.get(lora_b_key)
         if lora_a is None and lora_b is None:
@@ -238,7 +244,9 @@ def _maybe_merge_lora(
 def _quantize_weight_nvfp4(weight_cpu: torch.Tensor, device: str):
     import flashinfer
 
-    weight = weight_cpu.to(device=device, dtype=torch.bfloat16, non_blocking=False).contiguous()
+    weight = weight_cpu.to(
+        device=device, dtype=torch.bfloat16, non_blocking=False
+    ).contiguous()
     weight_global_scale = _make_global_scale(weight)
     weight_fp4, weight_scale = flashinfer.fp4_quantize(
         weight,
@@ -255,7 +263,9 @@ def _quantize_weight_nvfp4(weight_cpu: torch.Tensor, device: str):
     )
 
 
-def _build_output_config(base_config: Mapping[str, object], ignore_modules: list[str]) -> dict:
+def _build_output_config(
+    base_config: Mapping[str, object], ignore_modules: list[str]
+) -> dict:
     output_config = json.loads(json.dumps(base_config))
     output_config["quantization_config"] = {
         "quant_method": "modelopt",
@@ -348,7 +358,9 @@ def build_selective_nvfp4_transformer(
         with safe_open(shard_path, framework="pt", device="cpu") as f:
             metadata = dict(f.metadata() or {})
         metadata.setdefault("format", "pt")
-        metadata["_class_name"] = str(output_config.get("_class_name", metadata.get("_class_name", "")))
+        metadata["_class_name"] = str(
+            output_config.get("_class_name", metadata.get("_class_name", ""))
+        )
         metadata["config"] = json.dumps(output_config, sort_keys=True)
         metadata["quantization_config"] = quant_config_text
         metadata["_quantization_metadata"] = quant_config_text
@@ -373,7 +385,9 @@ def build_selective_nvfp4_transformer(
                 output_tensors[name] = weight_fp4
                 output_tensors[f"{module_name}.weight_scale"] = weight_scale
                 output_tensors[f"{module_name}.weight_scale_2"] = weight_scale_2
-                output_tensors[f"{module_name}.input_scale"] = input_scale_tensor.clone()
+                output_tensors[f"{module_name}.input_scale"] = (
+                    input_scale_tensor.clone()
+                )
                 quantized_weights += 1
             else:
                 if name.endswith(".weight"):
@@ -402,7 +416,10 @@ def build_selective_nvfp4_transformer(
     if index_filename is not None:
         with open(output_path / index_filename, "w", encoding="utf-8") as f:
             json.dump(
-                {"metadata": {"total_size": total_size}, "weight_map": updated_weight_map},
+                {
+                    "metadata": {"total_size": total_size},
+                    "weight_map": updated_weight_map,
+                },
                 f,
                 indent=2,
                 sort_keys=True,
@@ -436,7 +453,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--base-transformer-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--include-pattern", action="append", default=[])
-    parser.add_argument("--input-global-scale", type=float, default=DEFAULT_INPUT_GLOBAL_SCALE)
+    parser.add_argument(
+        "--input-global-scale", type=float, default=DEFAULT_INPUT_GLOBAL_SCALE
+    )
     parser.add_argument("--lora-path")
     parser.add_argument("--lora-key-prefix", default="diffusion_model.")
     parser.add_argument("--lora-strength", type=float, default=1.0)

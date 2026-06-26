@@ -145,7 +145,6 @@ void cutlass_scaled_fp4_mm_sm100a_sm120a(
   }
 }
 
-
 void cutlass_scaled_fp4_mm_bias_gelu_sm100a_sm120a(
     tvm::ffi::TensorView D,
     tvm::ffi::TensorView A,
@@ -271,7 +270,6 @@ void cutlass_scaled_fp4_mm_bias_gelu_sm100a_sm120a(
   }
 }
 
-
 void cutlass_scaled_fp4_mm_per_col_residual_gate_sm100a_sm120a(
     tvm::ffi::TensorView D,
     tvm::ffi::TensorView A,
@@ -362,18 +360,41 @@ void cutlass_scaled_fp4_mm_per_col_residual_gate_sm100a_sm120a(
     RuntimeCheck(host::is_type<fp16_t>(gate.dtype()), "gate dtype must match fp16 output dtype");
     RuntimeCheck(host::is_type<fp16_t>(bias_gate.dtype()), "bias_gate dtype must match fp16 output dtype");
     cutlassFp4GemmPerColResidualGateDispatchSm100<cutlass::half_t>(
-        D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, static_cast<int>(m), static_cast<int>(n), static_cast<int>(k), stream);
+        D,
+        A,
+        B,
+        A_sf,
+        B_sf,
+        alpha,
+        residual,
+        gate,
+        bias_gate,
+        static_cast<int>(m),
+        static_cast<int>(n),
+        static_cast<int>(k),
+        stream);
   } else if (host::is_type<bf16_t>(D.dtype())) {
     RuntimeCheck(host::is_type<bf16_t>(residual.dtype()), "residual dtype must match bf16 output dtype");
     RuntimeCheck(host::is_type<bf16_t>(gate.dtype()), "gate dtype must match bf16 output dtype");
     RuntimeCheck(host::is_type<bf16_t>(bias_gate.dtype()), "bias_gate dtype must match bf16 output dtype");
     cutlassFp4GemmPerColResidualGateDispatchSm100<cutlass::bfloat16_t>(
-        D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate, static_cast<int>(m), static_cast<int>(n), static_cast<int>(k), stream);
+        D,
+        A,
+        B,
+        A_sf,
+        B_sf,
+        alpha,
+        residual,
+        gate,
+        bias_gate,
+        static_cast<int>(m),
+        static_cast<int>(n),
+        static_cast<int>(k),
+        stream);
   } else {
     Panic("Unsupported output data type of nvfp4 per-col residual gate mm");
   }
 }
-
 
 void cutlass_scaled_fp4_mm_batched_per_col_residual_gate_sm100a_sm120a(
     tvm::ffi::TensorView D,
@@ -460,12 +481,15 @@ void cutlass_scaled_fp4_mm_batched_per_col_residual_gate_sm100a_sm120a(
   const int64_t rounded_k = round_up(k / 16, 4);
 
   RuntimeCheck(A_sf.size(1) == B_sf.size(1), "scale_a and scale_b shapes cannot be multiplied");
-  RuntimeCheck(A_sf.size(0) == batch_size * rounded_m && A_sf.size(1) == rounded_k, "scale_a has invalid batched padded shape");
-  RuntimeCheck(B_sf.size(0) == batch_size * rounded_n && B_sf.size(1) == rounded_k, "scale_b has invalid batched padded shape");
+  RuntimeCheck(
+      A_sf.size(0) == batch_size * rounded_m && A_sf.size(1) == rounded_k, "scale_a has invalid batched padded shape");
+  RuntimeCheck(
+      B_sf.size(0) == batch_size * rounded_n && B_sf.size(1) == rounded_k, "scale_b has invalid batched padded shape");
 
   const cudaStream_t stream = LaunchKernel::resolve_device(A.device());
   const int sm_version = getSMVersion(A.device().device_id);
-  RuntimeCheck(sm_version < 120, "NVFP4 batched per-col residual gate epilogue is currently implemented for SM100 only");
+  RuntimeCheck(
+      sm_version < 120, "NVFP4 batched per-col residual gate epilogue is currently implemented for SM100 only");
 
   if (host::is_type<fp16_t>(D.dtype())) {
     RuntimeCheck(host::is_type<fp16_t>(residual.dtype()), "residual dtype must match fp16 output dtype");

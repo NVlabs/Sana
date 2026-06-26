@@ -77,7 +77,6 @@ void cutlass_scaled_fp4_mm_bias_gelu(
   cutlass_scaled_fp4_mm_bias_gelu_sm100a_sm120a(D, A, B, A_sf, B_sf, alpha, bias);
 }
 
-
 void cutlass_scaled_fp4_mm_per_col_residual_gate(
     tvm::ffi::TensorView D,
     tvm::ffi::TensorView A,
@@ -88,8 +87,7 @@ void cutlass_scaled_fp4_mm_per_col_residual_gate(
     tvm::ffi::TensorView residual,
     tvm::ffi::TensorView gate,
     tvm::ffi::TensorView bias_gate) {
-  cutlass_scaled_fp4_mm_per_col_residual_gate_sm100a_sm120a(
-      D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate);
+  cutlass_scaled_fp4_mm_per_col_residual_gate_sm100a_sm120a(D, A, B, A_sf, B_sf, alpha, residual, gate, bias_gate);
 }
 
 void cutlass_scaled_fp4_mm_batched_per_col_residual_gate(

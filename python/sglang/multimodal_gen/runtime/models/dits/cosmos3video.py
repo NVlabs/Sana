@@ -15,6 +15,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from sglang.multimodal_gen.configs.models.dits.cosmos3video import Cosmos3VideoConfig
+from sglang.multimodal_gen.runtime.cache.cosmos3_teacache import (
+    Cosmos3TeaCacheCoordinator,
+    cosmos3_teacache_config_from_env,
+)
 from sglang.multimodal_gen.runtime.distributed import (
     get_sp_group,
     get_sp_world_size,
@@ -37,10 +41,6 @@ from sglang.multimodal_gen.runtime.layers.vocab_parallel_embedding import (
     VocabParallelEmbedding,
 )
 from sglang.multimodal_gen.runtime.loader.utils import get_param_names_mapping
-from sglang.multimodal_gen.runtime.cache.cosmos3_teacache import (
-    Cosmos3TeaCacheCoordinator,
-    cosmos3_teacache_config_from_env,
-)
 from sglang.multimodal_gen.runtime.models.dits.base import CachableDiT
 from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
 from sglang.srt.utils import add_prefix
@@ -1073,21 +1073,29 @@ class Cosmos3OmniTransformer(CachableDiT):
         JSON breakdown. No-op unless the env flag is set.
         """
         import os
+
         if getattr(self, "_prof_inited", False):
             return
         self._prof_inited = True
         if os.environ.get("SGLANG_COSMOS3_PROFILE_MODULES", "0") != "1":
             return
         import json
-        self._prof_pending = []          # (category, start_event, end_event) for current forward
-        self._prof_tot = {}              # category -> accumulated ms (steady-state)
+
+        self._prof_pending = (
+            []
+        )  # (category, start_event, end_event) for current forward
+        self._prof_tot = {}  # category -> accumulated ms (steady-state)
         self._prof_steps = 0
         self._prof_warmup = int(os.environ.get("SGLANG_COSMOS3_PROFILE_WARMUP", "5"))
         self._prof_dump = os.environ.get(
             "SGLANG_COSMOS3_PROFILE_DUMP", "/tmp/sglang_cosmos3_module_profile.json"
         )
         try:
-            self._prof_rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+            self._prof_rank = (
+                torch.distributed.get_rank()
+                if torch.distributed.is_initialized()
+                else 0
+            )
         except Exception:
             self._prof_rank = 0
 
@@ -1095,17 +1103,19 @@ class Cosmos3OmniTransformer(CachableDiT):
             cls = type(mod).__name__
             n = name.lower()
             if cls in ("Cosmos3CrossAttention", "Cosmos3CausalAttention"):
-                return "attn_block"            # whole attention block (incl. its proj+qknorm+core)
+                return (
+                    "attn_block"  # whole attention block (incl. its proj+qknorm+core)
+                )
             if n.endswith("mlp.gate_up_proj") or n.endswith("mlp.down_proj"):
                 return "ffn"
             if n.endswith(".to_qkv") or n.endswith(".to_out"):
-                return "attn_proj"             # qkv + out projections (inside attn_block)
+                return "attn_proj"  # qkv + out projections (inside attn_block)
             if n.endswith(".norm_q") or n.endswith(".norm_k"):
-                return "attn_qknorm"           # q/k RMSNorm (inside attn_block)
+                return "attn_qknorm"  # q/k RMSNorm (inside attn_block)
             if n.endswith("proj_in") or n.endswith("proj_out"):
                 return "io_proj"
             if cls == "RMSNorm":
-                return "norm"                  # input/post layernorms + norm_moe_gen
+                return "norm"  # input/post layernorms + norm_moe_gen
             return None
 
         def mk_pre(mod):
@@ -1115,15 +1125,19 @@ class Cosmos3OmniTransformer(CachableDiT):
                 ev = torch.cuda.Event(enable_timing=True)
                 ev.record()
                 m._prof_start = ev
+
             return pre
 
         def mk_post(cat):
             def post(m, inp, out):
-                if self._prof_steps < self._prof_warmup or not hasattr(m, "_prof_start"):
+                if self._prof_steps < self._prof_warmup or not hasattr(
+                    m, "_prof_start"
+                ):
                     return
                 ev = torch.cuda.Event(enable_timing=True)
                 ev.record()
                 self._prof_pending.append((cat, m._prof_start, ev))
+
             return post
 
         nhooked = 0
@@ -1154,7 +1168,9 @@ class Cosmos3OmniTransformer(CachableDiT):
         self.register_forward_hook(top_post)
         logger.info(
             "[module-profile] hooked %d submodules; warmup=%d dump=%s",
-            nhooked, self._prof_warmup, self._prof_dump,
+            nhooked,
+            self._prof_warmup,
+            self._prof_dump,
         )
 
     def _maybe_init_fp4_linear(self):
@@ -1168,6 +1184,7 @@ class Cosmos3OmniTransformer(CachableDiT):
         the gen-layer loop runs under fp8_autocast. No-op unless the flag is set.
         """
         import os
+
         if getattr(self, "_fp4_inited", False):
             return
         self._fp4_inited = True
@@ -1202,7 +1219,9 @@ class Cosmos3OmniTransformer(CachableDiT):
         self._te = te
         self._fp4_recipe = terec.NVFP4BlockScaling()
         tset = set(
-            os.environ.get("SGLANG_COSMOS3_FP4_TARGETS", "gate_up,down,qkv,out").split(",")
+            os.environ.get("SGLANG_COSMOS3_FP4_TARGETS", "gate_up,down,qkv,out").split(
+                ","
+            )
         )
         # Selective / hybrid precision: keep some layers and some denoising steps
         # in BF16 (diffusion is most sensitive at the first/last steps and early
@@ -1211,11 +1230,15 @@ class Cosmos3OmniTransformer(CachableDiT):
         n_layers = len(self.gen_layers)
         skip_first_L = int(os.environ.get("SGLANG_COSMOS3_FP4_SKIP_FIRST_LAYERS", "0"))
         skip_last_L = int(os.environ.get("SGLANG_COSMOS3_FP4_SKIP_LAST_LAYERS", "0"))
-        self._fp4_skip_first_steps = int(os.environ.get("SGLANG_COSMOS3_FP4_SKIP_FIRST_STEPS", "0"))
+        self._fp4_skip_first_steps = int(
+            os.environ.get("SGLANG_COSMOS3_FP4_SKIP_FIRST_STEPS", "0")
+        )
         # Default: keep the last 3 denoising steps in BF16 (they do the final
         # refinement and are the most quality-sensitive to FP4 quantization).
         # Override with SGLANG_COSMOS3_FP4_SKIP_LAST_STEPS.
-        self._fp4_skip_last_steps = int(os.environ.get("SGLANG_COSMOS3_FP4_SKIP_LAST_STEPS", "3"))
+        self._fp4_skip_last_steps = int(
+            os.environ.get("SGLANG_COSMOS3_FP4_SKIP_LAST_STEPS", "3")
+        )
 
         class _TEFp4Linear(torch.nn.Module):
             # Matches the sglang ParallelLinear interface: forward -> (out, bias)
@@ -1254,12 +1277,19 @@ class Cosmos3OmniTransformer(CachableDiT):
         logger.info(
             "[fp4-linear] swapped %d linears to TE NVFP4 (targets=%s); BF16 layers: "
             "first %d + last %d (=%d/%d kept BF16); BF16 steps: first %d + last %d",
-            n, sorted(tset), skip_first_L, skip_last_L, skipped_layers, n_layers,
-            self._fp4_skip_first_steps, self._fp4_skip_last_steps,
+            n,
+            sorted(tset),
+            skip_first_L,
+            skip_last_L,
+            skipped_layers,
+            n_layers,
+            self._fp4_skip_first_steps,
+            self._fp4_skip_last_steps,
         )
 
     def _fp4_autocast(self, current_step=None, num_steps=None):
         import contextlib
+
         if not getattr(self, "_fp4_enabled", False):
             return contextlib.nullcontext()
         # Step-level hybrid precision: run the (swapped) te.Linears in BF16 — i.e.

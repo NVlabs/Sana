@@ -14,4 +14,3 @@ LOCAL_ENTRYPOINTS = ["reference family; no unified local runtime adapter yet"]
 
 def dependency_status() -> dict[str, bool]:
     return _dependency_status("sglang.multimodal_gen.runtime.layers.quantization")
-

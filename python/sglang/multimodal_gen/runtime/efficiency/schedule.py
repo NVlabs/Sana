@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Generic, Hashable, Iterable, TypeVar
+from typing import Callable, Generic, Iterable, TypeVar
 
 T = TypeVar("T")
 

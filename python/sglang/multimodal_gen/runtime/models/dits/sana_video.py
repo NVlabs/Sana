@@ -100,8 +100,12 @@ class WanRotaryPosEmbed(nn.Module):
         fsh = freqs_sin[1][:pph].view(1, pph, 1, -1).expand(ppf, pph, ppw, -1)
         fsw = freqs_sin[2][:ppw].view(1, 1, ppw, -1).expand(ppf, pph, ppw, -1)
 
-        freqs_cos = torch.cat([fcf, fch, fcw], dim=-1).reshape(1, ppf * pph * ppw, 1, -1)
-        freqs_sin = torch.cat([fsf, fsh, fsw], dim=-1).reshape(1, ppf * pph * ppw, 1, -1)
+        freqs_cos = torch.cat([fcf, fch, fcw], dim=-1).reshape(
+            1, ppf * pph * ppw, 1, -1
+        )
+        freqs_sin = torch.cat([fsf, fsh, fsw], dim=-1).reshape(
+            1, ppf * pph * ppw, 1, -1
+        )
         return freqs_cos, freqs_sin
 
 
@@ -137,10 +141,18 @@ class SanaVideoLinearAttention(nn.Module):
         # diffusers casts the KV-aggregation to fp32 -> slow SIMT sgemm (~9% of the
         # DiT, profiled). bf16 tensor cores accumulate in fp32 anyway, so this env
         # keeps the aggregation in bf16 (tensor-core, compile-friendly). OFF==fp32.
-        self._bf16_agg = os.environ.get("SGLANG_SANA_LINATTN_BF16", "0") in ("1", "true", "True")
+        self._bf16_agg = os.environ.get("SGLANG_SANA_LINATTN_BF16", "0") in (
+            "1",
+            "true",
+            "True",
+        )
         # Fused QKV projection (lossless: concat to_q/k/v weights -> one GEMM, 3
         # launches -> 1). Built in post_load_weights. OFF == separate projections.
-        self._qkv_merge = os.environ.get("SGLANG_SANA_QKV_MERGE", "0") in ("1", "true", "True")
+        self._qkv_merge = os.environ.get("SGLANG_SANA_QKV_MERGE", "0") in (
+            "1",
+            "true",
+            "True",
+        )
         self._qkv_w = None
 
     def build_qkv_merge(self):
@@ -207,7 +219,9 @@ class SanaVideoLinearAttention(nn.Module):
 class SanaVideoCrossAttention(nn.Module):
     """Softmax (SDPA) cross-attention to Gemma2 text embeddings, with qk_norm."""
 
-    def __init__(self, query_dim, cross_attention_dim, num_heads, head_dim, qk_norm=True):
+    def __init__(
+        self, query_dim, cross_attention_dim, num_heads, head_dim, qk_norm=True
+    ):
         super().__init__()
         inner_dim = num_heads * head_dim
         self.num_heads = num_heads
@@ -222,7 +236,9 @@ class SanaVideoCrossAttention(nn.Module):
         self.norm_q = RMSNorm(inner_dim) if qk_norm else None
         self.norm_k = RMSNorm(inner_dim) if qk_norm else None
 
-    def forward(self, hidden_states, encoder_hidden_states, encoder_attention_mask=None):
+    def forward(
+        self, hidden_states, encoder_hidden_states, encoder_attention_mask=None
+    ):
         B, S, _ = hidden_states.shape
         T = encoder_hidden_states.shape[1]
 
@@ -251,7 +267,9 @@ class SanaVideoCrossAttention(nn.Module):
                     B, self.num_heads, S, T
                 )
 
-        hidden_states = F.scaled_dot_product_attention(query, key, value, attn_mask=attn_mask)
+        hidden_states = F.scaled_dot_product_attention(
+            query, key, value, attn_mask=attn_mask
+        )
         hidden_states = hidden_states.transpose(1, 2).reshape(B, S, -1)
         hidden_states = hidden_states.to(query.dtype)
 
@@ -270,11 +288,21 @@ class GLUMBTempConv(nn.Module):
         self.nonlinearity = nn.SiLU()
         self.conv_inverted = nn.Conv2d(in_channels, hidden_channels * 2, 1, 1, 0)
         self.conv_depth = nn.Conv2d(
-            hidden_channels * 2, hidden_channels * 2, 3, 1, 1, groups=hidden_channels * 2
+            hidden_channels * 2,
+            hidden_channels * 2,
+            3,
+            1,
+            1,
+            groups=hidden_channels * 2,
         )
         self.conv_point = nn.Conv2d(hidden_channels, out_channels, 1, 1, 0, bias=False)
         self.conv_temp = nn.Conv2d(
-            out_channels, out_channels, kernel_size=(3, 1), stride=1, padding=(1, 0), bias=False
+            out_channels,
+            out_channels,
+            kernel_size=(3, 1),
+            stride=1,
+            padding=(1, 0),
+            bias=False,
         )
 
     def forward(self, hidden_states):
@@ -310,7 +338,8 @@ class SanaVideoModulatedNorm(nn.Module):
     def forward(self, hidden_states, temb, scale_shift_table):
         hidden_states = self.norm(hidden_states)
         shift, scale = (
-            scale_shift_table[None, None] + temb[:, :, None].to(scale_shift_table.device)
+            scale_shift_table[None, None]
+            + temb[:, :, None].to(scale_shift_table.device)
         ).unbind(dim=2)
         hidden_states = hidden_states * (1 + scale) + shift
         return hidden_states
@@ -425,7 +454,10 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
             arch.attention_head_dim, self.patch_size, arch.rope_max_seq_len
         )
         self.patch_embedding = nn.Conv3d(
-            arch.in_channels, self.inner_dim, kernel_size=self.patch_size, stride=self.patch_size
+            arch.in_channels,
+            self.inner_dim,
+            kernel_size=self.patch_size,
+            stride=self.patch_size,
         )
 
         # 2. Timestep / caption embeddings
@@ -455,9 +487,13 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
         )
 
         # 4. Output
-        self.scale_shift_table = nn.Parameter(torch.randn(2, self.inner_dim) / self.inner_dim**0.5)
+        self.scale_shift_table = nn.Parameter(
+            torch.randn(2, self.inner_dim) / self.inner_dim**0.5
+        )
         self.norm_out = SanaVideoModulatedNorm(self.inner_dim, eps=arch.norm_eps)
-        self.proj_out = nn.Linear(self.inner_dim, math.prod(self.patch_size) * self.out_channels)
+        self.proj_out = nn.Linear(
+            self.inner_dim, math.prod(self.patch_size) * self.out_channels
+        )
 
         self.layer_names = ["transformer_blocks"]
 
@@ -480,7 +516,9 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
         # accumulates it, and skips while the accumulator stays below threshold.
         # CFG is unbatched and both branches get the SAME latent x_t -> the decision
         # is identical, so decide once on branch 0 and reuse the shared residual.
-        self._ec_thresh = float(os.environ.get("SGLANG_SANA_EASYCACHE_THRESH", "0") or 0.0)
+        self._ec_thresh = float(
+            os.environ.get("SGLANG_SANA_EASYCACHE_THRESH", "0") or 0.0
+        )
         self._ec_warmup = int(os.environ.get("SGLANG_SANA_EASYCACHE_WARMUP", "3") or 3)
         self._ec_sub = int(os.environ.get("SGLANG_SANA_EASYCACHE_SUBSAMPLE", "8") or 8)
         self._ec_x_prev = None
@@ -523,7 +561,9 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
             return True
         cur = x[:, :: self._ec_sub].float()
         input_change = (cur - self._ec_x_prev).abs().mean()
-        approx = float((self._ec_rate * input_change / max(self._ec_out_prev_norm, 1e-6)).item())
+        approx = float(
+            (self._ec_rate * input_change / max(self._ec_out_prev_norm, 1e-6)).item()
+        )
         self._ec_cumulative += approx
         return self._ec_cumulative >= self._ec_thresh
 
@@ -562,12 +602,20 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
         rotary_emb,
         encoder_attention_mask,
     ):
-        args = (encoder_hidden_states, timestep_mod, post_patch_num_frames,
-                post_patch_height, post_patch_width, rotary_emb)
+        args = (
+            encoder_hidden_states,
+            timestep_mod,
+            post_patch_num_frames,
+            post_patch_height,
+            post_patch_width,
+            rotary_emb,
+        )
         if self._profile and not self._profiled:
             return self._profile_blocks(hidden_states, args, encoder_attention_mask)
         for block in self.transformer_blocks:
-            hidden_states = block(hidden_states, *args, encoder_attention_mask=encoder_attention_mask)
+            hidden_states = block(
+                hidden_states, *args, encoder_attention_mask=encoder_attention_mask
+            )
         return hidden_states
 
     @torch.compiler.disable
@@ -575,13 +623,24 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
         import torch.profiler as tp
 
         self._profiled = True
-        with tp.profile(activities=[tp.ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with tp.profile(
+            activities=[tp.ProfilerActivity.CUDA], record_shapes=True
+        ) as prof:
             for block in self.transformer_blocks:
-                hidden_states = block(hidden_states, *args, encoder_attention_mask=encoder_attention_mask)
+                hidden_states = block(
+                    hidden_states, *args, encoder_attention_mask=encoder_attention_mask
+                )
             torch.cuda.synchronize()
-        print("==== SANA-Video block-stack component profile (20 layers, eager) ====", flush=True)
-        print(prof.key_averages(group_by_input_shape=True).table(
-            sort_by="cuda_time_total", row_limit=35), flush=True)
+        print(
+            "==== SANA-Video block-stack component profile (20 layers, eager) ====",
+            flush=True,
+        )
+        print(
+            prof.key_averages(group_by_input_shape=True).table(
+                sort_by="cuda_time_total", row_limit=35
+            ),
+            flush=True,
+        )
         print("==== END component profile ====", flush=True)
         return hidden_states
 
@@ -591,7 +650,14 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
         t_now = float(timestep.flatten()[0].item())
         self._tc_reset_if_new_gen(t_now)
         # CFG is unbatched: cond & uncond of a step share the timestep.
-        branch = 1 if (self._cache_prev_t is not None and abs(t_now - self._cache_prev_t) < 1e-4) else 0
+        branch = (
+            1
+            if (
+                self._cache_prev_t is not None
+                and abs(t_now - self._cache_prev_t) < 1e-4
+            )
+            else 0
+        )
         self._cache_prev_t = t_now
         step = self._tc_step.get(branch, 0)
         self._tc_step[branch] = step + 1
@@ -600,8 +666,11 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
             run_blocks = self._ec_decide(step, hidden_states)
             self._ec_run = run_blocks
             if self._ec_debug:
-                print(f"EC step={step} run={int(run_blocks)} "
-                      f"cum={self._ec_cumulative:.4f} K={self._ec_rate}", flush=True)
+                print(
+                    f"EC step={step} run={int(run_blocks)} "
+                    f"cum={self._ec_cumulative:.4f} K={self._ec_rate}",
+                    flush=True,
+                )
         else:
             run_blocks = self._ec_run
         return {"run_blocks": run_blocks, "branch": branch}
@@ -611,7 +680,9 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
         """Eager: update EasyCache state after a computed step (rate + residual)."""
         if decision["branch"] == 0:
             self._ec_update(hidden_before, hidden_states)
-        self._tc_reuse_residual = (hidden_states - hidden_before).detach()  # shared common-mode residual
+        self._tc_reuse_residual = (
+            hidden_states - hidden_before
+        ).detach()  # shared common-mode residual
 
     @torch.compiler.disable
     def _cache_reuse(self, decision, hidden_before, hidden_states):
@@ -668,7 +739,9 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
             timestep, hidden_dtype=hidden_states.dtype
         )
         timestep_mod = timestep_mod.view(batch_size, -1, timestep_mod.size(-1))
-        embedded_timestep = embedded_timestep.view(batch_size, -1, embedded_timestep.size(-1))
+        embedded_timestep = embedded_timestep.view(
+            batch_size, -1, embedded_timestep.size(-1)
+        )
 
         encoder_hidden_states = self.caption_projection(encoder_hidden_states)
         encoder_hidden_states = encoder_hidden_states.view(
@@ -692,7 +765,9 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
             )
         else:
             # Cache control is eager (dynamo-opaque); _run_blocks stays compiled.
-            decision = self._cache_decide(timestep, hidden_states, timestep_mod, batch_size)
+            decision = self._cache_decide(
+                timestep, hidden_states, timestep_mod, batch_size
+            )
             hidden_before = hidden_states
             if decision["run_blocks"]:
                 hidden_states = self._run_blocks(
@@ -707,9 +782,13 @@ class SanaVideoTransformer3DModel(CachableDiT, LayerwiseOffloadableModuleMixin):
                 )
                 self._cache_after_compute(decision, hidden_before, hidden_states)
             else:
-                hidden_states = self._cache_reuse(decision, hidden_before, hidden_states)
+                hidden_states = self._cache_reuse(
+                    decision, hidden_before, hidden_states
+                )
 
-        hidden_states = self.norm_out(hidden_states, embedded_timestep, self.scale_shift_table)
+        hidden_states = self.norm_out(
+            hidden_states, embedded_timestep, self.scale_shift_table
+        )
         hidden_states = self.proj_out(hidden_states)
 
         # Unpatchify

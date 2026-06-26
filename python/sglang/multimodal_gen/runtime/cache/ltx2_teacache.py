@@ -9,8 +9,8 @@ reuse. The output norm/projection/unpatchify path still runs every step.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 from typing import Any
 
 import torch
@@ -146,7 +146,9 @@ class LTX2TeaCacheCoordinator:
             stage = getattr(attn_metadata, "ltx2_stage", None)
             num_steps = int(getattr(attn_metadata, "ltx2_num_steps", 0) or 0)
         if stage is None and forward_batch is not None:
-            stage = getattr(forward_batch, "ltx2_stage", None) or getattr(forward_batch, "stage", None)
+            stage = getattr(forward_batch, "ltx2_stage", None) or getattr(
+                forward_batch, "stage", None
+            )
         if stage is None:
             stage = "stage1"
         if num_steps <= 0 and forward_batch is not None:
@@ -220,7 +222,11 @@ class LTX2TeaCacheCoordinator:
         stage, step, _num_steps, context_pass_id = self._runtime_context()
         if pass_id is None:
             pass_id = context_pass_id
-        if self._last_stage_step is not None and step == 0 and self._last_stage_step != (stage, 0):
+        if (
+            self._last_stage_step is not None
+            and step == 0
+            and self._last_stage_step != (stage, 0)
+        ):
             self.reset()
         self._last_stage_step = (stage, step)
 
@@ -244,13 +250,20 @@ class LTX2TeaCacheCoordinator:
             return LTX2TeaCacheDecision(False, key, "disabled_or_boundary")
 
         entry = self._entries.setdefault(key, _Entry())
-        if entry.video_residual is None or entry.audio_residual is None or entry.previous_feature is None:
+        if (
+            entry.video_residual is None
+            or entry.audio_residual is None
+            or entry.previous_feature is None
+        ):
             stats.computes += 1
             stats.missing_recomputes += 1
             stats.computed_steps.append(step)
             return LTX2TeaCacheDecision(False, key, "missing_cache")
 
-        if self.config.periodic_recompute_steps > 0 and entry.last_compute_step is not None:
+        if (
+            self.config.periodic_recompute_steps > 0
+            and entry.last_compute_step is not None
+        ):
             if step - entry.last_compute_step >= self.config.periodic_recompute_steps:
                 entry.continuous_hits = 0
                 stats.computes += 1
@@ -258,7 +271,10 @@ class LTX2TeaCacheCoordinator:
                 stats.computed_steps.append(step)
                 return LTX2TeaCacheDecision(False, key, "periodic_recompute")
 
-        if self.config.max_continuous_hits >= 0 and entry.continuous_hits >= self.config.max_continuous_hits:
+        if (
+            self.config.max_continuous_hits >= 0
+            and entry.continuous_hits >= self.config.max_continuous_hits
+        ):
             entry.continuous_hits = 0
             stats.computes += 1
             stats.periodic_recomputes += 1
@@ -273,7 +289,12 @@ class LTX2TeaCacheCoordinator:
             stats.missing_recomputes += 1
             stats.computed_steps.append(step)
             return LTX2TeaCacheDecision(False, key, "feature_shape_changed")
-        rel_l1 = float(((feature - prev).abs().mean() / prev.abs().mean().clamp_min(1e-6)).detach().cpu().item())
+        rel_l1 = float(
+            ((feature - prev).abs().mean() / prev.abs().mean().clamp_min(1e-6))
+            .detach()
+            .cpu()
+            .item()
+        )
         accumulated = entry.accumulated_distance + rel_l1
         if accumulated >= self.config.threshold:
             entry.accumulated_distance = 0.0
@@ -287,10 +308,25 @@ class LTX2TeaCacheCoordinator:
         entry.continuous_hits += 1
         stats.hits += 1
         stats.skipped_steps.append(step)
-        video = hidden_states + (entry.video_residual.clone() if self.config.clone_on_hit else entry.video_residual)
-        audio = audio_hidden_states + (entry.audio_residual.clone() if self.config.clone_on_hit else entry.audio_residual)
+        video = hidden_states + (
+            entry.video_residual.clone()
+            if self.config.clone_on_hit
+            else entry.video_residual
+        )
+        audio = audio_hidden_states + (
+            entry.audio_residual.clone()
+            if self.config.clone_on_hit
+            else entry.audio_residual
+        )
         if self.config.log_decisions:
-            logger.info("LTX2 TeaCache hit stage=%s step=%s pass=%s rel_l1=%.6f accum=%.6f", stage, step, pass_id, rel_l1, accumulated)
+            logger.info(
+                "LTX2 TeaCache hit stage=%s step=%s pass=%s rel_l1=%.6f accum=%.6f",
+                stage,
+                step,
+                pass_id,
+                rel_l1,
+                accumulated,
+            )
         return LTX2TeaCacheDecision(True, key, "cache_hit", video, audio)
 
     def store(
@@ -332,7 +368,9 @@ def make_ltx2_teacache_config_from_env() -> LTX2TeaCacheConfig:
         stage1_enabled=_env_flag("SGLANG_LTX2_TEACACHE_STAGE1_ENABLED", True),
         stage2_enabled=not _env_flag("SGLANG_LTX2_TEACACHE_STAGE2_DISABLE", True),
         max_continuous_hits=_env_int("SGLANG_LTX2_TEACACHE_MAX_CONTINUOUS_HITS", 1),
-        periodic_recompute_steps=_env_int("SGLANG_LTX2_TEACACHE_PERIODIC_RECOMPUTE_STEPS", 0),
+        periodic_recompute_steps=_env_int(
+            "SGLANG_LTX2_TEACACHE_PERIODIC_RECOMPUTE_STEPS", 0
+        ),
         include_audio=_env_flag("SGLANG_LTX2_TEACACHE_INCLUDE_AUDIO", True),
         detach_on_store=_env_flag("SGLANG_LTX2_TEACACHE_DETACH_ON_STORE", True),
         clone_on_hit=_env_flag("SGLANG_LTX2_TEACACHE_CLONE_ON_HIT", False),
@@ -340,7 +378,9 @@ def make_ltx2_teacache_config_from_env() -> LTX2TeaCacheConfig:
     )
 
 
-def get_ltx2_teacache_coordinator(transformer: object) -> LTX2TeaCacheCoordinator | None:
+def get_ltx2_teacache_coordinator(
+    transformer: object,
+) -> LTX2TeaCacheCoordinator | None:
     config = make_ltx2_teacache_config_from_env()
     if not config.enabled:
         return None

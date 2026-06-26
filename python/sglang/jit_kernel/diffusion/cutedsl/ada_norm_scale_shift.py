@@ -167,7 +167,11 @@ def _validate_inputs(
         raise ValueError("timestep dtype must match x dtype")
     if scale_shift_table.dtype not in (torch.float16, torch.bfloat16, torch.float32):
         raise ValueError("scale_shift_table dtype must be fp16, bf16 or fp32")
-    if x.stride(-1) != 1 or timestep.stride(-1) != 1 or scale_shift_table.stride(-1) != 1:
+    if (
+        x.stride(-1) != 1
+        or timestep.stride(-1) != 1
+        or scale_shift_table.stride(-1) != 1
+    ):
         raise ValueError("inputs must be last-dim contiguous")
     batch, seq, hidden = x.shape
     total_params = int(scale_shift_table.shape[0])
@@ -175,7 +179,10 @@ def _validate_inputs(
         raise ValueError("scale_shift_table must have shape [P,D]")
     if timestep.shape != (batch, seq, total_params * hidden):
         raise ValueError("shape mismatch between x, timestep and scale_shift_table")
-    if min(shift_index, scale_index) < 0 or max(shift_index, scale_index) >= total_params:
+    if (
+        min(shift_index, scale_index) < 0
+        or max(shift_index, scale_index) >= total_params
+    ):
         raise ValueError("Ada parameter index out of range")
     if hidden % 256 != 0 or hidden > 8192:
         raise ValueError("D must be a multiple of 256 and <= 8192")
@@ -273,7 +280,6 @@ def _fused_norm_ada_scale_shift_fake(
     x, timestep, scale_shift_table, shift_index, scale_index, norm_type, eps=1e-5
 ):
     return x.new_empty(x.shape)
-
 
 
 class ScaleResidualNormAdaScaleShift:
@@ -508,12 +514,22 @@ def fused_scale_residual_norm_ada_scale_shift(
         )
         fake_sig_args = [
             to_fake_cute_args(t)
-            for t in (y, residual_out, residual, x, gate, timestep_3d, scale_shift_table)
+            for t in (
+                y,
+                residual_out,
+                residual,
+                x,
+                gate,
+                timestep_3d,
+                scale_shift_table,
+            )
         ]
         compiled_fn = cute.compile(kernel, *fake_sig_args, options="--enable-tvm-ffi")
         _COMPILE_CACHE[hash_key] = compiled_fn
 
-    compiled_fn(y, residual_out, residual, x, gate, timestep_3d, scale_shift_table, eps, stream)
+    compiled_fn(
+        y, residual_out, residual, x, gate, timestep_3d, scale_shift_table, eps, stream
+    )
     return y, residual_out
 
 

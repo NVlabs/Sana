@@ -17,7 +17,9 @@ DEFAULT_FILES = [
 ]
 
 
-def parse_total(headers: requests.structures.CaseInsensitiveDict, downloaded_before: int) -> int | None:
+def parse_total(
+    headers: requests.structures.CaseInsensitiveDict, downloaded_before: int
+) -> int | None:
     content_range = headers.get("content-range")
     if content_range:
         match = re.search(r"/(\d+)$", content_range)
@@ -39,12 +41,17 @@ def fmt_bytes(value: float) -> str:
     return f"{size:.2f}TB"
 
 
-def download_file(filename: str, output_dir: Path, interval_s: float, chunk_size: int) -> Path:
+def download_file(
+    filename: str, output_dir: Path, interval_s: float, chunk_size: int
+) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     target = output_dir / filename
     partial = output_dir / f"{filename}.part"
     if target.exists() and target.stat().st_size > 0:
-        print(f"[skip] {target} already exists ({fmt_bytes(target.stat().st_size)})", flush=True)
+        print(
+            f"[skip] {target} already exists ({fmt_bytes(target.stat().st_size)})",
+            flush=True,
+        )
         return target
 
     downloaded_before = partial.stat().st_size if partial.exists() else 0
@@ -64,7 +71,9 @@ def download_file(filename: str, output_dir: Path, interval_s: float, chunk_size
     last_bytes = downloaded_before
     downloaded = downloaded_before
 
-    with requests.get(url, headers=headers, stream=True, allow_redirects=True, timeout=(30, 180)) as response:
+    with requests.get(
+        url, headers=headers, stream=True, allow_redirects=True, timeout=(30, 180)
+    ) as response:
         if response.status_code == 416 and partial.exists():
             partial.rename(target)
             print(f"[done] {target} ({fmt_bytes(target.stat().st_size)})", flush=True)
@@ -72,11 +81,17 @@ def download_file(filename: str, output_dir: Path, interval_s: float, chunk_size
         response.raise_for_status()
         mode = "ab" if response.status_code == 206 and downloaded_before else "wb"
         if mode == "wb" and downloaded_before:
-            print("[warn] server did not honor Range request; restarting partial download", flush=True)
+            print(
+                "[warn] server did not honor Range request; restarting partial download",
+                flush=True,
+            )
             downloaded = 0
             last_bytes = 0
         total = parse_total(response.headers, downloaded if mode == "ab" else 0)
-        print(f"[response] status={response.status_code} total={fmt_bytes(total) if total else 'unknown'} final_url_host={requests.utils.urlparse(response.url).netloc}", flush=True)
+        print(
+            f"[response] status={response.status_code} total={fmt_bytes(total) if total else 'unknown'} final_url_host={requests.utils.urlparse(response.url).netloc}",
+            flush=True,
+        )
         with partial.open(mode) as handle:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 if not chunk:
@@ -97,7 +112,10 @@ def download_file(filename: str, output_dir: Path, interval_s: float, chunk_size
     partial.rename(target)
     elapsed = time.monotonic() - start
     new_bytes = target.stat().st_size - downloaded_before
-    print(f"[done] {target} size={fmt_bytes(target.stat().st_size)} elapsed={elapsed:.1f}s avg={fmt_bytes(new_bytes / max(elapsed, 1e-6))}/s", flush=True)
+    print(
+        f"[done] {target} size={fmt_bytes(target.stat().st_size)} elapsed={elapsed:.1f}s avg={fmt_bytes(new_bytes / max(elapsed, 1e-6))}/s",
+        flush=True,
+    )
     return target
 
 
@@ -110,7 +128,9 @@ def main() -> None:
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
     for filename in args.files:
-        download_file(filename, output_dir, args.interval_s, args.chunk_mib * 1024 * 1024)
+        download_file(
+            filename, output_dir, args.interval_s, args.chunk_mib * 1024 * 1024
+        )
 
 
 if __name__ == "__main__":

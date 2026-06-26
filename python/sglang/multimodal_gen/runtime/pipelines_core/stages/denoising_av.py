@@ -22,7 +22,6 @@ from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
 logger = init_logger(__name__)
 
 
-
 def _load_saved_stage2_noise(
     path: str, reference_tensor: torch.Tensor, tensor_name: str
 ) -> torch.Tensor:
@@ -355,7 +354,9 @@ class LTX2RefinementStage(LTX2AVDenoisingStage):
                         video_noise_path, batch.latents, "video_noise"
                     )
                 else:
-                    video_noise = self._ltx2_renoise_like(batch.latents, renoise_generator)
+                    video_noise = self._ltx2_renoise_like(
+                        batch.latents, renoise_generator
+                    )
                 batch.latents = (
                     video_noise.float() * noise_scale
                     + batch.latents.float() * (1.0 - noise_scale)
@@ -453,9 +454,9 @@ class LTX2RefinementStage(LTX2AVDenoisingStage):
             batch.do_classifier_free_guidance = original_do_cfg
             batch.ltx2_ti2v_clean_latent_background = original_clean_latent_background
 
-        dump_dir = os.environ.get("SGLANG_LTX2_DUMP_STAGE2_FINAL_DIR") or os.environ.get(
-            "SGLANG_LTX2_DUMP_STAGE2_DEBUG_DIR"
-        )
+        dump_dir = os.environ.get(
+            "SGLANG_LTX2_DUMP_STAGE2_FINAL_DIR"
+        ) or os.environ.get("SGLANG_LTX2_DUMP_STAGE2_DEBUG_DIR")
         if dump_dir:
             os.makedirs(dump_dir, exist_ok=True)
             payload = {}

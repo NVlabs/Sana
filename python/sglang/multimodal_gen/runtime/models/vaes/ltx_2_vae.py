@@ -754,7 +754,9 @@ class LTX2VideoUpBlock3d(nn.Module):
             elif upsample_type == "spatiotemporal":
                 upsample_stride = (2, 2, 2)
             else:
-                raise ValueError(f"Unsupported LTX2 decoder upsample_type: {upsample_type}")
+                raise ValueError(
+                    f"Unsupported LTX2 decoder upsample_type: {upsample_type}"
+                )
 
             self.upsamplers = nn.ModuleList(
                 [

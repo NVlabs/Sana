@@ -13,11 +13,12 @@ LOCAL_ENTRYPOINTS = [
 
 
 def dependency_status() -> dict[str, bool]:
-    return _dependency_status("sglang.multimodal_gen.runtime.efficiency.techniques.step_cache")
+    return _dependency_status(
+        "sglang.multimodal_gen.runtime.efficiency.techniques.step_cache"
+    )
 
 
 def get_technique_class():
     from sglang.multimodal_gen.runtime.efficiency.techniques.step_cache import StepCache
 
     return StepCache
-

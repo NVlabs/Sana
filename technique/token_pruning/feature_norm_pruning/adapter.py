@@ -13,11 +13,14 @@ LOCAL_ENTRYPOINTS = [
 
 
 def dependency_status() -> dict[str, bool]:
-    return _dependency_status("sglang.multimodal_gen.runtime.efficiency.techniques.token_prune")
+    return _dependency_status(
+        "sglang.multimodal_gen.runtime.efficiency.techniques.token_prune"
+    )
 
 
 def get_technique_class():
-    from sglang.multimodal_gen.runtime.efficiency.techniques.token_prune import TokenPrune
+    from sglang.multimodal_gen.runtime.efficiency.techniques.token_prune import (
+        TokenPrune,
+    )
 
     return TokenPrune
-

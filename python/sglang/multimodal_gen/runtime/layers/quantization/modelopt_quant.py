@@ -593,8 +593,8 @@ def modelopt_fp4_apply_quantized_linear_bias_gelu(
 def modelopt_fp4_apply_linear_bias_gelu(
     layer: torch.nn.Module, x: torch.Tensor, bias: torch.Tensor
 ) -> torch.Tensor | None:
-    x_fp4, x_scale_interleaved, input_shape, output_dtype = modelopt_fp4_quantize_activation(
-        x, layer.input_scale_inv
+    x_fp4, x_scale_interleaved, input_shape, output_dtype = (
+        modelopt_fp4_quantize_activation(x, layer.input_scale_inv)
     )
     return modelopt_fp4_apply_quantized_linear_bias_gelu(
         layer, x_fp4, x_scale_interleaved, input_shape, output_dtype, bias
@@ -734,10 +734,14 @@ def modelopt_fp4_apply_quantized_linear_batched_per_col_residual_gate(
     alpha = layer.alpha
     if alpha.numel() != 1:
         return None
-    gate_alpha = (gate_2d.float() * alpha.float().reshape(())).to(output_dtype).contiguous()
-    bias_gate = (bias.float().reshape(1, output_size) * gate_2d.float()).to(
-        output_dtype
-    ).contiguous()
+    gate_alpha = (
+        (gate_2d.float() * alpha.float().reshape(())).to(output_dtype).contiguous()
+    )
+    bias_gate = (
+        (bias.float().reshape(1, output_size) * gate_2d.float())
+        .to(output_dtype)
+        .contiguous()
+    )
 
     out = fused_gemm(
         x_fp4,
@@ -867,7 +871,9 @@ def modelopt_fp4_apply_quantized_linear_per_col_residual_gate(
     alpha = layer.alpha
     if alpha.numel() != 1:
         return None
-    gate_alpha = (gate_col.float() * alpha.float().reshape(())).to(output_dtype).contiguous()
+    gate_alpha = (
+        (gate_col.float() * alpha.float().reshape(())).to(output_dtype).contiguous()
+    )
     bias_gate = (bias.float() * gate_col.float()).to(output_dtype).contiguous()
 
     out = fused_gemm(
@@ -898,8 +904,8 @@ def modelopt_fp4_apply_linear_per_col_residual_gate(
     if batched is not None:
         return batched
 
-    x_fp4, x_scale_interleaved, input_shape, output_dtype = modelopt_fp4_quantize_activation(
-        x, layer.input_scale_inv
+    x_fp4, x_scale_interleaved, input_shape, output_dtype = (
+        modelopt_fp4_quantize_activation(x, layer.input_scale_inv)
     )
     return modelopt_fp4_apply_quantized_linear_per_col_residual_gate(
         layer,

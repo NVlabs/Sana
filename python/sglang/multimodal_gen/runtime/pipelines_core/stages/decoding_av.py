@@ -9,8 +9,8 @@ from sglang.multimodal_gen.runtime.managers.memory_managers.component_manager im
     ComponentUse,
 )
 from sglang.multimodal_gen.runtime.pipelines_core.schedule_batch import OutputBatch, Req
-from sglang.multimodal_gen.runtime.pipelines_core.stages.decoding import DecodingStage
 from sglang.multimodal_gen.runtime.pipelines_core.stages.base import PipelineStage
+from sglang.multimodal_gen.runtime.pipelines_core.stages.decoding import DecodingStage
 from sglang.multimodal_gen.runtime.platforms import current_platform
 from sglang.multimodal_gen.runtime.server_args import ServerArgs
 from sglang.multimodal_gen.runtime.utils.logging_utils import (
@@ -43,9 +43,7 @@ def _compile_tiled_video_vae_decoder_enabled() -> bool:
 
 
 def _video_vae_compile_mode() -> str:
-    return os.environ.get(
-        "SGLANG_LTX2_VAE_COMPILE_MODE", "max-autotune-no-cudagraphs"
-    )
+    return os.environ.get("SGLANG_LTX2_VAE_COMPILE_MODE", "max-autotune-no-cudagraphs")
 
 
 def _ltx2_stage1_export_path(batch: Req) -> str | None:
@@ -124,9 +122,7 @@ def _decode_profile_scope(batch: Req, name: str):
     finally:
         if torch.cuda.is_available():
             torch.cuda.synchronize()
-        metrics.record_stage(
-            f"LTX2AVDecodingStage.{name}", time.perf_counter() - start
-        )
+        metrics.record_stage(f"LTX2AVDecodingStage.{name}", time.perf_counter() - start)
 
 
 class LTX2AVDecodingStage(DecodingStage):
@@ -218,9 +214,7 @@ class LTX2AVDecodingStage(DecodingStage):
 
         mode = _video_vae_compile_mode()
         try:
-            logger.info(
-                "Compiling tiled LTX2 video VAE decoder with mode: %s", mode
-            )
+            logger.info("Compiling tiled LTX2 video VAE decoder with mode: %s", mode)
             self._compiled_tiled_video_vae_decoder_base = decoder
             self._compiled_tiled_video_vae_decoder = torch.compile(
                 decoder, fullgraph=False, dynamic=False, mode=mode
@@ -484,7 +478,9 @@ class LTX2AVDecodingStage(DecodingStage):
                 )
                 logger.info("Saved LTX2 stage1 pre-refine output: %s", saved_paths)
         except Exception:
-            logger.warning("Failed to save LTX2 stage1 pre-refine output", exc_info=True)
+            logger.warning(
+                "Failed to save LTX2 stage1 pre-refine output", exc_info=True
+            )
         finally:
             batch.latents = original_latents
             batch.audio_latents = original_audio_latents
@@ -510,14 +506,12 @@ class LTX2Stage1ExportStage(PipelineStage):
         if not output_path:
             return batch
 
-        if (
-            "ltx2_stage1_export_latents" not in batch.extra
-            and isinstance(batch.latents, torch.Tensor)
+        if "ltx2_stage1_export_latents" not in batch.extra and isinstance(
+            batch.latents, torch.Tensor
         ):
             batch.extra["ltx2_stage1_export_latents"] = batch.latents.detach().cpu()
-        if (
-            "ltx2_stage1_export_audio_latents" not in batch.extra
-            and isinstance(batch.audio_latents, torch.Tensor)
+        if "ltx2_stage1_export_audio_latents" not in batch.extra and isinstance(
+            batch.audio_latents, torch.Tensor
         ):
             batch.extra["ltx2_stage1_export_audio_latents"] = (
                 batch.audio_latents.detach().cpu()

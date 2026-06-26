@@ -67,8 +67,12 @@ class Capability(enum.Enum):
 
     BLOCKS = "blocks"  # an iterable transformer-block list
     PRUNABLE_TOKENS = "prunable_tokens"  # a separable prunable token segment
-    RESIDUAL_TUPLE = "residual_tuple"  # block forward returns a residual-compatible tuple
-    SWAPPABLE_ATTENTION = "swappable_attention"  # attention goes through the backend layer
+    RESIDUAL_TUPLE = (
+        "residual_tuple"  # block forward returns a residual-compatible tuple
+    )
+    SWAPPABLE_ATTENTION = (
+        "swappable_attention"  # attention goes through the backend layer
+    )
 
 
 @dataclass

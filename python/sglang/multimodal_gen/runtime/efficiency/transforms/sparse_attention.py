@@ -9,12 +9,12 @@
 from __future__ import annotations
 
 from sglang.multimodal_gen.runtime.efficiency.registry import register_transform
+from sglang.multimodal_gen.runtime.efficiency.technique import Capability, Seam
 from sglang.multimodal_gen.runtime.efficiency.transform import (
     ModelTransform,
     TransformContext,
     TransformPhase,
 )
-from sglang.multimodal_gen.runtime.efficiency.technique import Capability, Seam
 
 
 @register_transform("sparse_attention")

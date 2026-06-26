@@ -16,4 +16,3 @@ def dependency_status() -> dict[str, bool]:
         "svg",
         "sglang.multimodal_gen.runtime.layers.attention.backends.sparse_video_gen_2_attn",
     )
-

@@ -520,9 +520,9 @@ def _resolve_quant_config(
     if quant_config_name == "modelopt_fp4":
         quantization_section = None
         if isinstance(hf_config, dict):
-            quantization_section = hf_config.get("quantization_config") or hf_config.get(
-                "quantization"
-            )
+            quantization_section = hf_config.get(
+                "quantization_config"
+            ) or hf_config.get("quantization")
         if isinstance(quantization_section, dict) and quantization_section.get(
             "ignore_is_authoritative", False
         ):

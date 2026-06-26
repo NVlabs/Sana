@@ -14,6 +14,7 @@ import torch
 import triton
 import triton.language as tl
 from torch.nn.attention import SDPBackend, sdpa_kernel
+from triton.tools.tensor_descriptor import TensorDescriptor
 
 from sglang.multimodal_gen.runtime.layers.attention.backends.attention_backend import (
     AttentionBackend,
@@ -23,7 +24,6 @@ from sglang.multimodal_gen.runtime.layers.attention.backends.attention_backend i
 from sglang.multimodal_gen.runtime.platforms import AttentionBackendEnum
 from sglang.multimodal_gen.runtime.server_args import get_global_server_args
 from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
-from triton.tools.tensor_descriptor import TensorDescriptor
 
 logger = init_logger(__name__)
 
@@ -51,7 +51,9 @@ def _piecewise_stats_enabled() -> bool:
 
 def _piecewise_stats_flush_every() -> int:
     try:
-        return max(0, int(os.environ.get("SGLANG_PIECEWISE_ATTN_STATS_FLUSH_EVERY", "100")))
+        return max(
+            0, int(os.environ.get("SGLANG_PIECEWISE_ATTN_STATS_FLUSH_EVERY", "100"))
+        )
     except ValueError:
         return 100
 
@@ -117,7 +119,9 @@ def _piecewise_record_stats(
         if branch == "sparse":
             _PIECEWISE_STATS["sparse_calls"] = int(_PIECEWISE_STATS["sparse_calls"]) + 1
         else:
-            _PIECEWISE_STATS["fallback_calls"] = int(_PIECEWISE_STATS["fallback_calls"]) + 1
+            _PIECEWISE_STATS["fallback_calls"] = (
+                int(_PIECEWISE_STATS["fallback_calls"]) + 1
+            )
         _piecewise_bump(_PIECEWISE_STATS["by_stage"], stage_key, branch)
         _piecewise_bump(_PIECEWISE_STATS["by_prefix"], prefix_key, branch)
         _piecewise_bump(_PIECEWISE_STATS["by_reason"], reason_key, branch)
@@ -188,6 +192,7 @@ def _ltx2_layer_idx_from_prefix(prefix: str) -> int | None:
     except ValueError:
         return None
 
+
 _PYTORCH_DEFAULT_CUDA_SDP_BACKENDS = [
     SDPBackend.CUDNN_ATTENTION,
     SDPBackend.FLASH_ATTENTION,
@@ -204,7 +209,9 @@ def _make_tma_allocator():
 
 
 def build_block_map(indices, nt_kv):
-    block_map = torch.zeros(*indices.shape[:-1], nt_kv, device=indices.device, dtype=torch.int8)
+    block_map = torch.zeros(
+        *indices.shape[:-1], nt_kv, device=indices.device, dtype=torch.int8
+    )
     block_map.scatter_(-1, indices.to(torch.long), 1)
     return block_map.contiguous()
 
@@ -215,7 +222,7 @@ def chunk_reduce_kv_kernel(
     v,
     kc,
     vc,
-    k_var,   # [B*H, N]
+    k_var,  # [B*H, N]
     T,
     N: tl.constexpr,
     K: tl.constexpr,
@@ -254,7 +261,7 @@ def chunk_reduce_kv_kernel(
 def chunk_reduce_k_kernel(
     k,
     kc,
-    k_var,   # [B*H, N]
+    k_var,  # [B*H, N]
     T,
     N: tl.constexpr,
     K: tl.constexpr,
@@ -296,7 +303,7 @@ def chunk_reduce_q_kernel(
 
     p_q = tl.make_tensor_descriptor(q + i_bh * T * K, (T, K), (K, 1), (BT, BK))
     b_q = p_q.load([i_t * BT, 0])
-    
+
     b_qc = tl.sum(b_q, axis=0) / block_size
 
     p_qc = tl.make_block_ptr(qc + i_bh * N * K + i_t * K, (K,), (1,), (0,), (BK,), (0,))
@@ -409,7 +416,7 @@ def piecewise_attn_fwd_kernel(
     tl.multiple_of(q_start, BT)
 
     b_q = q_desc.load([i_bh, q_start, 0]).reshape([BT, BK])
-    
+
     sm_scale = scale * 1.44269504
     acc = tl.zeros([BT, BV], dtype=tl.float32)
     l_i = tl.zeros((BT,), dtype=tl.float32)
@@ -425,7 +432,7 @@ def piecewise_attn_fwd_kernel(
         b_s = tl.dot(b_q, b_k.T) * sm_scale
         b_s += tl.where((kv_start + token_offsets)[None, :] < T_KV, 0, float("-inf"))
 
-        new_m = tl.maximum(m_i, tl.max(b_s,  axis=1))
+        new_m = tl.maximum(m_i, tl.max(b_s, axis=1))
         alpha = tl.math.exp2(m_i - new_m)
         score = tl.math.exp2(b_s - new_m[:, None])
 
@@ -444,25 +451,31 @@ def piecewise_attn_fwd_kernel(
 
     if APPROX_REMAINDER:
         for start_n in range(0, NT_KV, GROUP_SIZE):
-            p_kc = tl.make_tensor_descriptor(kc + i_bh * NT_KV * K, (NT_KV, K), (K, 1), (GROUP_SIZE, BK))
+            p_kc = tl.make_tensor_descriptor(
+                kc + i_bh * NT_KV * K, (NT_KV, K), (K, 1), (GROUP_SIZE, BK)
+            )
             b_kc = p_kc.load([start_n, 0])
-            
+
             chunk_indices = start_n + tl.arange(0, GROUP_SIZE)
             is_selected = chunk_indices[:, None] == selected[None, :]
             selected_mask = tl.max(is_selected, axis=1)
             valid_mask = (chunk_indices < NT_KV) & (selected_mask == 0)
 
-            current_lens = tl.minimum(BT, tl.maximum(0, T_KV - chunk_indices * BT)).to(tl.float32)
-            
+            current_lens = tl.minimum(BT, tl.maximum(0, T_KV - chunk_indices * BT)).to(
+                tl.float32
+            )
+
             b_s_mean = tl.dot(b_q, b_kc.T) * sm_scale
             b_s_mean = tl.where(valid_mask[None, :], b_s_mean, float("-inf"))
 
             new_m = tl.maximum(m_i, tl.max(b_s_mean, axis=1))
             alpha = tl.math.exp2(m_i - new_m)
-            
+
             prob_chunk = tl.math.exp2(b_s_mean - new_m[:, None])
 
-            p_vc = tl.make_tensor_descriptor(vc + i_bh * NT_KV * V, (NT_KV, V), (V, 1), (GROUP_SIZE, BV))
+            p_vc = tl.make_tensor_descriptor(
+                vc + i_bh * NT_KV * V, (NT_KV, V), (V, 1), (GROUP_SIZE, BV)
+            )
             b_vc = p_vc.load([start_n, i_v * BV])
 
             acc = acc * alpha[:, None] + tl.dot(prob_chunk.to(b_vc.dtype), b_vc)
@@ -502,7 +515,9 @@ def attn_bwd_preprocess(
 
 @triton.autotune(
     configs=[
-        triton.Config({"GROUP_SIZE": GROUP_SIZE}, num_warps=num_warps, num_stages=num_stages)
+        triton.Config(
+            {"GROUP_SIZE": GROUP_SIZE}, num_warps=num_warps, num_stages=num_stages
+        )
         for GROUP_SIZE in [32, 64, 128]
         for num_warps in [4, 8]
         for num_stages in [2, 3]
@@ -542,13 +557,15 @@ def piecewise_attn_bwd_dq_kernel(
 
     b_q = q_desc.load([i_bh, q_start, 0]).reshape([BT, BK])
     b_do = do_desc.load([i_bh, q_start, i_v * BV]).reshape([BT, BV])
-    
+
     p_lse = tl.make_block_ptr(lse + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,))
-    p_delta = tl.make_block_ptr(delta + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,))
+    p_delta = tl.make_block_ptr(
+        delta + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,)
+    )
 
     b_lse = tl.load(p_lse, boundary_check=(0,), padding_option="zero")
     b_D = tl.load(p_delta, boundary_check=(0,), padding_option="zero")
-    
+
     sm_scale = scale * 1.44269504
     b_dq = tl.zeros([BT, BK], dtype=tl.float32)
     offs_bt = tl.arange(0, BT)
@@ -572,8 +589,12 @@ def piecewise_attn_bwd_dq_kernel(
 
         b_dq += tl.dot(b_ds.to(b_k.dtype), b_k) * scale
 
-    p_kc = tl.make_tensor_descriptor(kc + i_bh * NT_KV * K, (NT_KV, K), (K, 1), (GROUP_SIZE, BK))
-    p_vc = tl.make_tensor_descriptor(vc + i_bh * NT_KV * V, (NT_KV, V), (V, 1), (GROUP_SIZE, BV))
+    p_kc = tl.make_tensor_descriptor(
+        kc + i_bh * NT_KV * K, (NT_KV, K), (K, 1), (GROUP_SIZE, BK)
+    )
+    p_vc = tl.make_tensor_descriptor(
+        vc + i_bh * NT_KV * V, (NT_KV, V), (V, 1), (GROUP_SIZE, BV)
+    )
 
     for start_n in range(0, NT_KV, GROUP_SIZE):
         tl.multiple_of(start_n, GROUP_SIZE)
@@ -587,7 +608,9 @@ def piecewise_attn_bwd_dq_kernel(
         )
         valid_mask = (chunk_indices < NT_KV) & (selected == 0)
 
-        current_lens = tl.minimum(BT, tl.maximum(0, T_KV - chunk_indices * BT)).to(tl.float32)
+        current_lens = tl.minimum(BT, tl.maximum(0, T_KV - chunk_indices * BT)).to(
+            tl.float32
+        )
         b_s_mean = tl.dot(b_q, tl.trans(b_kc)) * sm_scale
         b_s_mean = tl.where(valid_mask[None, :], b_s_mean, float("-inf"))
         b_p = tl.math.exp2(b_s_mean - b_lse[:, None])
@@ -641,8 +664,12 @@ def piecewise_attn_bwd_approx_dkdv_kernel(
 
     offs_c = i_kv_group * BN + tl.arange(0, BN)
 
-    p_kc = tl.make_tensor_descriptor(kc + i_bh * NT_KV * K, (NT_KV, K), (K, 1), (BN, BK))
-    p_vc = tl.make_tensor_descriptor(vc + i_bh * NT_KV * V, (NT_KV, V), (V, 1), (BN, BV))
+    p_kc = tl.make_tensor_descriptor(
+        kc + i_bh * NT_KV * K, (NT_KV, K), (K, 1), (BN, BK)
+    )
+    p_vc = tl.make_tensor_descriptor(
+        vc + i_bh * NT_KV * V, (NT_KV, V), (V, 1), (BN, BV)
+    )
 
     b_kc = p_kc.load([i_kv_group * BN, 0])
     b_vc = p_vc.load([i_kv_group * BN, i_v * BV])
@@ -656,14 +683,22 @@ def piecewise_attn_bwd_approx_dkdv_kernel(
         tl.multiple_of(q_start, BT)
 
         q_offs = q_start + tl.arange(0, BT)
-        selected = tl.load(block_map + (i_bh * NT_Q + i_q) * NT_KV + offs_c, mask=offs_c < NT_KV, other=1)
+        selected = tl.load(
+            block_map + (i_bh * NT_Q + i_q) * NT_KV + offs_c,
+            mask=offs_c < NT_KV,
+            other=1,
+        )
         valid_chunk = (offs_c < NT_KV) & (selected == 0)
 
         b_q = q_desc.load([i_bh, q_start, 0]).reshape([BT, BK])
         b_do = do_desc.load([i_bh, q_start, i_v * BV]).reshape([BT, BV])
-        
-        p_lse = tl.make_block_ptr(lse + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,))
-        p_delta = tl.make_block_ptr(delta + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,))
+
+        p_lse = tl.make_block_ptr(
+            lse + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,)
+        )
+        p_delta = tl.make_block_ptr(
+            delta + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,)
+        )
 
         b_lse = tl.load(p_lse, boundary_check=(0,), padding_option="zero")
         b_lse = tl.where(q_offs < T_Q, b_lse, float("inf"))
@@ -743,8 +778,12 @@ def piecewise_attn_bwd_exact_dkdv_kernel(
             b_q = q_desc.load([i_bh, q_start, 0]).reshape([BT, BK])
             b_do = do_desc.load([i_bh, q_start, i_v * BV]).reshape([BT, BV])
 
-            p_lse = tl.make_block_ptr(lse + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,))
-            p_delta = tl.make_block_ptr(delta + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,))
+            p_lse = tl.make_block_ptr(
+                lse + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,)
+            )
+            p_delta = tl.make_block_ptr(
+                delta + i_bh * T_Q, (T_Q,), (1,), (q_start,), (BT,), (0,)
+            )
 
             b_lse = tl.load(p_lse, boundary_check=(0,), padding_option="zero")
             b_lse = tl.where(q_offs < T_Q, b_lse, float("inf"))
@@ -798,23 +837,27 @@ def piecewise_attn_fwd(
 ):
     B, H, T_Q, K, T_KV, V = *q.shape, *v.shape[-2:]
     BT, NS = block_size, block_indices.shape[-1]
-    
+
     o = torch.empty(B, H, T_Q, V, device=q.device, dtype=v.dtype)
     lse = torch.empty(B, H, T_Q, device=q.device, dtype=torch.float)
 
     BK = triton.next_power_of_2(K)
     BV = triton.next_power_of_2(V)
     B_NS = triton.next_power_of_2(NS)
-    
+
     NT_Q = triton.cdiv(T_Q, BT)
     NT_KV = triton.cdiv(T_KV, BT)
-    
+
     q_desc = TensorDescriptor.from_tensor(q.reshape(B * H, T_Q, K), [1, block_size, BK])
     o_desc = TensorDescriptor.from_tensor(o.reshape(B * H, T_Q, V), [1, block_size, BV])
 
-    k_desc = TensorDescriptor.from_tensor(k.reshape(B * H, T_KV, K), [1, block_size, BK])
-    v_desc = TensorDescriptor.from_tensor(v.reshape(B * H, T_KV, V), [1, block_size, BV])
-    
+    k_desc = TensorDescriptor.from_tensor(
+        k.reshape(B * H, T_KV, K), [1, block_size, BK]
+    )
+    v_desc = TensorDescriptor.from_tensor(
+        v.reshape(B * H, T_KV, V), [1, block_size, BV]
+    )
+
     grid = (triton.cdiv(V, BV), NT_Q, B * H)
     piecewise_attn_fwd_kernel[grid](
         q_desc=q_desc,
@@ -863,7 +906,7 @@ def piecewise_attn_bwd(
 
     BK = triton.next_power_of_2(K)
     BV = triton.next_power_of_2(V)
-    
+
     NT_Q = triton.cdiv(T_Q, BT)
     NT_KV = triton.cdiv(T_KV, BT)
 
@@ -888,7 +931,7 @@ def piecewise_attn_bwd(
     q_desc = TensorDescriptor.from_tensor(q.reshape(B * H, T_Q, K), [1, BT, BK])
     k_desc = TensorDescriptor.from_tensor(k.reshape(B * H, T_KV, K), [1, BT, BK])
     v_desc = TensorDescriptor.from_tensor(v.reshape(B * H, T_KV, V), [1, BT, BV])
-    
+
     grid = (triton.cdiv(V, BV), NT_Q, B * H)
     piecewise_attn_bwd_dq_kernel[grid](
         do_desc=do_desc,
@@ -976,9 +1019,9 @@ def piecewise_attn_bwd(
 
 @torch.no_grad()
 def taylor_error_block_indices(
-    qc: torch.Tensor,       # [B, H, NT_Q, K]
-    kc: torch.Tensor,       # [B, H, NT_KV, K]
-    k_var: torch.Tensor,    # [B, H, NT_KV]
+    qc: torch.Tensor,  # [B, H, NT_Q, K]
+    kc: torch.Tensor,  # [B, H, NT_KV, K]
+    k_var: torch.Tensor,  # [B, H, NT_KV]
     density: float,
     scale: float,
     eps: float = 1e-8,
@@ -1052,7 +1095,7 @@ class PiecewiseAttentionFunction(torch.autograd.Function):
             vc=vc,
             block_indices=block_indices,
             block_size=block_size,
-            scale=scale
+            scale=scale,
         )
 
         ctx.save_for_backward(q, k, v, kc, vc, o, lse, block_indices)
@@ -1163,7 +1206,9 @@ class PiecewiseAttentionImpl(AttentionImpl):
             cfg = {}
         dense_fallback = cfg.get("piecewise_dense_fallback", None)
         if dense_fallback is None:
-            dense_fallback = os.environ.get("SGLANG_PIECEWISE_ATTN_DENSE_FALLBACK", "fa")
+            dense_fallback = os.environ.get(
+                "SGLANG_PIECEWISE_ATTN_DENSE_FALLBACK", "fa"
+            )
         self.dense_fallback = str(dense_fallback).strip().lower()
         self._dense_fa_impl = None
         if self.dropout == 0.0 and self.dense_fallback != "sdpa":
@@ -1301,7 +1346,11 @@ class PiecewiseAttentionImpl(AttentionImpl):
         return False
 
     def _density_for_step(self, attn_metadata: AttentionMetadata | None) -> float:
-        stage = getattr(attn_metadata, "ltx2_stage", None) if attn_metadata is not None else None
+        stage = (
+            getattr(attn_metadata, "ltx2_stage", None)
+            if attn_metadata is not None
+            else None
+        )
         if self._layer_forces_dense(stage):
             return 1.0
         if not self.stage1_schedule or attn_metadata is None:
@@ -1402,7 +1451,11 @@ class PiecewiseAttentionImpl(AttentionImpl):
         if fallback_reason:
             _piecewise_record_stats(
                 prefix=self.prefix,
-                stage=getattr(attn_metadata, "ltx2_stage", None) if attn_metadata is not None else None,
+                stage=(
+                    getattr(attn_metadata, "ltx2_stage", None)
+                    if attn_metadata is not None
+                    else None
+                ),
                 branch="fallback",
                 reason=fallback_reason,
                 query=query,
@@ -1486,7 +1539,11 @@ class PiecewiseAttentionImpl(AttentionImpl):
             )
         _piecewise_record_stats(
             prefix=self.prefix,
-            stage=getattr(attn_metadata, "ltx2_stage", None) if attn_metadata is not None else None,
+            stage=(
+                getattr(attn_metadata, "ltx2_stage", None)
+                if attn_metadata is not None
+                else None
+            ),
             branch="sparse",
             reason="",
             query=query,

@@ -47,9 +47,7 @@ try:
     from cache_dit import BlockAdapter, ForwardPattern
     from cache_dit.caching.block_adapters import BlockAdapterRegister
 except ImportError:  # pragma: no cover — cache-dit is optional at runtime
-    logger.debug(
-        "cache-dit not installed; LTX2 BlockAdapter registration is a no-op."
-    )
+    logger.debug("cache-dit not installed; LTX2 BlockAdapter registration is a no-op.")
     BlockAdapter = None  # type: ignore[assignment]
     ForwardPattern = None  # type: ignore[assignment]
     BlockAdapterRegister = None  # type: ignore[assignment]

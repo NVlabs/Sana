@@ -10,7 +10,10 @@ from sglang.multimodal_gen.configs.pipeline_configs.ltx_2 import (
     is_ltx23_native_variant,
     sync_ltx23_runtime_vae_markers,
 )
-from sglang.multimodal_gen.configs.sample.ltx_2 import LTX23HQSamplingParams
+from sglang.multimodal_gen.configs.sample.ltx_2 import (
+    LTX23DistilledSamplingParams,
+    LTX23HQSamplingParams,
+)
 from sglang.multimodal_gen.runtime.distributed import get_local_torch_device
 from sglang.multimodal_gen.runtime.loader.component_loaders.component_loader import (
     PipelineComponentLoader,
@@ -57,10 +60,23 @@ logger = init_logger(__name__)
 
 BASE_SHIFT_ANCHOR = 1024
 MAX_SHIFT_ANCHOR = 4096
+LTX2_DISTILLED_SIGMA_VALUES = [
+    1.0,
+    0.99375,
+    0.9875,
+    0.98125,
+    0.975,
+    0.909375,
+    0.725,
+    0.421875,
+]
 
 
 def _resolve_ltx2_two_stage_component_paths(
-    model_path: str, component_paths: dict[str, str]
+    model_path: str,
+    component_paths: dict[str, str],
+    *,
+    resolve_distilled_lora: bool = True,
 ) -> dict[str, str]:
     resolved = dict(component_paths)
     auto_resolved = []
@@ -78,12 +94,10 @@ def _resolve_ltx2_two_stage_component_paths(
                 auto_resolved.append(f"spatial_upsampler={candidate}")
                 break
 
-    if "distilled_lora" not in resolved:
+    if resolve_distilled_lora and "distilled_lora" not in resolved:
         distilled_lora_candidates = [
             os.path.join(model_path, "ltx-2.3-20b-distilled-lora-384.safetensors"),
-            os.path.join(
-                model_path, "ltx-2.3-22b-distilled-lora-384-1.1.safetensors"
-            ),
+            os.path.join(model_path, "ltx-2.3-22b-distilled-lora-384-1.1.safetensors"),
             os.path.join(model_path, "ltx-2.3-22b-distilled-lora-384.safetensors"),
             os.path.join(model_path, "ltx-2-19b-distilled-lora-384.safetensors"),
         ]
@@ -163,6 +177,9 @@ class LTX2SigmaPreparationStage(PipelineStage):
 
     def forward(self, batch: Req, server_args: ServerArgs) -> Req:
         batch.extra["ltx2_phase"] = "stage1"
+        if server_args.pipeline_class_name == "LTX2DistilledPipeline":
+            batch.sigmas = list(LTX2_DISTILLED_SIGMA_VALUES)
+            return batch
         if is_ltx23_native_variant(server_args.pipeline_config.vae_config.arch_config):
             # Gate on pipeline class to mirror the three official entry points:
             # - HQ (`ti2vid_two_stages_hq.py:164`) calls
@@ -767,8 +784,7 @@ class LTX2TwoStageResidencyController:
     def enter_phase(self, phase: str) -> bool:
         """Switch active two-stage DiT with minimal transfer/sync overhead."""
         if not (
-            self.should_use_premerged
-            or self.pipeline._use_explicit_stage2_transformer
+            self.should_use_premerged or self.pipeline._use_explicit_stage2_transformer
         ):
             return False
         if phase == self._active_phase:
@@ -793,6 +809,7 @@ class LTX2TwoStagePipeline(_BaseLTX2Pipeline):
     STAGE_2_DISTILLED_LORA_STRENGTH = 1.0
     STAGE_1_DENOISING_SAMPLER_NAME = "euler"
     STAGE_2_DENOISING_SAMPLER_NAME = "euler"
+    REQUIRE_DISTILLED_LORA = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -833,7 +850,9 @@ class LTX2TwoStagePipeline(_BaseLTX2Pipeline):
     def initialize_pipeline(self, server_args: ServerArgs):
         super().initialize_pipeline(server_args)
         server_args.component_paths = _resolve_ltx2_two_stage_component_paths(
-            self.model_path, server_args.component_paths
+            self.model_path,
+            server_args.component_paths,
+            resolve_distilled_lora=self.REQUIRE_DISTILLED_LORA,
         )
 
         upsampler_path = server_args.component_paths.get("spatial_upsampler")
@@ -852,7 +871,7 @@ class LTX2TwoStagePipeline(_BaseLTX2Pipeline):
         self.memory_usages["spatial_upsampler"] = memory_usage
 
         distilled_lora_path = server_args.component_paths.get("distilled_lora")
-        if not distilled_lora_path:
+        if not distilled_lora_path and self.REQUIRE_DISTILLED_LORA:
             raise ValueError(
                 f"{self.pipeline_name} requires --distilled-lora-path "
                 "(component_paths['distilled_lora'])."
@@ -924,10 +943,7 @@ class LTX2TwoStagePipeline(_BaseLTX2Pipeline):
                 distilled_lora_strength = self._get_stage_distilled_lora_strength(
                     phase, batch
                 )
-                if (
-                    distilled_lora_strength
-                    != self.STAGE_2_DISTILLED_LORA_STRENGTH
-                ):
+                if distilled_lora_strength != self.STAGE_2_DISTILLED_LORA_STRENGTH:
                     raise ValueError(
                         "Explicit transformer_2 is assumed to already include the "
                         "default stage-2 distilled LoRA. Per-request stage-2 "
@@ -1154,6 +1170,26 @@ class LTX2TwoStagePipeline(_BaseLTX2Pipeline):
         _add_ltx2_decoding_stage(self)
 
 
+class LTX2DistilledPipeline(LTX2TwoStagePipeline):
+    """Two-stage LTX-2 distilled pipeline using a merged distilled checkpoint."""
+
+    pipeline_name = "LTX2DistilledPipeline"
+    pipeline_config_cls = LTX2PipelineConfig
+    sampling_params_cls = LTX23DistilledSamplingParams
+    STAGE_1_DISTILLED_LORA_STRENGTH = 0.0
+    STAGE_2_DISTILLED_LORA_STRENGTH = 0.0
+    REQUIRE_DISTILLED_LORA = False
+
+    @staticmethod
+    def _should_merge_stage2_distilled_lora(server_args: ServerArgs) -> bool:
+        return False
+
+    def _get_stage_distilled_lora_strength(
+        self, phase: str, batch: Req | None
+    ) -> float:
+        return 0.0
+
+
 class LTX2TwoStageHQPipeline(LTX2TwoStagePipeline):
     pipeline_name = "LTX2TwoStageHQPipeline"
     pipeline_config_cls = LTX2PipelineConfig
@@ -1164,4 +1200,9 @@ class LTX2TwoStageHQPipeline(LTX2TwoStagePipeline):
     STAGE_2_DENOISING_SAMPLER_NAME = "res2s"
 
 
-EntryClass = [LTX2Pipeline, LTX2TwoStagePipeline, LTX2TwoStageHQPipeline]
+EntryClass = [
+    LTX2Pipeline,
+    LTX2TwoStagePipeline,
+    LTX2DistilledPipeline,
+    LTX2TwoStageHQPipeline,
+]

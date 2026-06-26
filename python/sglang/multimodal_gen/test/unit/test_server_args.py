@@ -808,6 +808,30 @@ class TestOffloadDefaults(unittest.TestCase):
         self.assertFalse(args.vae_cpu_offload)
         self.assertIsNone(args.layerwise_offload_components)
 
+    def test_auto_high_memory_ltx23_distilled_resident_mode(self):
+        args = self._from_dict_with_pipeline_config(
+            LTX2PipelineConfig(),
+            memory_gb=140,
+            available_memory_gb=134,
+            kwargs={
+                "model_path": "Lightricks/LTX-2.3",
+                "pipeline_class_name": "LTX2DistilledPipeline",
+                "transformer_weights_path": "/models/ltx-2.3-distilled.safetensors",
+                "component_paths": {
+                    "spatial_upsampler": "/models/upsampler.safetensors"
+                },
+            },
+        )
+
+        self.assertEqual(args.ltx2_two_stage_device_mode, "resident")
+        self.assertFalse(args.dit_cpu_offload)
+        self.assertFalse(args.text_encoder_cpu_offload)
+        self.assertFalse(args.image_encoder_cpu_offload)
+        self.assertIsNone(args.layerwise_offload_components)
+        self.assertEqual(
+            args.transformer_weights_path, "/models/ltx-2.3-distilled.safetensors"
+        )
+
     def test_auto_high_memory_ltx23_original_keeps_default_layerwise_components(self):
         args = self._from_dict_with_pipeline_config(
             LTX2PipelineConfig(),

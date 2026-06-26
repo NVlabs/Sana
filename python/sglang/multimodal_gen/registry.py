@@ -111,6 +111,7 @@ from sglang.multimodal_gen.configs.sample.hunyuan3d import Hunyuan3DSamplingPara
 from sglang.multimodal_gen.configs.sample.joy_image import JoyImageEditSamplingParams
 from sglang.multimodal_gen.configs.sample.ltx_2 import (
     LTX2SamplingParams,
+    LTX23DistilledSamplingParams,
     LTX23HQSamplingParams,
     LTX23SamplingParams,
 )
@@ -645,6 +646,11 @@ def _register_configs():
         model_detectors=[
             lambda path: "ltx-2.3" in path.lower(),
         ],
+    )
+    # register dedicated sampling params for LTX2DistilledPipeline
+    _PIPELINE_CONFIG_REGISTRY.setdefault(
+        "LTX2DistilledPipeline",
+        (LTX2PipelineConfig, LTX23DistilledSamplingParams),
     )
     # register dedicated sampling params for LTX2TwoStageHQPipeline
     _PIPELINE_CONFIG_REGISTRY.setdefault(

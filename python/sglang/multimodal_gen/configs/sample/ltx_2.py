@@ -92,6 +92,33 @@ class LTX23SamplingParams(LTX2SamplingParams):
 
 
 @dataclasses.dataclass
+class LTX23DistilledSamplingParams(LTX23SamplingParams):
+    """Sampling parameters matching official LTX-2.3 two-stage distilled defaults."""
+
+    seed: int = 10
+    guidance_scale: float = 1.0
+    num_inference_steps: int = 8
+
+    video_cfg_scale: float = 1.0
+    video_stg_scale: float = 0.0
+    video_rescale_scale: float = 0.0
+    video_modality_scale: float = 1.0
+    video_skip_step: int = 0
+    video_stg_blocks: list[int] = field(default_factory=list)
+
+    audio_cfg_scale: float = 1.0
+    audio_stg_scale: float = 0.0
+    audio_rescale_scale: float = 0.0
+    audio_modality_scale: float = 1.0
+    audio_skip_step: int = 0
+    audio_stg_blocks: list[int] = field(default_factory=list)
+
+    def build_request_extra(self) -> dict[str, Any]:
+        # Official distilled uses a positive-only SimpleDenoiser by default.
+        return SamplingParams.build_request_extra(self)
+
+
+@dataclasses.dataclass
 class LTX23HQSamplingParams(LTX23SamplingParams):
     """Sampling parameters matching official LTX-2.3 HQ two-stage defaults."""
 

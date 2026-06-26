@@ -74,7 +74,11 @@ from sglang.multimodal_gen.utils import (
 logger = init_logger(__name__)
 
 LTX2_TWO_STAGE_DEVICE_MODES = ("original", "snapshot", "resident")
-LTX2_TWO_STAGE_PIPELINE_NAMES = ("LTX2TwoStagePipeline", "LTX2TwoStageHQPipeline")
+LTX2_TWO_STAGE_PIPELINE_NAMES = (
+    "LTX2TwoStagePipeline",
+    "LTX2DistilledPipeline",
+    "LTX2TwoStageHQPipeline",
+)
 # H200-class GPUs (>=130 GiB total) can usually keep both LTX2 DiTs resident.
 LTX2_RESIDENT_AUTO_ENABLE_MEM_GB = 130
 LORA_MERGE_MODES = ("auto", "merge", "dynamic")

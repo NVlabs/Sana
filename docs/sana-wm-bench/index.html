@@ -919,6 +919,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#evaluation-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#run-one-scene" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1478,6 +1489,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#evaluation-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#run-one-scene" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1609,136 +1631,153 @@ world-model evaluation. The release scope is intentionally narrow:</p>
 <p>The rest of this guide assumes:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">BENCH</span><span class="o">=</span>data/SANA-WM-Bench
 </code></pre></div>
+<h2 id="evaluation-dependencies">Evaluation Dependencies<a class="headerlink" href="#evaluation-dependencies" title="Permanent link">&para;</a></h2>
+<p>Run the benchmark from a Sana-WM runtime environment with the extra evaluation
+packages installed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>vbench<span class="w"> </span>decord<span class="w"> </span>lpips<span class="w"> </span><span class="nv">pyiqa</span><span class="o">==</span><span class="m">0</span>.1.10<span class="w"> </span><span class="nv">facexlib</span><span class="o">==</span><span class="m">0</span>.3.0
+</code></pre></div>
+<p>Camera pose accuracy additionally requires Pi3 to be importable:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="s">from pi3.models.pi3 import Pi3</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="s">print(&quot;Pi3 OK&quot;)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s">PY</span>
+</code></pre></div>
+<p>If the inference environment has strict package pins, keep the VBench/LPIPS
+extras in a separate evaluation environment or user site and use the same
+repository checkout and result directory.</p>
+<p>The first VBench/LPIPS run downloads the official evaluation weights into the
+user cache, including DINO, AMT, ViCLIP, and AlexNet checkpoints. Make sure the
+evaluation job has network access or a pre-populated cache.</p>
 <h2 id="run-one-scene">Run One Scene<a class="headerlink" href="#run-one-scene" title="Permanent link">&para;</a></h2>
 <p>Download or point <code>BENCH</code> at the release directory:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">BENCH</span><span class="o">=</span>data/SANA-WM-Bench
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">SPLIT</span><span class="o">=</span>benchmark_v2_smooth_60s
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">SCENE</span><span class="o">=</span>game_style_001
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">WORK</span><span class="o">=</span>results/sana_wm_bench_inputs/<span class="nv">$SPLIT</span>/<span class="nv">$SCENE</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">&quot;</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nb">export</span><span class="w"> </span>BENCH<span class="w"> </span>SPLIT<span class="w"> </span>SCENE<span class="w"> </span>WORK
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s">import json</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="s">import os</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="s">from pathlib import Path</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="s">import numpy as np</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="s">bench = Path(os.environ[&quot;BENCH&quot;])</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="s">split = os.environ[&quot;SPLIT&quot;]</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="s">scene = os.environ[&quot;SCENE&quot;]</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="s">work = Path(os.environ[&quot;WORK&quot;])</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="s">manifest = bench / split / &quot;sanawm_export_v2/run_manifest.jsonl&quot;</span>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="s">rows = [json.loads(line) for line in manifest.read_text(encoding=&quot;utf-8&quot;).splitlines() if line.strip()]</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="s">row = next(r for r in rows if r[&quot;id&quot;] == scene)</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="s">traj = np.load(bench / row[&quot;camera_path&quot;])</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="s">np.save(work / f&quot;{scene}_c2w.npy&quot;, traj[&quot;c2w&quot;])</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="s">np.save(work / f&quot;{scene}_intrinsics.npy&quot;, traj[&quot;intrinsics&quot;])</span>
-<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="s">(work / f&quot;{scene}.txt&quot;).write_text(row[&quot;prompt&quot;], encoding=&quot;utf-8&quot;)</span>
-<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="s">PY</span>
-<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>
-<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>python<span class="w"> </span>inference_video_scripts/wm/inference_sana_wm.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="w">  </span>--image<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BENCH</span><span class="s2">/images/</span><span class="nv">$SCENE</span><span class="s2">.png&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">/</span><span class="nv">$SCENE</span><span class="s2">.txt&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="w">  </span>--camera<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">/</span><span class="si">${</span><span class="nv">SCENE</span><span class="si">}</span><span class="s2">_c2w.npy&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="w">  </span>--intrinsics<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">/</span><span class="si">${</span><span class="nv">SCENE</span><span class="si">}</span><span class="s2">_intrinsics.npy&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a><span class="w">  </span>--num_frames<span class="w"> </span><span class="m">961</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="w">  </span>--fps<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a><span class="w">  </span>--step<span class="w"> </span><span class="m">60</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a><span class="w">  </span>--cfg_scale<span class="w"> </span><span class="m">5</span>.0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a><span class="w">  </span>--flow_shift<span class="w"> </span><span class="m">8</span>.0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a><span class="w">  </span>--sampling_algo<span class="w"> </span>flow_euler_ltx<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a><span class="w">  </span>--seed<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a><span class="w">  </span>--refiner_seed<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a><span class="w">  </span>--no_action_overlay<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a><span class="w">  </span>--output_dir<span class="w"> </span><span class="s2">&quot;results/sana_wm_bidirectional_refined/simple_60s&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a><span class="w">  </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SCENE</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">BENCH</span><span class="o">=</span>data/SANA-WM-Bench
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">SPLIT</span><span class="o">=</span>benchmark_v2_smooth_60s
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nv">SCENE</span><span class="o">=</span>game_style_001
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nv">WORK</span><span class="o">=</span>results/sana_wm_bench_inputs/<span class="nv">$SPLIT</span>/<span class="nv">$SCENE</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">&quot;</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nb">export</span><span class="w"> </span>BENCH<span class="w"> </span>SPLIT<span class="w"> </span>SCENE<span class="w"> </span>WORK
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">import json</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">import os</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">from pathlib import Path</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">import numpy as np</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s">bench = Path(os.environ[&quot;BENCH&quot;])</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="s">split = os.environ[&quot;SPLIT&quot;]</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="s">scene = os.environ[&quot;SCENE&quot;]</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="s">work = Path(os.environ[&quot;WORK&quot;])</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="s">manifest = bench / split / &quot;sanawm_export_v2/run_manifest.jsonl&quot;</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="s">rows = [json.loads(line) for line in manifest.read_text(encoding=&quot;utf-8&quot;).splitlines() if line.strip()]</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="s">row = next(r for r in rows if r[&quot;id&quot;] == scene)</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="s">traj = np.load(bench / row[&quot;camera_path&quot;])</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="s">np.save(work / f&quot;{scene}_c2w.npy&quot;, traj[&quot;c2w&quot;])</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="s">np.save(work / f&quot;{scene}_intrinsics.npy&quot;, traj[&quot;intrinsics&quot;])</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="s">(work / f&quot;{scene}.txt&quot;).write_text(row[&quot;prompt&quot;], encoding=&quot;utf-8&quot;)</span>
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="s">PY</span>
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>
+<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>python<span class="w"> </span>inference_video_scripts/wm/inference_sana_wm.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">  </span>--image<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BENCH</span><span class="s2">/images/</span><span class="nv">$SCENE</span><span class="s2">.png&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">/</span><span class="nv">$SCENE</span><span class="s2">.txt&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="w">  </span>--camera<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">/</span><span class="si">${</span><span class="nv">SCENE</span><span class="si">}</span><span class="s2">_c2w.npy&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a><span class="w">  </span>--intrinsics<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$WORK</span><span class="s2">/</span><span class="si">${</span><span class="nv">SCENE</span><span class="si">}</span><span class="s2">_intrinsics.npy&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="w">  </span>--num_frames<span class="w"> </span><span class="m">961</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="w">  </span>--fps<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a><span class="w">  </span>--step<span class="w"> </span><span class="m">60</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="w">  </span>--cfg_scale<span class="w"> </span><span class="m">5</span>.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a><span class="w">  </span>--flow_shift<span class="w"> </span><span class="m">8</span>.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a><span class="w">  </span>--sampling_algo<span class="w"> </span>flow_euler_ltx<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="w">  </span>--seed<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="w">  </span>--refiner_seed<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a><span class="w">  </span>--no_action_overlay<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="w">  </span>--output_dir<span class="w"> </span><span class="s2">&quot;results/sana_wm_bidirectional_refined/simple_60s&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a><span class="w">  </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SCENE</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>The output is:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>results/sana_wm_bidirectional_refined/simple_60s/&lt;scene_id&gt;_generated.mp4
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>results/sana_wm_bidirectional_refined/simple_60s/&lt;scene_id&gt;_generated.mp4
 </code></pre></div>
 <p>The LTX-2 refiner is enabled by default. Do not pass <code>--no_refiner</code> for the
 benchmark run.</p>
 <h2 id="run-all-80-scenes-with-a-scheduler">Run All 80 Scenes With A Scheduler<a class="headerlink" href="#run-all-80-scenes-with-a-scheduler" title="Permanent link">&para;</a></h2>
 <p>For Slurm-based clusters, this example runs one scene per task. Adjust
 array concurrency for the available GPU capacity.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>run_sana_wm_bench.sbatch<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="s">#!/usr/bin/env bash</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s">#SBATCH --job-name=swm_bench</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="s">#SBATCH --account=&lt;account&gt;</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">#SBATCH --partition=&lt;gpu-partition&gt;</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">#SBATCH --gres=gpu:1</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">#SBATCH --cpus-per-task=16</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">#SBATCH --mem=220G</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">#SBATCH --time=04:00:00</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">#SBATCH --array=0-79%8</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">#SBATCH --output=logs/%x_%A_%a.out</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">set -euo pipefail</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s">REPO=/path/to/Sana</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="s">PY=/path/to/python</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="s">BENCH=data/SANA-WM-Bench</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="s">METHOD=sana_wm_bidirectional_refined</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="s">SPLIT_DIR=${SPLIT_DIR:-benchmark_v2_smooth_60s}</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="s">SPLIT_NAME=${SPLIT_NAME:-simple_60s}</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="s">export BENCH METHOD SPLIT_DIR SPLIT_NAME</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="s">cd &quot;$REPO&quot;</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="s">export PYTHONPATH=&quot;$REPO:${PYTHONPATH:-}&quot;</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="s">SCENE=$($PY - &lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="s">import json</span>
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="s">import os</span>
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="s">from pathlib import Path</span>
-<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="s">bench = Path(os.environ[&quot;BENCH&quot;])</span>
-<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="s">split = os.environ[&quot;SPLIT_DIR&quot;]</span>
-<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="s">idx = int(os.environ[&quot;SLURM_ARRAY_TASK_ID&quot;])</span>
-<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="s">rows = [json.loads(line) for line in (bench / split / &quot;sanawm_export_v2/run_manifest.jsonl&quot;).read_text().splitlines() if line.strip()]</span>
-<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a><span class="s">print(rows[idx][&quot;id&quot;])</span>
-<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="s">PY</span>
-<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="s">)</span>
-<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a>
-<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="s">WORK=&quot;$REPO/results/sana_wm_bench_inputs/$SPLIT_NAME/$SCENE&quot;</span>
-<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a><span class="s">OUT=&quot;$REPO/results/$METHOD/$SPLIT_NAME&quot;</span>
-<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a><span class="s">mkdir -p &quot;$WORK&quot; &quot;$OUT&quot;</span>
-<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="s">export SCENE WORK OUT</span>
-<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a>
-<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a><span class="s">$PY - &lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="s">import json</span>
-<a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a><span class="s">import os</span>
-<a id="__codelineno-5-45" name="__codelineno-5-45" href="#__codelineno-5-45"></a><span class="s">from pathlib import Path</span>
-<a id="__codelineno-5-46" name="__codelineno-5-46" href="#__codelineno-5-46"></a><span class="s">import numpy as np</span>
-<a id="__codelineno-5-47" name="__codelineno-5-47" href="#__codelineno-5-47"></a><span class="s">bench = Path(os.environ[&quot;BENCH&quot;])</span>
-<a id="__codelineno-5-48" name="__codelineno-5-48" href="#__codelineno-5-48"></a><span class="s">split = os.environ[&quot;SPLIT_DIR&quot;]</span>
-<a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a><span class="s">scene = os.environ[&quot;SCENE&quot;]</span>
-<a id="__codelineno-5-50" name="__codelineno-5-50" href="#__codelineno-5-50"></a><span class="s">work = Path(os.environ[&quot;WORK&quot;])</span>
-<a id="__codelineno-5-51" name="__codelineno-5-51" href="#__codelineno-5-51"></a><span class="s">rows = [json.loads(line) for line in (bench / split / &quot;sanawm_export_v2/run_manifest.jsonl&quot;).read_text().splitlines() if line.strip()]</span>
-<a id="__codelineno-5-52" name="__codelineno-5-52" href="#__codelineno-5-52"></a><span class="s">row = next(r for r in rows if r[&quot;id&quot;] == scene)</span>
-<a id="__codelineno-5-53" name="__codelineno-5-53" href="#__codelineno-5-53"></a><span class="s">traj = np.load(bench / row[&quot;camera_path&quot;])</span>
-<a id="__codelineno-5-54" name="__codelineno-5-54" href="#__codelineno-5-54"></a><span class="s">np.save(work / f&quot;{scene}_c2w.npy&quot;, traj[&quot;c2w&quot;])</span>
-<a id="__codelineno-5-55" name="__codelineno-5-55" href="#__codelineno-5-55"></a><span class="s">np.save(work / f&quot;{scene}_intrinsics.npy&quot;, traj[&quot;intrinsics&quot;])</span>
-<a id="__codelineno-5-56" name="__codelineno-5-56" href="#__codelineno-5-56"></a><span class="s">(work / f&quot;{scene}.txt&quot;).write_text(row[&quot;prompt&quot;], encoding=&quot;utf-8&quot;)</span>
-<a id="__codelineno-5-57" name="__codelineno-5-57" href="#__codelineno-5-57"></a><span class="s">PY</span>
-<a id="__codelineno-5-58" name="__codelineno-5-58" href="#__codelineno-5-58"></a>
-<a id="__codelineno-5-59" name="__codelineno-5-59" href="#__codelineno-5-59"></a><span class="s">$PY inference_video_scripts/wm/inference_sana_wm.py \</span>
-<a id="__codelineno-5-60" name="__codelineno-5-60" href="#__codelineno-5-60"></a><span class="s">  --image &quot;$BENCH/images/$SCENE.png&quot; \</span>
-<a id="__codelineno-5-61" name="__codelineno-5-61" href="#__codelineno-5-61"></a><span class="s">  --prompt &quot;$WORK/$SCENE.txt&quot; \</span>
-<a id="__codelineno-5-62" name="__codelineno-5-62" href="#__codelineno-5-62"></a><span class="s">  --camera &quot;$WORK/${SCENE}_c2w.npy&quot; \</span>
-<a id="__codelineno-5-63" name="__codelineno-5-63" href="#__codelineno-5-63"></a><span class="s">  --intrinsics &quot;$WORK/${SCENE}_intrinsics.npy&quot; \</span>
-<a id="__codelineno-5-64" name="__codelineno-5-64" href="#__codelineno-5-64"></a><span class="s">  --num_frames 961 --fps 16 \</span>
-<a id="__codelineno-5-65" name="__codelineno-5-65" href="#__codelineno-5-65"></a><span class="s">  --step 60 --cfg_scale 5.0 --flow_shift 8.0 \</span>
-<a id="__codelineno-5-66" name="__codelineno-5-66" href="#__codelineno-5-66"></a><span class="s">  --sampling_algo flow_euler_ltx \</span>
-<a id="__codelineno-5-67" name="__codelineno-5-67" href="#__codelineno-5-67"></a><span class="s">  --seed 42 --refiner_seed 42 \</span>
-<a id="__codelineno-5-68" name="__codelineno-5-68" href="#__codelineno-5-68"></a><span class="s">  --no_action_overlay \</span>
-<a id="__codelineno-5-69" name="__codelineno-5-69" href="#__codelineno-5-69"></a><span class="s">  --output_dir &quot;$OUT&quot; \</span>
-<a id="__codelineno-5-70" name="__codelineno-5-70" href="#__codelineno-5-70"></a><span class="s">  --name &quot;$SCENE&quot;</span>
-<a id="__codelineno-5-71" name="__codelineno-5-71" href="#__codelineno-5-71"></a><span class="s">EOF</span>
-<a id="__codelineno-5-72" name="__codelineno-5-72" href="#__codelineno-5-72"></a>
-<a id="__codelineno-5-73" name="__codelineno-5-73" href="#__codelineno-5-73"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>logs
-<a id="__codelineno-5-74" name="__codelineno-5-74" href="#__codelineno-5-74"></a>sbatch<span class="w"> </span>--export<span class="o">=</span>ALL,SPLIT_DIR<span class="o">=</span>benchmark_v2_smooth_60s,SPLIT_NAME<span class="o">=</span>simple_60s<span class="w"> </span>run_sana_wm_bench.sbatch
-<a id="__codelineno-5-75" name="__codelineno-5-75" href="#__codelineno-5-75"></a>sbatch<span class="w"> </span>--export<span class="o">=</span>ALL,SPLIT_DIR<span class="o">=</span>benchmark_v2_hard_60s,SPLIT_NAME<span class="o">=</span>hard_60s<span class="w"> </span>run_sana_wm_bench.sbatch
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>run_sana_wm_bench.sbatch<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="s">#!/usr/bin/env bash</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="s">#SBATCH --job-name=swm_bench</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="s">#SBATCH --account=&lt;account&gt;</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="s">#SBATCH --partition=&lt;gpu-partition&gt;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="s">#SBATCH --gres=gpu:1</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="s">#SBATCH --cpus-per-task=16</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="s">#SBATCH --mem=220G</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="s">#SBATCH --time=04:00:00</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="s">#SBATCH --array=0-79%8</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="s">#SBATCH --output=logs/%x_%A_%a.out</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="s">set -euo pipefail</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="s">REPO=/path/to/Sana</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="s">PY=/path/to/python</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="s">BENCH=data/SANA-WM-Bench</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="s">METHOD=sana_wm_bidirectional_refined</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="s">SPLIT_DIR=${SPLIT_DIR:-benchmark_v2_smooth_60s}</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="s">SPLIT_NAME=${SPLIT_NAME:-simple_60s}</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="s">export BENCH METHOD SPLIT_DIR SPLIT_NAME</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="s">cd &quot;$REPO&quot;</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="s">export PYTHONPATH=&quot;$REPO:${PYTHONPATH:-}&quot;</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="s">SCENE=$($PY - &lt;&lt;&#39;PY&#39;</span>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="s">import json</span>
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a><span class="s">import os</span>
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a><span class="s">from pathlib import Path</span>
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a><span class="s">bench = Path(os.environ[&quot;BENCH&quot;])</span>
+<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a><span class="s">split = os.environ[&quot;SPLIT_DIR&quot;]</span>
+<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a><span class="s">idx = int(os.environ[&quot;SLURM_ARRAY_TASK_ID&quot;])</span>
+<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a><span class="s">rows = [json.loads(line) for line in (bench / split / &quot;sanawm_export_v2/run_manifest.jsonl&quot;).read_text().splitlines() if line.strip()]</span>
+<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a><span class="s">print(rows[idx][&quot;id&quot;])</span>
+<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a><span class="s">PY</span>
+<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a><span class="s">)</span>
+<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>
+<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a><span class="s">WORK=&quot;$REPO/results/sana_wm_bench_inputs/$SPLIT_NAME/$SCENE&quot;</span>
+<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a><span class="s">OUT=&quot;$REPO/results/$METHOD/$SPLIT_NAME&quot;</span>
+<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a><span class="s">mkdir -p &quot;$WORK&quot; &quot;$OUT&quot;</span>
+<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a><span class="s">export SCENE WORK OUT</span>
+<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>
+<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a><span class="s">$PY - &lt;&lt;&#39;PY&#39;</span>
+<a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a><span class="s">import json</span>
+<a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a><span class="s">import os</span>
+<a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a><span class="s">from pathlib import Path</span>
+<a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a><span class="s">import numpy as np</span>
+<a id="__codelineno-7-47" name="__codelineno-7-47" href="#__codelineno-7-47"></a><span class="s">bench = Path(os.environ[&quot;BENCH&quot;])</span>
+<a id="__codelineno-7-48" name="__codelineno-7-48" href="#__codelineno-7-48"></a><span class="s">split = os.environ[&quot;SPLIT_DIR&quot;]</span>
+<a id="__codelineno-7-49" name="__codelineno-7-49" href="#__codelineno-7-49"></a><span class="s">scene = os.environ[&quot;SCENE&quot;]</span>
+<a id="__codelineno-7-50" name="__codelineno-7-50" href="#__codelineno-7-50"></a><span class="s">work = Path(os.environ[&quot;WORK&quot;])</span>
+<a id="__codelineno-7-51" name="__codelineno-7-51" href="#__codelineno-7-51"></a><span class="s">rows = [json.loads(line) for line in (bench / split / &quot;sanawm_export_v2/run_manifest.jsonl&quot;).read_text().splitlines() if line.strip()]</span>
+<a id="__codelineno-7-52" name="__codelineno-7-52" href="#__codelineno-7-52"></a><span class="s">row = next(r for r in rows if r[&quot;id&quot;] == scene)</span>
+<a id="__codelineno-7-53" name="__codelineno-7-53" href="#__codelineno-7-53"></a><span class="s">traj = np.load(bench / row[&quot;camera_path&quot;])</span>
+<a id="__codelineno-7-54" name="__codelineno-7-54" href="#__codelineno-7-54"></a><span class="s">np.save(work / f&quot;{scene}_c2w.npy&quot;, traj[&quot;c2w&quot;])</span>
+<a id="__codelineno-7-55" name="__codelineno-7-55" href="#__codelineno-7-55"></a><span class="s">np.save(work / f&quot;{scene}_intrinsics.npy&quot;, traj[&quot;intrinsics&quot;])</span>
+<a id="__codelineno-7-56" name="__codelineno-7-56" href="#__codelineno-7-56"></a><span class="s">(work / f&quot;{scene}.txt&quot;).write_text(row[&quot;prompt&quot;], encoding=&quot;utf-8&quot;)</span>
+<a id="__codelineno-7-57" name="__codelineno-7-57" href="#__codelineno-7-57"></a><span class="s">PY</span>
+<a id="__codelineno-7-58" name="__codelineno-7-58" href="#__codelineno-7-58"></a>
+<a id="__codelineno-7-59" name="__codelineno-7-59" href="#__codelineno-7-59"></a><span class="s">$PY inference_video_scripts/wm/inference_sana_wm.py \</span>
+<a id="__codelineno-7-60" name="__codelineno-7-60" href="#__codelineno-7-60"></a><span class="s">  --image &quot;$BENCH/images/$SCENE.png&quot; \</span>
+<a id="__codelineno-7-61" name="__codelineno-7-61" href="#__codelineno-7-61"></a><span class="s">  --prompt &quot;$WORK/$SCENE.txt&quot; \</span>
+<a id="__codelineno-7-62" name="__codelineno-7-62" href="#__codelineno-7-62"></a><span class="s">  --camera &quot;$WORK/${SCENE}_c2w.npy&quot; \</span>
+<a id="__codelineno-7-63" name="__codelineno-7-63" href="#__codelineno-7-63"></a><span class="s">  --intrinsics &quot;$WORK/${SCENE}_intrinsics.npy&quot; \</span>
+<a id="__codelineno-7-64" name="__codelineno-7-64" href="#__codelineno-7-64"></a><span class="s">  --num_frames 961 --fps 16 \</span>
+<a id="__codelineno-7-65" name="__codelineno-7-65" href="#__codelineno-7-65"></a><span class="s">  --step 60 --cfg_scale 5.0 --flow_shift 8.0 \</span>
+<a id="__codelineno-7-66" name="__codelineno-7-66" href="#__codelineno-7-66"></a><span class="s">  --sampling_algo flow_euler_ltx \</span>
+<a id="__codelineno-7-67" name="__codelineno-7-67" href="#__codelineno-7-67"></a><span class="s">  --seed 42 --refiner_seed 42 \</span>
+<a id="__codelineno-7-68" name="__codelineno-7-68" href="#__codelineno-7-68"></a><span class="s">  --no_action_overlay \</span>
+<a id="__codelineno-7-69" name="__codelineno-7-69" href="#__codelineno-7-69"></a><span class="s">  --output_dir &quot;$OUT&quot; \</span>
+<a id="__codelineno-7-70" name="__codelineno-7-70" href="#__codelineno-7-70"></a><span class="s">  --name &quot;$SCENE&quot;</span>
+<a id="__codelineno-7-71" name="__codelineno-7-71" href="#__codelineno-7-71"></a><span class="s">EOF</span>
+<a id="__codelineno-7-72" name="__codelineno-7-72" href="#__codelineno-7-72"></a>
+<a id="__codelineno-7-73" name="__codelineno-7-73" href="#__codelineno-7-73"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>logs
+<a id="__codelineno-7-74" name="__codelineno-7-74" href="#__codelineno-7-74"></a>sbatch<span class="w"> </span>--export<span class="o">=</span>ALL,SPLIT_DIR<span class="o">=</span>benchmark_v2_smooth_60s,SPLIT_NAME<span class="o">=</span>simple_60s<span class="w"> </span>run_sana_wm_bench.sbatch
+<a id="__codelineno-7-75" name="__codelineno-7-75" href="#__codelineno-7-75"></a>sbatch<span class="w"> </span>--export<span class="o">=</span>ALL,SPLIT_DIR<span class="o">=</span>benchmark_v2_hard_60s,SPLIT_NAME<span class="o">=</span>hard_60s<span class="w"> </span>run_sana_wm_bench.sbatch
 </code></pre></div>
 <p>Each split is complete when it has 80 files matching <code>*_generated.mp4</code>.</p>
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
@@ -1787,99 +1826,99 @@ conventions:</p>
 <li><code>TransErr</code> and <code>CamMC</code>: means of <code>TransErr_rel</code> and <code>CamMC_rel</code>.</li>
 <li><code>Delta IQ</code>: <code>temporal_degradation.json["trend"]["imaging_quality"]["degradation"]</code>.</li>
 </ul>
-<p>Use the evaluator scripts from your evaluation environment together with
+<p>Use the bundled evaluator scripts under <code>tools/metrics/sana_wm/</code> together with
 this result layout:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>results/sana_wm_bidirectional_refined/
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>|-- method_info.json
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>|-- simple_60s/
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>|   `-- &lt;scene_id&gt;_generated.mp4
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>|-- hard_60s/
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>|   `-- &lt;scene_id&gt;_generated.mp4
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>`-- eval/
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    |-- simple_60s/
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    `-- hard_60s/
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>results/sana_wm_bidirectional_refined/
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>|-- method_info.json
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>|-- simple_60s/
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>|   `-- &lt;scene_id&gt;_generated.mp4
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>|-- hard_60s/
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>|   `-- &lt;scene_id&gt;_generated.mp4
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>`-- eval/
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    |-- simple_60s/
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    `-- hard_60s/
 </code></pre></div>
 <p>Keep the generated videos clean for metrics: use <code>*_generated.mp4</code>, not
 overlay/combined videos.</p>
 <p>Run VBench, revisit consistency, and temporal degradation with the unified
 evaluator. Run from the model repository root and pass the benchmark metadata
 explicitly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">BENCH</span><span class="o">=</span>data/SANA-WM-Bench
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nv">METHOD_DIR</span><span class="o">=</span>results/sana_wm_bidirectional_refined
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">:</span><span class="si">${</span><span class="nv">PYTHONPATH</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>python<span class="w"> </span>/path/to/eval_unified.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--method_dir<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METHOD_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--split<span class="w"> </span>simple_60s<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--benchmark_meta<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BENCH</span><span class="s2">/benchmark_v2_smooth_60s/scene_trajectories_v2.json&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--metrics<span class="w"> </span>vbench<span class="w"> </span>revisit<span class="w"> </span>temporal<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>--vbench_dims<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span>subject_consistency<span class="w"> </span>background_consistency<span class="w"> </span>temporal_flickering<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span>motion_smoothness<span class="w"> </span>dynamic_degree<span class="w"> </span>aesthetic_quality<span class="w"> </span>imaging_quality<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span>overall_consistency<span class="w"> </span>temporal_style<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>--revisit_lpips<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span>--window_sec<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span>--skip_first_frame<span class="w"> </span>auto
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">:</span><span class="si">${</span><span class="nv">PYTHONPATH</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>python<span class="w"> </span>/path/to/eval_unified.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">  </span>--method_dir<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METHOD_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">  </span>--split<span class="w"> </span>hard_60s<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">  </span>--benchmark_meta<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BENCH</span><span class="s2">/benchmark_v2_hard_60s/scene_trajectories_v2.json&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">  </span>--metrics<span class="w"> </span>vbench<span class="w"> </span>revisit<span class="w"> </span>temporal<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">  </span>--vbench_dims<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">    </span>subject_consistency<span class="w"> </span>background_consistency<span class="w"> </span>temporal_flickering<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="w">    </span>motion_smoothness<span class="w"> </span>dynamic_degree<span class="w"> </span>aesthetic_quality<span class="w"> </span>imaging_quality<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="w">    </span>overall_consistency<span class="w"> </span>temporal_style<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="w">  </span>--revisit_lpips<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="w">  </span>--window_sec<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a><span class="w">  </span>--skip_first_frame<span class="w"> </span>auto
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">BENCH</span><span class="o">=</span>data/SANA-WM-Bench
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">METHOD_DIR</span><span class="o">=</span>results/sana_wm_bidirectional_refined
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">:</span><span class="si">${</span><span class="nv">PYTHONPATH</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>python<span class="w"> </span>tools/metrics/sana_wm/eval_unified.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--method_dir<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METHOD_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--split<span class="w"> </span>simple_60s<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>--benchmark_meta<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BENCH</span><span class="s2">/benchmark_v2_smooth_60s/scene_trajectories_v2.json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--metrics<span class="w"> </span>vbench<span class="w"> </span>revisit<span class="w"> </span>temporal<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span>--vbench_dims<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span>subject_consistency<span class="w"> </span>background_consistency<span class="w"> </span>temporal_flickering<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span>motion_smoothness<span class="w"> </span>dynamic_degree<span class="w"> </span>aesthetic_quality<span class="w"> </span>imaging_quality<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">    </span>overall_consistency<span class="w"> </span>temporal_style<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span>--revisit_lpips<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">  </span>--window_sec<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">  </span>--skip_first_frame<span class="w"> </span>auto
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">:</span><span class="si">${</span><span class="nv">PYTHONPATH</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>python<span class="w"> </span>tools/metrics/sana_wm/eval_unified.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">  </span>--method_dir<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METHOD_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">  </span>--split<span class="w"> </span>hard_60s<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">  </span>--benchmark_meta<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BENCH</span><span class="s2">/benchmark_v2_hard_60s/scene_trajectories_v2.json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">  </span>--metrics<span class="w"> </span>vbench<span class="w"> </span>revisit<span class="w"> </span>temporal<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="w">  </span>--vbench_dims<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a><span class="w">    </span>subject_consistency<span class="w"> </span>background_consistency<span class="w"> </span>temporal_flickering<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="w">    </span>motion_smoothness<span class="w"> </span>dynamic_degree<span class="w"> </span>aesthetic_quality<span class="w"> </span>imaging_quality<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="w">    </span>overall_consistency<span class="w"> </span>temporal_style<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a><span class="w">  </span>--revisit_lpips<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a><span class="w">  </span>--window_sec<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="w">  </span>--skip_first_frame<span class="w"> </span>auto
 </code></pre></div>
 <p>Camera accuracy is GPU-backed and should be run as a separate 8-GPU Slurm job.
-Because the release manifest stores dataset-relative <code>camera_path</code> entries, run
-the pose script from the dataset root while using absolute result and output
-paths:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>run_sana_wm_pose_eval.sbatch<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="s">#!/usr/bin/env bash</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="s">#SBATCH --job-name=swm_pose80</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="s">#SBATCH --account=&lt;account&gt;</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="s">#SBATCH --partition=&lt;gpu-partition&gt;</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="s">#SBATCH --gres=gpu:8</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="s">#SBATCH --cpus-per-task=64</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="s">#SBATCH --mem=500G</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="s">#SBATCH --time=16:00:00</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="s">#SBATCH --output=logs/%x_%j.out</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="s">set -euo pipefail</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="s">PY=/path/to/python</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="s">ACCEL=/path/to/accelerate</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="s">BENCH=data/SANA-WM-Bench</span>
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="s">METHOD_DIR=/path/to/results/sana_wm_bidirectional_refined</span>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="s">cd &quot;$BENCH&quot;</span>
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="s">export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</span>
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="s">run_pose() {</span>
-<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="s">  local split=&quot;$1&quot;</span>
-<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="s">  local split_dir=&quot;$2&quot;</span>
-<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="s">  &quot;$ACCEL&quot; launch --num_processes=8 --mixed_precision=bf16 \</span>
-<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a><span class="s">    /path/to/eval_benchmark_poses.py \</span>
-<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="s">    --result_folder &quot;$METHOD_DIR/$split&quot; \</span>
-<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="s">    --manifest &quot;$BENCH/$split_dir/sanawm_export_v2/run_manifest.jsonl&quot; \</span>
-<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="s">    --interval 4 \</span>
-<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="s">    --batch_size 1 \</span>
-<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a><span class="s">    --output &quot;$METHOD_DIR/$split/eval_poses.json&quot; \</span>
-<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a><span class="s">    --skip_first_frame auto</span>
-<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a><span class="s">}</span>
-<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>
-<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a><span class="s">run_pose simple_60s benchmark_v2_smooth_60s</span>
-<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a><span class="s">run_pose hard_60s benchmark_v2_hard_60s</span>
-<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>
-<a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a><span class="s">&quot;$PY&quot; /path/to/aggregate_results.py \</span>
-<a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a><span class="s">  --results_root &quot;$(dirname &quot;$METHOD_DIR&quot;)&quot; \</span>
-<a id="__codelineno-8-39" name="__codelineno-8-39" href="#__codelineno-8-39"></a><span class="s">  --json_out &quot;$METHOD_DIR/metrics_80scene/aggregate_results.json&quot; \</span>
-<a id="__codelineno-8-40" name="__codelineno-8-40" href="#__codelineno-8-40"></a><span class="s">  --md_out &quot;$METHOD_DIR/metrics_80scene/aggregate_results.md&quot;</span>
-<a id="__codelineno-8-41" name="__codelineno-8-41" href="#__codelineno-8-41"></a><span class="s">EOF</span>
-<a id="__codelineno-8-42" name="__codelineno-8-42" href="#__codelineno-8-42"></a>
-<a id="__codelineno-8-43" name="__codelineno-8-43" href="#__codelineno-8-43"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>logs
-<a id="__codelineno-8-44" name="__codelineno-8-44" href="#__codelineno-8-44"></a>sbatch<span class="w"> </span>run_sana_wm_pose_eval.sbatch
+Run the pose script from the repository root and point it at the downloaded
+benchmark manifest:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>run_sana_wm_pose_eval.sbatch<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="s">#!/usr/bin/env bash</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="s">#SBATCH --job-name=swm_pose80</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="s">#SBATCH --account=&lt;account&gt;</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="s">#SBATCH --partition=&lt;gpu-partition&gt;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="s">#SBATCH --gres=gpu:8</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="s">#SBATCH --cpus-per-task=64</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="s">#SBATCH --mem=500G</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="s">#SBATCH --time=16:00:00</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="s">#SBATCH --output=logs/%x_%j.out</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="s">set -euo pipefail</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="s">PY=/path/to/python</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="s">ACCEL=/path/to/accelerate</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="s">REPO=/path/to/Sana</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="s">BENCH=data/SANA-WM-Bench</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="s">METHOD_DIR=/path/to/results/sana_wm_bidirectional_refined</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="s">cd &quot;$REPO&quot;</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="s">export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="s">run_pose() {</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="s">  local split=&quot;$1&quot;</span>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="s">  local split_dir=&quot;$2&quot;</span>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="s">  &quot;$ACCEL&quot; launch --num_processes=8 --mixed_precision=bf16 \</span>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="s">    tools/metrics/sana_wm/eval_benchmark_poses.py \</span>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="s">    --result_folder &quot;$METHOD_DIR/$split&quot; \</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a><span class="s">    --manifest &quot;$BENCH/$split_dir/sanawm_export_v2/run_manifest.jsonl&quot; \</span>
+<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="s">    --interval 4 \</span>
+<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="s">    --batch_size 1 \</span>
+<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="s">    --output &quot;$METHOD_DIR/$split/eval_poses.json&quot; \</span>
+<a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="s">    --skip_first_frame auto</span>
+<a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="s">}</span>
+<a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>
+<a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="s">run_pose simple_60s benchmark_v2_smooth_60s</span>
+<a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a><span class="s">run_pose hard_60s benchmark_v2_hard_60s</span>
+<a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>
+<a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a><span class="s">&quot;$PY&quot; tools/metrics/sana_wm/aggregate_results.py \</span>
+<a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a><span class="s">  --results_root &quot;$(dirname &quot;$METHOD_DIR&quot;)&quot; \</span>
+<a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a><span class="s">  --json_out &quot;$METHOD_DIR/metrics_80scene/aggregate_results.json&quot; \</span>
+<a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a><span class="s">  --md_out &quot;$METHOD_DIR/metrics_80scene/aggregate_results.md&quot;</span>
+<a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a><span class="s">EOF</span>
+<a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>
+<a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>logs
+<a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>sbatch<span class="w"> </span>run_sana_wm_pose_eval.sbatch
 </code></pre></div>
 <p>Aggregate outputs into <code>metrics_80scene/aggregate_results.json</code> and
 <code>metrics_80scene/aggregate_results.md</code>. The SANA-WM rows should include

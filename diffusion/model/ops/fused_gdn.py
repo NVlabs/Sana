@@ -1247,10 +1247,14 @@ def _fused_gdn_bwd_kernel(
             # Store dQ_rot temporarily to dqkv[Q] at normal d positions.
             dq_ptrs = dqkv_bh + n_idx[:, None] * stride_n + 0 * stride_3 + offs_d[None, :] * stride_d
             tl.store(dq_ptrs, dQ_rot.to(tl.bfloat16), mask=mask_sd)
+            # The XOR-paired channel can be owned by another warp. Synchronize
+            # both sides of the scratch roundtrip before dqkv is overwritten.
+            tl.debug_barrier()
 
             # Load dQ_rot at paired positions.
             dq_pair_ptrs = dqkv_bh + n_idx[:, None] * stride_n + 0 * stride_3 + offs_d_pair[None, :] * stride_d
             dQ_rot_pair = tl.load(dq_pair_ptrs, mask=mask_sd_pair, other=0.0).to(tl.float32)
+            tl.debug_barrier()
 
             # RoPE inverse: dQ = dQ_rot * Cos - dQ_rot_pair * Sin.
             dQ = dQ_rot * Cos - dQ_rot_pair * Sin + dQ_from_den
@@ -1377,8 +1381,12 @@ def _fused_gdn_bwd_kernel(
                 # ---- RoPE inverse for K ----
                 dk_ptrs = dqkv_bh + n_idx[:, None] * stride_n + 1 * stride_3 + offs_d[None, :] * stride_d
                 tl.store(dk_ptrs, dK_rot.to(tl.bfloat16), mask=mask_sd)
+                # Match the dQ synchronization: all temporary values must be
+                # visible before paired loads and consumed before overwrites.
+                tl.debug_barrier()
                 dk_pair_ptrs = dqkv_bh + n_idx[:, None] * stride_n + 1 * stride_3 + offs_d_pair[None, :] * stride_d
                 dK_rot_pair = tl.load(dk_pair_ptrs, mask=mask_sd_pair, other=0.0).to(tl.float32)
+                tl.debug_barrier()
 
                 dK_from_kv = dK_rot * Cos - dK_rot_pair * Sin
                 dK_total = dK_from_kv + dK_z

@@ -32,7 +32,6 @@ from torch.distributed.nn import functional as dist_nn
 from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
 from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
 from diffusion.model.liger_norms import get_rmsnorm_class
-from diffusion.model.registry import ATTENTION_BLOCKS
 from diffusion.model.ops.fused_streaming import (
     _SLOT_FWD_KV,
     _SLOT_FWD_Z,
@@ -41,6 +40,7 @@ from diffusion.model.ops.fused_streaming import (
     _cached_gdn_forward_triton,
     _slice_rope_to_current_chunk,
 )
+from diffusion.model.registry import ATTENTION_BLOCKS
 from diffusion.utils.chunk_utils import normalize_chunk_index
 
 RMSNorm = get_rmsnorm_class()

@@ -27,8 +27,8 @@ import torch.nn.functional as F
 from timm.models.layers import DropPath
 from torch.nn.attention.flex_attention import flex_attention
 
-from diffusion.model.builder import MODELS
 from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
+from diffusion.model.builder import MODELS
 from diffusion.model.nets.basic_modules import ChunkGLUMBConvTemp, GLUMBConv, GLUMBConvTemp, Mlp
 from diffusion.model.nets.sana_blocks import (
     CaptionEmbedder,

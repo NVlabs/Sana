@@ -31,6 +31,7 @@ from diffusion.model.nets.sana_gdn_camctrl_blocks import (
     BidirectionalGDNUCPESinglePathLiteLA,
     ChunkCausalGDNUCPESinglePathLiteLA,
 )
+from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
 from diffusion.model.ops.fused_cam_gdn import (
     _invert_SE3,
     _prepare_ucpe_rope_tables,
@@ -47,7 +48,6 @@ from diffusion.model.ops.fused_gdn import (
     prepare_rope_tables,
 )
 from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_bidi_chunkwise, cam_scan_pair_chunkwise
-from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
 from diffusion.model.ops.fused_gdn_cp import (
     cp_fused_cam_gdn_num_autograd,
     cp_fused_gdn_chunkwise_raw_autograd,

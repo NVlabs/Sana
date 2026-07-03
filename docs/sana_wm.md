@@ -341,6 +341,12 @@ The implementation lives in
 self-forcing warmup, and T121 self-forcing/DMD stages with the released data
 and checkpoints:
 
+The CI smoke test at
+`tests/bash/training/test_training_sana_wm_distill.sh` follows the same three
+stages with deterministic synthetic trajectory/latent fixtures. It runs one
+optimizer step per stage and passes the saved ODE checkpoint into T43, then the
+saved generator/critic checkpoint into the T121 sink + sliding-cache stage.
+
 ```bash
 # T43 ODE regression (FSDP2, no CP). Set data_path first.
 torchrun --nproc_per_node=8 \

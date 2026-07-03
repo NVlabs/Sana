@@ -285,7 +285,7 @@ This repo includes the minimal chunk-causal Stage-1 training path:
 - training script: `train_video_scripts/train_sana_wm_stage1.py`
 - training config: `configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml`
 - latent dataset loader: `diffusion/data/datasets/video/sana_wm_zip_latent_data.py`
-- CP/FSDP2 tests: `tests/test_context_parallel*.py`
+- CP2/FSDP2 smoke test: `tests/bash/training/test_training_sana_wm_stage1.sh`
 
 The example can run directly from the public HF dataset
 [`Efficient-Large-Model/SANA-WM-example-training-dataset`](https://huggingface.co/datasets/Efficient-Large-Model/SANA-WM-example-training-dataset).
@@ -325,6 +325,42 @@ entries are resolved under that directory after download.
 The Sekai-derived dataset is redistributed for non-commercial research use
 only. See the dataset card, `LICENSE`, and `NOTICE.md` in the HF dataset repo
 before training or redistributing derivatives.
+
+This public Stage-1 recipe matches the released model, 121-frame latent shape,
+CP2, three-frame chunking, and hybrid GDN/softmax settings. It intentionally
+uses only the redistributable Sekai camera-control data; the internal training
+curriculum also mixed separate video-only and no-camera data sources. Exact
+weight reproduction therefore requires the original data mixture.
+
+## ODE and Self-Forcing Distillation
+
+The implementation lives in
+`diffusion/longsana/trainer/sana_wm_distill.py` and is selected by
+`train_video_scripts/train_longsana.py` through `trainer: wm_ode` or
+`trainer: wm_self_forcing`. The three public configs provide the T43 ODE, T43
+self-forcing warmup, and T121 self-forcing/DMD stages with the released data
+and checkpoints:
+
+```bash
+# T43 ODE regression (FSDP2, no CP). Set data_path first.
+torchrun --nproc_per_node=8 \
+  train_video_scripts/train_longsana.py \
+  --config_path configs/sana_wm/distill/ode_t43.yaml \
+  --disable-wandb
+
+# T43 self-forcing warmup (8 GPUs, CP4 / DP2).
+torchrun --nproc_per_node=8 \
+  train_video_scripts/train_longsana.py \
+  --config_path configs/sana_wm/distill/self_forcing_t43.yaml \
+  --disable-wandb
+
+# T121 self-forcing + DMD (8 GPUs, CP4 / DP2).
+torchrun --nproc_per_node=8 \
+  train_video_scripts/train_longsana.py \
+  --config_path configs/sana_wm/distill/self_forcing_t121.yaml \
+  --disable-wandb
+```
+
 
 ## 🎛️ Argument Reference
 

@@ -47,28 +47,55 @@ scheduler).  Slot 6 distinguishes GDN (state-based) from softmax
      - cam_S_kv state (B, H_c, D_c, D_c)
      - cam_k post-UCPE (B, H_c, N, D_c)
    * - 3
-     - None
+     - camera K ShortConv state (B*S, K-1, C)
      - cam_v post-UCPE (B, H_c, N, D_c)
    * - 4
      - ShortConv K state (B*S, K-1, C)
      - None (no conv for softmax)
    * - 5
-     - tconv state (handled by CachedGLUMBConvTemp)
-     - tconv state
+     - reserved
+     - reserved
    * - 6
      - type flag: 1.0
      - type flag: 0.0
-   * - 7-9
+   * - 7-8
      - reserved
      - reserved
+   * - 9
+     - tconv state (handled by CachedGLUMBConvTemp)
+     - tconv state
 """
 
 from __future__ import annotations
 
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import triton
 from fla.modules import ShortConvolution
+
+from diffusion.model.nets.sana_camctrl_blocks import _prepare_ray_apply_fns
+from diffusion.model.ops.fused_cam_gdn import (
+    _invert_SE3,
+    _prepare_ucpe_rope_tables,
+    _process_camera_conditions_raymats_only,
+    _torch_cam_scan_reference,
+    _torch_cam_scan_single_chunk,
+    cam_prep_func,
+    cam_prep_func_with_grad,
+)
+from diffusion.model.ops.fused_gdn import fused_qk_inv_rms, prepare_rope_tables
+from diffusion.model.ops.fused_gdn_chunkwise import (
+    _default_dot_prec,
+    cam_scan_chunkwise,
+    phase_a,
+    phase_b_triton,
+    phase_c,
+)
+from diffusion.model.ops.fused_gdn_chunkwise_cuda import cam_scan_chunkwise_cuda
+from diffusion.model.ops.fused_gdn_chunkwise_stateful_raw import fused_gdn_chunkwise_stateful_raw_autograd
 
 # ---------------------------------------------------------------------------
 # Cache slot indices (must match scheduler constants)
@@ -232,10 +259,6 @@ def _gdn_main_triton(
         ``(out, S_kv_new, S_z_new)`` where ``out`` is ``(B, N, H, D)``
         post-divide in the kernel's dot_precision dtype (fp32 or bf16).
     """
-    # Imports are local so the module loads on CPU-only environments.
-    from diffusion.model.ops.fused_gdn import fused_qk_inv_rms, prepare_rope_tables
-    from diffusion.model.ops.fused_gdn_chunkwise import _default_dot_prec, phase_a, phase_b_triton, phase_c
-
     B, N, three, H, D = qkv.shape
     assert three == 3, f"qkv last-3 dim must be 3 (q,k,v); got shape {qkv.shape}"
     T, H_sp, W_sp = HW
@@ -253,9 +276,6 @@ def _gdn_main_triton(
         k_nw = layer.k_norm.weight.float().contiguous()
         norm_eps = float(getattr(layer.q_norm, "eps", 1e-5))
 
-    # ---- inv RMS (single fused launch over Q and K halves of qkv) ----
-    q_inv_rms, k_inv_rms = fused_qk_inv_rms(qkv, eps=norm_eps)
-
     # ---- RoPE tables for the current chunk ----
     if rotary_emb is None:
         rope_cos = torch.ones(N, D, device=qkv.device, dtype=torch.float32)
@@ -272,6 +292,51 @@ def _gdn_main_triton(
     decay_c = decay.contiguous()
 
     dot_prec = _default_dot_prec()
+
+    if torch.is_grad_enabled() and qkv.requires_grad:
+        forward = fused_gdn_chunkwise_stateful_raw_autograd(
+            qkv,
+            beta_c,
+            decay_c,
+            q_nw,
+            k_nw,
+            rope_cos,
+            rope_sin,
+            T,
+            S,
+            init_state_kv=S_kv_prev,
+            init_state_z=S_z_prev,
+            k_scale=k_scale,
+            norm_eps=norm_eps,
+            dot_precision=dot_prec,
+            save_final_state=save_kv_cache,
+            direction=1,
+        )
+        reverse = fused_gdn_chunkwise_stateful_raw_autograd(
+            qkv,
+            beta_c,
+            decay_c,
+            q_nw,
+            k_nw,
+            rope_cos,
+            rope_sin,
+            T,
+            S,
+            k_scale=k_scale,
+            norm_eps=norm_eps,
+            dot_precision=dot_prec,
+            direction=2,
+        )
+        num_fwd, den_fwd = forward[:2]
+        num_rev, den_rev = reverse
+        denominator = (den_fwd.float() + den_rev.float()).permute(0, 2, 1).unsqueeze(-1)
+        out = ((num_fwd.float() + num_rev.float()) / (denominator + float(layer.eps))).to(qkv.dtype)
+        if save_kv_cache:
+            return out, forward[2], forward[3]
+        return out, None, None
+
+    # ---- inv RMS (single fused launch over Q and K halves of qkv) ----
+    q_inv_rms, k_inv_rms = fused_qk_inv_rms(qkv, eps=norm_eps)
 
     # ---- Phase A: shared prep for both directions ----
     I_P_kv, A_buf, I_P_z, B_z = phase_a(
@@ -433,18 +498,37 @@ def _cam_main_triton(
         (fwd + per-chunk bwd combined) and ``cam_S_kv_new`` shaped
         ``(B, H, D, D)`` fp32 (or ``None`` when not saving).
     """
-    import os as _os
-
-    import triton
+    if torch.is_grad_enabled() and any(tensor.requires_grad for tensor in (q_cam_trans, k_cam_trans, v_cam_trans)):
+        beta_f = beta.float().contiguous()
+        if beta_f.ndim == 3:
+            beta_f = beta_f.unsqueeze(-1).expand(-1, -1, -1, S).contiguous()
+        decay_f = decay.float().contiguous()
+        # The fused cache stores M as (K feature, V feature), while the
+        # torch recurrence uses state @ k and therefore keeps (V, K).
+        init_state = cam_S_kv_prev.transpose(-1, -2) if cam_S_kv_prev is not None else None
+        forward, final_state = _torch_cam_scan_single_chunk(
+            q_cam_trans.float().contiguous(),
+            k_cam_trans.float().contiguous(),
+            v_cam_trans.float().contiguous(),
+            beta_f,
+            decay_f,
+            init_state=init_state,
+            return_final_state=True,
+        )
+        reverse = _torch_cam_scan_reference(
+            q_cam_trans.float().contiguous(),
+            k_cam_trans.float().contiguous(),
+            v_cam_trans.float().contiguous(),
+            beta_f,
+            decay_f,
+            reverse=True,
+        )
+        final_state = final_state.transpose(-1, -2).contiguous() if save_kv_cache else None
+        return forward + reverse, final_state
 
     # CUDA cam scan on by default; set SANA_GDN_CUDA=0 to force Triton.
-    if _os.environ.get("SANA_GDN_CUDA", "1") != "0":
-        try:
-            from diffusion.model.ops.fused_gdn_chunkwise_cuda import cam_scan_chunkwise_cuda as cam_scan_chunkwise
-        except Exception:
-            from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
-    else:
-        from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
+    scan = cam_scan_chunkwise_cuda if os.environ.get("SANA_GDN_CUDA", "1") != "0" else None
+    scan = scan or cam_scan_chunkwise
 
     B, H, D, N = q_cam_trans.shape
     assert N == T * S, f"N={N} != T*S={T * S}"
@@ -476,7 +560,7 @@ def _cam_main_triton(
 
     # ---- Forward scan with state ----
     if save_kv_cache:
-        out_fwd, final_state = cam_scan_chunkwise(
+        out_fwd, final_state = scan(
             q32,
             k32,
             v32,
@@ -487,7 +571,7 @@ def _cam_main_triton(
             save_final_state=True,
         )
     else:
-        out_fwd = cam_scan_chunkwise(
+        out_fwd = scan(
             q32,
             k32,
             v32,
@@ -500,7 +584,7 @@ def _cam_main_triton(
         final_state = None
 
     # ---- Backward scan (per-chunk isolated; no state) ----
-    out_bwd = cam_scan_chunkwise(
+    out_bwd = scan(
         q32,
         k32,
         v32,
@@ -533,16 +617,17 @@ def _cam_prep_triton(
     HW: tuple[int, int, int],
     camera_conditions: torch.Tensor,
     rotary_emb: torch.Tensor | None,
-    **kwargs: object,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, callable]:
+    conv_cache: torch.Tensor | None,
+    save_cache: bool,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, callable, torch.Tensor | None]:
     """Streaming cam-branch QKV prep through the bidir's fused Triton kernel.
 
     Mirrors the prep section of
     :meth:`BidirectionalGDNUCPESinglePathLiteLABothTriton._forward_cam_branch`
     (QKV linear + cam-K short conv + ``cam_prep_func`` Triton kernel +
     ``inflation_sq`` reshape) but applies the K conv with a per-chunk
-    isolated bidirectional pattern matching the torch streaming path
-    (``BidirectionalGDN._apply_temporal_short_conv``).
+    cached left context on the forward half and chunk-local context on the
+    backward half.
 
     Args:
         layer: A :class:`CachedChunkCausalGDNUCPESinglePathLiteLA` instance.
@@ -550,22 +635,16 @@ def _cam_prep_triton(
         HW: ``(T, H, W)`` token layout.
         camera_conditions: ``(B, T, ...)`` camera-pose tensor.
         rotary_emb: complex RoPE frequencies for the current chunk.
+        conv_cache: Previous camera-K short-convolution context.
+        save_cache: Whether to return context for the next chunk.
 
     Returns:
-        ``(q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o)``
+        ``(q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o, new_conv_cache)``
         with ``q/k/v_cam_trans`` shaped ``(B, H_cam, D_cam, N)`` in the input
         dtype, ``inflation_sq`` shaped ``(B, H_cam, 1, N)`` fp32, and
         ``apply_fn_o`` a torch closure that applies the inverse UCPE+RoPE to
-        the scan output.
+        the scan output, and the new short-convolution cache (or ``None``).
     """
-    from diffusion.model.nets.sana_camctrl_blocks import _prepare_ray_apply_fns
-    from diffusion.model.ops.fused_cam_gdn import (
-        _invert_SE3,
-        _prepare_ucpe_rope_tables,
-        _process_camera_conditions_raymats_only,
-        cam_prep_func,
-    )
-
     if layer.conv_q_cam is not None or layer.conv_v_cam is not None:
         raise NotImplementedError(
             "Triton cam-prep requires k_conv_only=True on the camera branch " "(conv_q_cam / conv_v_cam must be None)."
@@ -583,12 +662,15 @@ def _cam_prep_triton(
     qkv_cam = F.linear(x, qkv_w, qkv_b)
     q_raw, k_raw, v_raw = qkv_cam.chunk(3, dim=-1)
 
+    new_conv_cache = None
     if layer.conv_k_cam is not None:
-        # Match the streaming torch path's K-conv routing:
-        # ``_GDNUCPEBase._apply_temporal_short_conv`` dispatches to the
-        # bidirectional in-chunk conv when ``chunk_size >= T`` (the streaming
-        # cam K conv has no cross-chunk state).
-        k_raw = layer._apply_temporal_short_conv(k_raw, layer.conv_k_cam, HW, **kwargs)
+        k_raw, new_conv_cache = _cached_temporal_short_conv(
+            k_raw,
+            layer.conv_k_cam,
+            HW,
+            conv_cache,
+            save_cache,
+        )
 
     q_raw = q_raw.contiguous().view(B, N, H_heads, D_head).contiguous()
     k_raw = k_raw.contiguous().view(B, N, H_heads, D_head).contiguous()
@@ -628,7 +710,8 @@ def _cam_prep_triton(
     k_norm_w = layer.k_norm_cam.weight.float().contiguous()
     k_scale = (D_head**-0.5) * (S**-0.5)
     norm_eps_val = float(getattr(layer.q_norm_cam, "eps", getattr(layer.q_norm_cam, "variance_epsilon", 1e-6)))
-    q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = cam_prep_func(
+    prep = cam_prep_func_with_grad if torch.is_grad_enabled() and q_raw.requires_grad else cam_prep_func
+    q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq = prep(
         q_raw,
         k_raw,
         v_raw,
@@ -646,7 +729,7 @@ def _cam_prep_triton(
     # ---- 5. Inverse-UCPE closure for the scan output ----
     _, _, apply_fn_o = _prepare_ray_apply_fns(head_dim=D_head, P=P, P_T=P_T, P_inv=P_inv, rotary_emb=rotary_emb_cam)
 
-    return q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o
+    return q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o, new_conv_cache
 
 
 def _cached_gdn_forward_triton(
@@ -705,7 +788,7 @@ def _cached_gdn_forward_triton(
         k_flat, new_conv_cache = _cached_temporal_short_conv(
             k_flat, layer.conv_k, HW, kv_cache[_SLOT_SHORTCONV], save_kv_cache
         )
-        qkv = qkv.contiguous()
+        qkv = qkv.clone() if torch.is_grad_enabled() and qkv.requires_grad else qkv.contiguous()
         qkv[:, :, 1].copy_(k_flat.reshape(B, N, H, D))
         if save_kv_cache:
             kv_cache[_SLOT_SHORTCONV] = new_conv_cache

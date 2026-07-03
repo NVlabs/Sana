@@ -16,9 +16,13 @@
 
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 from timm.models.vision_transformer import Mlp
+from torch.distributed.nn import functional as dist_nn
 
+from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
+from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
 from diffusion.model.act import build_act, get_act_name
 from diffusion.model.norms import build_norm, get_norm_name
 from diffusion.model.registry import FFN_BLOCKS
@@ -235,7 +239,6 @@ class GLUMBConvTemp(GLUMBConv):
         nn.init.zeros_(self.t_conv.weight)
 
     def forward(self, x: torch.Tensor, HW=None, **kwargs) -> torch.Tensor:
-        del kwargs
         B, N, C = x.shape
 
         assert len(HW) == 3, "HW must be a tuple of (T, H, W)"
@@ -246,13 +249,11 @@ class GLUMBConvTemp(GLUMBConv):
 
         # Temporal aggregation
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)
-        try:
-            from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
-            from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-        except Exception:
-            cp_active = False
-        else:
-            cp_active = cp_enabled() and get_cp_group() is not None
+        frame_mask = kwargs.get("frame_valid_mask", None)
+        if frame_mask is not None:
+            frame_mask = frame_mask.reshape(B, T).to(x_reshaped)
+            x_reshaped = x_reshaped * frame_mask[:, None, :, None]
+        cp_active = cp_enabled() and get_cp_group() is not None
 
         if cp_active and self.t_conv.padding[0] > 0:
             halo = int(self.t_conv.padding[0])
@@ -261,6 +262,8 @@ class GLUMBConvTemp(GLUMBConv):
         else:
             t_out = self.t_conv(x_reshaped)
         x_out = x_reshaped + t_out
+        if frame_mask is not None:
+            x_out = x_out * frame_mask[:, None, :, None]
 
         x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
 
@@ -269,7 +272,6 @@ class GLUMBConvTemp(GLUMBConv):
 
 class ChunkGLUMBConvTemp(GLUMBConvTemp):
     def forward(self, x: torch.Tensor, HW=None, chunk_index=None, **kwargs) -> torch.Tensor:
-        del kwargs
         if chunk_index is None:
             chunk_index = [0]
         B, N, C = x.shape
@@ -281,8 +283,24 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
         x = self._apply_spatial_autochunked(x)
 
         x_reshaped = x.view(B, T, C, H * W).permute(0, 2, 1, 3)  # B, C, T, H*W
+        frame_mask = kwargs.get("frame_valid_mask")
+        if frame_mask is not None:
+            frame_mask = frame_mask.reshape(B, T).to(x_reshaped)
+            x_reshaped = x_reshaped * frame_mask[:, None, :, None]
+
+        x_local = x_reshaped
+        cp_group = get_cp_group() if cp_enabled() else None
+        if cp_group is not None and kwargs.get("chunk_index_global") is not None:
+            cp_rank = dist.get_rank(cp_group)
+            x_reshaped = torch.cat(dist_nn.all_gather(x_reshaped.contiguous(), group=cp_group), dim=2)
+            chunk_index = kwargs["chunk_index_global"]
+            T_work = x_reshaped.shape[2]
+        else:
+            cp_rank = 0
+            T_work = T
+
         padding_size = self.t_conv.kernel_size[0] // 2
-        chunk_boundaries = [int(idx) for idx in chunk_index] + [T]
+        chunk_boundaries = sorted({0, *(int(idx) for idx in chunk_index if 0 < int(idx) < T_work), T_work})
         chunk_sizes = [end - start for start, end in zip(chunk_boundaries, chunk_boundaries[1:])]
         x_reshaped_list = x_reshaped.split(chunk_sizes, dim=-2)
 
@@ -322,9 +340,15 @@ class ChunkGLUMBConvTemp(GLUMBConvTemp):
             unpadded_chunks.append(unpadded_chunk)
 
         t_conv_out_final = torch.cat(unpadded_chunks, dim=-2)
-        assert t_conv_out_final.shape[-2] == T, f"Expected temporal dimension {T}, got {t_conv_out_final.shape[-2]}"
+        assert (
+            t_conv_out_final.shape[-2] == T_work
+        ), f"Expected temporal dimension {T_work}, got {t_conv_out_final.shape[-2]}"
+        if cp_group is not None and kwargs.get("chunk_index_global") is not None:
+            t_conv_out_final = t_conv_out_final[:, :, cp_rank * T : (cp_rank + 1) * T]
 
-        x_out = x_reshaped + t_conv_out_final
+        x_out = x_local + t_conv_out_final
+        if frame_mask is not None:
+            x_out = x_out * frame_mask[:, None, :, None]
 
         x_out = x_out.permute(0, 2, 3, 1).reshape(B, N, C)
 

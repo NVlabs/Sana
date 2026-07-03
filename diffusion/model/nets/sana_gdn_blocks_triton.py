@@ -9,9 +9,16 @@ scan.
 from __future__ import annotations
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 
-from diffusion.distributed.context_parallel.config import cp_enabled
+from diffusion.distributed.context_parallel.config import (
+    cp_enabled,
+    get_cp_group,
+    get_cp_triton_block_fusion,
+)
+from diffusion.distributed.context_parallel.distributed_scan import cp_frame_gdn_scan
+from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
 from diffusion.model.nets.sana_camctrl_blocks import (
     _maybe_drop_cam_branch,
     _prepare_ray_apply_fns,
@@ -40,6 +47,11 @@ from diffusion.model.ops.fused_gdn import (
     prepare_rope_tables,
 )
 from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_bidi_chunkwise, cam_scan_pair_chunkwise
+from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
+from diffusion.model.ops.fused_gdn_cp import (
+    cp_fused_cam_gdn_num_autograd,
+    cp_fused_gdn_chunkwise_raw_autograd,
+)
 from diffusion.model.registry import ATTENTION_BLOCKS
 from diffusion.utils.chunk_utils import (
     is_chunk_causal_request,
@@ -129,19 +141,8 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
             ``(B, N_local, C)`` after attention + (optional) output gate
             + projection.
         """
-        import torch.distributed as dist
-
-        from diffusion.distributed.context_parallel.config import get_cp_group
-        from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-        from diffusion.model.ops.fused_gdn_cp import cp_fused_gdn_chunkwise_raw_autograd
-        from diffusion.utils.chunk_utils import normalize_chunk_index
-
         del mask, block_mask  # unused on this path
 
-        if kwargs.get("frame_valid_mask", None) is not None:
-            raise NotImplementedError(
-                "ChunkCausalGDNTriton CP-Triton path does not support " "frame_valid_mask (training-only feature)."
-            )
         if self.conv_q is not None or self.conv_v is not None:
             raise NotImplementedError(
                 "ChunkCausalGDNTriton CP-Triton path supports k_conv_only="
@@ -158,6 +159,16 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
         if C != H * D:
             raise ValueError(f"C={C} != heads*dim={H * D}.")
 
+        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
+            kwargs.get("frame_valid_mask"),
+            B=B,
+            T=T,
+            S=S,
+            device=x.device,
+            dtype=x.dtype,
+        )
+        token_mask = token_valid_mask.view(B, N, 1) if token_valid_mask is not None else None
+
         cp_group = get_cp_group()
         if cp_group is None:
             raise RuntimeError(
@@ -166,6 +177,8 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
 
         # ---- 1. QKV projection on the CP-local slice. ---------------------
         qkv = self.qkv(x).reshape(B, N, 3, H, D)
+        if token_mask is not None:
+            qkv = qkv * token_mask[:, :, None, None]
 
         # ---- 2. Chunk-causal short conv on K (in-place writeback). --------
         if self.conv_k is not None:
@@ -188,6 +201,9 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
             beta, decay = precomputed_gates
         else:
             beta, decay = self._compute_frame_gates(x, HW)
+        if beta_valid_mask is not None:
+            beta = torch.where(beta_valid_mask.bool(), beta, 0.0)
+            decay = torch.where(decay_valid_mask.bool(), decay, 1.0)
         beta = beta.contiguous()
         decay = decay.contiguous()
 
@@ -242,7 +258,7 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
             T_global = T * cp_world
             global_offset = cp_rank_local * T
             valid_chunk_index_global, _ = normalize_chunk_index(
-                chunk_index,
+                kwargs.get("chunk_index_global", chunk_index),
                 T_global,
                 chunk_size,
                 chunk_split_strategy,
@@ -258,6 +274,9 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
             input_mask = torch.ones(B, 1, T, 1, 1, device=x.device, dtype=qkv.dtype)
             if boundaries:
                 input_mask[:, :, boundaries] = 0.0
+        if token_valid_mask is not None:
+            frame_valid = token_valid_mask.view(B, T, S)[:, :, 0].view(B, 1, T, 1, 1)
+            input_mask = input_mask * frame_valid
 
         def _cp_flip_and_shift(tensors: list[torch.Tensor], shift_vals: list[float]) -> list[torch.Tensor]:
             is_last = cp_rank_local == cp_world - 1
@@ -355,6 +374,8 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
         if apply_output_gate:
             out = self._apply_output_gate(out, x)
             out = self.proj(out.to(self.proj.weight.dtype))
+        if token_mask is not None:
+            out = out * token_mask.to(out.dtype)
         return out
 
     def forward(
@@ -373,10 +394,6 @@ class ChunkCausalGDNTriton(ChunkCausalGDN):
         if HW is None:
             raise ValueError("ChunkCausalGDNTriton requires HW=(T, H, W).")
         if cp_enabled():
-            from diffusion.distributed.context_parallel.config import (
-                get_cp_triton_block_fusion,
-            )
-
             if not get_cp_triton_block_fusion():
                 raise NotImplementedError(
                     "ChunkCausalGDNTriton context-parallel execution requires "
@@ -696,10 +713,6 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
             7. Apply inverse UCPE (``apply_fn_o``) in torch.
         """
         if cp_enabled():
-            from diffusion.distributed.context_parallel.config import (
-                get_cp_triton_block_fusion,
-            )
-
             if not get_cp_triton_block_fusion():
                 raise NotImplementedError(
                     "ChunkCausalGDNUCPESinglePathLiteLABothTriton context-parallel "
@@ -876,14 +889,12 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         """CP-aware Triton-fused chunk-causal camera branch.
 
         The forward branch uses :func:`cam_prep_func_with_grad` followed by
-        :func:`cp_fused_cam_gdn_num_autograd`. The backward branch keeps
-        chunk-local anti-causal semantics by running each rank's local chunks
-        independently, so no cross-rank communication is needed for the
-        reverse scan.
+        :func:`cp_fused_cam_gdn_num_autograd`. The backward branch uses the
+        same distributed scan in reverse rank order, with chunk-boundary
+        resets preserving chunk-local anti-causal semantics.
 
         Limitations / rejections:
 
-        * ``frame_valid_mask`` (training-only feature) -> NotImplementedError.
         * Q/V short conv (``conv_q_cam`` / ``conv_v_cam``) -> NotImplementedError.
         * Multi-chunk schedule required (chunk_size < T_global or
           explicit chunk_index). Single-chunk falls through to eager
@@ -898,20 +909,7 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         Returns:
             ``(B, N_local, cam_dim)`` post-inverse-UCPE camera output.
         """
-        import torch.distributed as dist
-
-        from diffusion.distributed.context_parallel.config import get_cp_group
-        from diffusion.distributed.context_parallel.distributed_scan import get_local_scan_cls
-        from diffusion.model.nets.sana_gdn_blocks import flip_and_shift
-        from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
-        from diffusion.model.ops.fused_gdn_cp import cp_fused_cam_gdn_num_autograd
-
         # ---- Guards. ----
-        if kwargs.get("frame_valid_mask", None) is not None:
-            raise NotImplementedError(
-                "ChunkCausalGDNUCPESinglePathLiteLABothTriton CP-Triton "
-                "cam branch does not support frame_valid_mask (training-only feature)."
-            )
         if self.conv_q_cam is not None or self.conv_v_cam is not None:
             raise NotImplementedError(
                 "ChunkCausalGDNUCPESinglePathLiteLABothTriton CP-Triton "
@@ -925,6 +923,16 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         dtype_orig = x.dtype
         H_heads = self.cam_heads
         D_head = self.cam_head_dim
+
+        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
+            kwargs.get("frame_valid_mask"),
+            B=B,
+            T=T,
+            S=S,
+            device=x.device,
+            dtype=x.dtype,
+        )
+        token_mask = token_valid_mask.view(B, N, 1) if token_valid_mask is not None else None
 
         cp_group = get_cp_group()
         if cp_group is None:
@@ -950,6 +958,8 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         qkv_w = torch.cat([self.q_proj_cam.weight, self.k_proj_cam.weight, self.v_proj_cam.weight])
         qkv_b = torch.cat([self.q_proj_cam.bias, self.k_proj_cam.bias, self.v_proj_cam.bias])
         qkv_cam = torch.nn.functional.linear(x, qkv_w, qkv_b)
+        if token_mask is not None:
+            qkv_cam = qkv_cam * token_mask
         q_raw, k_raw, v_raw = qkv_cam.chunk(3, dim=-1)
 
         if self.conv_k_cam is not None:
@@ -1040,6 +1050,9 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         else:
             assert beta.shape == (B, H_heads, T, S), f"beta shape {beta.shape}"
             beta_bhfs = beta.contiguous()
+        if beta_valid_mask is not None:
+            beta_bhfs = torch.where(beta_valid_mask.bool(), beta_bhfs, 0.0)
+            decay = torch.where(decay_valid_mask.bool(), decay, 1.0)
         decay = decay.contiguous()
 
         q_cam_trans = q_cam_trans.contiguous()
@@ -1060,13 +1073,10 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
             truncate_to_active=None,
         )
 
-        # ---- 8. Backward scan (per-chunk local). ----
-        # Each rank runs the backward independently on its local chunks.
-        # Chunk-isolated backward semantics make this correct without
-        # cross-rank communication.
+        # ---- 8. Backward scan (chunk-causal, distributed across CP). ----
         global_offset = cp_rank_local * T
         valid_chunk_index_global, _ = normalize_chunk_index(
-            chunk_index,
+            kwargs.get("chunk_index_global", chunk_index),
             T_global,
             chunk_size,
             chunk_split_strategy,
@@ -1077,72 +1087,58 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
             if global_offset <= idx < global_offset + T and idx != 0
         ]
 
-        local_chunk_ends = [0]
-        for b in boundaries:
-            if 0 < b < T:
-                local_chunk_ends.append(b)
-        local_chunk_ends.append(T)
-        local_chunk_ends = sorted(set(local_chunk_ends))
+        decay_bwd_input = decay.clone()
+        if boundaries:
+            decay_bwd_input[:, :, boundaries] = 0.0
+        input_mask = torch.ones(B, 1, T, 1, 1, device=x.device, dtype=q_cam_trans.dtype)
+        if boundaries:
+            input_mask[:, :, boundaries] = 0.0
+        if token_valid_mask is not None:
+            frame_valid = token_valid_mask.view(B, T, S)[:, :, 0].view(B, 1, T, 1, 1)
+            input_mask = input_mask * frame_valid
 
-        def _to_time_bwd(t: torch.Tensor) -> torch.Tensor:
-            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4)
+        def _to_frame(t: torch.Tensor) -> torch.Tensor:
+            return t.view(B, H_heads, D_head, T, S).permute(0, 1, 3, 2, 4).contiguous()
 
-        q_rot_T = _to_time_bwd(q_cam_trans)
-        k_rot_T = _to_time_bwd(k_cam_trans)
-        v_T = _to_time_bwd(v_cam_trans)
+        def _from_frame(t: torch.Tensor) -> torch.Tensor:
+            return t.permute(0, 1, 3, 2, 4).reshape(B, H_heads, D_head, T * S).contiguous()
 
-        out_bwd_chunks: list[torch.Tensor] = []
-        for ci in range(len(local_chunk_ends) - 1):
-            cs = local_chunk_ends[ci]
-            ce = local_chunk_ends[ci + 1]
-            chunk_len = ce - cs
+        def _cp_flip_and_shift(tensors: list[torch.Tensor], shift_vals: list[float]) -> list[torch.Tensor]:
+            is_last = cp_rank_local == cp_world - 1
+            results = []
+            for tensor, sv in zip(tensors, shift_vals):
+                first_frame = tensor[:, :, :1, ...].contiguous()
+                haloed = cp_halo_exchange(first_frame, left_size=0, right_size=1, dim=2, group=cp_group)
+                boundary = haloed[:, :, 1:2, ...]
+                if is_last and sv != 0.0:
+                    boundary = boundary.mul(0.0).add(sv)
+                flipped = torch.flip(tensor, dims=[2])
+                results.append(torch.cat([boundary, flipped[:, :, : T - 1, ...]], dim=2))
+            return results
 
-            # Size-1 chunk: anti-causal scan contributes zero (matches
-            # eager frame-causal design).
-            if chunk_len == 1:
-                out_bwd_chunks.append(q_rot_T.new_zeros(B, H_heads, D_head, 1, S))
-                continue
+        q_rot_f = _to_frame(q_cam_trans)
+        k_rot_f = _to_frame(k_cam_trans) * input_mask
+        v_f = _to_frame(v_cam_trans) * input_mask
+        q_rot_bwd_f = torch.flip(q_rot_f, dims=[2])
+        k_rot_bwd_f, v_bwd_f = _cp_flip_and_shift([k_rot_f, v_f], [0.0, 0.0])
 
-            q_chunk = q_rot_T[:, :, cs:ce]
-            k_chunk = k_rot_T[:, :, cs:ce]
-            v_chunk = v_T[:, :, cs:ce]
-            if beta_bhfs.ndim == 4:
-                beta_chunk = beta_bhfs[:, :, cs:ce, :]
-            else:
-                beta_chunk = beta_bhfs[:, :, cs:ce]
-            decay_chunk = decay[:, :, cs:ce]
+        beta_f = beta_bhfs.unsqueeze(3) * input_mask
+        decay_f = decay_bwd_input.view(B, H_heads, T, 1, 1)
+        beta_bwd_f, decay_bwd_f = _cp_flip_and_shift([beta_f, decay_f], [0.0, 1.0])
 
-            q_bwd_c = torch.flip(q_chunk, dims=[2])
-            k_bwd_c = flip_and_shift(k_chunk, dim=2, shift_val=0.0)
-            v_bwd_c = flip_and_shift(v_chunk, dim=2, shift_val=0.0)
-            beta_bwd_c = flip_and_shift(beta_chunk, dim=2, shift_val=0.0)
-            decay_bwd_c = flip_and_shift(decay_chunk, dim=2, shift_val=1.0)
-
-            beta_bwd_c = beta_bwd_c.unsqueeze(3)
-            decay_bwd_c = decay_bwd_c.view(B, H_heads, chunk_len, 1, 1)
-            identity = torch.eye(D_head, device=x.device, dtype=q_bwd_c.dtype).reshape(1, 1, 1, D_head, D_head)
-            W_kv_bwd, U_kv_bwd, W_z_bwd, U_z_bwd = _build_transition_matrices(
-                k_bwd_c,
-                v_bwd_c,
-                k_bwd_c,
-                beta_bwd_c,
-                decay_bwd_c,
-                identity,
-                B * H_heads,
-                chunk_len,
-                D_head,
-            )
-            W_z_bwd = torch.zeros_like(W_z_bwd)
-            U_z_bwd = torch.zeros_like(U_z_bwd)
-            local_scan = get_local_scan_cls(W_kv_bwd.is_cuda)
-            S_kv_bwd, _ = local_scan.apply(W_kv_bwd, U_kv_bwd, W_z_bwd, U_z_bwd)
-            S_kv_bwd = S_kv_bwd.view(B, H_heads, chunk_len, D_head, D_head)
-            out_bwd_c = torch.matmul(S_kv_bwd, q_bwd_c)
-            out_bwd_c = torch.flip(out_bwd_c, dims=[2]).permute(0, 1, 3, 2, 4).contiguous()
-            out_bwd_chunks.append(out_bwd_c)
-
-        out_bwd_cat = torch.cat(out_bwd_chunks, dim=3)
-        out_bwd_flat = out_bwd_cat.reshape(B, H_heads, D_head, T * S)
+        out_bwd_flipped, _ = cp_fused_cam_gdn_num_autograd(
+            _from_frame(q_rot_bwd_f),
+            _from_frame(k_rot_bwd_f),
+            _from_frame(v_bwd_f),
+            beta_bwd_f.squeeze(3).contiguous(),
+            decay_bwd_f.squeeze(-1).squeeze(-1).contiguous(),
+            F=T,
+            S=S,
+            group=cp_group,
+            reverse_rank_order=True,
+            truncate_to_active=None,
+        )
+        out_bwd_flat = _from_frame(torch.flip(_to_frame(out_bwd_flipped), dims=[2]))
 
         # ---- 9. Single-path combine: num_fwd + num_bwd (no divide). ----
         out = out_fwd + out_bwd_flat
@@ -1160,6 +1156,8 @@ class ChunkCausalGDNUCPESinglePathLiteLABothTriton(ChunkCausalGDNUCPESinglePathL
         )
         out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
         out = out.reshape(B, self.cam_dim, -1).permute(0, 2, 1)
+        if token_mask is not None:
+            out = out * token_mask.to(out.dtype)
         return out
 
 
@@ -1231,18 +1229,8 @@ class BidirectionalGDNTriton(BidirectionalGDN):
             ``(B, N_local, C)`` after attention + (optional) output gate
             + projection.
         """
-        import torch.distributed as dist
-
-        from diffusion.distributed.context_parallel.config import get_cp_group
-        from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-        from diffusion.model.ops.fused_gdn_cp import cp_fused_gdn_chunkwise_raw_autograd
-
         del mask, block_mask  # unused on this path
 
-        if kwargs.get("frame_valid_mask", None) is not None:
-            raise NotImplementedError(
-                "BidirectionalGDNTriton CP-Triton path does not support " "frame_valid_mask (training-only feature)."
-            )
         if self.conv_q is not None or self.conv_v is not None:
             raise NotImplementedError(
                 "BidirectionalGDNTriton CP-Triton path supports k_conv_only="
@@ -1258,6 +1246,16 @@ class BidirectionalGDNTriton(BidirectionalGDN):
         if C != H * D:
             raise ValueError(f"C={C} != heads*dim={H * D}.")
 
+        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
+            kwargs.get("frame_valid_mask", None),
+            B=B,
+            T=T,
+            S=S,
+            device=x.device,
+            dtype=x.dtype,
+        )
+        token_mask = token_valid_mask.view(B, N, 1) if token_valid_mask is not None else None
+
         cp_group = get_cp_group()
         if cp_group is None:
             raise RuntimeError(
@@ -1266,11 +1264,18 @@ class BidirectionalGDNTriton(BidirectionalGDN):
 
         # ---- 1. QKV projection on the CP-local slice. ---------------------
         qkv = self.qkv(x).reshape(B, N, 3, H, D)
+        if token_mask is not None:
+            qkv = qkv * token_mask[:, :, None, None]
 
         # ---- 2. Bidirectional short conv on K (parent method). ----
         if self.conv_k is not None:
             k_raw = qkv[:, :, 1].contiguous().reshape(B, N, C)
-            k_conv = self._apply_temporal_short_conv(k_raw, self.conv_k, HW)
+            k_conv = self._apply_temporal_short_conv(
+                k_raw,
+                self.conv_k,
+                HW,
+                frame_valid_mask=kwargs.get("frame_valid_mask"),
+            )
             qkv = qkv.clone()
             qkv[:, :, 1] = k_conv.reshape(B, N, H, D)
 
@@ -1280,6 +1285,9 @@ class BidirectionalGDNTriton(BidirectionalGDN):
             beta, decay = precomputed_gates
         else:
             beta, decay = self._compute_frame_gates(x, HW)
+        if beta_valid_mask is not None:
+            beta = torch.where(beta_valid_mask.bool(), beta, 0.0)
+            decay = torch.where(decay_valid_mask.bool(), decay, 1.0)
         beta = beta.contiguous()
         decay = decay.contiguous()
 
@@ -1424,6 +1432,8 @@ class BidirectionalGDNTriton(BidirectionalGDN):
         if apply_output_gate:
             out = self._apply_output_gate(out, x)
             out = self.proj(out.to(self.proj.weight.dtype))
+        if token_mask is not None:
+            out = out * token_mask.to(out.dtype)
         return out
 
     def forward(
@@ -1439,10 +1449,6 @@ class BidirectionalGDNTriton(BidirectionalGDN):
         if HW is None:
             raise ValueError("BidirectionalGDNTriton requires HW=(T, H, W).")
         if cp_enabled():
-            from diffusion.distributed.context_parallel.config import (
-                get_cp_triton_block_fusion,
-            )
-
             if not get_cp_triton_block_fusion():
                 raise NotImplementedError(
                     "BidirectionalGDNTriton context-parallel execution requires "
@@ -1692,10 +1698,6 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
     ) -> torch.Tensor:
         # ---- Guards: no CP, k_conv_only=True (apply in either mode). ----
         if cp_enabled():
-            from diffusion.distributed.context_parallel.config import (
-                get_cp_triton_block_fusion,
-            )
-
             if not get_cp_triton_block_fusion():
                 raise NotImplementedError(
                     "BidirectionalGDNUCPESinglePathLiteLABothTriton context-parallel "
@@ -1870,20 +1872,7 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
           reverse scan is used (the eager bidi cam path).
         * Bidirectional camera runs full sequence end-to-end.
         """
-        import torch.distributed as dist
-
-        from diffusion.distributed.context_parallel.config import get_cp_group
-        from diffusion.distributed.context_parallel.distributed_scan import cp_frame_gdn_scan
-        from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
-        from diffusion.model.ops.frame_gdn.api import _build_transition_matrices
-        from diffusion.model.ops.fused_gdn_cp import cp_fused_cam_gdn_num_autograd
-
-        # ---- Guards: training-only / Q-V conv rejections. ----
-        if kwargs.get("frame_valid_mask", None) is not None:
-            raise NotImplementedError(
-                "BidirectionalGDNUCPESinglePathLiteLABothTriton CP-Triton "
-                "cam branch does not support frame_valid_mask (training-only feature)."
-            )
+        # ---- Guards: Q/V conv rejections. ----
         if self.conv_q_cam is not None or self.conv_v_cam is not None:
             raise NotImplementedError(
                 "BidirectionalGDNUCPESinglePathLiteLABothTriton CP-Triton "
@@ -1897,6 +1886,16 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
         H_heads = self.cam_heads
         D_head = self.cam_head_dim
 
+        token_valid_mask, beta_valid_mask, decay_valid_mask = self._prepare_frame_valid_masks(
+            kwargs.get("frame_valid_mask", None),
+            B=B,
+            T=T,
+            S=S,
+            device=x.device,
+            dtype=x.dtype,
+        )
+        token_mask = token_valid_mask.view(B, N, 1) if token_valid_mask is not None else None
+
         cp_group = get_cp_group()
         if cp_group is None:
             raise RuntimeError("_forward_cam_branch_cp_triton_ag (bidi) called but CP group is not initialized.")
@@ -1905,12 +1904,19 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
         qkv_w = torch.cat([self.q_proj_cam.weight, self.k_proj_cam.weight, self.v_proj_cam.weight])
         qkv_b = torch.cat([self.q_proj_cam.bias, self.k_proj_cam.bias, self.v_proj_cam.bias])
         qkv_cam = torch.nn.functional.linear(x, qkv_w, qkv_b)
+        if token_mask is not None:
+            qkv_cam = qkv_cam * token_mask
         q_raw, k_raw, v_raw = qkv_cam.chunk(3, dim=-1)
 
         if self.conv_k_cam is not None:
             # Parent (BidirectionalGDN._apply_temporal_short_conv) handles
             # CP halo exchange internally.
-            k_raw = self._apply_temporal_short_conv(k_raw, self.conv_k_cam, HW)
+            k_raw = self._apply_temporal_short_conv(
+                k_raw,
+                self.conv_k_cam,
+                HW,
+                frame_valid_mask=kwargs.get("frame_valid_mask"),
+            )
 
         q_raw = q_raw.contiguous().view(B, N, H_heads, D_head).contiguous()
         k_raw = k_raw.contiguous().view(B, N, H_heads, D_head).contiguous()
@@ -1997,6 +2003,9 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
         else:
             assert beta.shape == (B, H_heads, T, S), f"beta shape {beta.shape}"
             beta_bhfs = beta.contiguous()
+        if beta_valid_mask is not None:
+            beta_bhfs = torch.where(beta_valid_mask.bool(), beta_bhfs, 0.0)
+            decay = torch.where(decay_valid_mask.bool(), decay, 1.0)
         decay = decay.contiguous()
 
         q_cam_trans = q_cam_trans.contiguous()
@@ -2103,4 +2112,6 @@ class BidirectionalGDNUCPESinglePathLiteLABothTriton(BidirectionalGDNUCPESingleP
         )
         out = apply_fn_o(out.transpose(-1, -2)).transpose(-1, -2).contiguous()
         out = out.reshape(B, self.cam_dim, -1).permute(0, 2, 1)
+        if token_mask is not None:
+            out = out * token_mask.to(out.dtype)
         return out

@@ -319,7 +319,7 @@ def _chunk_index_from_config(config: SanaVideoCamCtrlConfig, num_frames: int) ->
 
 def _pad_and_split_cp(clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask, cp_size: int):
     if cp_size <= 1:
-        return clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask
+        return clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask, None
 
     from diffusion.distributed.context_parallel import (
         cp_broadcast_tensor,
@@ -336,6 +336,7 @@ def _pad_and_split_cp(clean_images, noise, timesteps, camera_conditions, chunk_p
 
     local_world = dist.get_world_size(cp_group)
     pad_frames = cp_right_pad_size(clean_images.shape[2], local_world)
+    frame_valid_mask = None
     if pad_frames > 0:
         clean_images = cp_right_pad_temporal(clean_images, dim=2, pad_size=pad_frames, value=0.0)
         noise = cp_right_pad_temporal(noise, dim=2, pad_size=pad_frames, value=0.0)
@@ -362,7 +363,6 @@ def _pad_and_split_cp(clean_images, noise, timesteps, camera_conditions, chunk_p
         cp_broadcast_tensor(chunk_plucker, cp_group)
     if loss_mask is not None:
         cp_broadcast_tensor(loss_mask, cp_group)
-
     clean_images = cp_split_temporal(clean_images, dim=2, group=cp_group).contiguous()
     noise = cp_split_temporal(noise, dim=2, group=cp_group).contiguous()
     if isinstance(timesteps, torch.Tensor) and timesteps.ndim >= 3:
@@ -373,7 +373,9 @@ def _pad_and_split_cp(clean_images, noise, timesteps, camera_conditions, chunk_p
         chunk_plucker = cp_split_temporal(chunk_plucker, dim=2, group=cp_group).contiguous()
     if loss_mask is not None:
         loss_mask = cp_split_temporal(loss_mask, dim=2, group=cp_group).contiguous()
-    return clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask
+    if frame_valid_mask is not None:
+        frame_valid_mask = cp_split_temporal(frame_valid_mask, dim=2, group=cp_group).contiguous()
+    return clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask, frame_valid_mask
 
 
 def _build_timesteps(
@@ -669,14 +671,16 @@ def main(cfg: SanaVideoCamCtrlConfig) -> None:
             loss_mask = _build_i2v_loss_mask(clean_images, do_i2v)
             timesteps, _ = _build_timesteps(config, clean_images, global_t, do_i2v, time_sampler=time_sampler)
             noise = torch.randn_like(clean_images)
-            clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask = _pad_and_split_cp(
-                clean_images,
-                noise,
-                timesteps,
-                camera_conditions,
-                chunk_plucker,
-                loss_mask,
-                cp_size,
+            clean_images, noise, timesteps, camera_conditions, chunk_plucker, loss_mask, frame_valid_mask = (
+                _pad_and_split_cp(
+                    clean_images,
+                    noise,
+                    timesteps,
+                    camera_conditions,
+                    chunk_plucker,
+                    loss_mask,
+                    cp_size,
+                )
             )
             full_t = clean_images.shape[2] * cp_size if cp_size > 1 else clean_images.shape[2]
             chunk_index_global = _chunk_index_from_config(config, full_t)
@@ -707,6 +711,8 @@ def main(cfg: SanaVideoCamCtrlConfig) -> None:
                 model_kwargs["camera_conditions"] = camera_conditions
             if chunk_plucker is not None:
                 model_kwargs["chunk_plucker"] = chunk_plucker
+            if frame_valid_mask is not None:
+                model_kwargs["frame_valid_mask"] = frame_valid_mask
 
             with accelerator.accumulate(model):
                 optimizer.zero_grad(set_to_none=True)

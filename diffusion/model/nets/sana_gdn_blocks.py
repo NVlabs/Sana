@@ -22,30 +22,34 @@ import math
 import os
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-from einops import rearrange
 from fla.modules import ShortConvolution
 from timm.models.vision_transformer import Attention as Attention_
+from torch.distributed.nn import functional as dist_nn
 
+from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
+from diffusion.distributed.context_parallel.halo_exchange import cp_halo_exchange
 from diffusion.model.liger_norms import get_rmsnorm_class
-from diffusion.utils.chunk_utils import (
-    chunk_index_from_chunk_size,
-    is_chunk_causal_request,
-    is_uniform_chunking,
-    normalize_chunk_index,
-    size1_chunk_position_indices,
+from diffusion.model.registry import ATTENTION_BLOCKS
+from diffusion.model.ops.fused_streaming import (
+    _SLOT_FWD_KV,
+    _SLOT_FWD_Z,
+    _SLOT_TYPE_FLAG,
+    _TYPE_CONCAT,
+    _cached_gdn_forward_triton,
+    _slice_rope_to_current_chunk,
 )
+from diffusion.utils.chunk_utils import normalize_chunk_index
 
 RMSNorm = get_rmsnorm_class()
-from diffusion.model.registry import ATTENTION_BLOCKS
 
 # Gate ``@torch.compile`` on all GDN scan / helper functions via
 # ``GDN_DISABLE_COMPILE``.  When set to anything other than ``"0"`` / ``"false"``,
 # compile is disabled (useful for debugging / parity work).
 _COMPILE_DISABLE = os.environ.get("GDN_DISABLE_COMPILE", "0") not in ("0", "false")
 
-_HAS_FLEX_ATTENTION = bool(int(os.environ.get("SANA_USE_FLEX_ATTENTION", "0")))
 _SDPA_D112_DIRECT = os.environ.get("SANA_WM_SDPA_D112_DIRECT", "").strip().lower() in {
     "1",
     "true",
@@ -532,14 +536,18 @@ class BidirectionalGDN(GDN):
             x: Input tensor of shape (B, N, C) where N = T * S.
             conv: FLA ``ShortConvolution`` module.
             HW: Tuple of (T, H, W) describing the token layout.
-            **kwargs: Unused.
+            **kwargs: ``frame_valid_mask`` enables the WM score-model CP path.
 
         Returns:
             Tensor of shape (B, N, C) after bidirectional temporal conv.
         """
-        del kwargs
-
         x, B, S, T = self._reshape_to_temporal(x, HW)
+        if kwargs.get("frame_valid_mask") is not None:
+            if cp_enabled():
+                halo = int(conv.weight.shape[-1]) - 1
+                x = cp_halo_exchange(x, left_size=halo, right_size=halo, dim=1, group=get_cp_group())
+                x = self._bidirectional_causal_conv_1d(x, conv)[:, halo : halo + T]
+                return self._reshape_from_temporal(x, B, S, T)
         x = self._bidirectional_causal_conv_1d(x, conv)
         return self._reshape_from_temporal(x, B, S, T)
 
@@ -659,6 +667,15 @@ class ChunkCausalGDN(GDN):
         parts: list[torch.Tensor] = []
         for start_t, end_t in bounds:
             seg = x[:, start_t:end_t, :]
+            if end_t - start_t == 1:
+                # FLA's ShortConvolution update kernel does not support a
+                # length-1 sequence without a cache.  For one position the
+                # causal convolution is exactly its center tap (plus bias).
+                seg_out = seg * conv.weight[:, 0, -1].view(1, 1, -1)
+                if conv.bias is not None:
+                    seg_out = seg_out + conv.bias.view(1, 1, -1)
+                parts.append(seg_out)
+                continue
             seg_out, _ = conv(seg.flip(1))
             parts.append(seg_out.flip(1))
         return torch.cat(parts, dim=1)
@@ -694,12 +711,36 @@ class ChunkCausalGDN(GDN):
         """
         chunk_size = kwargs.get("chunk_size")
         chunk_index = kwargs.get("chunk_index")
+        chunk_index_global = kwargs.get("chunk_index_global")
         chunk_split_strategy = kwargs.get("chunk_split_strategy", "uniform")
 
         dtype_in = x.dtype
         x, B, S, T = self._reshape_to_temporal(x, HW)
 
-        # NOTE: CP removed — single-GPU path only.
+        if cp_enabled() and get_cp_group() is not None and conv.weight.shape[-1] > 1:
+            cp_group = get_cp_group()
+            halo = int(conv.weight.shape[-1]) - 1
+
+            x_fwd = cp_halo_exchange(x, left_size=halo, right_size=0, dim=1, group=cp_group).contiguous()
+            y_fwd = self._causal_conv_1d(x_fwd, conv)[:, halo:]
+
+            cp_rank = dist.get_rank(cp_group)
+            cp_world = dist.get_world_size(cp_group)
+            global_start = cp_rank * T
+            x_global = torch.cat(dist_nn.all_gather(x.contiguous(), group=cp_group), dim=1)
+            y_bwd_global = self._backward_causal_conv_per_chunk(
+                x_global,
+                conv,
+                T * cp_world,
+                chunk_size,
+                chunk_index_global,
+                chunk_split_strategy,
+            )
+            y_bwd = y_bwd_global[:, global_start : global_start + T]
+            center = x * conv.weight[:, 0, -1].view(1, 1, -1)
+            y = y_fwd + y_bwd - center
+            return self._reshape_from_temporal(y.to(dtype_in), B, S, T)
+
         # 1. Global forward causal conv (cross-chunk context flows forward).
         y_fwd, _ = conv(x)
 
@@ -757,8 +798,6 @@ def _forward_softmax_attn(
     softmax attention instead of the gated-delta recurrence. Reuses the
     parent block's QKV/q_norm/k_norm/proj for parameter compatibility.
     """
-    import torch.nn.functional as F
-
     B, N, C = x.shape
     T, H, W = HW
     S = H * W
@@ -801,12 +840,37 @@ def _forward_softmax_attn(
     v = v.transpose(1, 2)
 
     dtype_orig = x.dtype
+    token_valid_mask_global = token_valid_mask
     if q.dtype == torch.float32:
         q, k, v = q.bfloat16(), k.bfloat16(), v.bfloat16()
 
-    attn_mask = _get_frame_causal_mask(T, S, x.device) if frame_causal else None
+    if token_valid_mask is not None:
+        if cp_enabled():
+            cp_group = get_cp_group()
+            k = torch.cat(dist_nn.all_gather(k.contiguous(), group=cp_group), dim=2)
+            v = torch.cat(dist_nn.all_gather(v.contiguous(), group=cp_group), dim=2)
+            token_valid_mask_global = torch.cat(
+                dist_nn.all_gather(token_valid_mask.contiguous(), group=cp_group), dim=1
+            )
 
-    out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
+    attn_mask = _get_frame_causal_mask(T, S, x.device) if frame_causal else None
+    if token_valid_mask_global is not None and not bool(token_valid_mask_global.all()):
+        valid_key_mask = token_valid_mask_global.bool().view(B, 1, 1, -1)
+        attn_mask = valid_key_mask if attn_mask is None else attn_mask & valid_key_mask
+
+    head_dim = q.shape[-1]
+    padded_head = token_valid_mask is not None and _sdpa_needs_head_pad(head_dim)
+    if padded_head:
+        pad_to = 128 if head_dim <= 128 else 256
+        q = F.pad(q, (0, pad_to - head_dim))
+        k = F.pad(k, (0, pad_to - head_dim))
+        v = F.pad(v, (0, pad_to - head_dim))
+    if padded_head:
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, scale=head_dim**-0.5)
+    else:
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
+    if padded_head:
+        out = out[..., :head_dim]
     out = out.transpose(1, 2).reshape(B, N, C).to(dtype_orig)
 
     if apply_output_gate:
@@ -815,122 +879,14 @@ def _forward_softmax_attn(
         if hasattr(self, "proj_gate"):
             out = out * F.silu(self.proj_gate(x))
         out = self.proj(out)
+    if token_valid_mask is not None:
+        out = out * token_valid_mask.view(B, N, 1).to(out.dtype)
     return out
 
 
 # ---------------------------------------------------------------------------
 # Chunk-causal softmax attention for hybrid GDN-Softmax architectures
 # ---------------------------------------------------------------------------
-
-# flex_attention for chunk-causal softmax (single-kernel, no O(N^2) mask).
-try:
-    from torch.nn.attention.flex_attention import BlockMask, create_block_mask
-    from torch.nn.attention.flex_attention import flex_attention as _flex_attention_raw
-
-    _flex_attention = torch.compile(_flex_attention_raw, dynamic=False, mode="max-autotune-no-cudagraphs")
-    _HAS_FLEX_ATTENTION_CHUNK = True
-except ImportError:
-    _HAS_FLEX_ATTENTION_CHUNK = False
-
-_chunk_causal_block_mask_cache: dict[tuple, BlockMask] = {}
-
-
-def _get_chunk_causal_block_mask(
-    chunk_boundaries: list[int],
-    S: int,
-    q_len: int,
-    kv_len: int,
-    q_frame_offset: int,
-    device: torch.device,
-) -> BlockMask:
-    """Build a flex_attention BlockMask for chunk-causal attention.
-
-    Token ``q_idx`` can attend to ``kv_idx`` iff ``chunk(q) >= chunk(kv)``,
-    i.e. ``kv_idx < chunk_end(q)``.  Uses the HiAR pattern: precompute an
-    ``ends`` tensor mapping each token to its chunk's exclusive end token
-    index.  Results are cached by
-    ``(chunk_boundaries, S, q_len, kv_len, q_frame_offset, device)``.
-    """
-    cache_key = (tuple(chunk_boundaries), S, q_len, kv_len, q_frame_offset, device)
-    if cache_key in _chunk_causal_block_mask_cache:
-        return _chunk_causal_block_mask_cache[cache_key]
-
-    # flex_attention requires Q_LEN and KV_LEN to be multiples of 128.
-    q_pad = (128 - q_len % 128) % 128
-    kv_pad = (128 - kv_len % 128) % 128
-    Q_LEN = q_len + q_pad
-    KV_LEN = kv_len + kv_pad
-
-    # Build per-token ``ends`` array: ends[tok] = exclusive end token index
-    # of the chunk that ``tok`` belongs to (in global KV token space).
-    # Padded tokens map to KV_LEN so they attend to everything (masked later).
-    ends_kv = torch.full((KV_LEN,), KV_LEN, device=device, dtype=torch.long)
-    for ci in range(len(chunk_boundaries) - 1):
-        tok_start = chunk_boundaries[ci] * S
-        tok_end = chunk_boundaries[ci + 1] * S
-        if tok_end > KV_LEN:
-            tok_end = KV_LEN
-        if tok_start < KV_LEN:
-            ends_kv[tok_start:tok_end] = tok_end
-
-    # For Q tokens: map local Q index -> global token, then look up chunk end.
-    q_offset_tokens = q_frame_offset * S
-    ends_q = torch.full((Q_LEN,), KV_LEN, device=device, dtype=torch.long)
-    for qi in range(min(q_len, Q_LEN)):
-        global_qi = qi + q_offset_tokens
-        if global_qi < len(ends_kv):
-            ends_q[qi] = ends_kv[global_qi]
-
-    def mask_fn(b, h, q_idx, kv_idx):
-        return kv_idx < ends_q[q_idx]
-
-    block_mask = create_block_mask(
-        mask_fn,
-        B=None,
-        H=None,
-        Q_LEN=Q_LEN,
-        KV_LEN=KV_LEN,
-        _compile=False,
-        device=device,
-    )
-
-    _chunk_causal_block_mask_cache[cache_key] = block_mask
-    return block_mask
-
-
-_chunk_causal_mask_cache: dict[tuple, torch.Tensor] = {}
-
-
-def _get_chunk_causal_mask(
-    T: int,
-    S: int,
-    chunk_boundaries: list[int],
-    device: torch.device,
-) -> torch.Tensor:
-    """Chunk-wise block-causal mask for video generation.
-
-    Full attention within each chunk (all spatial tokens across all frames
-    in the chunk attend to each other), causal across chunks (tokens in
-    chunk C attend to all tokens in chunks 0..C only).
-
-    Args:
-        T: Number of temporal frames.
-        S: Number of spatial tokens per frame (``H * W``).
-        chunk_boundaries: Sorted chunk boundary list ``[0, c1, ..., T]``.
-        device: Target device for the mask tensor.
-
-    Returns:
-        Boolean mask ``(1, 1, T*S, T*S)`` where ``True`` = allowed to attend.
-    """
-    key = (T, S, tuple(chunk_boundaries), device)
-    if key not in _chunk_causal_mask_cache:
-        frame_to_chunk = torch.zeros(T, device=device, dtype=torch.long)
-        for i in range(len(chunk_boundaries) - 1):
-            frame_to_chunk[chunk_boundaries[i] : chunk_boundaries[i + 1]] = i
-        token_to_chunk = frame_to_chunk.repeat_interleave(S)
-        mask = token_to_chunk.unsqueeze(1) >= token_to_chunk.unsqueeze(0)
-        _chunk_causal_mask_cache[key] = mask.unsqueeze(0).unsqueeze(0)
-    return _chunk_causal_mask_cache[key]
 
 
 def _forward_softmax_attn_chunk_causal(
@@ -944,7 +900,7 @@ def _forward_softmax_attn_chunk_causal(
     apply_output_gate: bool = True,
     **kwargs: object,
 ) -> torch.Tensor:
-    """Chunk-causal softmax attention (SDPA / flex_attention) reusing GDN parameters.
+    """Chunk-causal softmax attention using SDPA and GDN parameters.
 
     Used by ``ChunkCausalSoftmaxAttn``.  Reuses ``qkv``, ``q_norm``,
     ``k_norm``, ``proj``, and the output gate from the parent ``GDN``
@@ -993,51 +949,46 @@ def _forward_softmax_attn_chunk_causal(
     v = v.transpose(1, 2)
 
     dtype_orig = x.dtype
+    token_valid_mask_global = token_valid_mask
     if q.dtype == torch.float32:
         q, k, v = q.bfloat16(), k.bfloat16(), v.bfloat16()
 
-    # NOTE: CP removed — single-GPU path only.
+    q_frame_offset = 0
+    chunk_index_for_mask = chunk_index
+    if cp_enabled() and get_cp_group() is not None:
+        cp_group = get_cp_group()
+        cp_rank = dist.get_rank(cp_group)
+        cp_world = dist.get_world_size(cp_group)
+        k = torch.cat(dist_nn.all_gather(k.contiguous(), group=cp_group), dim=2)
+        v = torch.cat(dist_nn.all_gather(v.contiguous(), group=cp_group), dim=2)
+        if token_valid_mask is not None:
+            token_valid_mask_global = torch.cat(
+                dist_nn.all_gather(token_valid_mask.contiguous(), group=cp_group), dim=1
+            )
+        q_frame_offset = cp_rank * T
+        T = T * cp_world
+        chunk_index_for_mask = kwargs.get("chunk_index_global", chunk_index)
+
+    invalid_key_mask = None
+    if token_valid_mask_global is not None and not bool(token_valid_mask_global.all()):
+        invalid_key_mask = token_valid_mask_global.bool().view(B, 1, 1, -1)
+
     _chunk_causal = chunk_size is not None and chunk_size < T
 
     if _chunk_causal:
-        chunk_boundaries, _ = normalize_chunk_index(chunk_index, T, chunk_size, chunk_split_strategy)
-        q_len = T * S
-        kv_len = T * S
-        q_frame_offset = 0
-
-        if _HAS_FLEX_ATTENTION_CHUNK:
-            # flex_attention: single compiled kernel with block-sparse mask.
-            block_mask = _get_chunk_causal_block_mask(chunk_boundaries, S, q_len, kv_len, q_frame_offset, x.device)
-            q_pad = (128 - q_len % 128) % 128
-            kv_pad = (128 - kv_len % 128) % 128
-            if q_pad > 0:
-                q = F.pad(q, (0, 0, 0, q_pad))
-            if kv_pad > 0:
-                k = F.pad(k, (0, 0, 0, kv_pad))
-                v = F.pad(v, (0, 0, 0, kv_pad))
-            out = _flex_attention(q, k, v, block_mask=block_mask)
-            if q_pad > 0:
-                out = out[:, :, :q_len, :]
-        else:
-            # Fallback: per-chunk loop with head_dim padding for FlashAttention.
-            D = q.shape[-1]
-            _need_pad = _sdpa_needs_head_pad(D)
-            if _need_pad:
-                _pad_to = 128 if D <= 128 else 256
-                _pad_size = _pad_to - D
-                q = F.pad(q, (0, _pad_size))
-                k = F.pad(k, (0, _pad_size))
-                v = F.pad(v, (0, _pad_size))
-            out_chunks: list[torch.Tensor] = []
-            for ci in range(len(chunk_boundaries) - 1):
-                c_start = chunk_boundaries[ci]
-                c_end = chunk_boundaries[ci + 1]
-                q_chunk = q[:, :, c_start * S : c_end * S, :]
-                out_chunk = F.scaled_dot_product_attention(q_chunk, k[:, :, : c_end * S, :], v[:, :, : c_end * S, :])
-                out_chunks.append(out_chunk)
-            out = torch.cat(out_chunks, dim=2)
-            if _need_pad:
-                out = out[..., :D]
+        out = _sdpa_maybe_chunk_causal(
+            q,
+            k,
+            v,
+            need_chunk_mask=True,
+            T=T,
+            S=S,
+            chunk_size=chunk_size,
+            chunk_index=chunk_index_for_mask,
+            chunk_split_strategy=chunk_split_strategy,
+            q_frame_offset=q_frame_offset,
+            attn_mask=invalid_key_mask,
+        )
     else:
         # Fully bidirectional softmax (no chunking).
         D = q.shape[-1]
@@ -1048,7 +999,13 @@ def _forward_softmax_attn_chunk_causal(
             q = F.pad(q, (0, _pad_size))
             k = F.pad(k, (0, _pad_size))
             v = F.pad(v, (0, _pad_size))
-        out = F.scaled_dot_product_attention(q, k, v)
+        out = F.scaled_dot_product_attention(
+            q,
+            k,
+            v,
+            attn_mask=invalid_key_mask,
+            scale=D**-0.5 if _need_pad else None,
+        )
         if _need_pad:
             out = out[..., :D]
 
@@ -1077,11 +1034,10 @@ class ChunkCausalSoftmaxAttn(ChunkCausalGDN):
     ``A_log``, ``dt_bias``, ``recall_gate``) are present but unused in
     forward.
 
-    Uses ``F.scaled_dot_product_attention`` (or ``flex_attention`` when
-    available) with a chunk-wise causal mask: full bidirectional attention
-    within each chunk, causal across chunks.  This matches the attention
-    pattern of ``ChunkCausalGDN`` while using exact softmax instead of the
-    linear GDN recurrence.
+    Uses ``F.scaled_dot_product_attention`` per chunk: full bidirectional
+    attention within each chunk and causal attention across chunks.  This
+    matches the attention pattern of ``ChunkCausalGDN`` while using exact
+    softmax instead of the linear GDN recurrence.
     """
 
     def __init__(self, *args: object, conv_kernel_size: int = 0, **kwargs: object) -> None:
@@ -1143,7 +1099,8 @@ def _sdpa_maybe_chunk_causal(
     chunk_size: int | None,
     chunk_index: list[int] | None,
     chunk_split_strategy: str,
-    device: torch.device,
+    q_frame_offset: int = 0,
+    attn_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Run SDPA with chunk-causal masking when needed, or plain SDPA otherwise.
 
@@ -1156,26 +1113,9 @@ def _sdpa_maybe_chunk_causal(
     """
     if need_chunk_mask:
         chunk_boundaries, _ = normalize_chunk_index(chunk_index, T, chunk_size, chunk_split_strategy)
-        q_len = T * S
-        kv_len = T * S
-
-        if _HAS_FLEX_ATTENTION:
-            block_mask = _get_chunk_causal_block_mask(chunk_boundaries, S, q_len, kv_len, 0, device)
-            q_pad = (128 - q_len % 128) % 128
-            kv_pad = (128 - kv_len % 128) % 128
-            if q_pad > 0:
-                q = F.pad(q, (0, 0, 0, q_pad))
-            if kv_pad > 0:
-                k = F.pad(k, (0, 0, 0, kv_pad))
-                v = F.pad(v, (0, 0, 0, kv_pad))
-            out = _flex_attention(q, k, v, block_mask=block_mask)
-            if q_pad > 0:
-                out = out[:, :, :q_len, :]
-            return out
-
-        # Fallback: per-chunk loop with head_dim padding for FlashAttention.
+        q_len = q.shape[2]
         D = q.shape[-1]
-        _need_pad = D not in (32, 64, 128, 256) and D < 256
+        _need_pad = _sdpa_needs_head_pad(D)
         if _need_pad:
             _pad_to = 128 if D <= 128 else 256
             _pad_size = _pad_to - D
@@ -1183,14 +1123,21 @@ def _sdpa_maybe_chunk_causal(
             k = F.pad(k, (0, _pad_size))
             v = F.pad(v, (0, _pad_size))
         out_chunks: list[torch.Tensor] = []
+        q_frame_end = q_frame_offset + q_len // S
         for ci in range(len(chunk_boundaries) - 1):
             c_start = chunk_boundaries[ci]
             c_end = chunk_boundaries[ci + 1]
-            q_chunk = q[:, :, c_start * S : c_end * S, :]
+            if c_end <= q_frame_offset or c_start >= q_frame_end:
+                continue
+            q_start = max(c_start, q_frame_offset) - q_frame_offset
+            q_end = min(c_end, q_frame_end) - q_frame_offset
+            q_chunk = q[:, :, q_start * S : q_end * S, :]
             out_chunk = F.scaled_dot_product_attention(
                 q_chunk,
                 k[:, :, : c_end * S, :],
                 v[:, :, : c_end * S, :],
+                attn_mask=None if attn_mask is None else attn_mask[..., : c_end * S],
+                scale=D**-0.5 if _need_pad else None,
             )
             out_chunks.append(out_chunk)
         out = torch.cat(out_chunks, dim=2)
@@ -1200,14 +1147,20 @@ def _sdpa_maybe_chunk_causal(
 
     # Standard path: full SDPA (all cached tokens are causally prior).
     D = q.shape[-1]
-    _need_pad = D not in (32, 64, 128, 256) and D < 256
+    _need_pad = _sdpa_needs_head_pad(D)
     if _need_pad:
         _pad_to = 128 if D <= 128 else 256
         _pad_size = _pad_to - D
         q = F.pad(q, (0, _pad_size))
         k = F.pad(k, (0, _pad_size))
         v = F.pad(v, (0, _pad_size))
-    out = F.scaled_dot_product_attention(q, k, v)
+    out = F.scaled_dot_product_attention(
+        q,
+        k,
+        v,
+        attn_mask=attn_mask,
+        scale=D**-0.5 if _need_pad else None,
+    )
     if _need_pad:
         out = out[..., :D]
     return out
@@ -1235,8 +1188,6 @@ class CachedChunkCausalGDN(ChunkCausalGDN):
         chunk_index: list[int] | None = None,
         **kwargs: object,
     ) -> tuple[torch.Tensor, list]:
-        from diffusion.model.ops.fused_streaming import _cached_gdn_forward_triton
-
         if kwargs.get("kv_cache", None) is None:
             raise RuntimeError("CachedChunkCausalGDN requires kv_cache to be provided " "(streaming inference only).")
         del mask, block_mask, chunk_split_strategy, chunk_index
@@ -1273,14 +1224,6 @@ class CachedChunkCausalSoftmaxAttn(ChunkCausalSoftmaxAttn):
         chunk_index: list[int] | None = None,
         **kwargs: object,
     ) -> torch.Tensor | tuple[torch.Tensor, list]:
-        from diffusion.model.ops.fused_streaming import (
-            _SLOT_FWD_KV,
-            _SLOT_FWD_Z,
-            _SLOT_TYPE_FLAG,
-            _TYPE_CONCAT,
-            _slice_rope_to_current_chunk,
-        )
-
         kv_cache = kwargs.get("kv_cache", None)
         save_kv_cache = kwargs.get("save_kv_cache", False)
 
@@ -1353,7 +1296,6 @@ class CachedChunkCausalSoftmaxAttn(ChunkCausalSoftmaxAttn):
             chunk_size=chunk_size,
             chunk_index=chunk_index,
             chunk_split_strategy=chunk_split_strategy,
-            device=x.device,
         )
 
         if out.dtype != dtype_orig:

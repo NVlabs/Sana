@@ -36,13 +36,13 @@ with zipfile.ZipFile(raw_zip, "w", compression=zipfile.ZIP_STORED) as zf:
     )
 
 rng = np.random.default_rng(3407)
-latent = rng.standard_normal((128, 24, 22, 40), dtype=np.float32)
+latent = rng.standard_normal((128, 25, 22, 40), dtype=np.float32)
 buf = io.BytesIO()
 np.savez(buf, z=latent)
 with zipfile.ZipFile(cache_zip, "w", compression=zipfile.ZIP_STORED) as zf:
     zf.writestr(f"{key}.npz", buf.getvalue())
 
-num_pixel_frames = 192
+num_pixel_frames = 193
 poses = np.repeat(np.eye(4, dtype=np.float32)[None], num_pixel_frames, axis=0)
 poses[:, 2, 3] = np.linspace(0.0, 1.0, num_pixel_frames, dtype=np.float32)
 intrinsics = np.tile(np.array([760.0, 760.0, 640.0, 352.0], dtype=np.float32), (num_pixel_frames, 1))

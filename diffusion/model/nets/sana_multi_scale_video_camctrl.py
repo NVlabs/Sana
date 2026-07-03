@@ -21,11 +21,14 @@ import warnings
 from typing import Optional
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.layers import DropPath
+from torch.nn.attention.flex_attention import flex_attention
 
 from diffusion.model.builder import MODELS
+from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
 from diffusion.model.nets.basic_modules import ChunkGLUMBConvTemp, GLUMBConv, GLUMBConvTemp, Mlp
 from diffusion.model.nets.sana_blocks import (
     CaptionEmbedder,
@@ -71,8 +74,6 @@ _xformers_available = (
     and os.environ.get("DISABLE_XFORMERS", "0") != "1"
     and is_xformers_available()
 )
-if _xformers_available:
-    import xformers.ops
 
 
 class DeltaActionEmbedder(nn.Module):
@@ -929,12 +930,8 @@ class SanaMSVideoCamCtrl(Sana):
 
     def _compute_rope_with_cp(self, device: torch.device, h: int, w: int) -> torch.Tensor:
         """Compute RoPE frequencies with correct global positions under CP."""
-        from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
-
         if not cp_enabled():
             return self.rope((self.f, h, w), device)
-
-        import torch.distributed as dist
 
         cp_group = get_cp_group()
         if cp_group is None:
@@ -1265,8 +1262,6 @@ class SanaMSVideoCamCtrl(Sana):
         diag_width=1,
         multiplier=2,
     ):
-        from torch.nn.attention.flex_attention import flex_attention
-
         assert diag_width == multiplier, f"{diag_width} is not equivalent to {multiplier}"
 
         seq_len = context_length + num_frame * frame_size
@@ -1571,14 +1566,18 @@ class SanaMSVideoCamCtrlStreaming(SanaMSVideoCamCtrl):
     :class:`CachedSoftmaxUCPESinglePathLiteLA`) so each block accepts a
     per-block ``kv_cache`` slot and updates it in place.
 
-    The streaming entry point is :meth:`forward_long`, which the
-    self-forcing scheduler invokes directly. Plain :meth:`forward` is
-    inherited but will raise inside the cached attention because
-    ``kv_cache`` is mandatory — use the streaming sampler instead.
+    :meth:`forward` dispatches calls with ``start_f`` to :meth:`forward_long`;
+    calls without it follow the inherited behavior.
     """
 
     _camctrl_cls_gdn: type = CachedChunkCausalGDNUCPESinglePathLiteLA
     _camctrl_cls_softmax: type = CachedSoftmaxUCPESinglePathLiteLA
+    __call__ = nn.Module.__call__
+
+    def forward(self, x, timestep, y, mask=None, **kwargs):
+        if kwargs.get("start_f") is not None:
+            return self.forward_long(x, timestep, y, mask=mask, **kwargs)
+        return super().forward(x, timestep, y, mask=mask, **kwargs)
 
     # ------------------------------------------------------------------ #
     # AR KV-cache streaming forward
@@ -1944,17 +1943,6 @@ class SanaMSVideoCamCtrlStreaming(SanaMSVideoCamCtrl):
             block_output = self.get_block_output()
             self.block_output_buffer[self.inference_timestep] = block_output
         return x, kv_cache
-
-    def __call__(self, *args, **kwargs):
-        """Dispatch to :meth:`forward_long` when ``start_f`` is provided.
-
-        The self-forcing scheduler calls :meth:`forward_long` directly, but
-        the training-time longsana pipeline goes through ``__call__`` with
-        ``start_f`` set, so we keep this dispatch for backwards compat.
-        """
-        if kwargs.get("start_f") is not None:
-            return self.forward_long(*args, **kwargs)
-        return self.forward(*args, **kwargs)
 
 
 @MODELS.register_module()

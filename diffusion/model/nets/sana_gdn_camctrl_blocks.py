@@ -39,20 +39,32 @@ from __future__ import annotations
 from copy import deepcopy
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from fla.modules import ShortConvolution
+from torch.distributed.nn import functional as dist_nn
 
+from diffusion.distributed.context_parallel.config import cp_enabled, get_cp_group
+from diffusion.model.ops.fused_streaming import (
+    _SLOT_CAM,
+    _SLOT_CAM_AUX,
+    _cam_main_triton,
+    _cam_prep_triton,
+)
 from diffusion.model.registry import ATTENTION_BLOCKS
 
 from .sana_camctrl_blocks import _maybe_drop_cam_branch, prepare_prope_fns
 from .sana_gdn_blocks import (
     GDN,
     BidirectionalGDN,
+    CachedChunkCausalGDN,
+    CachedChunkCausalSoftmaxAttn,
     ChunkCausalGDN,
     _forward_softmax_attn,
+    _forward_softmax_attn_chunk_causal,
+    _sdpa_maybe_chunk_causal,
     _sdpa_needs_head_pad,
-    flip_and_shift,
 )
 
 # ---------------------------------------------------------------------------
@@ -492,26 +504,65 @@ def _forward_cam_branch_softmax(
     if q_sdpa.dtype == torch.float32:
         q_sdpa, k_sdpa, v_sdpa = q_sdpa.bfloat16(), k_sdpa.bfloat16(), v_sdpa.bfloat16()
 
+    key_valid_mask = token_valid_mask
+    attention_t = T
+    q_frame_offset = 0
+    chunk_index = kwargs.get("chunk_index")
+    if cp_enabled() and get_cp_group() is not None:
+        cp_group = get_cp_group()
+        cp_rank = dist.get_rank(cp_group)
+        cp_world = dist.get_world_size(cp_group)
+        k_sdpa = torch.cat(dist_nn.all_gather(k_sdpa.contiguous(), group=cp_group), dim=2)
+        v_sdpa = torch.cat(dist_nn.all_gather(v_sdpa.contiguous(), group=cp_group), dim=2)
+        if token_valid_mask is not None:
+            key_valid_mask = torch.cat(dist_nn.all_gather(token_valid_mask.contiguous(), group=cp_group), dim=1)
+        q_frame_offset = cp_rank * T
+        attention_t = T * cp_world
+        chunk_index = kwargs.get("chunk_index_global", chunk_index)
+
     invalid_kv_logit_bias = None
-    if token_valid_mask is not None and not bool(token_valid_mask.all()):
+    if key_valid_mask is not None and not bool(key_valid_mask.all()):
         invalid_kv_logit_bias = torch.where(
-            token_valid_mask.bool().view(B, 1, 1, -1),
+            key_valid_mask.bool().view(B, 1, 1, -1),
             torch.zeros((), dtype=q_sdpa.dtype, device=q_sdpa.device),
             torch.full((), -1e9, dtype=q_sdpa.dtype, device=q_sdpa.device),
         )
 
-    # FlashAttention-2 only supports head_dim in {32, 64, 128, 256}.
-    D = q_sdpa.shape[-1]
-    _need_pad = D not in (32, 64, 128, 256) and D < 256
-    if _need_pad:
-        _pad_to = 128 if D <= 128 else 256
-        _pad_size = _pad_to - D
-        q_sdpa = F.pad(q_sdpa, (0, _pad_size))
-        k_sdpa = F.pad(k_sdpa, (0, _pad_size))
-        v_sdpa = F.pad(v_sdpa, (0, _pad_size))
-    out = F.scaled_dot_product_attention(q_sdpa, k_sdpa, v_sdpa, attn_mask=invalid_kv_logit_bias)
-    if _need_pad:
-        out = out[..., :D]
+    chunk_size = kwargs.get("chunk_size")
+    need_chunk_mask = chunk_size is not None and chunk_size < attention_t
+    if need_chunk_mask:
+        out = _sdpa_maybe_chunk_causal(
+            q_sdpa,
+            k_sdpa,
+            v_sdpa,
+            need_chunk_mask=True,
+            T=attention_t,
+            S=S,
+            chunk_size=chunk_size,
+            chunk_index=chunk_index,
+            chunk_split_strategy=str(kwargs.get("chunk_split_strategy", "uniform")),
+            q_frame_offset=q_frame_offset,
+            attn_mask=invalid_kv_logit_bias,
+        )
+    else:
+        # FlashAttention-2 only supports head_dim in {32, 64, 128, 256}.
+        D = q_sdpa.shape[-1]
+        _need_pad = _sdpa_needs_head_pad(D)
+        if _need_pad:
+            _pad_to = 128 if D <= 128 else 256
+            _pad_size = _pad_to - D
+            q_sdpa = F.pad(q_sdpa, (0, _pad_size))
+            k_sdpa = F.pad(k_sdpa, (0, _pad_size))
+            v_sdpa = F.pad(v_sdpa, (0, _pad_size))
+        out = F.scaled_dot_product_attention(
+            q_sdpa,
+            k_sdpa,
+            v_sdpa,
+            attn_mask=invalid_kv_logit_bias,
+            scale=D**-0.5 if _need_pad else None,
+        )
+        if _need_pad:
+            out = out[..., :D]
 
     out = out.transpose(-1, -2)
     if out.dtype != dtype_orig:
@@ -554,16 +605,33 @@ class _SoftmaxUCPESinglePathLiteLA(
         chunk_size: int | None = None,
         **kwargs: object,
     ) -> torch.Tensor:
-        main_raw = _forward_softmax_attn(
-            self,
-            x,
-            HW,
-            rotary_emb,
-            frame_causal=False,
-            apply_output_gate=False,
-            chunk_size=chunk_size,
-            **kwargs,
-        )
+        if HW is None:
+            raise ValueError("HW must be provided for softmax attention.")
+        if chunk_size is not None:
+            softmax_kwargs = dict(kwargs)
+            chunk_split_strategy = str(softmax_kwargs.pop("chunk_split_strategy", "uniform"))
+            chunk_index = softmax_kwargs.pop("chunk_index", None)
+            main_raw = _forward_softmax_attn_chunk_causal(
+                self,
+                x,
+                HW,
+                rotary_emb,
+                chunk_size=chunk_size,
+                chunk_split_strategy=chunk_split_strategy,
+                chunk_index=chunk_index,
+                apply_output_gate=False,
+                **softmax_kwargs,
+            )
+        else:
+            main_raw = _forward_softmax_attn(
+                self,
+                x,
+                HW,
+                rotary_emb,
+                frame_causal=False,
+                apply_output_gate=False,
+                **kwargs,
+            )
 
         cam_contrib: torch.Tensor | int = 0
         camera_conditions = _maybe_drop_cam_branch(
@@ -630,8 +698,6 @@ class CachedChunkCausalGDNUCPESinglePathLiteLA(ChunkCausalGDNUCPESinglePathLiteL
         chunk_size: int | None = None,
         **kwargs: object,
     ) -> tuple[torch.Tensor, list]:
-        from .sana_gdn_blocks import CachedChunkCausalGDN
-
         kv_cache = kwargs.pop("kv_cache", None)
         save_kv_cache = kwargs.pop("save_kv_cache", False)
         if kv_cache is None:
@@ -670,8 +736,6 @@ class CachedChunkCausalGDNUCPESinglePathLiteLA(ChunkCausalGDNUCPESinglePathLiteL
                 kv_cache,
                 save_kv_cache,
                 precomputed_gates,
-                chunk_size=chunk_size,
-                **kwargs,
             )
             cam_contrib = self.out_proj_cam(cam_raw)
 
@@ -689,24 +753,25 @@ class CachedChunkCausalGDNUCPESinglePathLiteLA(ChunkCausalGDNUCPESinglePathLiteL
         kv_cache: list,
         save_kv_cache: bool,
         precomputed_gates: tuple | None,
-        **kwargs: object,
     ) -> torch.Tensor:
         """Camera branch with cached delta-rule state."""
-        from diffusion.model.ops.fused_streaming import (
-            _SLOT_CAM,
-            _cam_main_triton,
-            _cam_prep_triton,
-        )
-
         B, N, _ = x.shape
         T, H_sp, W_sp = HW
         S = H_sp * W_sp
         dtype_orig = x.dtype
 
         # Fused Triton cam prep: RMSNorm + ReLU + K-scale + UCPE 4x4 + RoPE.
-        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o = _cam_prep_triton(
-            self, x, HW, camera_conditions, rotary_emb, **kwargs
+        q_cam_trans, k_cam_trans, v_cam_trans, inflation_sq, apply_fn_o, cam_conv_cache = _cam_prep_triton(
+            self,
+            x,
+            HW,
+            camera_conditions,
+            rotary_emb,
+            kv_cache[_SLOT_CAM_AUX],
+            save_kv_cache,
         )
+        if save_kv_cache:
+            kv_cache[_SLOT_CAM_AUX] = cam_conv_cache
 
         if precomputed_gates is not None:
             beta, decay = precomputed_gates
@@ -766,8 +831,6 @@ class CachedSoftmaxUCPESinglePathLiteLA(_SoftmaxUCPESinglePathLiteLA):
         chunk_size: int | None = None,
         **kwargs: object,
     ) -> torch.Tensor | tuple[torch.Tensor, list]:
-        from .sana_gdn_blocks import CachedChunkCausalSoftmaxAttn
-
         kv_cache = kwargs.pop("kv_cache", None)
         save_kv_cache = kwargs.pop("save_kv_cache", False)
         if kv_cache is None:
@@ -827,10 +890,6 @@ class CachedSoftmaxUCPESinglePathLiteLA(_SoftmaxUCPESinglePathLiteLA):
         **kwargs: object,
     ) -> torch.Tensor:
         """Camera branch: SDPA with cached UCPE-transformed K, V."""
-        from diffusion.model.ops.fused_streaming import _SLOT_CAM, _SLOT_CAM_AUX
-
-        from .sana_gdn_blocks import _sdpa_maybe_chunk_causal
-
         B, N, _ = x.shape
         T, H_sp, W_sp = HW
         S = H_sp * W_sp
@@ -867,7 +926,6 @@ class CachedSoftmaxUCPESinglePathLiteLA(_SoftmaxUCPESinglePathLiteLA):
             chunk_size=kwargs.get("chunk_size", None),
             chunk_index=kwargs.get("chunk_index", None),
             chunk_split_strategy=kwargs.get("chunk_split_strategy", "uniform"),
-            device=x.device,
         )
 
         out = out.transpose(-1, -2)

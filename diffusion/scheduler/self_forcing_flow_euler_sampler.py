@@ -126,7 +126,7 @@ def _pop_extra_model_kwargs(model_kwargs: dict) -> dict:
 #   0: k, 1: v, 2: beta, 3: decay, 4: shortconv, 5: tconv, 6-9: None
 #
 # New layout (CachedChunkCausalGDN / CachedChunkCausalSoftmaxAttn):
-#   GDN:     0: S_kv state, 1: S_z state, 2: cam_S_kv state, 3: None
+#   GDN:     0: S_kv state, 1: S_z state, 2: cam_S_kv state, 3: cam K-conv state
 #   Softmax: 0: k post-RoPE, 1: v, 2: cam_k post-UCPE, 3: cam_v post-UCPE
 #   Both:    4: shortconv, 5: tconv, 6: type flag (1.0=state, 0.0=concat),
 #            9: FFN tconv state written by ``CachedGLUMBConvTemp``.
@@ -748,7 +748,7 @@ class SelfForcingFlowEulerCamCtrl(SelfForcingFlowEuler):
                     prev_last[0],  # S_kv state (or accumulated softmax k)
                     prev_last[1],  # S_z state (or accumulated softmax v)
                     prev_last[2],  # cam_S_kv state
-                    prev_last[3],  # None (GDN cam_aux unused)
+                    prev_last[3],  # camera K ShortConv state
                     prev_last[_SLOT_SHORTCONV],  # ShortConv state
                     None,  # (slot 5 unused)
                     prev_last[_SLOT_TYPE_FLAG],  # type flag

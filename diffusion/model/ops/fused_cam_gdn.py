@@ -43,6 +43,7 @@ from diffusion.model.nets.sana_camctrl_blocks import (
     ucm_unproject_grid_fov,
     world_to_ray_mats,
 )
+from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
 
 # =============================================================================
 # Scalar helpers
@@ -1427,8 +1428,6 @@ def cam_scan_func(
     # mode in phase_b_triton, which has the same flip-and-shift semantics as
     # cam's REVERSE=1 path. Bypass via FUSED_GDN_FORCE_LEGACY=1.
     if os.environ.get("FUSED_GDN_FORCE_LEGACY", "0") != "1":
-        from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
-
         return cam_scan_chunkwise(
             q,
             k,
@@ -1699,7 +1698,9 @@ def _torch_cam_scan_single_chunk(
     v: torch.Tensor,
     beta: torch.Tensor,
     decay: torch.Tensor,
-) -> torch.Tensor:
+    init_state: torch.Tensor | None = None,
+    return_final_state: bool = False,
+) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
     """Pure-torch single-chunk delta-rule scan (numerator-only).
 
     Algebraically equivalent to ``torch_chunk_cam_single_path_delta_rule`` with
@@ -1744,7 +1745,11 @@ def _torch_cam_scan_single_chunk(
     W = decay_view * (eye - torch.matmul(k_beta, k_t.transpose(-1, -2)))
     U = torch.matmul(v_t * beta_view, k_t.transpose(-1, -2))
 
-    state = torch.zeros(B, H, D, D, device=q.device, dtype=q.dtype)
+    state = (
+        torch.zeros(B, H, D, D, device=q.device, dtype=q.dtype)
+        if init_state is None
+        else init_state.to(device=q.device, dtype=q.dtype)
+    )
     s_kv_list: list[torch.Tensor] = []
     for t in range(T):
         state = torch.matmul(state, W[:, :, t]) + U[:, :, t]
@@ -1752,7 +1757,8 @@ def _torch_cam_scan_single_chunk(
     s_all = torch.stack(s_kv_list, dim=2)  # (B, H, T, D, D)
 
     out_t = torch.matmul(s_all, q_t)  # (B, H, T, D, S)
-    return out_t.permute(0, 1, 3, 2, 4).reshape(B, H, D, N)
+    out = out_t.permute(0, 1, 3, 2, 4).reshape(B, H, D, N)
+    return (out, state) if return_final_state else out
 
 
 def _torch_cam_scan_reference(

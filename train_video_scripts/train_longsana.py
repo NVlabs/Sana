@@ -1,12 +1,30 @@
+# ruff: noqa: E402
+
 import argparse
 import os
+
+# Importing the shared Stage-1 helpers must not disable xFormers for legacy
+# LongSANA trainers. The WM branch opts out explicitly after config dispatch.
+_disable_xformers_before_wm_import = os.environ.get("DISABLE_XFORMERS")
+_tokenizers_parallelism_before_wm_import = os.environ.get("TOKENIZERS_PARALLELISM")
+os.environ.setdefault("DISABLE_XFORMERS", "0")
 
 import wandb
 from omegaconf import OmegaConf
 
+import diffusion.model.nets.sana_blocks as sana_blocks
+import diffusion.model.nets.sana_multi_scale_video_camctrl as sana_video_camctrl
 from diffusion.longsana.trainer.longsana_trainer import LongSANATrainer
 from diffusion.longsana.trainer.ode import ODESANATrainer
+from diffusion.longsana.trainer.sana_wm_distill import SanaWMDistillTrainer
 from diffusion.longsana.trainer.self_forcing_trainer import Trainer as SelfForcingScoreDistillationTrainer
+
+if _disable_xformers_before_wm_import is None:
+    os.environ.pop("DISABLE_XFORMERS", None)
+if _tokenizers_parallelism_before_wm_import is None:
+    os.environ.pop("TOKENIZERS_PARALLELISM", None)
+del _disable_xformers_before_wm_import
+del _tokenizers_parallelism_before_wm_import
 
 
 def main():
@@ -48,6 +66,15 @@ def main():
         trainer = LongSANATrainer(config)
     elif config.trainer == "ode":
         trainer = ODESANATrainer(config)
+    elif config.trainer in {"wm_ode", "wm_self_forcing"}:
+        os.environ["DISABLE_XFORMERS"] = "1"
+        sana_blocks._xformers_available = False
+        sana_video_camctrl._xformers_available = False
+        config.mode = config.trainer.removeprefix("wm_")
+        config.wandb_name = args.wandb_name
+        trainer = SanaWMDistillTrainer(config)
+    else:
+        raise ValueError(f"Unknown trainer: {config.trainer}")
     trainer.train()
 
     wandb.finish()

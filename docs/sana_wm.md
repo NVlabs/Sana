@@ -278,21 +278,30 @@ runs unless `--no_refiner` is passed.
 `chunk_flow_euler` uses `interval_k = 1 / num_chunks` by default. Override it
 with `--chunk_interval_k` only for ablations.
 
-## Chunk-Causal Stage-1 Training on Sekai-Game
+## Stage-1 Teacher Training on Sekai-Game
 
-This repo includes the minimal chunk-causal Stage-1 training path:
+This repo includes matching bidirectional and chunk-causal Stage-1 teacher
+training recipes. They share the same Sekai-Game data, optimizer, and CP2/FSDP2
+settings; only the Stage-1 model and checkpoint differ:
 
 - training script: `train_video_scripts/train_sana_wm_stage1.py`
-- training config: `configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml`
+- bidirectional config: `configs/sana_wm/stage1/sana_wm_stage1_sekai_bidirectional_cp2_fsdp2.yaml`
+- chunk-causal config: `configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml`
 - latent dataset loader: `diffusion/data/datasets/video/sana_wm_zip_latent_data.py`
-- CP2/FSDP2 smoke test: `tests/bash/training/test_training_sana_wm_stage1.sh`
+- chunk-causal CP2/FSDP2 smoke test: `tests/bash/training/test_training_sana_wm_stage1.sh`
 
 The example can run directly from the public HF dataset
 [`Efficient-Large-Model/SANA-WM-example-training-dataset`](https://huggingface.co/datasets/Efficient-Large-Model/SANA-WM-example-training-dataset).
-The config downloads the dataset on the main rank, waits for all ranks, and
-trains from the chunk-causal Stage-1 teacher checkpoint with FSDP2 and CP2:
+Each config downloads the dataset on the main rank, waits for all ranks, and
+continues training from its released Stage-1 teacher checkpoint:
 
 ```bash
+# Bidirectional teacher
+torchrun --nproc_per_node=8 --master_port=29500 \
+  train_video_scripts/train_sana_wm_stage1.py \
+  --config_path configs/sana_wm/stage1/sana_wm_stage1_sekai_bidirectional_cp2_fsdp2.yaml
+
+# Chunk-causal teacher
 torchrun --nproc_per_node=8 --master_port=29500 \
   train_video_scripts/train_sana_wm_stage1.py \
   --config_path configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml
@@ -308,14 +317,26 @@ data:
   data_dir:
     sekai_game: data/sekai_game_train_961frames_16fps_ovl640
   vae_cache_dir: data/vae_cache/LTX2VAE_diffusers_704x1280/sekai_game_train_961frames_16fps_ovl640
-model:
-  load_from: hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors
-  attn_type: ChunkCausalGDNTriton
-  camctrl_type: ChunkCausalGDNUCPESinglePathLiteLABothTriton
+model:  # Bidirectional
+  load_from: hf://Efficient-Large-Model/SANA-WM_bidirectional/dit/sana_wm_1600m_720p.safetensors
+  attn_type: BidirectionalGDNTriton
+  camctrl_type: BidirectionalGDNUCPESinglePathLiteLABothTriton
+  ffn_type: GLUMBConvTemp
 train:
   use_fsdp: true
   fsdp_version: 2
   cp_size: 2
+```
+
+The chunk-causal recipe changes only the model-specific fields:
+
+```yaml
+model:
+  load_from: hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors
+  attn_type: ChunkCausalGDNTriton
+  camctrl_type: ChunkCausalGDNUCPESinglePathLiteLABothTriton
+  ffn_type: ChunkGLUMBConvTemp
+  chunk_size: 3
 ```
 
 Set `data.hf_dataset_local_dir` to a shared filesystem path if you do not want
@@ -326,11 +347,13 @@ The Sekai-derived dataset is redistributed for non-commercial research use
 only. See the dataset card, `LICENSE`, and `NOTICE.md` in the HF dataset repo
 before training or redistributing derivatives.
 
-This public Stage-1 recipe matches the released model, 121-frame latent shape,
-CP2, three-frame chunking, and hybrid GDN/softmax settings. It intentionally
-uses only the redistributable Sekai camera-control data; the internal training
-curriculum also mixed separate video-only and no-camera data sources. Exact
-weight reproduction therefore requires the original data mixture.
+These public Stage-1 recipes match the released models, 121-frame latent shape,
+CP2, and hybrid GDN/softmax settings; the chunk-causal variant uses three-frame
+chunks while the bidirectional variant attends over the full sequence. Both
+intentionally use only the redistributable Sekai camera-control data; the
+internal training curriculum also mixed separate video-only and no-camera data
+sources. Exact weight reproduction therefore requires the original data
+mixture.
 
 ## ODE and Self-Forcing Distillation
 

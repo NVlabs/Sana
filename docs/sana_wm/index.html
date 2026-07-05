@@ -951,6 +951,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ode-and-self-forcing-distillation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ODE and Self-Forcing Distillation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#argument-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1710,6 +1721,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ode-and-self-forcing-distillation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ODE and Self-Forcing Distillation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#argument-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2077,7 +2099,7 @@ with <code>--chunk_interval_k</code> only for ablations.</p>
 <li>training script: <code>train_video_scripts/train_sana_wm_stage1.py</code></li>
 <li>training config: <code>configs/sana_wm/stage1/sana_wm_stage1_sekai_chunk_causal_cp2_fsdp2.yaml</code></li>
 <li>latent dataset loader: <code>diffusion/data/datasets/video/sana_wm_zip_latent_data.py</code></li>
-<li>CP/FSDP2 tests: <code>tests/test_context_parallel*.py</code></li>
+<li>CP2/FSDP2 smoke test: <code>tests/bash/training/test_training_sana_wm_stage1.sh</code></li>
 </ul>
 <p>The example can run directly from the public HF dataset
 <a href="https://huggingface.co/datasets/Efficient-Large-Model/SANA-WM-example-training-dataset"><code>Efficient-Large-Model/SANA-WM-example-training-dataset</code></a>.
@@ -2110,6 +2132,41 @@ entries are resolved under that directory after download.</p>
 <p>The Sekai-derived dataset is redistributed for non-commercial research use
 only. See the dataset card, <code>LICENSE</code>, and <code>NOTICE.md</code> in the HF dataset repo
 before training or redistributing derivatives.</p>
+<p>This public Stage-1 recipe matches the released model, 121-frame latent shape,
+CP2, three-frame chunking, and hybrid GDN/softmax settings. It intentionally
+uses only the redistributable Sekai camera-control data; the internal training
+curriculum also mixed separate video-only and no-camera data sources. Exact
+weight reproduction therefore requires the original data mixture.</p>
+<h2 id="ode-and-self-forcing-distillation">ODE and Self-Forcing Distillation<a class="headerlink" href="#ode-and-self-forcing-distillation" title="Permanent link">&para;</a></h2>
+<p>The implementation lives in
+<code>diffusion/longsana/trainer/sana_wm_distill.py</code> and is selected by
+<code>train_video_scripts/train_longsana.py</code> through <code>trainer: wm_ode</code> or
+<code>trainer: wm_self_forcing</code>. The three public configs provide the T43 ODE, T43
+self-forcing warmup, and T121 self-forcing/DMD stages with the released data
+and checkpoints:</p>
+<p>The CI smoke test at
+<code>tests/bash/training/test_training_sana_wm_distill.sh</code> follows the same three
+stages with deterministic synthetic trajectory/latent fixtures. It runs one
+optimizer step per stage and passes the saved ODE checkpoint into T43, then the
+saved generator/critic checkpoint into the T121 sink + sliding-cache stage.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># T43 ODE regression (FSDP2, no CP). Set data_path first.</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>train_video_scripts/train_longsana.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_wm/distill/ode_t43.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--disable-wandb
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># T43 self-forcing warmup (8 GPUs, CP4 / DP2).</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span>train_video_scripts/train_longsana.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_wm/distill/self_forcing_t43.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span>--disable-wandb
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="c1"># T121 self-forcing + DMD (8 GPUs, CP4 / DP2).</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span>train_video_scripts/train_longsana.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_wm/distill/self_forcing_t121.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">  </span>--disable-wandb
+</code></pre></div>
 <h2 id="argument-reference">🎛️ Argument Reference<a class="headerlink" href="#argument-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2296,12 +2353,12 @@ avoid duplicating large immutable artifacts.</p>
 <p>The Sana text encoder (<code>gemma-2-2b-it</code>) is fetched separately from
 <code>Efficient-Large-Model/gemma-2-2b-it</code>.</p>
 <h2 id="bibtex">📝 BibTeX<a class="headerlink" href="#bibtex" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">zhu2026sana</span><span class="p">,</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Sana-wm: Efficient minute-scale world modeling with hybrid linear diffusion transformer}</span><span class="p">,</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Zhu, Haoyi and Liu, Haozhe and Zhao, Yuyang and Ye, Tian and Chen, Junsong and Yu, Jincheng and He, Tong and Han, Song and Xie, Enze}</span><span class="p">,</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="na">journal</span><span class="p">=</span><span class="s">{arXiv preprint arXiv:2605.15178}</span><span class="p">,</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2026}</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">zhu2026sana</span><span class="p">,</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Sana-wm: Efficient minute-scale world modeling with hybrid linear diffusion transformer}</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Zhu, Haoyi and Liu, Haozhe and Zhao, Yuyang and Ye, Tian and Chen, Junsong and Yu, Jincheng and He, Tong and Han, Song and Xie, Enze}</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="na">journal</span><span class="p">=</span><span class="s">{arXiv preprint arXiv:2605.15178}</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2026}</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">}</span>
 </code></pre></div>
 
 

@@ -334,18 +334,13 @@ weight reproduction therefore requires the original data mixture.
 
 ## ODE and Self-Forcing Distillation
 
-The implementation lives in
-`diffusion/longsana/trainer/sana_wm_distill.py` and is selected by
-`train_video_scripts/train_longsana.py` through `trainer: wm_ode` or
-`trainer: wm_self_forcing`. The three public configs provide the T43 ODE, T43
-self-forcing warmup, and T121 self-forcing/DMD stages with the released data
-and checkpoints:
+This repo includes the minimal self-forcing distillation training path:
 
-The CI smoke test at
-`tests/bash/training/test_training_sana_wm_distill.sh` follows the same three
-stages with deterministic synthetic trajectory/latent fixtures. It runs one
-optimizer step per stage and passes the saved ODE checkpoint into T43, then the
-saved generator/critic checkpoint into the T121 sink + sliding-cache stage.
+- training script: `train_video_scripts/train_longsana.py`
+- CP2/FSDP2 smoke test: `tests/bash/training/test_training_sana_wm_distill.sh`
+
+The three configs provide the T43 ODE, T43 self-forcing warmup, and T121 self-forcing/DMD stages with the released data
+and checkpoints:
 
 ```bash
 # T43 ODE regression (FSDP2, no CP). Set data_path first.

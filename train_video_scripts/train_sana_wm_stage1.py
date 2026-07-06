@@ -667,7 +667,7 @@ def main(cfg: SanaVideoCamCtrlConfig) -> None:
             if num_sampler_chunks > time_sampler_chunks:
                 time_sampler = _build_time_sampler(config, global_t, accelerator.device)
                 time_sampler_chunks = num_sampler_chunks
-            do_i2v = config.task == "df" and random.random() < float(config.train.ltx_image_condition_prob)
+            do_i2v = config.task in {"df", "ti2v"} and random.random() < float(config.train.ltx_image_condition_prob)
             loss_mask = _build_i2v_loss_mask(clean_images, do_i2v)
             timesteps, _ = _build_timesteps(config, clean_images, global_t, do_i2v, time_sampler=time_sampler)
             noise = torch.randn_like(clean_images)

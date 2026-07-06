@@ -1,4 +1,4 @@
-task: df
+task: ti2v
 data:
   hf_dataset_repo: Efficient-Large-Model/SANA-WM-example-training-dataset
   hf_dataset_revision: 4d965e94b9ea11b9c5ba085251ffa7a0345e006f
@@ -144,12 +144,6 @@ train:
   timestep_weight: false
   noise_multiplier: 0.0
   ltx_image_condition_prob: 0.9
-  chunk_sampling_strategy: incremental
-  chunk_mixture_probs:
-    same_t: 0.1
-    incremental: 0.4
-    last_chunk_anchor: 0.4
-    teacher_forcing_clean: 0.1
   extra:
     cp:
       scan_backend: triton

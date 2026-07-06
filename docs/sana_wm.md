@@ -282,7 +282,10 @@ with `--chunk_interval_k` only for ablations.
 
 This repo includes matching bidirectional and chunk-causal Stage-1 teacher
 training recipes. They share the same Sekai-Game data, optimizer, and CP2/FSDP2
-settings; only the Stage-1 model and checkpoint differ:
+settings. The bidirectional recipe uses the video-level `ti2v` objective with
+probabilistic clean first-frame conditioning, while the
+chunk-causal recipe uses frame-wise `df` training with chunk-wise timestep
+sampling:
 
 - training script: `train_video_scripts/train_sana_wm_stage1.py`
 - bidirectional config: `configs/sana_wm/stage1/sana_wm_stage1_sekai_bidirectional_cp2_fsdp2.yaml`
@@ -317,6 +320,7 @@ data:
   data_dir:
     sekai_game: data/sekai_game_train_961frames_16fps_ovl640
   vae_cache_dir: data/vae_cache/LTX2VAE_diffusers_704x1280/sekai_game_train_961frames_16fps_ovl640
+task: ti2v
 model:  # Bidirectional
   load_from: hf://Efficient-Large-Model/SANA-WM_bidirectional/dit/sana_wm_1600m_720p.safetensors
   attn_type: BidirectionalGDNTriton
@@ -326,17 +330,27 @@ train:
   use_fsdp: true
   fsdp_version: 2
   cp_size: 2
+  ltx_image_condition_prob: 0.9
 ```
 
-The chunk-causal recipe changes only the model-specific fields:
+The chunk-causal recipe additionally enables frame-wise diffusion and its
+chunk-wise timestep mixture:
 
 ```yaml
+task: df
 model:
   load_from: hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors
   attn_type: ChunkCausalGDNTriton
   camctrl_type: ChunkCausalGDNUCPESinglePathLiteLABothTriton
   ffn_type: ChunkGLUMBConvTemp
   chunk_size: 3
+train:
+  chunk_sampling_strategy: incremental
+  chunk_mixture_probs:
+    same_t: 0.1
+    incremental: 0.4
+    last_chunk_anchor: 0.4
+    teacher_forcing_clean: 0.1
 ```
 
 Set `data.hf_dataset_local_dir` to a shared filesystem path if you do not want

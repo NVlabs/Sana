@@ -1,0 +1,50 @@
+{
+  "model_type": "bernini",
+  "architectures": ["BerniniModel"],
+  "mllm_attn_implementation": "sdpa",
+  "partial_pretrain_model": "",
+  "base_dir": "ByteDance/Bernini-Diffusers",
+  "vae_subfolder": "vae",
+  "cotrain": true,
+  "boundary_ratio": 0.417,
+  "switch_dit_boundary": 0.875,
+  "shift": 3.0,
+  "logit_mean": 0.5,
+  "logit_std": 1,
+  "mode_scale": 1.29,
+  "scratch": true,
+  "transformers_version": "4.57.3",
+  "mllm_subfolder": "mllm",
+  "processor_subfolder": "mllm",
+  "bernini_ckpt_subfolder": "bernini",
+  "scratch_mllm": true,
+  "use_src_id_rotary_emb": true,
+  "feature_type_from_stage_one": "masked_tgt_embed_with_qwen_txt_vit_tokens",
+  "num_mask_token": 4096,
+  "max_sequence_length": 512,
+  "clip_diff_cfg": {
+    "model_type": "flow_match",
+    "z_channels": 3584,
+    "target_channels": 3584,
+    "width": 4096,
+    "diffusion_batch_mul": 16,
+    "shift": 2.0
+  },
+  "connector_cfg": {
+    "model_type": "MLPConnector",
+    "out_dim_for_gen": 4096,
+    "enable_gen_branch": true,
+    "out_dim_for_vit": 3584,
+    "enable_vit_branch": true,
+    "gen_head_type": "zerolinear",
+    "zero_init_proj_gen_last": true
+  },
+  "mask_ratio_infer_cfg": {
+    "generator_type": "default"
+  },
+  "t5_max_sequence_length": 512,
+  "t5_text_encoder_subfolder": "t5_text_encoder",
+  "t5_tokenizer_subfolder": "t5_tokenizer",
+  "t5_combine_type": "concat_with_zero_init",
+  "target_fps": 16
+}

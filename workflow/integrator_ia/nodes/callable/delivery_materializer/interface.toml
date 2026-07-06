@@ -1,0 +1,10 @@
+name = "delivery_materializer"
+kind = "agent_callable"
+owned_by = "integrator_ia"
+callable_by = ["workflow/integrator_ia/nodes/codex_executor"]
+description = "Port pinned donor implementation files into the integration worktree and emit file-level provenance."
+
+inputs = ["state/integration-source-inventory.json", "integration_worktree"]
+outputs = ["INTEGRATION-SOURCES.lock.json", "experiment-local implementation files"]
+outcomes = ["materialized", "merge_conflict", "source_changed", "infra_blocked"]
+forbidden = ["mutate_donor", "copy_whole_worktree", "cross_workflow_runtime_import", "unhashed_source"]

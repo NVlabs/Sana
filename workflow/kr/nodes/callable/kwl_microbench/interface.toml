@@ -1,0 +1,9 @@
+name = "kwl_microbench"
+kind = "agent_callable"
+callable_by = ["codex_executor"]
+description = "Run or create a warm paired OFF/ON single-DiT or module-level KWL evaluation."
+
+inputs = ["candidate_id", "candidate_manifest", "off_path", "on_path", "shape_contract"]
+outputs = ["runs/<candidate_id>_microbench/microbench.json", "runs/<candidate_id>_microbench/gate_assess.json"]
+outcomes = ["passed", "failed", "infra_blocked"]
+required_artifacts = ["gate_assess.json"]

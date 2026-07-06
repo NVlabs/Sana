@@ -1,0 +1,102 @@
+schema_version = 1
+id = "sana_video"
+display_name = "Sana 5B Video 720p193"
+legacy_profile = "models/sana_video.toml"
+contract_kind = "model_baseline_minimal_copy"
+
+[baseline]
+manifest = "candidates/sana_video_baseline.toml"
+runtime_root = "runtime/sana_video_baseline"
+eval_profile = "evals/profiles/official_video_t2v_sana_video.toml"
+description = "Minimum local wrapper closure for Sana Video baseline inference."
+
+[baseline.copy]
+paths_are_repo_relative = true
+include = [
+  "models/sana_video.toml",
+  "models/sana_video/**",
+  "runtime/sana_video_baseline/**",
+  "candidates/sana_video_baseline.toml",
+  "candidates/schema.md",
+  "evals/profiles/official_video_t2v_sana_video.toml",
+  "evals/rubrics/gemini_visual_artifact_gate.md",
+  "evals/tiers.toml",
+  "scripts/launch_candidate.py",
+  "scripts/collect_run.py",
+  "search/plan_eval.py",
+  "tools/vision/README.md",
+  "tools/vision/lpips_judge.py",
+  "tools/vision/nvidia_gemini_judge.py",
+  "efficiency/candidate_manifest.py",
+]
+exclude = [
+  ".git/**",
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "**/.pytest_cache/**",
+  "runs/**",
+  "output/**",
+  "workflow/**",
+  "search_space/**",
+]
+
+[[baseline.reference_only]]
+name = "sana_minimal_inference_zip"
+repo = "yitongl/sana_video"
+repo_type = "dataset"
+path = "standalone/sana5b_720p193_minimal_infer.zip"
+reason = "Small private source bundle is downloaded/extracted into shared cache at runtime."
+
+[[baseline.reference_only]]
+name = "sana_complete_standalone_bundle"
+path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sana_video_2/Sana/output/standalone/sana5b_720p193_minimal_infer"
+reason = "Shared reference copy of the standalone source closure; experiments copy the editable source subset from this path."
+
+[[baseline.external_copy]]
+name = "sana_editable_standalone_bundle"
+source = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sana_video_2/Sana/output/standalone/sana5b_720p193_minimal_infer"
+dest = "external/sana_standalone"
+reason = "Editable experiment-local Sana source bundle used for kernel optimization. Large model assets remain reference-only."
+exclude = [
+  "**/__pycache__/**",
+  "__pycache__/**",
+  "**/*.pyc",
+  "models/LTX-2.3-Diffusers/**",
+  "models/checkpoints/**",
+  "outputs/**",
+  "runs/**",
+]
+
+[[baseline.overlay_copy]]
+name = "sana_hot_benchmark_entrypoint"
+source = "models/sana_video/overlays/inference_video_scripts/inference_sana_video.py"
+dest = "external/sana_standalone/inference_video_scripts/inference_sana_video.py"
+reason = "Install the canonical same-shape warmup and hot text-encoder-through-VAE timing contract into each editable experiment copy."
+
+[[baseline.reference_only]]
+name = "sana_checkpoint"
+repo = "yitongl/sana_video"
+repo_type = "dataset"
+path = "Sana_5B_480px_QwenNext_ltxvae23_selfflow_pertoken_subattnres_v2_multires_multifps_sft/checkpoints/epoch_7_step_2107015/model_ema.pth"
+reason = "Large 17 GB checkpoint is shared by reference and must not be copied into experiments."
+
+[[baseline.reference_only]]
+name = "ltx23_vae"
+repo = "Efficient-Large-Model/LTX-2.3-Diffusers"
+repo_type = "model"
+path = "vae/*"
+reason = "VAE assets are shared by reference under the Sana bundle asset root."
+
+[[baseline.reference_only]]
+name = "text_encoder"
+repo = "Efficient-Large-Model/gemma-2-2b-it"
+repo_type = "model"
+reason = "Text encoder is loaded through the normal Hugging Face cache."
+
+[experiment_defaults]
+worktree_mode = "model_baseline_minimal_copy"
+experiments_root = "output/experiments"
+state_dir = "state"
+runs_dir = "runs"
+logs_dir = "logs"
+caches = ["tmp", "triton", "torch_extensions", "python_deps"]

@@ -1,0 +1,12 @@
+name = "integration_gate"
+kind = "orchestration"
+owned_by = "integrator_ia"
+callable_by = ["workflow/integrator_ia/workflow.py"]
+description = "Validate pinned provenance, all eight warm-sample composition measurements, and three recipe runs."
+
+inputs = ["state/integration-source-inventory.json", "INTEGRATION-SOURCES.lock.json", "INTEGRATION-STATUS.json", "COMPOSITION-MATRIX.json", "runs/<recipe>/outputs/benchmark.json", "runs/<recipe>/outputs/integration_stats.json"]
+outputs = ["state/integration-gate.json"]
+outcomes = ["ready", "needs_retry"]
+timing_scope = "warm_single_sample_text_encoder_through_vae_decode"
+required_recipes = ["conservative", "balanced", "aggressive"]
+forbidden = ["environment_only_component_proof", "donor_timing_substitution", "initialization_inside_timer", "video_write_inside_timer", "forced_full_stack_delivery"]

@@ -69,6 +69,7 @@ HISTORICAL_RECORD_IGNORE_PATHS = (
     "`output/fanout/`",
     "`output/fanout_loop_*/`",
     "`output/fanout_runs/*` except the active run id",
+    "`output/experiments/*` except the active experiment id",
     "`runs/*step-cache*` / `runs/*stepcache*`",
     "`runs/*tokenprune*`",
     "`runs/*teacache*`",
@@ -94,6 +95,7 @@ HISTORICAL_RECORD_GLOBS = (
     "output/fanout",
     "output/fanout_loop_*",
     "output/fanout_runs/*",
+    "output/experiments/*",
     "runs/*step-cache*",
     "runs/*stepcache*",
     "runs/*tokenprune*",
@@ -260,9 +262,67 @@ retain candidates that improve latency, peak memory, aligned quality, or
 reliable numeric stability, then let final low/medium/high selection pick the
 best retained profiles by speed target and quality ranking. ON bit-exactness is
 not required; record the declared tolerance class and aligned quality evidence.
+Use a microbench-first, module-local implementation bias: inspect the live hot
+path for already-adjacent operator chains, launch overhead,
+layout/copy/allocation churn, static metadata/workspace reuse, and equivalent
+packing or batching opportunities. Do not implement, resume, or rerun
+backend-selection, SDPA-backend, framework-dispatch, FlashAttention/FlashInfer
+dispatch, or env-flag-only probes.
+If prior local `AGENT-STATUS.json`, `SEARCH_JOURNAL.md`, or run directories
+contain backend-selection work, mark those records stale/cancelled and start a
+fresh module/DiT microbench candidate.
+Write a module-level or DiT-block-level warm paired microbenchmark before any
+full denoising or video generation run. OFF baseline and ON candidate must run
+in the same process, same Slurm allocation/GPU, same tensors, same dtype, and
+same warmed cache state. Report median/p25/p75/min/max latency, iteration
+count, OFF/ON ordering, tensor diff, launch/profile evidence, and expected full
+contribution (`saved_ms_per_call * calls_per_step * steps`). Full denoise is a
+visual sanity/gross-regression check, not the primary speed authority for
+sub-percent KWL candidates. Only after module-local kernel/operator candidates
+are exhausted should the agent try `torch.compile`, regional compile, CUDA
+graph capture, or other global graph machinery.
 Reject candidates that change scheduler, step count, token set, attention
 semantics, cache/prune semantics, quantization policy, prompt/guidance, LoRA
 state, resolution, frame count, or output shape.
+"""
+
+
+def kwl_model_reference_md(model_id: str, dimension: str, role: str) -> str:
+    if role == "integration" or dimension != "kwl_fusion" or model_id != "hunyuan_diffusers":
+        return ""
+    return """## Hunyuan Diffusers DiT Fusion References
+
+Use these concrete structure-derived examples as candidate references. They are
+not fixed recipes; each candidate still needs a small module/DiT microbench
+before any full denoising run.
+
+- Attention path: fuse Q/K projection output handling with QK RMSNorm and RoPE,
+  preserving dense attention semantics, masks, token order, and dtype.
+- Attention projection packing: pack or batch latent QKV and text added-QKV
+  projections when weights/layout permit.
+- Single-stream block: replace `cat(attn_output, mlp_output) -> proj_out ->
+  gate -> residual` with an equivalent split-projection or fused epilogue that
+  avoids materializing the concatenation.
+- Dual-stream attention residuals: fuse `hidden + gate * attn` and
+  `context + c_gate * context_attn` epilogues.
+- Dual-stream FFN prelude: fuse `LayerNorm -> scale/shift` for latent and text
+  branches.
+- Dual-stream FFN epilogue: fuse `x + gate * ff(x)` for latent and text
+  branches.
+- Attention output split/projection: avoid redundant split/copy/layout work
+  when latent/text sequence lengths are static.
+- Final output path: fuse or reduce `norm_out -> proj_out ->
+  reshape/permute/flatten` layout work.
+- Static metadata: cache or precompute attention mask descriptors,
+  RoPE/layout descriptors, offsets, and workspaces when they are invariant for
+  the official benchmark shape.
+
+Do not run full Hunyuan denoising to test a kernel idea first. The first
+artifact for each new KWL candidate should be a warm paired DiT/module
+microbench JSON with OFF baseline latency, ON candidate latency,
+median/p25/p75/min/max stats, iteration count, OFF/ON ordering, max/mean tensor
+diff, shape/dtype, launch/profile evidence, expected full contribution, and
+exact command.
 """
 
 
@@ -589,14 +649,22 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
     if dimension == "kwl_fusion":
         return common + [
             "inspect `search_space/05_kernel_fusion.md` before proposing implementations",
-            "run and record KWL preflight before GPU search: hot-path evidence, launch count, memory traffic, tensor shapes, dtype, backend availability, compile/graph state, OFF identity, fallback behavior, and semantic boundary proof",
-            "identify at least six KWL method families, including exact-preferred and quality-gated approximate variants across GEMM epilogues, norm/modulation/residual fusion, attention-adjacent dense fusion, compile or CUDA graph capture, layout/copy elimination, launch batching, stream overlap, decode/postprocess fusion, or backend selection when applicable",
-            "profile or inspect target-model hot ops and choose exact, numerically tolerant, or quality-gated approximate kernel/backend candidates from evidence",
-            "separate KWL-safe kernel/backend approximations from algorithm changes; route cache, prune, sparse-attention, scheduler, or quantization-policy changes to other dimensions",
-            "retain speed or memory candidates when OFF identity passes and latency or peak memory improves; ON bit-exactness is not required",
+            "do not implement, resume, or rerun backend-selection, SDPA-backend, framework-dispatch, FlashAttention/FlashInfer dispatch, or env-flag-only probes",
+            "if prior local AGENT-STATUS, SEARCH_JOURNAL, or run directories contain backend-selection work, mark those records stale/cancelled and start a fresh module-level or DiT-block-level microbench candidate",
+            "run and record KWL preflight before GPU search: hot-path evidence, launch count, memory traffic, tensor shapes, dtype, kernel availability, microbench plan, OFF identity, fallback behavior, and semantic boundary proof",
+            "apply a microbench-first lossless bias: look for existing operator chains, launch overhead, layout/copy/allocation churn, static metadata/workspace reuse, and equivalent projection or small-kernel batching before global graph mechanisms",
+            "write a module-level or DiT-block-level warm paired microbench before any full denoising/video generation run; OFF baseline and ON candidate must run in the same process/allocation/GPU with same tensors, dtype, and warmed cache state; record median/p25/p75/min/max latency, OFF/ON ordering, iteration count, max/mean tensor diff, shape/dtype, launch/profile evidence, expected full contribution, and exact reproduction command",
+            "promote a candidate to full denoising only when warm paired DiT/module microbench latency or peak memory improves and tensor drift is inside the declared tolerance; use full denoise as visual/gross-regression sanity, not primary speed authority for sub-percent KWL changes",
+            "for each lossless candidate, state the semantic equivalence argument: same tensor inputs, parameters, masks, shape contract, dtype contract, dependency order, output placement, and aliasing/in-place behavior",
+            "for Hunyuan Diffusers, consider concrete DiT fusion references such as Q/K projection output plus QK RMSNorm plus RoPE, packed latent/text QKV projections, single-stream cat(attn, mlp)->proj_out->gate->residual, dual-stream gate/residual epilogues, LayerNorm->scale/shift, FFN epilogues, attention output split/projection, final norm/proj/layout, and static mask/RoPE/layout descriptors",
+            "identify at least seven KWL method families, including exact-preferred and quality-gated approximate variants across GEMM epilogues, norm/modulation/residual fusion, attention-adjacent dense fusion, layout/copy elimination, launch batching, stream overlap, decode/postprocess fusion, and compile/CUDA graph capture only after local module candidates are exhausted",
+            "profile or inspect target-model hot ops and choose exact, numerically tolerant, or quality-gated approximate kernel/operator candidates from evidence",
+            "separate KWL-safe kernel/operator approximations from algorithm changes; route cache, prune, sparse-attention, scheduler, or quantization-policy changes to other dimensions",
+            "retain speed or memory candidates when OFF identity passes, microbench latency or peak memory improves, and tensor drift is acceptable; ON bit-exactness is not required",
             "retain aligned quality or reliable numeric-stability candidates when those signals improve, even without a speedup",
             "record expected numeric tolerance as bit-exact, dtype-rounding-only, reduction-order drift, FMA/epilogue drift, fast-math drift, or approximate-kernel drift",
-            "record cold compile, warm compile, autotune, graph replay, and cache-reuse timing modes separately",
+            "record cold compile, warm compile, autotune, graph replay, and cache-reuse timing modes separately; do not claim speed from unpaired full-run timing against a historical baseline, and only use compile/graph mechanisms after module-level options are exhausted",
+            "if final full denoising shows severe visual artifacts after a passing microbench, first suspect a kernel/module bug such as aliasing, layout, mask, split/concat, dtype, stream ordering, or stale workspace rather than harmless numeric drift accumulation",
             "reject semantic changes to scheduler, step count, token set, attention semantics, cache/prune semantics, quantization policy, prompt/guidance, LoRA state, resolution, frame count, or output shape",
             "modify the inference/build code directly when needed; do not require a predeclared kernel-fusion seam",
             "produce at least one runnable candidate manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
@@ -664,6 +732,7 @@ def render_goal_md(
     contract_text = INTEGRATION_LOOP_CONTRACT if args.role == "integration" else FANOUT_LOOP_CONTRACT
     loop_values = loop_contract_values(args)
     kwl_loop_note = dimension_loop_note(args.dimension, args.role)
+    kwl_model_reference = kwl_model_reference_md(args.model_id, args.dimension, args.role)
     method_baseline_catalog = method_baseline_catalog_md(
         method_baselines_for_runtime(method_baselines, runtime_repo)
     )
@@ -699,6 +768,8 @@ If `search_space/` is missing or unclear, stop exploration and ask the main
 orchestration agent to repair the search-space contract.
 
 {method_baseline_catalog}
+
+{kwl_model_reference}
 
 {historical_record_policy_md()}
 
@@ -749,6 +820,46 @@ backfill a current-experiment record after the durable gate artifact exists. If
 search and hand the status to the main orchestrator. Watchers must treat
 `complete`, `terminal_pending_review`, and `blocked` as terminal states by using
 `status-summary` or JSON parsing; do not grep only for `status=complete`.
+
+## Codex Autorun Lifecycle
+
+Managed Codex sessions run as persistent interactive TUI sessions through
+`codex_auto_run.py` with model `gpt-5.6-sol`, sandbox `workspace-write`, and
+Codex approvals `on-request`. The autorun watcher may confirm recognized
+one-shot command/edit/network approvals, but it does not enable full access or
+`--bypass`.
+
+There is no `codex exec` process-exit loop in autorun mode. The TUI remains
+attachable after an agent response, and the Symposium session manager owns
+status, capture, follow-up input, stop, and release. Executor agents must keep
+the durable loop state current rather than relying on process exit. Before an
+executor reports terminal handoff, at least one current run-backed candidate
+must have a smooth full evaluation:
+
+- full candidate generation/denoise has completed or produced a structured
+  run-backed rejection;
+- `search/plan_eval.py --assess ... --out <run_dir>/assess_verdict.json` has
+  run with the canonical baseline frames and correct model profile;
+- the resulting gate artifact is valid JSON with baseline time, candidate time,
+  speedup, and no infrastructure blockers such as missing frames, missing
+  baseline frames, missing benchmark, missing ffmpeg, or missing API key;
+- for KWL executors, speed evidence includes a warm paired DiT/module-level
+  OFF/ON evaluation artifact with median/p25/p75/min/max timing, tensor diff,
+  launch/profile evidence, and expected full contribution; full denoise alone
+  is not sufficient speed evidence for sub-percent kernel changes;
+- the candidate record references the authoritative gate artifact, or the
+  artifact is ready for immediate `add-evidence`/`record-candidate`.
+
+If this smooth evaluation is missing, keep the executor session active and send
+a concrete follow-up through `codex_goal_session.py send`. When evaluation is
+ready, the orchestrator starts the corresponding reviewer goal. Only the
+reviewer can accept the workflow by writing `REVIEWER-STATUS.json` with
+`status="accepted"` and `decision="accept"`. If the reviewer finds credible
+remaining optimization space or a buggy/incomplete evaluation, it writes
+`status="needs_executor_resume"`; the orchestrator then sends or resumes the
+executor with the required follow-ups. A pre-existing `STOP_HOOK_RESUME.md` is
+consumed once by the launcher for migration compatibility, but autorun does not
+generate process-exit resume cycles.
 
 ## Model And Runtime Context
 
@@ -979,8 +1090,28 @@ def main() -> int:
                 "aligned_lpips_max",
                 "higher_speedup_tie_breaker",
             ],
+            "speed_evaluation_policy": (
+                "kwl_primary_speed_evidence_is_warm_paired_dit_or_module_off_on_median_with_expected_full_contribution"
+                if args.dimension == "kwl_fusion"
+                else "authoritative_run_assess_against_model_profile"
+            ),
             "hard_quality_thresholds": "disabled_by_default_numeric_gates_require_explicit_candidate_contract",
             "global_done_requires_integration": True,
+            "stop_hook_lifecycle": {
+                "enabled": False,
+                "reason": "replaced_by_codex_autorun_persistent_tui",
+            },
+            "autorun_lifecycle": {
+                "enabled": True,
+                "executor": "codex_auto_run.py",
+                "model": "gpt-5.6-sol",
+                "sandbox": "workspace-write",
+                "approval_policy": "on-request",
+                "persistent_tui": True,
+                "executor_handoff_requires_smooth_full_evaluation": True,
+                "reviewer_acceptance_required": True,
+                "reviewer_status": "REVIEWER-STATUS.json",
+            },
         },
         "root_branch": args.root_branch,
         "submodule_branch": args.submodule_branch,

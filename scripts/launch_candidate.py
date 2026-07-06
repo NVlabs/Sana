@@ -314,9 +314,16 @@ def write_launch_script(
     output_dir: Path,
 ) -> Path:
     launch_path = run_dir / "launch.sh"
+    started_path = run_dir / "job-started.json"
     lines = [
         "#!/usr/bin/env bash",
         "set -euo pipefail",
+        (
+            "printf '{\"schema_version\":1,\"job_id\":\"%s\",\"started_at_utc\":\"%s\","
+            "\"hostname\":\"%s\"}\\n' "
+            '"${SLURM_JOB_ID:-local}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(hostname)" '
+            f"> {shlex.quote(str(started_path))}"
+        ),
         f"cd {shlex.quote(str(sol_root))}",
         f"mkdir -p {shlex.quote(str(output_dir))}",
     ]
@@ -655,6 +662,8 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
     if candidate_dry_run:
         env.update(candidate_dry_run.get("env_preview", {}))
     env.update(data.get("env", {}))
+    env.setdefault("AUTOVIDEO_REPO_ROOT", str(root))
+    env.setdefault("AUTOVIDEO_RUNTIME_ROOT", str(runtime_root))
     for item in args.env or []:
         if "=" not in item:
             raise SystemExit(f"--env expects KEY=VALUE, got: {item}")

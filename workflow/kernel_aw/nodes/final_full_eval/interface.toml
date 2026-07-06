@@ -1,0 +1,9 @@
+name = "final_full_eval"
+kind = "orchestration"
+callable_by = ["workflow/kernel_aw/workflow.py"]
+description = "Run the terminal full diffusion/Gemini quality gate after reviewer requests workflow exit."
+
+inputs = ["REVIEWER-STATUS.json", "runs/*/outputs/benchmark.json", "baseline_frames"]
+outputs = ["runs/<run_id>/assess_verdict.json"]
+outcomes = ["passed", "missing", "quality_failed", "infra_blocked", "failed"]
+side_effects = ["may_run_plan_assess", "may_archive_reviewer_status"]

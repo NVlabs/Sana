@@ -1,0 +1,9 @@
+name = "full_diffusion_eval"
+kind = "agent_callable"
+callable_by = ["codex_executor"]
+description = "Launch or collect the official full Hunyuan diffusion run after microbench promotion."
+
+inputs = ["candidate_id", "candidate_manifest", "microbench_gate"]
+outputs = ["runs/<run_id>/outputs/benchmark.json", "runs/<run_id>/outputs/frames", "runs/<run_id>/outputs/out.mp4"]
+outcomes = ["submitted", "completed", "failed", "infra_blocked"]
+required_artifacts = ["outputs/benchmark.json", "outputs/frames or outputs/out.mp4"]

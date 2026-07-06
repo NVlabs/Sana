@@ -24,9 +24,9 @@ vague acceleration idea
 | `install_project_skills.py` | Install Symposium skills into this project root. |
 | `probe_goal_mode.py` | Check whether Symposium skills and interactive Codex goal-mode prerequisites are present. |
 | `prepare_goal.py` | Create a goal bundle with `goal.md`, `context.json`, and candidate manifest. |
-| `codex_goal_session.py` | Manage detached interactive Codex goal sessions through tmux. |
+| `codex_goal_session.py` | Manage detached Codex autorun sessions and their exact tmux panes. |
 | `start_claude_goal.sh` | Start an interactive Claude session with the goal prompt. |
-| `start_codex_goal.sh` | Guarded interactive adapter. It refuses to run without a TTY and Codex command. |
+| `start_codex_goal.sh` | Resolve `codex_auto_run.py` and launch a guarded Codex TUI goal session. |
 | `../../.symposium/goal-mode.env.example` | Example machine-local launcher configuration. |
 
 ## Install Symposium Skills Locally
@@ -58,15 +58,21 @@ On this machine, the configured Claude launcher is:
 CLAUDE_GOAL_COMMAND="$HOME/.local/bin/claude"
 ```
 
-Set `CODEX_GOAL_COMMAND` in `.symposium/goal-mode.env` when a real interactive
-Codex launcher is available:
+Configure the autorun launcher, model, and sandbox in
+`.symposium/goal-mode.env`:
 
 ```bash
-export CODEX_GOAL_COMMAND="/absolute/path/to/codex -C /absolute/path/to/auto-video --no-alt-screen"
+export CODEX_AUTORUN="$HOME/codex_auto_run.py"
+export CODEX_AUTORUN_MODEL="gpt-5.6-sol"
+export CODEX_AUTORUN_SANDBOX="workspace-write"
 ```
 
-The command must start interactive Codex. Goal text is not passed as a normal
-CLI prompt; managed sessions send `/goal follow <goal.md>` after the pane starts.
+`start_codex_goal.sh` also checks `$HOME/codex_auto_run.py` and
+`$HOME/code/codex_exec/codex_auto_run.py` when `CODEX_AUTORUN` is unset. It
+starts the managed TUI without an argv-sized prompt, waits for the Codex UI,
+then delivers the goal through a file-backed tmux buffer. It explicitly selects
+`gpt-5.6-sol` and uses `workspace-write` with `on-request` approvals. Do not set
+`--bypass`.
 
 ## Probe
 
@@ -78,6 +84,7 @@ The probe checks:
 
 - the Symposium submodule
 - project-local Codex/Claude skill install
+- whether `codex_auto_run.py` is available with workspace-write support
 - whether an interactive Codex command is available
 - whether an interactive Claude command is available
 - whether the current shell has a TTY
@@ -136,19 +143,16 @@ python3 tools/symposium/loop_control.py validate-status
 tools/symposium/start_codex_goal.sh goals/<goal-id>
 ```
 
-This script is intentionally guarded. It only starts an interactive session when:
-
-- stdin/stdout are attached to a TTY
-- a Codex command is available through `PATH`, or `CODEX_GOAL_COMMAND` is set
-
-Direct use starts interactive Codex and prints the native command to run:
-`/goal follow goals/<goal-id>/goal.md`. For unattended fanout, prefer the
-managed tmux session below, which sends that slash command automatically.
+This script delegates to `codex_auto_run.py`. Direct use attaches when a TTY is
+available; non-interactive use automatically detaches. The launcher rejects
+full-access sandbox values and always passes the selected model explicitly.
 
 ## Managed Codex Goal Sessions
 
-Use the tmux-backed manager when an agent or human needs to monitor and keep
-interacting with a Codex goal without owning the terminal forever.
+Use the manager when an agent or human needs to monitor and keep interacting
+with a Codex goal without owning the terminal forever. The manager does not
+create an outer tmux session; it records the exact pane created by
+`codex_auto_run.py`.
 
 Start a detached goal session:
 
@@ -234,6 +238,99 @@ python3 tools/symposium/codex_goal_session.py release goals/<goal-id> \
 ```
 
 Session metadata is written under `.symposium/scratch/codex-goal-sessions/`.
+
+### Autorun Lifecycle
+
+Managed goals are persistent Codex TUI sessions. The autorun watcher handles
+recognized command/edit/network approval overlays while Codex remains in
+`workspace-write`; it does not approve full-access screens or enable bypass.
+Use `status`, `capture`, and `send` to supervise progress and provide follow-up
+instructions. Use `stop` or `release` only for the exact recorded session.
+
+Autorun does not invoke `stop_hook.py after-agent`, because the interactive TUI
+does not exit after every response. Executors must update durable
+`AGENT-STATUS.json`, `SEARCH_JOURNAL.md`, and evaluation artifacts before
+requesting handoff. The orchestrator inspects those artifacts and starts the
+reviewer goal. The reviewer writes `REVIEWER-STATUS.json` at the worktree root:
+
+```json
+{
+  "schema_version": 1,
+  "target_goal_id": "kwl-fusion",
+  "status": "accepted",
+  "decision": "accept",
+  "reason": "smooth full evaluation exists and no credible local optimization remains",
+  "required_followups": [],
+  "evidence": ["runs/<run-id>/assess_verdict.json"]
+}
+```
+
+If the reviewer writes `"status": "needs_executor_resume"`, send the required
+follow-up to the still-live executor session or resume the persisted Codex
+conversation. A workflow is accepted only when the reviewer writes
+`status="accepted"` and `decision="accept"`. The launcher consumes a pre-existing
+`STOP_HOOK_RESUME.md` once for migration compatibility, but it does not create a
+process-exit resume loop.
+
+## Indexed Experiment Isolation
+
+Use indexed experiments when running many agents in parallel or when a new run
+must not see prior agent edits. Each experiment id gets a fresh git worktree
+from a shared baseline commit plus private `goals/`, `runs/`, `state/`, and
+compile/cache directories.
+
+Create a clean Hunyuan KWL experiment from the current committed baseline:
+
+```bash
+python3 tools/symposium/experiment.py create \
+  --experiment-id 15001 \
+  --base-ref <baseline-commit-or-branch> \
+  --dimension kwl_fusion \
+  --model-id hunyuan_diffusers
+```
+
+This writes:
+
+```text
+output/experiments/15001/
+  experiment.json
+  worktree/
+    goals/kwl-fusion/
+    runs/
+    state/
+    caches/tmp/
+    caches/triton/
+    caches/torch_extensions/
+```
+
+Start it:
+
+```bash
+python3 tools/symposium/experiment.py start --experiment-id 15001
+```
+
+Check or stop it:
+
+```bash
+python3 tools/symposium/experiment.py status --experiment-id 15001
+python3 tools/symposium/experiment.py stop --experiment-id 15001
+```
+
+Isolation rules:
+
+- `create` refuses to reuse an existing experiment id.
+- the worktree starts from `base_sha`, not from dirty coordinator files;
+- `start` refuses to run if local `AGENT-STATUS.json`, `SEARCH_JOURNAL.md`,
+  `SUMMARY.md`, or `runs/` already exists, unless `--resume` is passed;
+- `TMPDIR`, `TRITON_CACHE_DIR`, and `TORCH_EXTENSIONS_DIR` point inside the
+  experiment worktree;
+- tmux session names include the experiment id, for example
+  `exp-15001-kwl-fusion`.
+
+For a truly common starting point across many ids, commit the control-plane
+changes first and pass that same commit as `--base-ref` to every `create`
+command. Uncommitted coordinator edits are recorded in `experiment.json` but are
+not copied into the experiment worktree.
 
 ## Start Claude Goal Mode
 

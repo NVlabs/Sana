@@ -3,27 +3,112 @@
 **Scope**: Find kernel-level and graph-level implementation optimizations that
 preserve the same model algorithm. KWL candidates may change floating-point
 operation order, fused-multiply-add behavior, launch grouping, memory layout, or
-backend implementation, but must not change the scheduler, step count, token
-set, prompt/guidance state, LoRA state, resolution, frame count, attention
-semantics, cache semantics, pruning semantics, or quantization policy.
+custom-kernel implementation, but must not change the scheduler, step count,
+token set, prompt/guidance state, LoRA state, resolution, frame count, attention
+semantics, cache semantics, pruning semantics, quantization policy, or framework
+attention/backend dispatch policy.
 
 The `KWLFusions` transform is a build-time helper that emits
-`SGLANG_HQ_KWL_*` flags. It is useful for ablations, but it is not the whole
-search space. Subagents should inspect the target-model hot path directly and
-may implement exact fused operators, backend swaps, compile wrappers, graph
-capture, or layout fixes in the execution repo.
+`SGLANG_HQ_KWL_*` flags. It is historical diagnostic scaffolding, not a valid
+candidate by itself. Subagents should inspect the target-model hot path directly
+and may implement exact fused operators, custom kernel wrappers, module-local
+microbenchmarks, or layout fixes in the execution repo.
+
+## Lossless-First Implementation Direction
+
+Start from repeated operator chains that are already present in the target
+runtime and preserve the same mathematical program. Prefer exact or
+lossless-within-existing-dtype optimizations before global compiler changes:
+
+- fuse adjacent pointwise operations around existing matrix multiplies,
+  normalizations, modulations, activations, gates, residual adds, and output
+  conversions when the same tensors and parameters are consumed;
+- remove redundant layout, allocation, copy, transpose, cast, or metadata work
+  when aliasing and in-place safety are proven;
+- pack or batch equivalent projections, small kernels, or repeated launch sites
+  when this preserves the same inputs, outputs, masks, ordering constraints, and
+  dtype contract;
+- use compile, regional compile, CUDA graph capture, or launch batching only for
+  stable repeated regions, with cold/warm/graph-replay timings separated;
+- cache static descriptors, offsets, masks, layout metadata, and workspace
+  allocations only when their values are shape/prompt invariant for the current
+  benchmark contract.
+
+Framework backend selection, SDPA backend swaps, FlashAttention/FlashInfer
+dispatch switches, and env-flag-only bundles are out of scope for KWL agent
+startup. Do not implement, resume, or re-run backend-selection probes. A KWL
+candidate must modify an operator, module, layout path, custom kernel, or
+microbenchmarked DiT-level fusion boundary.
+If `AGENT-STATUS.json`, `SEARCH_JOURNAL.md`, or a prior run directory contains
+a partially completed backend-selection probe, mark that record stale/cancelled
+and start a fresh module/DiT microbench candidate instead of resuming it.
+
+## Microbench-First Contract
+
+Do not launch a full denoising/video generation run for a new KWL idea. First
+write a module-level or DiT-block-level warm paired microbenchmark that:
+
+- constructs representative tensors from the target model shape contract;
+- runs OFF baseline and ON candidate implementations in the same process, same
+  Slurm allocation/GPU, same input tensors, same dtype, and same warmed cache
+  state;
+- uses explicit warmup iterations before timing and reports repeat statistics:
+  median, p25/p75, min/max, iteration count, and OFF/ON ordering;
+- measures latency, launch count or profiler evidence, peak memory when useful,
+  and max/mean numerical difference;
+- proves OFF identity for guarded code;
+- records expected full contribution:
+  `saved_ms_per_call * calls_per_step * steps`, percent of measured DiT/block
+  time, and expected full-run speedup ceiling;
+- records exact reproduction commands and writes a durable JSON result.
+
+Promote a candidate to full inference only when the microbench shows positive
+latency or peak-memory movement under this warm paired DiT/module test and the
+tensor difference is inside the declared tolerance. Full denoise is final
+visual/quality sanity and gross-regression evidence; it is not the primary speed
+authority for sub-percent KWL candidates. If a full denoise later has visual
+artifacts, suspect a kernel, layout, aliasing, masking, or module-boundary bug
+first; do not dismiss it as small numeric drift accumulation without
+module-level evidence.
+
+## Hunyuan Diffusers DiT Fusion Reference
+
+For `hunyuan_diffusers`, inspect the installed Diffusers transformer before
+editing. The current structure has 20 dual-stream transformer blocks and 40
+single-stream transformer blocks, with 24 attention heads, head dim 128, inner
+dim 3072, patch size 2, and patch size t=1. Use these examples as concrete
+starting points for microbench candidates:
+
+- attention-adjacent Q/K projection output + QK RMSNorm + RoPE application;
+- packed latent QKV projection and packed text added-QKV projection, preserving
+  the same dense mask and token order;
+- single-stream block `cat(attn_output, mlp_output) -> proj_out -> gate ->
+  residual`, replacing the materialized concatenation with equivalent split
+  projection or fused epilogue;
+- dual-stream attention residual gates: `x + gate * attn` for latent and text
+  branches;
+- dual-stream `LayerNorm -> scale/shift` before FFN for latent/text branches;
+- FFN output epilogue `x + gate * ff(x)` for latent and text branches;
+- attention output split/projection for latent/text outputs when the split
+  shape is static;
+- final `norm_out -> proj_out -> reshape/permute/flatten` output-layout path;
+- attention mask and RoPE/layout descriptor construction when the values are
+  invariant for the official benchmark shape.
+
+Only after these module-local fusion candidates are exhausted should an agent
+try `torch.compile`, regional compile, CUDA graph capture, or other global graph
+machinery.
 
 ## Quality-Gated Frontier Contract
 
-KWL is an implementation optimization dimension with a strict semantic boundary,
-not a bit-exact-only dimension. Bit-exact or dtype-rounding-only candidates are
-preferred when they exist, but non-bit-exact kernel/backend paths are valid
-frontier candidates when their drift is declared and the authoritative visual
-evidence is recorded.
+KWL is an implementation optimization dimension with a strict semantic boundary.
+Bit-exact or dtype-rounding-only candidates are preferred. Non-bit-exact custom
+kernel/operator paths are valid only when their module-level tensor drift is
+declared, microbenchmarked, and then visually gated at the end.
 
 - OFF path must be identity to baseline for guarded code paths.
-- ON path may change floating-point order, FMA/epilogue behavior, compiler
-  lowering, backend implementation, or use a declared approximate kernel path.
+- ON path may change floating-point order, FMA/epilogue behavior, custom kernel
+  lowering, or use a declared approximate kernel path.
 - Every candidate must record its expected tolerance class: bit-exact,
   dtype-rounding-only, reduction-order drift, FMA/epilogue drift, fast-math
   drift, or approximate-kernel drift.
@@ -36,6 +121,8 @@ evidence is recorded.
 - Any candidate that changes sampling, denoising steps, token count, attention
   density, cache reuse, quantization policy, prompt handling, or output shape is
   not KWL. Route it to the appropriate dimension instead.
+- Full denoising/video generation is a final validation step only, not the first
+  measurement surface for kernel work.
 
 ## Required Preflight
 
@@ -44,12 +131,15 @@ Before proposing the first runnable candidate, record:
 - hot-path profile or code-inspection evidence: dominant kernel families,
   launch count, memory traffic, tensor shapes, dtype, and repeated operator
   chains;
-- environment and backend availability: PyTorch/CUDA versions, available
-  attention kernels, Triton/Inductor availability, CUTLASS/cuBLASLt/FlashInfer
-  or project-local fused kernels when relevant;
-- compile/graph state: cold compile cost, warm steady-state timing, graph
-  breaks, dynamic-shape guards, CUDA graph compatibility, and whether timing is
-  cold, warm, or cache-reused;
+- environment and kernel availability: PyTorch/CUDA versions, Triton/Inductor
+  availability, cuBLASLt/CUTLASS capabilities, and project-local fused kernels
+  when relevant;
+- microbench plan: tensor shapes, warmup/iteration counts, paired OFF/ON
+  ordering, median/p25/p75/min/max stats, diff metrics, profiler or
+  launch-count collection, expected full contribution, and acceptance criterion;
+- compile/graph state only after module-level candidates are exhausted: cold
+  compile cost, warm steady-state timing, graph breaks, dynamic-shape guards,
+  CUDA graph compatibility, and whether timing is cold, warm, or cache-reused;
 - identity proof: OFF flag leaves the baseline path byte-identical or otherwise
   proves no guarded code executes;
 - risk list: shape polymorphism, dtype casts, aliasing/in-place writes,
@@ -113,11 +203,11 @@ Possible targets:
 
 - Q/K RMSNorm plus RoPE fusion;
 - QKV projection packing or batching when weights and bias layout permit;
-- bias or mask placement inside an attention backend that already supports the
-  same dense attention semantics;
 - packed QKV layout conversion removal;
-- dense FlashAttention/FlashInfer/backend selection for the same mask, causal
-  mode, scale, dropout-off state, and dtype.
+- fused attention output split plus output projection when latent/text split
+  sizes are static;
+- static mask, descriptor, or layout metadata preparation when it avoids repeated
+  allocations and preserves the same dense attention semantics.
 
 Hard boundary:
 
@@ -127,7 +217,9 @@ Hard boundary:
 ### 4. Compile and Graph Capture
 
 Use compiler or capture mechanisms to reduce launch overhead while preserving
-the eager graph.
+the eager graph. This family is lower priority than module-local kernel/operator
+fusion; use it only after microbench evidence shows no viable local fusion
+candidate remains.
 
 Possible targets:
 
@@ -186,7 +278,9 @@ Evidence to collect:
 
 - launch count before/after;
 - CPU-side enqueue time and GPU timeline gaps;
-- whether the speedup persists under warm repeated runs.
+- whether the speedup persists under paired OFF/ON warm repeated runs in the
+  DiT/module context rather than a one-off full-video run against a historical
+  baseline.
 
 ### 7. Overlap, Streams, and Pipeline Scheduling
 
@@ -224,42 +318,24 @@ Guardrails:
   must match baseline semantics;
 - postprocess fusions cannot hide missing or reordered frames.
 
-### 9. Backend Selection and Fallback Policy
-
-Try an equivalent or quality-gated approximate backend only when the semantic
-boundary and fallback policy are proven.
-
-Possible targets:
-
-- dense attention backend selection among project-local kernels,
-  FlashAttention/FlashInfer, Triton, or framework SDPA;
-- GEMM backend selection among cuBLASLt, CUTLASS, Triton, or TorchInductor;
-- exact fallback for unsupported shape/dtype/device combinations;
-- warm cache and autotune-state management.
-
-Guardrails:
-
-- fallback must be visible in logs/manifests;
-- a candidate cannot report speedup from silently skipping work or falling back
-  to a different algorithm;
-- autotune and compile state must be labelled in every timing result.
-
 ## Search Axes
 
 - hot operator pattern: GEMM epilogue, norm/modulate, attention-adjacent,
   layout/copy, compile/graph, launch batching, stream overlap, decode/postprocess
 - scope: one module, one block family, attention-only, FFN-only, VAE-only,
   postprocess-only, whole repeated denoising region
-- backend path: eager PyTorch, TorchInductor, Triton, cuBLASLt, CUTLASS,
-  project-local CUDA/C++ op, FlashAttention/FlashInfer, CUDA graph
+- implementation path: eager PyTorch reference, custom Triton, cuBLASLt/CUTLASS
+  epilogue, project-local CUDA/C++ op, TorchInductor/CUDA graph only after
+  module-local candidates are exhausted
 - guard: env flag, module flag, shape/dtype guard, warm-cache guard, fallback
   policy
 - numerical tolerance: bit-exact, dtype-rounding-only, reduction-order drift,
   FMA/epilogue drift, fast-math drift, approximate-kernel drift
 - timing state: cold compile, warm compile, autotuned, CUDA graph replay,
   cache-reused
-- validation surface: module tensor diff, OFF identity, full render gate,
-  launch/profile evidence
+- validation surface: warm paired DiT/module latency, module tensor diff, OFF
+  identity, launch/profile evidence, expected full contribution, full render
+  visual gate only after microbench success
 
 ## Profiling Setup
 
@@ -281,7 +357,10 @@ Key metrics:
 - kernel launch count per block and per denoising step;
 - host enqueue gaps, host-device syncs, graph breaks, and dynamic-shape guards;
 - memory bandwidth versus compute utilization;
-- cold compile/autotune time versus warm steady-state time.
+- cold compile/autotune time versus warm steady-state time;
+- paired OFF/ON warm medians for DiT/block/module-level tests. Do not claim a
+  small KWL speedup from a single full run compared only against a historical
+  canonical baseline.
 
 ## Structured Negative Standard
 
@@ -291,7 +370,7 @@ A structured negative is acceptable only after the subagent records:
   quality-gated approximate variants where relevant, and why each is unsafe,
   unavailable, already fused, or not hot enough;
 - profile or code evidence for the top remaining hot spots;
-- backend availability and fallback evidence;
+- kernel implementation availability and fallback evidence for custom ops;
 - OFF identity results for any touched guard path;
 - expected speed ceiling explaining why more KWL work is unlikely to produce a
   useful retained frontier candidate.

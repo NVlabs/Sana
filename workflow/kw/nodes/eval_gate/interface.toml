@@ -1,0 +1,9 @@
+name = "eval_gate"
+kind = "orchestration"
+callable_by = ["workflow/kw/workflow.py"]
+description = "Require a smooth full evaluation gate for the KWL executor."
+
+inputs = ["AGENT-STATUS.json", "runs/*/outputs/benchmark.json", "baseline_frames"]
+outputs = ["assess_verdict.json or gate_assess.json"]
+outcomes = ["smooth", "missing", "infra_blocked", "failed"]
+side_effects = ["may_run_plan_assess", "may_write_runs"]

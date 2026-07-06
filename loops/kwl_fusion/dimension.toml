@@ -14,7 +14,8 @@ search_axes = [
   "hot operator pattern",
   "method family",
   "fusion boundary",
-  "kernel/backend choice",
+  "kernel implementation choice",
+  "microbench scope",
   "compile mode",
   "graph capture mode",
   "layout/copy elimination",
@@ -26,22 +27,31 @@ search_axes = [
 ]
 
 [[method_baseline]]
-id = "env_flag_kwl_bundle"
-family = "existing_kwl_flags"
+id = "eager_operator_chain_baseline"
+family = "module_local_eager_ops"
 tier = "wired"
-status = "env_ready"
-description = "Existing KWLFusions helper emits SGLANG_HQ_KWL_* flags for runtime ablations."
-entrypoint = "efficiency/transforms/kwl_fusions.py"
-required_work = "Verify the target runtime consumes each flag; use as a diagnostic baseline, not the whole KWL search."
+status = "wired"
+description = "The current unfused target-model module/operator chain used as the microbench and full-run baseline for exact KWL comparisons."
+entrypoint = "runtime/hunyuan_diffusers_baseline transformer block hot path"
+required_work = "Use as the OFF/eager reference when measuring module-local KWL candidates; do not replace it with backend selection or dispatch-only probes."
 
 [[method_baseline]]
 id = "gemm_epilogue_fusion"
 family = "gemm_epilogue_fusion"
 tier = "runtime_patch"
 status = "not_wired"
-description = "Fuse post-GEMM bias, activation, residual, gate, or output layout work into a backend epilogue."
+description = "Fuse post-GEMM bias, activation, residual, gate, or output layout work into a custom or library GEMM epilogue."
 entrypoint = "Sol-LTX-Infer hot linear/GEMM path"
-required_work = "Patch backend or custom op path; record tolerance class, tensor diffs when practical, and aligned quality evidence."
+required_work = "Patch the library epilogue or custom op path; record tolerance class, tensor diffs when practical, and aligned quality evidence."
+
+[[method_baseline]]
+id = "attention_adjacent_dense_fusion"
+family = "attention_adjacent_dense_fusion"
+tier = "runtime_patch"
+status = "not_wired"
+description = "Fuse dense-attention-adjacent projection output handling, norm, RoPE/layout, split/projection, or mask metadata work without changing attention semantics."
+entrypoint = "Sol-LTX-Infer attention module path"
+required_work = "Patch module-local operators or custom wrappers; prove same dense masks, token order, dtype contract, and tensor outputs within declared tolerance."
 
 [[method_baseline]]
 id = "norm_modulation_residual_fusion"
@@ -59,7 +69,7 @@ tier = "runtime_patch"
 status = "not_wired"
 description = "Use Torch compile, regional compile, graph-break repair, or CUDA graph replay for stable repeated regions."
 entrypoint = "Sol-LTX-Infer denoising/block execution path"
-required_work = "Patch compile/capture boundaries; separate cold compile, warm compile, graph replay, and fallback timings."
+required_work = "Use only after module-local kernel candidates are exhausted; patch compile/capture boundaries; separate cold compile, warm compile, graph replay, and fallback timings."
 
 [[method_baseline]]
 id = "layout_copy_elimination"
@@ -69,15 +79,6 @@ status = "not_wired"
 description = "Remove redundant contiguous, reshape, permute, dtype, allocation, or copy churn from hot paths."
 entrypoint = "Sol-LTX-Infer tensor layout path"
 required_work = "Patch the live path; prove aliasing/in-place safety and measure copy-kernel reduction."
-
-[[method_baseline]]
-id = "backend_selection_probe"
-family = "backend_selection"
-tier = "upper_bound_probe"
-status = "probe_only"
-description = "Try quality-gated approximate or alternate dense backends only when fallback and semantic boundary are explicit."
-entrypoint = "Sol-LTX-Infer backend dispatch path"
-required_work = "Record as blocker_probe or unsafe_probe unless it has full quality evidence, fallback logs, and declared tolerance."
 
 [eval]
 profile = "evals/profiles/official_video_t2v.toml"
@@ -91,11 +92,11 @@ max_iters = 40                           # search budget per dimension (hyperpar
 early_stop_patience = 0                  # fixed-budget frontier mode; 0 disables patience early stop
 keep = "frontier_candidates"             # keep candidates that improve quality OR speed/memory
 tiers = "evals/tiers.toml"               # speed targets: low=1.5x, medium=2.0x, high=3.0x
-# KWL follows standard fixed-budget frontier retention: retain candidates that
-# improve latency, peak memory, aligned quality, or reliable numeric stability.
-# ON bit-exactness is not required; record the declared tolerance class and
-# aligned quality evidence. Discard candidates with no quality/numeric
-# improvement and no speed/memory improvement; reject semantic changes, broken
-# OFF identity, or silent fallback.
+# KWL follows fixed-budget frontier retention over module/kernel microbench
+# evidence first: retain candidates that improve warm microbench latency or
+# peak memory with acceptable tensor diff and OFF identity. Full denoising is
+# final validation only after microbench success. Reject backend-selection,
+# SDPA-backend, framework-dispatch, or env-flag-only probes; stale local
+# backend-selection records must not be resumed.
 # Structured-negative is logged as a proposal/failure signature; it does not stop this default loop.
 # After the loop, the main agent selects 1.5x/2.0x/3.0x winners by Gemini+LPIPS quality ranking.

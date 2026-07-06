@@ -1,0 +1,88 @@
+id = "official_video_t2v_bernini"
+description = "Full Bernini (Bernini-Diffusers) 480p81 text-to-video evaluation profile."
+
+[official_config]
+model = "bernini_diffusers"
+width = 848
+height = 480
+frames = 81
+fps = 16
+steps = 50
+flow_shift = 5.0
+guidance_mode = "vae_txt_vit_wapg"
+seed = 42
+num_gpus = 4
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/benchmark.json",
+  "outputs/quality.json",
+  "outputs/risk_notes.md",
+  "outputs/collection.json",
+]
+optional = [
+  "outputs/frames",
+  "outputs/side_by_side.mp4",
+  "outputs/run_config.json",
+]
+
+[performance]
+baseline_candidate = "bernini_baseline"
+primary_metric = "denoise_s"
+secondary_metric = "total_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline runs BERNINI_CACHE_POLICY=off (the exact reference denoise path); optimizations must recover it when disabled."
+
+[quantitative_quality]
+enabled = true
+metrics = [
+  "frame_count",
+  "duration_s",
+  "mean_abs_pixel_diff",
+  "mse",
+  "psnr",
+  "sharpness_ratio",
+  "patch_boundary_ratio",
+  "temporal_delta_error",
+  "temporal_jitter_ratio",
+]
+frame_count_expected = 81
+duration_tolerance_s = 0.25
+sharpness_ratio_min = 0.95
+sharpness_ratio_max = 1.08
+temporal_jitter_ratio_min = 0.85
+temporal_jitter_ratio_max = 1.20
+
+[visual_artifact]
+enabled = true
+provider = "nvidia_gemini"
+base_url = "https://inference-api.nvidia.com/v1"
+model = "gcp/google/gemini-3.5-flash"
+api_key_env = "NVIDIA_API_KEY"
+rubric = "evals/rubrics/gemini_visual_artifact_gate.md"
+max_tokens = 4096
+sample_fps = 2
+side_by_side_required = true
+fail_on_new_artifacts = [
+  "snow_static_speckle",
+  "blur_detail_loss",
+  "mosaic_blocking_patch_artifacts",
+  "patch_boundary_discontinuity",
+  "banding_posterization",
+  "ghosting_smearing",
+  "melting_morphing_structure",
+  "temporal_flicker_popping",
+  "loss_of_temporal_coherence",
+  "composition_or_motion_regression",
+]

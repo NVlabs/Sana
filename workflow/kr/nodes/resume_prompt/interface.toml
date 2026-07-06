@@ -1,0 +1,9 @@
+name = "resume_prompt"
+kind = "orchestration"
+callable_by = ["workflow/kr/workflow.py"]
+description = "Write a workflow resume prompt for executor or reviewer."
+
+inputs = ["resume_target", "resume_reason", "resume_followups"]
+outputs = ["goals/<id>/STOP_HOOK_RESUME.md"]
+outcomes = ["written", "failed"]
+side_effects = ["writes_goal_dir"]

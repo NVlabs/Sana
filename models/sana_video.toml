@@ -1,0 +1,95 @@
+id = "sana_video"
+spec = "SanaVideo5B"
+display_name = "Sana 5B Video 720p193"
+family = "video_t2v"
+submodule = "runtime/sana_video_baseline"
+base_commit = ""
+run_script = "scripts/run_sana_video_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_sana_video.toml"
+
+[official_config]
+model = "sana_video_5b"
+dataset_repo = "yitongl/sana_video"
+bundle_file = "standalone/sana5b_720p193_minimal_infer.zip"
+checkpoint_file = "Sana_5B_480px_QwenNext_ltxvae23_selfflow_pertoken_subattnres_v2_multires_multifps_sft/checkpoints/epoch_7_step_2107015/model_ema.pth"
+width = 1280
+height = 736
+frames = 193
+fps = 24
+steps = 50
+cfg_scale = 8.0
+flow_shift = 12.0
+motion_score = 20
+num_gpus = 4
+
+[baseline]
+run_id = "20260702-044806-sana_video_baseline-canonical-sana-kernel_aw-0007-attempt1"
+slurm_job_id = "3768276"
+total_s = 313.26661357004195
+sample_mean_s = 62.65332271400839
+generate_s = 313.26661357004195
+text_encoder_s = 0.37796748289838433
+denoise_s = 297.4640354369767
+decode_s = 15.42461065016687
+wall_total_s = 313.26661357004195
+max_memory_allocated_gib = 0.0
+max_memory_reserved_gib = 0.0
+prompt_count = 5
+warmup_samples = 1
+timing_scope = "warm_single_sample_text_encoder_through_vae_decode"
+stage_isolated = true
+warm_steady_state = true
+includes_process_startup_and_model_load = false
+includes_text_encoder_inference = true
+includes_vae_decode = true
+includes_video_write = false
+denoise_s_is_compatibility_proxy = false
+status = "measured_holdout5_720p193_hot_text_encoder_through_vae_decode"
+
+[env]
+# Sana-ready shared environment used by the known-good Sana 5B inference jobs.
+PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/junsongc/envs/sana_open_b200_py311_cu128/bin/python"
+SANA_VIDEO_INFER_PYTHON = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/junsongc/envs/sana_open_b200_py311_cu128/bin/python"
+HF_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/.cache/huggingface"
+HF_HUB_CACHE = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/.cache/huggingface/hub"
+SANA_VIDEO_ASSET_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/.cache/sana_video"
+SANA_VIDEO_BUNDLE_ROOT = "external/sana_standalone"
+SANA_VIDEO_REFERENCE_BUNDLE_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sana_video_2/Sana/output/standalone/sana5b_720p193_minimal_infer"
+SANA_VIDEO_AUTO_DOWNLOAD_BUNDLE = "1"
+SANA_VIDEO_PREPARE_ASSETS = "0"
+SANA_VIDEO_ASSET_LINK_MODE = "symlink"
+SANA_VIDEO_CKPT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sana_video_2/Sana/output/Sana_5B_480px_QwenNext_ltxvae23_selfflow_pertoken_subattnres_v2_multires_multifps_sft/checkpoints/epoch_7_step_2107015/model_ema.pth"
+SANA_VIDEO_VAE_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sana_video_2/Sana/output/pretrained_models/LTX-2.3-Diffusers"
+SANA_VIDEO_NP = "1"
+SANA_VIDEO_SAMPLE_NUMS = "1"
+SANA_VIDEO_NUM_FRAMES = "193"
+SANA_VIDEO_FPS = "24"
+SANA_VIDEO_IMAGE_SIZE = "720"
+SANA_VIDEO_CFG_SCALE = "8"
+SANA_VIDEO_FLOW_SHIFT = "12"
+SANA_VIDEO_STEPS = "50"
+SANA_VIDEO_MOTION_SCORE = "20"
+SANA_HOT_BENCHMARK = "1"
+SANA_HOT_WARMUP_SAMPLES = "1"
+FORWARD_CACHE_METHOD = "none"
+SANA_VIDEO_PROMPTS = "models/sana_video/prompts/dpo_holdout_qwen35_val64_concrete40_first5.txt"
+PROMPT = "A coastal city at sunrise, warm light reflecting on glass towers and calm water, pedestrians crossing a waterfront promenade, cinematic camera motion."
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+cpus_per_task = 64
+mem = "512G"
+time = "04:00:00"
+job_name = "autovideo-sana-video-baseline-720p193"
+exclusive = true
+
+[reference_only]
+checkpoint_repo = "yitongl/sana_video"
+checkpoint_repo_type = "dataset"
+checkpoint_file = "Sana_5B_480px_QwenNext_ltxvae23_selfflow_pertoken_subattnres_v2_multires_multifps_sft/checkpoints/epoch_7_step_2107015/model_ema.pth"
+vae_repo = "Efficient-Large-Model/LTX-2.3-Diffusers"
+vae_files = "vae/*"
+text_encoder = "Efficient-Large-Model/gemma-2-2b-it"

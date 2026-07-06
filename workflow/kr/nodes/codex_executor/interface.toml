@@ -1,0 +1,9 @@
+name = "codex_executor"
+kind = "orchestration"
+callable_by = ["workflow/kr/workflow.py"]
+description = "Run one managed Codex autorun TUI executor turn for the KR retention workflow."
+
+inputs = ["goal_dir", "goal.md", "STOP_HOOK_RESUME.md", "autorun_model"]
+outputs = ["agent_last.md", "codex_exit_code", "NODE-COMPLETE.json"]
+outcomes = ["exited", "failed"]
+side_effects = ["may_modify_worktree", "may_write_goal_dir"]

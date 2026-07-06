@@ -95,6 +95,11 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert "PAB-style" in text
     assert "identify at least five caching mechanisms" in text
     assert "tools/symposium/loop_control.py init" in text
+    assert "## Codex Autorun Lifecycle" in text
+    assert "gpt-5.6-sol" in text
+    assert "workspace-write" in text
+    assert "STOP_HOOK_RESUME.md" in text
+    assert "REVIEWER-STATUS.json" in text
     assert "speed/quality evidence status" in text
     assert "reference/search_space_docs" not in text
     context = json.loads((goal_dir / "context.json").read_text())
@@ -129,6 +134,11 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert "restart_with_new_direction" in context["loop_contract"]["main_agent_review_actions"]
     assert "aligned_lpips" in context["loop_contract"]["quality_source_of_truth"]
     assert context["loop_contract"]["global_done_requires_integration"] is True
+    assert context["loop_contract"]["stop_hook_lifecycle"]["enabled"] is False
+    assert context["loop_contract"]["autorun_lifecycle"]["enabled"] is True
+    assert context["loop_contract"]["autorun_lifecycle"]["model"] == "gpt-5.6-sol"
+    assert context["loop_contract"]["autorun_lifecycle"]["sandbox"] == "workspace-write"
+    assert context["loop_contract"]["autorun_lifecycle"]["reviewer_acceptance_required"] is True
 
 
 def test_start_script_rejects_legacy_orchestrator_records() -> None:
@@ -144,6 +154,16 @@ def test_start_script_rejects_legacy_orchestrator_records() -> None:
     assert "--clean-stale-records" in text
     assert "SYMPOSIUM_CLEAN_HISTORY_RECORDS" in text
     assert "Refusing to start goal because stale optimization records are visible" in text
+    assert "codex_auto_run.py" in text
+    assert 'AUTORUN_MODEL="${CODEX_AUTORUN_MODEL:-gpt-5.6-sol}"' in text
+    assert 'AUTORUN_SANDBOX="${CODEX_AUTORUN_SANDBOX:-workspace-write}"' in text
+    assert "--model" in text
+    assert "tmux load-buffer" in text
+    assert "tmux paste-buffer" in text
+    assert 'PANE_CAPTURE" == *"OpenAI Codex"*' in text
+    assert "--prompt-file" not in text
+    assert "--dangerously-bypass-approvals-and-sandbox" not in text
+    assert "CODEX_EXEC_FLAGS" not in text
 
 
 def test_prepare_goal_stale_check_exempts_active_run() -> None:
@@ -393,9 +413,13 @@ def test_prepare_goal_embeds_kwl_quality_gated_rules() -> None:
     assert "## KWL Quality-Gated Frontier" in text
     assert "run the full fixed-budget frontier loop" in text
     assert "ON bit-exactness is not required" in text
-    assert "identify at least six KWL method families" in text
+    assert "identify at least seven KWL method families" in text
     assert "GEMM epilogues" in text
-    assert "compile or CUDA graph capture" in text
+    assert "module-level or DiT-block-level microbench" in text
+    assert "warm paired DiT/module" in text
+    assert "expected full contribution" in text
+    assert "not the primary speed authority" in text
+    assert "backend-selection" in text
     assert "layout/copy elimination" in text
     context = json.loads((goal_dir / "context.json").read_text())
     assert context["dimension"] == "kwl_fusion"
@@ -403,11 +427,16 @@ def test_prepare_goal_embeds_kwl_quality_gated_rules() -> None:
     assert "retain_kwl_candidate" in context["loop_contract"]["candidate_retention"]
     assert "declared_numeric_tolerance" in context["loop_contract"]["quality_source_of_truth"]
     assert "module_level_tensor_diff_when_available" in context["loop_contract"]["quality_source_of_truth"]
+    assert (
+        context["loop_contract"]["speed_evaluation_policy"]
+        == "kwl_primary_speed_evidence_is_warm_paired_dit_or_module_off_on_median_with_expected_full_contribution"
+    )
 
 
-def test_session_start_sends_native_goal_follow() -> None:
+def test_session_start_delegates_to_autorun() -> None:
     session_mod = load_module(SESSION, "codex_goal_session_test")
-    calls: list[list[str]] = []
+    launcher_calls: list[dict] = []
+    actual_session = "autovideo-sample-20260627-010203-1234-abcd"
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -428,15 +457,27 @@ def test_session_start_sends_native_goal_follow() -> None:
         launcher.parent.mkdir(parents=True)
         launcher.write_text("#!/usr/bin/env bash\n")
 
-        def fake_run_tmux(args: list[str], check: bool = True):
-            calls.append(args)
-            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        def fake_launcher(launcher_path: Path, goal_arg: str, worktree: Path, env: dict[str, str]):
+            launcher_calls.append(
+                {
+                    "launcher": launcher_path,
+                    "goal_arg": goal_arg,
+                    "worktree": worktree,
+                    "env": env,
+                }
+            )
+            return subprocess.CompletedProcess(
+                [str(launcher_path), goal_arg],
+                0,
+                stdout=f"Codex running in tmux session: {actual_session}\n",
+                stderr="",
+            )
 
-        def fake_alive(_session: str) -> bool:
-            return any(call and call[0] == "new-session" for call in calls)
+        def fake_alive(session: str) -> bool:
+            return session == actual_session
 
         session_mod.project_root = lambda: root
-        session_mod.run_tmux = fake_run_tmux
+        session_mod.run_goal_launcher = fake_launcher
         session_mod.tmux_alive = fake_alive
         session_mod.time.sleep = lambda _seconds: None
 
@@ -452,16 +493,26 @@ def test_session_start_sends_native_goal_follow() -> None:
             )
         )
 
-    send_text = [call for call in calls if call[:3] == ["send-keys", "-t", "autovideo-sample"]]
-    assert any("/goal follow goals/sample/goal.md" in call for call in send_text)
-    assert result["goal_follow_command"] == "/goal follow goals/sample/goal.md"
-    new_session = next(call for call in calls if call and call[0] == "new-session")
-    assert "Read AGENT-GOAL.md" not in " ".join(new_session)
+    assert len(launcher_calls) == 1
+    launch = launcher_calls[0]
+    assert launch["goal_arg"] == "goals/sample"
+    assert launch["worktree"] == root
+    assert launch["env"]["SYMPOSIUM_AUTORUN_DETACH"] == "1"
+    assert launch["env"]["SYMPOSIUM_AUTORUN_SESSION_PREFIX"] == "autovideo-sample"
+    assert launch["env"]["SYMPOSIUM_EXECUTOR_SESSION_NAME"] == "autovideo-sample"
+    assert launch["env"]["CODEX_AUTORUN_MODEL"] == "gpt-5.6-sol"
+    assert launch["env"]["CODEX_AUTORUN_SANDBOX"] == "workspace-write"
+    assert result["session"] == actual_session
+    assert result["executor"] == "codex-autorun"
+    assert result["model"] == "gpt-5.6-sol"
+    assert result["sandbox"] == "workspace-write"
+    assert "codex-autorun TUI" in result["goal_follow_command"]
 
 
 def test_session_start_can_run_in_isolated_worktree() -> None:
     session_mod = load_module(SESSION, "codex_goal_session_worktree_test")
-    calls: list[list[str]] = []
+    launcher_calls: list[dict] = []
+    actual_session = "sample-20260627-010203-1234-abcd"
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "main"
@@ -474,15 +525,27 @@ def test_session_start_can_run_in_isolated_worktree() -> None:
         launcher.parent.mkdir(parents=True)
         launcher.write_text("#!/usr/bin/env bash\n")
 
-        def fake_run_tmux(args: list[str], check: bool = True):
-            calls.append(args)
-            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        def fake_launcher(launcher_path: Path, goal_arg: str, cwd: Path, env: dict[str, str]):
+            launcher_calls.append(
+                {
+                    "launcher": launcher_path,
+                    "goal_arg": goal_arg,
+                    "cwd": cwd,
+                    "env": env,
+                }
+            )
+            return subprocess.CompletedProcess(
+                [str(launcher_path), goal_arg],
+                0,
+                stdout=f"Codex running in tmux session: {actual_session}\n",
+                stderr="",
+            )
 
-        def fake_alive(_session: str) -> bool:
-            return any(call and call[0] == "new-session" for call in calls)
+        def fake_alive(session: str) -> bool:
+            return session == actual_session
 
         session_mod.project_root = lambda: root
-        session_mod.run_tmux = fake_run_tmux
+        session_mod.run_goal_launcher = fake_launcher
         session_mod.tmux_alive = fake_alive
         session_mod.time.sleep = lambda _seconds: None
 
@@ -498,14 +561,19 @@ def test_session_start_can_run_in_isolated_worktree() -> None:
             )
         )
 
-    new_session = next(call for call in calls if call and call[0] == "new-session")
-    assert str(worktree) in new_session
-    assert str(launcher) in " ".join(new_session)
-    assert "SYMPOSIUM_CURRENT_RUN_ID" in " ".join(new_session)
-    assert "fanout_unit" in " ".join(new_session)
+    assert len(launcher_calls) == 1
+    launch = launcher_calls[0]
+    assert launch["launcher"] == launcher
+    assert launch["goal_arg"] == "goals/sample"
+    assert launch["cwd"] == worktree
+    assert launch["env"]["SYMPOSIUM_CURRENT_RUN_ID"] == "fanout_unit"
+    assert launch["env"]["AUTO_VIDEO_RUN_ID"] == "fanout_unit"
+    assert launch["env"]["RUN_ID"] == "fanout_unit"
+    assert launch["env"]["SYMPOSIUM_AUTORUN_SESSION_PREFIX"] == "sample"
     assert result["worktree"] == str(worktree)
     assert result["run_id"] == "fanout_unit"
-    assert result["goal_follow_command"] == "/goal follow goals/sample/goal.md"
+    assert result["session"] == actual_session
+    assert "codex-autorun TUI" in result["goal_follow_command"]
 
 
 def test_search_space_import_records_source_metadata() -> None:
@@ -549,7 +617,7 @@ def main() -> None:
     test_prepare_goal_embeds_token_prune_search_space_only()
     test_prepare_goal_embeds_sparse_attention_method_baselines()
     test_prepare_goal_embeds_kwl_quality_gated_rules()
-    test_session_start_sends_native_goal_follow()
+    test_session_start_delegates_to_autorun()
     test_session_start_can_run_in_isolated_worktree()
     test_search_space_import_records_source_metadata()
     print("goal mode tests passed")

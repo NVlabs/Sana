@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Manage interactive Codex goal sessions through tmux.
+"""Manage Codex autorun goal sessions through their owned tmux panes.
 
-This keeps Codex in real interactive mode while giving the orchestration layer
-cheap status, capture, and send controls.
+The codex_auto_run.py launcher owns tmux creation and approval watching. This
+adapter records the exact returned session while preserving Symposium status,
+capture, send, stop, and release controls.
 """
 
 from __future__ import annotations
@@ -21,6 +22,9 @@ from typing import Any
 
 
 VALID_NAME = re.compile(r"[^A-Za-z0-9_.-]+")
+AUTORUN_SESSION_RE = re.compile(r"^Codex running in tmux session:\s*(\S+)\s*$", re.MULTILINE)
+DEFAULT_AUTORUN_MODEL = "gpt-5.6-sol"
+DEFAULT_AUTORUN_SANDBOX = "workspace-write"
 
 
 def project_root() -> Path:
@@ -49,6 +53,11 @@ def goal_id(goal_dir: Path) -> str:
 
 def session_name_for(goal_dir: Path, name: str | None = None) -> str:
     return sanitize(name) if name else f"autovideo-{goal_id(goal_dir)}"
+
+
+def autorun_prefix_for(goal_dir: Path, name: str | None = None) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "-", session_name_for(goal_dir, name)).strip("-_")
+    return cleaned[:48].rstrip("-_") or "autovideo"
 
 
 def state_path(root: Path, goal_dir: Path, name: str | None = None) -> Path:
@@ -140,63 +149,82 @@ def infer_run_id(worktree: Path, context: dict[str, Any]) -> str:
     return ""
 
 
+def run_goal_launcher(
+    launcher: Path,
+    goal_arg: str,
+    worktree: Path,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [str(launcher), goal_arg],
+        cwd=worktree,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def start(args: argparse.Namespace) -> dict[str, Any]:
     root = project_root()
     worktree = resolve_worktree(root, args.worktree)
     goal_dir = resolve_goal_dir(worktree, args.goal_dir)
     context = load_context(goal_dir)
     run_id = infer_run_id(worktree, context)
-    session = session_name_for(goal_dir, args.name)
+    session_prefix = autorun_prefix_for(goal_dir, args.name)
     state_file = state_path(root, goal_dir, args.name)
+    previous_state = load_state(state_file)
+    previous_session = str(previous_state.get("session") or session_prefix)
 
-    if tmux_alive(session):
+    if tmux_alive(previous_session):
         if not args.force:
             raise SystemExit(
-                f"Session already exists: {session}. Use status/capture/send/attach or --force."
+                f"Session already exists: {previous_session}. "
+                "Use status/capture/send/attach or --force."
             )
-        run_tmux(["kill-session", "-t", session])
+        run_tmux(["kill-session", "-t", previous_session])
 
     launcher = worktree / "tools/symposium/start_codex_goal.sh"
     goal_arg = relative_to_root(worktree, goal_dir)
     goal_file = relative_to_root(worktree, goal_dir / "goal.md")
-    exports = ["export TERM=xterm-256color"]
+    env = os.environ.copy()
+    env["TERM"] = "xterm-256color"
+    env["SYMPOSIUM_AUTORUN_DETACH"] = "1"
+    env["SYMPOSIUM_AUTORUN_SESSION_PREFIX"] = session_prefix
+    env["SYMPOSIUM_SESSION_NAME"] = session_prefix
+    env.setdefault("CODEX_AUTORUN_MODEL", DEFAULT_AUTORUN_MODEL)
+    env.setdefault("CODEX_AUTORUN_SANDBOX", DEFAULT_AUTORUN_SANDBOX)
+    if context.get("role") != "gate":
+        env["SYMPOSIUM_EXECUTOR_SESSION_NAME"] = session_prefix
     if run_id:
-        quoted_run_id = shlex_quote(run_id)
-        exports.append(
-            "export "
-            f"SYMPOSIUM_CURRENT_RUN_ID={quoted_run_id} "
-            f"AUTO_VIDEO_RUN_ID={quoted_run_id} "
-            f"RUN_ID={quoted_run_id}"
+        env["SYMPOSIUM_CURRENT_RUN_ID"] = run_id
+        env["AUTO_VIDEO_RUN_ID"] = run_id
+        env["RUN_ID"] = run_id
+
+    proc = run_goal_launcher(launcher, goal_arg, worktree, env)
+    if proc.returncode != 0:
+        raise SystemExit(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"Codex autorun launcher failed: {launcher}"
         )
-    command = (
-        "; ".join(exports)
-        + "; "
-        f"exec {shlex_quote(str(launcher))} "
-        f"{shlex_quote(goal_arg)}"
-    )
-    run_tmux(
-        [
-            "new-session",
-            "-d",
-            "-s",
-            session,
-            "-x",
-            str(args.cols),
-            "-y",
-            str(args.rows),
-            "-c",
-            str(worktree),
-            f"bash -lc {shlex_quote(command)}",
-        ]
-    )
+    match = AUTORUN_SESSION_RE.search(proc.stdout)
+    if not match:
+        raise SystemExit(
+            "Codex autorun launcher did not report its tmux session. "
+            f"stdout: {proc.stdout[-1000:]!r}"
+        )
+    session = match.group(1)
     time.sleep(args.startup_delay)
-    # Exec mode: start_codex_goal.sh runs `codex exec` with the goal.md as its
-    # prompt, so there is no interactive `/goal follow` slash command to send.
-    follow_command = f"(exec mode) codex exec -C {worktree} with {goal_file}"
+    follow_command = (
+        f"codex-autorun TUI in {worktree} with initial prompt file {goal_file}; "
+        f"model={env['CODEX_AUTORUN_MODEL']} sandbox={env['CODEX_AUTORUN_SANDBOX']}"
+    )
 
     data = {
         "session": session,
         "tmux_session": session,
+        "session_prefix": session_prefix,
         "goal_dir": str(goal_dir),
         "goal_id": goal_id(goal_dir),
         "role": context.get("role", "implementation"),
@@ -208,6 +236,11 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
         "status": "starting",
         "resource_state": "active",
         "goal_follow_command": follow_command,
+        "executor": "codex-autorun",
+        "model": env["CODEX_AUTORUN_MODEL"],
+        "sandbox": env["CODEX_AUTORUN_SANDBOX"],
+        "launcher_stdout_tail": proc.stdout[-2000:],
+        "launcher_stderr_tail": proc.stderr[-2000:],
         "last_capture_at_utc": None,
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "state_file": str(state_file),
@@ -215,11 +248,6 @@ def start(args: argparse.Namespace) -> dict[str, Any]:
     }
     write_state(state_file, data)
     return {**data, "alive": tmux_alive(session)}
-
-
-def shlex_quote(value: str) -> str:
-    # Local tiny quote helper to avoid importing shlex just for this path.
-    return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
 def session_from_args(args: argparse.Namespace) -> tuple[Path, Path, str, dict[str, Any]]:

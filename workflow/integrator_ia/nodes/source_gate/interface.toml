@@ -1,0 +1,10 @@
+name = "source_gate"
+kind = "orchestration"
+owned_by = "integrator_ia"
+callable_by = ["workflow/integrator_ia/workflow.py"]
+description = "Resolve and pin read-only kernel, PISA, and cache delivery artifacts before integration begins."
+
+inputs = ["kernel_delivery/DELIVERY.json", "pisa_delivery/DELIVERY.json", "cache_delivery/DELIVERY.json", "BASELINE-LOCK.json"]
+outputs = ["state/integration-source-inventory.json", "state/integration-source-snapshots/"]
+outcomes = ["ready", "source_blocked"]
+forbidden = ["mutate_donor_worktree", "import_donor_workflow_nodes", "parse_private_donor_status", "select_unmeasured_recipe"]

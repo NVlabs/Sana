@@ -1,0 +1,12 @@
+name = "composition_probe"
+kind = "agent_callable"
+owned_by = "integrator_ia"
+callable_by = ["workflow/integrator_ia/nodes/codex_executor"]
+description = "Measure all eight component toggles under the warm per-sample inference contract."
+
+inputs = ["integrated_candidate_manifest", "source_lock", "official_shape"]
+outputs = ["COMPOSITION-MATRIX.json", "runs/<probe>/composition_stats.json"]
+outcomes = ["composed", "negative_interaction", "fallback_detected", "infra_blocked"]
+required_conditions = ["000", "100", "010", "001", "110", "101", "011", "111"]
+timing_scope = "warm_single_sample_text_encoder_through_vae_decode"
+forbidden = ["multiply_donor_speedups", "donor_timing_as_integrated_measurement", "environment_only_activation_claim", "initialization_inside_timer", "video_write_inside_timer"]

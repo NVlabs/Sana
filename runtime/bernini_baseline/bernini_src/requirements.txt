@@ -1,0 +1,57 @@
+# ---- Core (required) ----
+# torch CUDA 12.4 build -- resolved from the PyTorch wheel index:
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.5.1+cu124
+diffusers==0.35.2
+# diffusers needs accelerate for the low_cpu_mem_usage load path, which is
+# mandatory for the Wan2.2 transformer (it keeps fp32-sensitive modules).
+accelerate==0.34.2
+transformers==4.57.3
+flash-attn==2.8.3
+safetensors
+einops
+numpy
+Pillow
+tqdm
+ftfy
+ninja
+scipy
+
+# ---- Video / image I/O ----
+decord
+imageio
+imageio-ffmpeg
+
+# ---- Prompt engineering (recommended) ----
+# Powers --use_pe, which rewrites the prompt through an OpenAI-compatible
+# endpoint. Strongly recommended for best generation quality; the v1 SDK API
+# (`from openai import OpenAI`) is required.
+openai>=1.0
+
+# ---- Gradio demo ----
+# Powers gradio_demo.py (the in-browser UI on top of the Bernini pipeline).
+gradio==6.15.0
+
+# ---- Open-VeOmni (REQUIRED, installed separately) ----
+# Open-VeOmni (Apache-2.0, Python 3.11) is a required dependency: all inference
+# paths import it, including single-GPU. It is not listed as a plain requirement
+# here because it must be installed with --no-deps, so it does not pull in a
+# different torch build and override the pinned torch==2.5.1+cu124 above.
+# After installing this file, run:
+#   pip install --no-deps git+https://github.com/ByteDance-Seed/VeOmni.git@v0.1.10
+
+# ---- Optional ----
+# Faster attention (auto-detected if installed; otherwise PyTorch SDPA is used).
+#   - FlashAttention-2 -- general CUDA GPUs (incl. A100/A800):
+#       pip install flash-attn==2.8.3
+#   - FlashAttention-3 -- Hopper only (H100/H800/H200, SM 90a; CUDA >= 12.3,
+#     PyTorch >= 2.4). `flash_attn_interface` is NOT on PyPI; build it from the
+#     flash-attention repo's hopper/ directory at tag v2.8.3 (matches the
+#     FlashAttention-2 pin above). Set MAX_JOBS to compile with multiple
+#     threads -- each nvcc job needs ~3-5 GB RAM, so size it to the available
+#     memory (MAX_JOBS=$(nproc) uses every core):
+#       git clone https://github.com/Dao-AILab/flash-attention.git
+#       cd flash-attention
+#       git checkout v2.8.3
+#       cd hopper
+#       MAX_JOBS=$(nproc) python3 setup.py install --user

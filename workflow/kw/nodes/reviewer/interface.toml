@@ -1,0 +1,9 @@
+name = "reviewer"
+kind = "orchestration"
+callable_by = ["workflow/kw/workflow.py"]
+description = "Run or inspect the reviewer for a smooth KWL executor evaluation."
+
+inputs = ["executor_goal_dir", "assess_verdict.json", "REVIEWER-STATUS.json"]
+outputs = ["REVIEWER-STATUS.json", "goals/<id>-reviewer/agent_last.md"]
+outcomes = ["accepted", "needs_executor_resume", "invalid_status", "failed"]
+side_effects = ["may_write_goal_dir", "may_modify_worktree"]

@@ -1,0 +1,10 @@
+name = "final_gate"
+kind = "orchestration"
+owned_by = "integrator_ia"
+callable_by = ["workflow/integrator_ia/workflow.py"]
+description = "Require tier-appropriate blind Codex evidence for all three recipes and validate the downstream delivery interface."
+
+inputs = ["state/integration-gate.json", "runs/<recipe>/assess_verdict.json", "INTEGRATION-STATUS.json", "INTEGRATION-DELIVERY.json"]
+outputs = ["state/final-gate.json"]
+outcomes = ["smooth", "needs_finalize", "needs_retry"]
+forbidden = ["self_authored_visual_verdict", "quality_fail_as_complete", "unhashed_delivery_file"]

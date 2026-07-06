@@ -1,0 +1,12 @@
+name = "baseline_run"
+kind = "programmatic"
+owner = "cache_ca"
+description = "Import, launch, retry, or monitor the experiment's single immutable canonical hot baseline run."
+
+[outcomes]
+completed = "The one baseline run has all required benchmark and video outputs."
+waiting = "The one baseline job is still pending or running."
+infra_blocked = "Submission failed, retry budget was exhausted, or the canonical source was incomplete."
+
+[artifacts]
+state = "state/baseline-run.json"

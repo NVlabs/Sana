@@ -1,0 +1,9 @@
+name = "plan_assess"
+kind = "agent_callable"
+callable_by = ["codex_executor"]
+description = "Run the authoritative aligned assessment for a completed full diffusion run."
+
+inputs = ["run_dir", "baseline_frames", "model_id"]
+outputs = ["runs/<run_id>/assess_verdict.json"]
+outcomes = ["smooth", "quality_failed", "infra_blocked"]
+required_artifacts = ["assess_verdict.json"]

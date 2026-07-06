@@ -93,6 +93,39 @@ def command_help_contains(command: str, needle: str, env: dict[str, str]) -> boo
     return needle.lower() in proc.stdout.lower()
 
 
+def resolve_codex_autorun(env: dict[str, str]) -> str | None:
+    candidates = []
+    if env.get("CODEX_AUTORUN"):
+        candidates.append(Path(env["CODEX_AUTORUN"]).expanduser())
+    candidates.extend(
+        [
+            Path.home() / "codex_auto_run.py",
+            Path.home() / "code/codex_exec/codex_auto_run.py",
+        ]
+    )
+    for path in candidates:
+        if path.is_file() and os.access(path, os.X_OK):
+            return str(path)
+    return None
+
+
+def executable_help_contains(executable: str | None, needle: str, env: dict[str, str]) -> bool:
+    if not executable:
+        return False
+    try:
+        proc = subprocess.run(
+            [executable, "--help"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=env,
+            timeout=5,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return False
+    return needle.lower() in proc.stdout.lower()
+
+
 def skill_status(root: Path, target: str) -> dict[str, Any]:
     base = root / f".{target}" / "skills"
     missing = [name for name in SKILLS if not (base / name / "SKILL.md").exists()]
@@ -108,6 +141,7 @@ def probe() -> dict[str, Any]:
     env = goal_env(root)
     vendor = vendor_root()
     codex_command = env.get("CODEX_GOAL_COMMAND") or which("codex", env)
+    codex_autorun = resolve_codex_autorun(env)
     claude_command = env.get("CLAUDE_GOAL_COMMAND") or which("claude", env)
     vendor_meta = vendor_metadata()
     return {
@@ -126,13 +160,18 @@ def probe() -> dict[str, Any]:
         "commands": {
             "codex": codex_command,
             "codex_help_mentions_goal": command_help_contains("codex", "goal", env),
+            "codex_autorun": codex_autorun,
+            "codex_autorun_supports_workspace_write": executable_help_contains(
+                codex_autorun, "workspace-write", env
+            ),
             "claude": claude_command,
         },
         "interactive": {
             "stdin_tty": sys.stdin.isatty(),
             "stdout_tty": sys.stdout.isatty(),
         },
-        "can_start_codex_goal_here": bool(codex_command) and sys.stdin.isatty() and sys.stdout.isatty(),
+        "can_start_codex_goal_here": bool(codex_command) and bool(codex_autorun),
+        "can_attach_codex_goal_here": sys.stdin.isatty() and sys.stdout.isatty(),
     }
 
 

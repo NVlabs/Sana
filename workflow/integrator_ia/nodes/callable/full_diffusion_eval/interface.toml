@@ -1,0 +1,12 @@
+name = "full_diffusion_eval"
+kind = "agent_callable"
+owned_by = "integrator_ia"
+callable_by = ["workflow/integrator_ia/nodes/codex_executor"]
+description = "Run fixed visual workloads and warm per-sample timing for all three delivery recipes."
+
+inputs = ["integrated_recipe_manifests", "source_lock", "composition_matrix"]
+outputs = ["runs/<run_id>/outputs/benchmark.json", "runs/<run_id>/outputs/run_config.json", "runs/<run_id>/outputs/integration_stats.json", "runs/<run_id>/outputs/frames", "runs/<run_id>/outputs/out.mp4"]
+outcomes = ["completed", "failed", "infra_blocked"]
+required_recipes = ["conservative", "balanced", "aggressive"]
+timing_scope = "warm_single_sample_text_encoder_through_vae_decode"
+forbidden = ["initialization_inside_timer", "video_write_inside_timer", "changed_prompt_or_shape", "missing_dispatch_proof"]

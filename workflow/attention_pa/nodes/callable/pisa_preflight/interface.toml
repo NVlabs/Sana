@@ -1,0 +1,9 @@
+name = "pisa_preflight"
+kind = "agent_callable"
+callable_by = ["codex_executor"]
+description = "Map Sana attention layers/steps and prove a faithful PISA backend before recipe search."
+
+inputs = ["experiment_local_sana_source", "official_shape", "dense_backend"]
+outputs = ["runs/pisa_preflight/attention_map.json", "runs/pisa_preflight/backend_probe.json"]
+outcomes = ["ready", "needs_backend_port", "infra_blocked"]
+required_artifacts = ["attention_map.json", "backend_probe.json"]

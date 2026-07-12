@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+echo "Testing SANA-Streaming training helpers"
+bash tests/bash/training/test_training_sana_streaming.sh
+
 echo "Setting up test data..."
 
 mkdir -p data/longsana

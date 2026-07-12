@@ -8,6 +8,7 @@ import torch
 import torch.distributed as dist
 import torch.nn.functional as F
 from einops import rearrange
+from omegaconf import OmegaConf
 from termcolor import colored
 
 from diffusion.longsana.pipeline.sana_inference_pipeline import SanaInferencePipeline
@@ -16,7 +17,7 @@ from diffusion.longsana.utils.debug_option import DEBUG, LOG_GPU_MEMORY
 from diffusion.longsana.utils.loss import get_denoising_loss
 from diffusion.longsana.utils.model_wrapper import SanaModelWrapper, SanaTextEncoder, SanaVAEWrapper
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
-from diffusion.utils.config import model_video_init_config
+from diffusion.utils.config import model_v2v_init_config, model_video_init_config
 from tools.download import find_model
 
 
@@ -32,6 +33,11 @@ class DMDSana(torch.nn.Module):
         self.device = device
         self.args = args
         self.dtype = torch.bfloat16 if args.mixed_precision else torch.float32
+        self.v2v = bool(getattr(args, "v2v", False))
+        if self.v2v:
+            # The fused SANA-Streaming kernel is inference-only. Resolve the
+            # autograd-capable PyTorch recurrence before constructing V2V blocks.
+            os.environ["USE_CHUNKWISE_GDN"] = "0"
 
         self._initialize_sana_models(args, device)
 
@@ -102,12 +108,15 @@ class DMDSana(torch.nn.Module):
         state_dict = state_dict.get("generator", state_dict)
         state_dict = state_dict.get("state_dict", state_dict)
 
-        try:
-            # load ode init model
-            missing_g, unexpected_g = self.generator.load_state_dict(state_dict, strict=True)
+        if self.v2v:
+            missing_g, unexpected_g = self._load_v2v_state_dict(self.generator, state_dict, strict=strict)
+        else:
+            try:
+                # load ode init model
+                missing_g, unexpected_g = self.generator.load_state_dict(state_dict, strict=True)
 
-        except Exception:
-            missing_g, unexpected_g = self.generator.model.load_state_dict(state_dict, strict=True)
+            except Exception:
+                missing_g, unexpected_g = self.generator.model.load_state_dict(state_dict, strict=True)
 
         # eval mode and align dtype/device
         self.generator.model.eval()
@@ -124,10 +133,15 @@ class DMDSana(torch.nn.Module):
             fake_state = find_model(fake_ckpt)
             fake_state = fake_state.get("critic", fake_state)
             fake_state = fake_state.get("state_dict", fake_state)
-            try:
-                missing_f_fake, unexpected_f_fake = self.fake_score.load_state_dict(fake_state, strict=strict)
-            except Exception:
-                missing_f_fake, unexpected_f_fake = self.fake_score.model.load_state_dict(fake_state, strict=strict)
+            if self.v2v:
+                missing_f_fake, unexpected_f_fake = self._load_v2v_state_dict(
+                    self.fake_score, fake_state, strict=strict
+                )
+            else:
+                try:
+                    missing_f_fake, unexpected_f_fake = self.fake_score.load_state_dict(fake_state, strict=strict)
+                except Exception:
+                    missing_f_fake, unexpected_f_fake = self.fake_score.model.load_state_dict(fake_state, strict=strict)
             fake_load_info = {"missing": missing_f_fake, "unexpected": unexpected_f_fake, "path": fake_ckpt}
             self.fake_score.model.eval()
             self.fake_score = self.fake_score.to(device=self.device, dtype=self.dtype)
@@ -138,10 +152,15 @@ class DMDSana(torch.nn.Module):
         if self.real_name == "SANA":
             real_state = find_model(real_ckpt)
             real_state = real_state.get("state_dict", real_state)
-            try:
-                missing_f_real, unexpected_f_real = self.real_score.load_state_dict(real_state, strict=strict)
-            except Exception:
-                missing_f_real, unexpected_f_real = self.real_score.model.load_state_dict(real_state, strict=strict)
+            if self.v2v:
+                missing_f_real, unexpected_f_real = self._load_v2v_state_dict(
+                    self.real_score, real_state, strict=strict
+                )
+            else:
+                try:
+                    missing_f_real, unexpected_f_real = self.real_score.load_state_dict(real_state, strict=strict)
+                except Exception:
+                    missing_f_real, unexpected_f_real = self.real_score.model.load_state_dict(real_state, strict=strict)
             self.real_score.model.eval()
             self.real_score = self.real_score.to(device=self.device, dtype=self.dtype)
 
@@ -159,6 +178,43 @@ class DMDSana(torch.nn.Module):
             ret["fake_score"] = fake_load_info
         return ret
 
+    @staticmethod
+    def _load_v2v_state_dict(model_wrapper, state_dict, strict=True):
+        """Load released raw or LongSANA-wrapped V2V checkpoints.
+
+        Released checkpoints contain a raw ``state_dict`` without ``pos_embed``;
+        LongSANA checkpoints store the wrapper's ``model.*`` keys. In both cases
+        the position buffer is deterministic model state, so initialize only
+        that missing key locally and keep strict validation for every weight.
+        """
+
+        state_dict = {(key.removeprefix("module.")): value for key, value in state_dict.items()}
+        candidates = [
+            (model_wrapper, state_dict),
+            (
+                model_wrapper.model,
+                {key.removeprefix("model."): value for key, value in state_dict.items()},
+            ),
+        ]
+        errors = []
+        for target, candidate in candidates:
+            candidate = dict(candidate)
+            expected_state = target.state_dict()
+            if not set(candidate).intersection(expected_state):
+                continue
+            for key, value in expected_state.items():
+                if key.endswith("pos_embed") and key not in candidate:
+                    candidate[key] = value
+            try:
+                return target.load_state_dict(candidate, strict=strict)
+            except RuntimeError as error:
+                errors.append(error)
+
+        message = "V2V checkpoint does not match either the wrapped or raw SANA model"
+        if errors:
+            raise RuntimeError(message) from errors[-1]
+        raise RuntimeError(message)
+
     def set_step(self, step: int):
         self.step = step
 
@@ -174,9 +230,17 @@ class DMDSana(torch.nn.Module):
             sana_fake_config_path = getattr(args, "sana_fake_config", None)
             if self.is_main_process:
                 print(f"init sana config (fake) for real model: {sana_fake_config_path}")
-            sana_cfg_fake = pyrallis.load(LongSANAVideoInference, open(sana_fake_config_path))
+            sana_cfg_fake = (
+                self._load_sana_config(sana_fake_config_path)
+                if self.v2v
+                else pyrallis.load(LongSANAVideoInference, open(sana_fake_config_path))
+            )
             latent_size_fake = sana_cfg_fake.model.image_size // sana_cfg_fake.vae.vae_downsample_rate
-            model_kwargs_fake = model_video_init_config(sana_cfg_fake, latent_size=latent_size_fake)
+            model_kwargs_fake = (
+                model_v2v_init_config(sana_cfg_fake, latent_size=latent_size_fake)
+                if self.v2v
+                else model_video_init_config(sana_cfg_fake, latent_size=latent_size_fake)
+            )
             if self.is_main_process:
                 print(colored(f"init sana fake for real model", "green"))
             sana_model_real = build_model(
@@ -217,14 +281,22 @@ class DMDSana(torch.nn.Module):
         # TODO: Need to make the path more robust.
         sana_config_path = getattr(args, "sana_config", "sana/configs/Sana_2B_480p_self_forcing.yaml")
         print(f"init sana config (generator): {sana_config_path}")
-        sana_cfg = pyrallis.load(LongSANAVideoInference, open(sana_config_path))
+        sana_cfg = (
+            self._load_sana_config(sana_config_path)
+            if self.v2v
+            else pyrallis.load(LongSANAVideoInference, open(sana_config_path))
+        )
         work_dir = "output/sana_logs"
         try:
             os.makedirs(work_dir, exist_ok=True)
         except Exception:
             pass
         latent_size = sana_cfg.model.image_size // sana_cfg.vae.vae_downsample_rate
-        model_kwargs = model_video_init_config(sana_cfg, latent_size=latent_size)
+        model_kwargs = (
+            model_v2v_init_config(sana_cfg, latent_size=latent_size)
+            if self.v2v
+            else model_video_init_config(sana_cfg, latent_size=latent_size)
+        )
         if self.is_main_process:
             print(colored(f"init sana generator", "green"))
         sana_model_gen = build_model(
@@ -259,14 +331,22 @@ class DMDSana(torch.nn.Module):
             # use independent sana config (if not provided, fallback to generator's config)
             sana_fake_config_path = getattr(args, "sana_fake_config", None)
             print(f"init sana config (fake): {sana_fake_config_path}")
-            sana_cfg_fake = pyrallis.load(LongSANAVideoInference, open(sana_fake_config_path))
+            sana_cfg_fake = (
+                self._load_sana_config(sana_fake_config_path)
+                if self.v2v
+                else pyrallis.load(LongSANAVideoInference, open(sana_fake_config_path))
+            )
             latent_size_fake = sana_cfg_fake.model.image_size // sana_cfg_fake.vae.vae_downsample_rate
             if latent_size_fake != latent_size:
                 raise ValueError(
                     f"Generator and fake SANA latent_size mismatch: gen={latent_size}, fake={latent_size_fake}. "
                     f"Please ensure compatible VAE/image_size settings."
                 )
-            model_kwargs_fake = model_video_init_config(sana_cfg_fake, latent_size=latent_size_fake)
+            model_kwargs_fake = (
+                model_v2v_init_config(sana_cfg_fake, latent_size=latent_size_fake)
+                if self.v2v
+                else model_video_init_config(sana_cfg_fake, latent_size=latent_size_fake)
+            )
             if self.is_main_process:
                 print(colored(f"init sana fake", "green"))
             sana_model_fake = build_model(
@@ -319,6 +399,14 @@ class DMDSana(torch.nn.Module):
             load_info = self.from_pretrained(args.generator_ckpt, strict=True, real_ckpt=args.get("real_ckpt", None))
         print(f"[Load] SANA weights loaded: {load_info}")
 
+    @staticmethod
+    def _load_sana_config(config_path):
+        """Load either a full training config or a public model-only config."""
+        config_dict = OmegaConf.to_container(OmegaConf.load(config_path), resolve=True)
+        config_dict.setdefault("data", {})
+        config_dict.setdefault("train", {})
+        return pyrallis.decode(LongSANAVideoInference, config_dict)
+
     def _initialize_inference_pipeline(self):
         """
         initialize training pipeline for DMDSana, using SanaTrainingPipeline
@@ -342,6 +430,14 @@ class DMDSana(torch.nn.Module):
                 num_cached_blocks=self.args.get("num_cached_blocks", -1),
             )
         else:
+            v2v_pipeline_kwargs = (
+                {
+                    "sink_token": self.args.get("sink_token", False),
+                    "v2v": True,
+                }
+                if self.v2v
+                else {}
+            )
             self.inference_pipeline = SanaTrainingPipeline(
                 denoising_step_list=self.denoising_step_list,
                 scheduler=self.scheduler,
@@ -355,6 +451,7 @@ class DMDSana(torch.nn.Module):
                 batch_size=self.batch_size,
                 update_kv_cache_by_end=self.args.get("update_kv_cache_by_end", False),
                 num_cached_blocks=self.args.get("num_cached_blocks", -1),
+                **v2v_pipeline_kwargs,
             )
 
     def _get_timestep(
@@ -408,10 +505,13 @@ class DMDSana(torch.nn.Module):
         unconditional_dict_real: dict,
         normalization: bool = True,
         current_length: int = 0,
+        data_info: Optional[dict] = None,
     ) -> Tuple[torch.Tensor, dict]:
         """
         compute KL gradient (reference DMD implementation).
         """
+        data_info = data_info or {}
+        v2v_model_kwargs = {"data_info": data_info} if self.v2v else {}
         # compute fake conditional prediction (CFG requires cond/uncond)
         if self.fake_name == "SANA":
             assert "mask" in conditional_dict
@@ -420,7 +520,11 @@ class DMDSana(torch.nn.Module):
             # BFCHW -> BCFHW
             noisy_bcfhw = rearrange(noisy_image_or_video, "b f c h w -> b c f h w")
             _, pred_fake_image_cond_bcfhw, _ = self.fake_score(
-                noisy_image_or_video=noisy_bcfhw, condition=condition, timestep=timestep, mask=mask
+                noisy_image_or_video=noisy_bcfhw,
+                condition=condition,
+                timestep=timestep,
+                mask=mask,
+                **v2v_model_kwargs,
             )
             # BCFHW -> BFCHW
             pred_fake_image_cond = rearrange(pred_fake_image_cond_bcfhw, "b c f h w -> b f c h w")
@@ -442,7 +546,11 @@ class DMDSana(torch.nn.Module):
             # BFCHW -> BCFHW
             noisy_bcfhw = rearrange(noisy_image_or_video, "b f c h w -> b c f h w")
             _, pred_real_image_cond_bcfhw, _ = self.real_score(
-                noisy_image_or_video=noisy_bcfhw, condition=condition, timestep=timestep, mask=mask
+                noisy_image_or_video=noisy_bcfhw,
+                condition=condition,
+                timestep=timestep,
+                mask=mask,
+                **v2v_model_kwargs,
             )
             # BCFHW -> BFCHW
             pred_real_image_cond = rearrange(pred_real_image_cond_bcfhw, "b c f h w -> b f c h w")
@@ -452,7 +560,11 @@ class DMDSana(torch.nn.Module):
             condition = unconditional_dict_real["prompt_embeds"].clone()
             mask = unconditional_dict_real.get("mask", None)
             _, pred_real_image_uncond_bcfhw, _ = self.real_score(
-                noisy_image_or_video=noisy_bcfhw, condition=condition, timestep=timestep, mask=mask
+                noisy_image_or_video=noisy_bcfhw,
+                condition=condition,
+                timestep=timestep,
+                mask=mask,
+                **v2v_model_kwargs,
             )
             pred_real_image_uncond = rearrange(pred_real_image_uncond_bcfhw, "b c f h w -> b f c h w")
         else:
@@ -496,6 +608,7 @@ class DMDSana(torch.nn.Module):
         denoised_timestep_from: int = 0,
         denoised_timestep_to: int = 0,
         current_length: int = 0,
+        data_info: Optional[dict] = None,
     ) -> Tuple[torch.Tensor, dict]:
         """
         compute DMD loss (consistent with DMD class).
@@ -542,6 +655,7 @@ class DMDSana(torch.nn.Module):
                 conditional_dict_real=conditional_dict_real,
                 unconditional_dict_real=unconditional_dict_real,
                 current_length=current_length,
+                data_info=data_info,
             )
 
         if gradient_mask is not None:

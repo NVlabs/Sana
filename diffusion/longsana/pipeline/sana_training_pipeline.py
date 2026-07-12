@@ -12,6 +12,14 @@ from diffusion.model.nets.sana_blocks import CachedCausalAttention
 
 # Generate the full long video.
 class SanaTrainingPipeline:
+    """Chunk-wise SANA training pipeline.
+
+    V2V models use six cache slots per block. Existing LongSANA models keep
+    their original three-slot cache behavior.
+    """
+
+    _V2V_CACHE_SLOTS = 6
+
     def __init__(
         self,
         denoising_step_list: List[int],
@@ -78,15 +86,25 @@ class SanaTrainingPipeline:
         self.reset_state()
         self.num_cached_blocks = int(kwargs.get("num_cached_blocks", -1))
         self.update_kv_cache_by_end = kwargs.get("update_kv_cache_by_end", False)
+        self.v2v = bool(kwargs.get("v2v", False))
+        self.sink_token = bool(kwargs.get("sink_token", False))
+        self._full_history_softmax_cache = self.num_cached_blocks < 0
+        self.block_is_state_cached: List[bool] = []
+        if self.v2v:
+            self._detect_v2v_cache_blocks()
         print(
             colored(
-                f"Additional parameters: num_cached_blocks {self.num_cached_blocks}, update_kv_cache_by_end : {self.update_kv_cache_by_end}, last_step_only {last_step_only}"
+                "Additional parameters: "
+                f"num_cached_blocks {self.num_cached_blocks}, "
+                f"update_kv_cache_by_end : {self.update_kv_cache_by_end}, "
+                f"last_step_only {last_step_only}"
             )
         )
 
     def reset_state(self):
         """reset training state"""
         chunk_indices = self._create_autoregressive_segments(self.num_max_frames, self.num_frame_per_block)
+        self._chunk_indices = chunk_indices
         self.state = {
             "current_chunk_index": 0,
             "conditional_info": None,
@@ -155,6 +173,88 @@ class SanaTrainingPipeline:
             chunk_indices.append(total_frames)
         return chunk_indices
 
+    def _model_blocks(self):
+        model = self.sana_model.module if hasattr(self.sana_model, "module") else self.sana_model
+        if hasattr(model, "blocks"):
+            return model.blocks
+        if hasattr(model, "transformer_blocks"):
+            return model.transformer_blocks
+        if hasattr(model, "layers"):
+            return model.layers
+        raise ValueError("Sana model does not have blocks/transformer_blocks/layers")
+
+    def _detect_v2v_cache_blocks(self) -> None:
+        """Record whether each V2V attention block uses state or token cache."""
+        from diffusion.model.nets.sana_v2v_attn_blocks import (
+            V2VAfterRoPEGatedSoftmaxAttention,
+            V2VStateCachedBiGDNAttention,
+        )
+
+        block_is_state_cached = []
+        for block in self._model_blocks():
+            attn = getattr(block, "attn", None)
+            if isinstance(attn, V2VStateCachedBiGDNAttention):
+                block_is_state_cached.append(True)
+            elif isinstance(attn, V2VAfterRoPEGatedSoftmaxAttention):
+                block_is_state_cached.append(False)
+            else:
+                raise ValueError(f"Unsupported V2V attention block: {type(attn).__name__}")
+
+        self.block_is_state_cached = block_is_state_cached
+
+    @staticmethod
+    def _slice_chunk_data_info(
+        image_vae_embeds: Optional[torch.Tensor],
+        start_f: int,
+        end_f: int,
+    ) -> dict:
+        """Build data_info whose V2V conditioning exactly matches one chunk."""
+        if image_vae_embeds is None:
+            return {}
+        if image_vae_embeds.dim() != 5:
+            raise ValueError("image_vae_embeds must be [B, C, T, H, W]")
+
+        chunk_frames = end_f - start_f
+        if end_f > image_vae_embeds.shape[2]:
+            raise ValueError(
+                "image_vae_embeds does not cover the requested chunk: "
+                f"frames={image_vae_embeds.shape[2]}, requested=[{start_f}, {end_f})"
+            )
+        chunk_embeds = image_vae_embeds[:, :, start_f:end_f]
+        if chunk_embeds.shape[2] != chunk_frames:
+            raise ValueError(f"V2V conditioning has {chunk_embeds.shape[2]} frames, expected {chunk_frames}")
+        return {"image_vae_embeds": chunk_embeds}
+
+    def cache_positions(
+        self,
+        chunk_idx: int,
+        start_f: int,
+        end_f: int,
+        sink_num: int,
+        num_cached_frames: int,
+        device: torch.device,
+    ) -> Tuple[int, int, Optional[torch.Tensor]]:
+        """Return position arguments for the current cache window."""
+        if not self.v2v:
+            return start_f, end_f, None
+
+        current_num_frames = end_f - start_f
+        if sink_num > 0:
+            non_sink_count = num_cached_frames - sink_num + current_num_frames
+            if non_sink_count < current_num_frames:
+                raise ValueError("Invalid V2V cache frame accounting")
+            sink_fi = torch.arange(sink_num, device=device)
+            window_start_f = end_f - non_sink_count
+            remaining_fi = torch.arange(window_start_f, end_f, device=device)
+            return 0, end_f, torch.cat([sink_fi, remaining_fi], dim=0)
+
+        cache_start_chunk = max(chunk_idx - self.num_cached_blocks, 0) if self.num_cached_blocks > 0 else 0
+        if cache_start_chunk < len(self._chunk_indices):
+            rope_start_f = self._chunk_indices[cache_start_chunk]
+        else:
+            rope_start_f = max(0, start_f - num_cached_frames)
+        return rope_start_f, end_f, None
+
     def reach_max_frames(self) -> bool:
         """check if can generate more"""
         return self.state["current_chunk_index"] >= len(self.state["chunk_indices"]) - 1
@@ -167,6 +267,7 @@ class SanaTrainingPipeline:
         current_start_frame: int = 0,
         requires_grad: bool = True,
         return_sim_step: bool = False,
+        image_vae_embeds: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[int], Optional[int]]:
         """
         denoise in chunk-wise manner, input/output is consistent with sample in SelfForcingFlowEuler.sample:
@@ -184,6 +285,7 @@ class SanaTrainingPipeline:
 
         batch_size, num_latent_channels, video_frames, height, width = latents.shape
         device = latents.device
+        self._spatial_hw = height * width
 
         condition = prompt_embeds.clone()
         if mask is not None:
@@ -210,15 +312,19 @@ class SanaTrainingPipeline:
         exit_flags = self.generate_and_sync_list(num_chunks, steps, device)
 
         output = torch.zeros_like(latents)
-        previous_chunk_index = 0
-        for _kv_cache in self.kv_cache:
-            if _kv_cache[0][-1] is not None:
-                previous_chunk_index += 1
+        if self.v2v:
+            previous_chunk_index = current_start_frame // self.num_frame_per_block
+        else:
+            # Preserve the legacy path's cache-progress detection.  Its first
+            # autoregressive chunk can be larger than num_frame_per_block.
+            previous_chunk_index = sum(chunk_cache[0][-1] is not None for chunk_cache in (self.kv_cache or []))
+        self._ensure_kv_cache_capacity(previous_chunk_index + num_chunks)
 
         # pred_x0 style
         for chunk_idx in range(num_chunks):
             # setup internal cache
-            chunk_kv_cache = self._accumulate_kv_cache(self.kv_cache, chunk_idx + previous_chunk_index)
+            global_chunk_idx = chunk_idx + previous_chunk_index
+            chunk_kv_cache, _, sink_num, num_cached_frames = self.prepare_kv_cache(global_chunk_idx)
 
             chunk_condition = condition[chunk_idx].unsqueeze(0)
             chunk_mask = mask[chunk_idx][None] if mask is not None else None
@@ -226,6 +332,20 @@ class SanaTrainingPipeline:
             start_f = chunk_indices[chunk_idx]
             end_f = chunk_indices[chunk_idx + 1]
             latent_model_input = latents[:, :, start_f:end_f]
+            local_data_info = self._slice_chunk_data_info(image_vae_embeds, start_f, end_f)
+
+            absolute_start_f = start_f + current_start_frame
+            absolute_end_f = end_f + current_start_frame
+            rope_start_f, rope_end_f, frame_index = self.cache_positions(
+                global_chunk_idx,
+                absolute_start_f,
+                absolute_end_f,
+                sink_num,
+                num_cached_frames,
+                device,
+            )
+            data_info_kwargs = {"data_info": local_data_info} if local_data_info else {}
+            position_kwargs = {"frame_index": frame_index} if self.v2v else {}
 
             # select exit step for current chunk
             exit_step_idx = exit_flags[0] if self.same_step_across_blocks else exit_flags[chunk_idx]
@@ -240,11 +360,13 @@ class SanaTrainingPipeline:
                             noisy_image_or_video=latent_model_input,
                             condition=chunk_condition,
                             timestep=timestep,
-                            start_f=(start_f + current_start_frame),
-                            end_f=(end_f + current_start_frame),
+                            start_f=rope_start_f,
+                            end_f=rope_end_f,
                             save_kv_cache=False,
                             mask=chunk_mask,
                             kv_cache=chunk_kv_cache,
+                            **position_kwargs,
+                            **data_info_kwargs,
                         )
                     if index < len(self.denoising_step_list) - 1:
                         flow_pred = rearrange(flow_pred, "b c f h w -> b f c h w")
@@ -263,11 +385,13 @@ class SanaTrainingPipeline:
                         noisy_image_or_video=latent_model_input,
                         condition=chunk_condition,
                         timestep=timestep,
-                        start_f=(start_f + current_start_frame),
-                        end_f=(end_f + current_start_frame),
+                        start_f=rope_start_f,
+                        end_f=rope_end_f,
                         save_kv_cache=False,
                         mask=chunk_mask,
                         kv_cache=chunk_kv_cache,
+                        **position_kwargs,
+                        **data_info_kwargs,
                     )
                     if self.update_kv_cache_by_end and index < len(self.denoising_step_list) - 1:
                         flow_pred = rearrange(flow_pred_grad.detach(), "b c f h w -> b f c h w")
@@ -299,18 +423,24 @@ class SanaTrainingPipeline:
                 timestep_zero * torch.ones([batch_size * current_num_frames], device=noise.device, dtype=torch.long),
             ).unflatten(0, pred_x0.shape[:2])
             latent_model_input_for_cache = rearrange(denoised_pred, "b f c h w -> b c f h w")
+            cache_for_update = self.copy_kv_cache_slots(chunk_kv_cache) if self.v2v else chunk_kv_cache
             with torch.no_grad():
                 _, _, updated_kv_cache = self.generator(
                     noisy_image_or_video=latent_model_input_for_cache,
                     condition=chunk_condition,
                     timestep=timestep_zero,
-                    start_f=(start_f + current_start_frame),
-                    end_f=(end_f + current_start_frame),
+                    start_f=rope_start_f,
+                    end_f=rope_end_f,
                     save_kv_cache=True,
                     mask=chunk_mask,
-                    kv_cache=chunk_kv_cache,
+                    kv_cache=cache_for_update,
+                    **position_kwargs,
+                    **data_info_kwargs,
                 )
-            self.kv_cache[chunk_idx + previous_chunk_index] = updated_kv_cache
+            if self.v2v:
+                self.update_kv_cache(global_chunk_idx, updated_kv_cache)
+            else:
+                self.kv_cache[global_chunk_idx] = updated_kv_cache
 
         # denoised timestep range (refer to last chunk timesteps and exit_flags)
 
@@ -496,6 +626,152 @@ class SanaTrainingPipeline:
 
         return output, denoised_timestep_from, denoised_timestep_to
 
+    def _empty_block_cache(self) -> list:
+        slots = self._V2V_CACHE_SLOTS if self.v2v else 3
+        return [None] * slots
+
+    def _empty_chunk_cache(self) -> list:
+        return [self._empty_block_cache() for _ in range(self.num_model_blocks)]
+
+    @staticmethod
+    def copy_kv_cache_slots(kv_cache: list) -> list:
+        """Copy mutable slot containers while sharing their history tensors."""
+        return [list(block_cache) for block_cache in kv_cache]
+
+    def _ensure_kv_cache_capacity(self, num_chunks: int) -> None:
+        if self.kv_cache is None:
+            self.kv_cache = []
+        while len(self.kv_cache) < num_chunks:
+            self.kv_cache.append(self._empty_chunk_cache())
+
+    def initialize_kv_cache(
+        self,
+        num_chunks: Optional[int] = None,
+        batch_size: Optional[int] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ) -> list:
+        """Initialize an empty cache and return it.
+
+        ``batch_size``, ``dtype`` and ``device`` remain accepted for parity
+        with the existing private API; cache tensors are allocated lazily by
+        the attention modules.
+        """
+        del batch_size, dtype, device
+        if num_chunks is None:
+            num_chunks = max(0, len(self.state["chunk_indices"]) - 1)
+        self.kv_cache = [self._empty_chunk_cache() for _ in range(num_chunks)]
+        return self.kv_cache
+
+    def _accumulate_v2v_kv_cache(self, kv_cache, chunk_idx):
+        """Prepare one six-slot V2V cache."""
+        if chunk_idx == 0:
+            return kv_cache[0], 0, 0, 0
+
+        cur_kv_cache = kv_cache[chunk_idx]
+        start_chunk_idx = max(chunk_idx - self.num_cached_blocks, 0) if self.num_cached_blocks > 0 else 0
+        num_cached_frames = 0
+        sink_num = 0
+
+        for block_id, is_state_cached in enumerate(self.block_is_state_cached):
+            if is_state_cached:
+                prev = kv_cache[chunk_idx - 1][block_id]
+                cur_kv_cache[block_id][0] = prev[0]
+                cur_kv_cache[block_id][1] = prev[1]
+                cur_kv_cache[block_id][-1] = prev[-1]
+                continue
+
+            if self._full_history_softmax_cache:
+                prev = kv_cache[chunk_idx - 1][block_id]
+                cur_kv_cache[block_id] = [prev[0], prev[1], prev[2], None, None, prev[-1]]
+                if prev[0] is not None and self._spatial_hw > 0:
+                    num_cached_frames = prev[0].shape[-1] // self._spatial_hw
+                continue
+
+            previous_q = previous_k = previous_v = previous_tconv = None
+            valid_cached_chunks = list(range(start_chunk_idx, chunk_idx))
+            if self.num_cached_blocks > 0 and self.sink_token:
+                window_start_chunk = max(chunk_idx - self.num_cached_blocks + 1, 0)
+                if window_start_chunk > 0:
+                    valid_cached_chunks = [0] + list(range(window_start_chunk, chunk_idx))
+                    if sink_num == 0:
+                        sink_num = self._chunk_indices[1] - self._chunk_indices[0]
+
+            for cache_idx in range(chunk_idx):
+                if cache_idx not in valid_cached_chunks:
+                    kv_cache[cache_idx][block_id] = [None] * self._V2V_CACHE_SLOTS
+                    continue
+                prev = kv_cache[cache_idx][block_id]
+                if prev[0] is not None:
+                    if previous_q is None:
+                        previous_q = prev[0].clone()
+                        previous_k = prev[1].clone()
+                        previous_v = prev[2].clone()
+                    else:
+                        previous_q = torch.cat([previous_q, prev[0]], dim=-1)
+                        previous_k = torch.cat([previous_k, prev[1]], dim=-1)
+                        previous_v = torch.cat([previous_v, prev[2]], dim=-1)
+                if prev[-1] is not None:
+                    previous_tconv = (
+                        prev[-1].clone() if previous_tconv is None else torch.cat([previous_tconv, prev[-1]], dim=2)
+                    )
+
+            cur_kv_cache[block_id] = [
+                previous_q,
+                previous_k,
+                previous_v,
+                None,
+                None,
+                previous_tconv,
+            ]
+            if previous_q is not None and self._spatial_hw > 0:
+                num_cached_frames = previous_q.shape[-1] // self._spatial_hw
+
+        return cur_kv_cache, chunk_idx - start_chunk_idx, sink_num, num_cached_frames
+
+    def prepare_kv_cache(self, chunk_idx: int):
+        """Return ``(cache, cached_chunks, sink_frames, cached_frames)``."""
+        self._ensure_kv_cache_capacity(chunk_idx + 1)
+        if self.v2v:
+            return self._accumulate_v2v_kv_cache(self.kv_cache, chunk_idx)
+        return self._accumulate_kv_cache(self.kv_cache, chunk_idx), 0, 0, 0
+
+    def promote_kv_cache(self, chunk_idx: int) -> None:
+        """Promote a full-history softmax cache after saving the current chunk."""
+        if not self.v2v or not self._full_history_softmax_cache or chunk_idx == 0:
+            return
+
+        for block_id, is_state_cached in enumerate(self.block_is_state_cached):
+            if is_state_cached:
+                continue
+            prev = self.kv_cache[chunk_idx - 1][block_id]
+            cur = self.kv_cache[chunk_idx][block_id]
+
+            if prev[0] is not None and cur[0] is not None:
+                cur[0] = torch.cat([prev[0], cur[0]], dim=-1)
+                cur[1] = torch.cat([prev[1], cur[1]], dim=-1)
+                cur[2] = torch.cat([prev[2], cur[2]], dim=-1)
+            elif prev[0] is not None:
+                cur[0], cur[1], cur[2] = prev[0], prev[1], prev[2]
+
+            if prev[-1] is not None and cur[-1] is not None:
+                cur[-1] = torch.cat([prev[-1], cur[-1]], dim=2)
+            elif prev[-1] is not None:
+                cur[-1] = prev[-1]
+            self.kv_cache[chunk_idx - 1][block_id] = [None] * len(prev)
+
+    def update_kv_cache(self, chunk_idx: int, updated_kv_cache: list) -> list:
+        """Store a model-produced cache and apply full-history promotion."""
+        self._ensure_kv_cache_capacity(chunk_idx + 1)
+        if self.v2v:
+            if updated_kv_cache is None or len(updated_kv_cache) != self.num_model_blocks:
+                raise ValueError("V2V generator must return one cache entry per model block")
+            if any(len(block_cache) != self._V2V_CACHE_SLOTS for block_cache in updated_kv_cache):
+                raise ValueError("V2V cache entries must contain six slots")
+        self.kv_cache[chunk_idx] = updated_kv_cache
+        self.promote_kv_cache(chunk_idx)
+        return self.kv_cache[chunk_idx]
+
     def _accumulate_kv_cache(self, kv_cache, chunk_idx):
         """recalculate and accumulate KV cache, align with ar_flow_euler_sampler.accumulate_kv_cache
         - cur_kv_cache[block_id] structure is [cum_vk, k_sum, tconv]
@@ -534,9 +810,6 @@ class SanaTrainingPipeline:
         if self.cached_modules is not None:
             return self.cached_modules
 
-        # Handle both DDP wrapped and unwrapped models
-        model = self.sana_model.module if hasattr(self.sana_model, "module") else self.sana_model
-
         # Organize modules by block index
         cached_modules = []
 
@@ -557,15 +830,7 @@ class SanaTrainingPipeline:
             collect_recursive(block)
             return attention_modules + conv_modules
 
-        # get the blocks of the model
-        if hasattr(model, "blocks"):  # Common pattern
-            blocks = model.blocks
-        elif hasattr(model, "transformer_blocks"):
-            blocks = model.transformer_blocks
-        elif hasattr(model, "layers"):
-            blocks = model.layers
-        else:
-            raise ValueError("Sana model does not have any blocks")
+        blocks = self._model_blocks()
 
         # Collect modules from each block
         self.num_model_blocks = len(blocks)
@@ -577,23 +842,14 @@ class SanaTrainingPipeline:
 
     def _initialize_kv_cache(self, batch_size, dtype, device):
         """Initialize per-chunk KV cache containers for SANA cached modules."""
-        chunk_indices = self.state["chunk_indices"]
-        num_chunks = max(0, len(chunk_indices) - 1)
-        kv_cache: list = []
-        for _ in range(num_chunks):
-            # For each chunk, per-block entries: [cum_vk, k_sum, tconv]
-            kv_cache.append([[None, None, None] for _ in range(self.num_model_blocks)])
-        self.kv_cache = kv_cache
+        return self.initialize_kv_cache(batch_size=batch_size, dtype=dtype, device=device)
 
     def _initialize_crossattn_cache(self, batch_size, dtype, device):
         pass
 
     def clear_kv_cache(self):
-        chunk_indices = self.state["chunk_indices"]
-        num_chunks = max(0, len(chunk_indices) - 1)
-        self.kv_cache = []
-        for _ in range(num_chunks):
-            self.kv_cache.append([[None, None, None] for _ in range(self.num_model_blocks)])
+        num_chunks = max(0, len(self.state["chunk_indices"]) - 1)
+        self.initialize_kv_cache(num_chunks=num_chunks)
 
         print(f"[SanaTrainingPipeline] clear_kv_cache for {num_chunks} chunks")
 

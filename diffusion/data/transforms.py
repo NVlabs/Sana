@@ -17,6 +17,7 @@
 
 import numbers
 
+import imageio.v3 as iio
 import numpy as np
 import torch
 import torchvision.transforms as T
@@ -274,3 +275,25 @@ def read_image_from_path(path, image_size):
         ]
     )
     return transform(image)  # C,H,W, range (-1, 1)
+
+
+def read_video_from_path(path, video_size, num_frames):
+    """Decode a local video to normalized ``[T, C, H, W]`` frames."""
+    frames = []
+    for frame in iio.imiter(path, plugin="pyav"):
+        frames.append(frame)
+        if len(frames) == num_frames:
+            break
+
+    if len(frames) < num_frames:
+        raise RuntimeError(f"Short decode: {path} returned {len(frames)} frames, expected at least {num_frames}")
+
+    transform = T.Compose(
+        [
+            ToTensorVideo(),
+            ResizeCrop(video_size),
+            T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
+        ]
+    )
+    video = torch.from_numpy(np.stack(frames)).permute(0, 3, 1, 2)
+    return transform(video)

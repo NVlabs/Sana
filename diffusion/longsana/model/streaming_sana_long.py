@@ -15,6 +15,7 @@ import torch.distributed as dist
 from einops import rearrange
 from termcolor import colored
 
+from diffusion.longsana.pipeline.sana_reverse_reg_pipeline import SanaReverseRegPipeline
 from diffusion.longsana.pipeline.sana_switch_training_pipeline import SanaSwitchTrainingPipeline
 from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipeline
 from diffusion.longsana.utils.debug_option import DEBUG, DEBUG_GRADIENT, LOG_GPU_MEMORY
@@ -54,16 +55,18 @@ class StreamingSANATrainingModel:
         self.max_length = getattr(config, "streaming_max_length", 141)  # 141 for 35s, 261 for 60s
         self.possible_max_length = getattr(config, "streaming_possible_max_length", None)
         self.min_new_frame = getattr(config, "streaming_min_new_frame", 20)
-        self.independent_first_frame = self.chunk_size % 20 == 1
 
         # Get required components from the underlying model
         self.generator = base_model.generator
         self.fake_score = base_model.fake_score
         self.scheduler = base_model.scheduler
         self.denoising_loss_func = base_model.denoising_loss_func
+        self.reverse_reg_weight = float(getattr(config, "reverse_reg_weight", 0.0))
+        self.enable_reverse_reg = bool(getattr(base_model, "v2v", False)) and self.reverse_reg_weight > 0
 
         # Fetch model configuration
         self.num_frame_per_block = base_model.num_frame_per_block
+        self.independent_first_frame = bool(self.chunk_size % self.num_frame_per_block)
         self.frame_seq_length = getattr(base_model.inference_pipeline, "frame_seq_length", 1560)
 
         # Initialize inference pipeline
@@ -71,6 +74,25 @@ class StreamingSANATrainingModel:
         if self.inference_pipeline is None:
             base_model._initialize_inference_pipeline()
             self.inference_pipeline = base_model.inference_pipeline
+
+        self.reverse_pipeline = None
+        if self.enable_reverse_reg:
+            self.reverse_pipeline = SanaReverseRegPipeline(
+                denoising_step_list=base_model.denoising_step_list,
+                scheduler=self.scheduler,
+                generator=self.generator,
+                same_step_across_blocks=base_model.args.same_step_across_blocks,
+                last_step_only=base_model.args.last_step_only,
+                num_max_frames=getattr(base_model.args, "student_max_frame", self.max_length),
+                context_noise=base_model.args.get("context_noise", 0),
+                num_frame_per_block=self.num_frame_per_block,
+                num_chunks_per_clip=base_model.args.num_chunks_per_clip,
+                batch_size=self.image_or_video_shape[0] if self.image_or_video_shape else 1,
+                update_kv_cache_by_end=base_model.args.get("update_kv_cache_by_end", False),
+                num_cached_blocks=base_model.args.get("num_cached_blocks", -1),
+                sink_token=base_model.args.get("sink_token", False),
+                v2v=True,
+            )
 
         # Streaming state
         self.reset_state()
@@ -81,7 +103,9 @@ class StreamingSANATrainingModel:
             print(f"[StreamingTrain-Model] min_new_frame={self.min_new_frame}")
             print(f"[StreamingTrain-Model] base_model type: {type(self.base_model).__name__}")
 
-    def _process_first_frame_encoding(self, frames: torch.Tensor) -> torch.Tensor:
+    def _process_first_frame_encoding(
+        self, frames: torch.Tensor, image_vae_embeds: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """
         Apply special encoding to the first frame, following the logic in _run_generator.
 
@@ -95,7 +119,7 @@ class StreamingSANATrainingModel:
 
         if total_frames <= 1:
             # Only one or zero frames, return as is
-            return frames
+            return frames, image_vae_embeds
 
         # Determine the range to process: last 21 frames
         process_frames = min(self.chunk_size, total_frames)
@@ -117,13 +141,23 @@ class StreamingSANATrainingModel:
             image_latent = self.base_model.vae.encode_to_latent(last_frame_pixel).to(self.dtype)
             image_latent = rearrange(image_latent, "b c f h w -> b f c h w")
 
+            processed_image_vae_embeds = None
+            if image_vae_embeds is not None:
+                source_to_decode = image_vae_embeds[:, :, : -(process_frames - 1)]
+                source_pixels = self.base_model.vae.decode_to_pixel(source_to_decode)
+                source_first_pixel = source_pixels[:, :, -1:].to(self.dtype)
+                source_first_latent = self.base_model.vae.encode_to_latent(source_first_pixel).to(self.dtype)
+                processed_image_vae_embeds = torch.cat(
+                    [source_first_latent, image_vae_embeds[:, :, -(process_frames - 1) :]], dim=2
+                )
+
         remaining_frames = frames[:, -(process_frames - 1) :, ...]
         processed_frames = torch.cat([image_latent, remaining_frames], dim=1)
 
         if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
             print(f"[StreamingTrain-Model] Processed first frame encoding: {frames.shape} -> {processed_frames.shape}")
 
-        return processed_frames
+        return processed_frames, processed_image_vae_embeds
 
     def reset_state(self):
         """Reset streaming training state"""
@@ -139,6 +173,8 @@ class StreamingSANATrainingModel:
         }
 
         self.inference_pipeline.clear_kv_cache()
+        if self.reverse_pipeline is not None:
+            self.reverse_pipeline.clear_kv_cache()
 
     def _should_switch_prompt(self, chunk_start_frame: int, chunk_size: int) -> bool:
         # If already switched, do not switch again
@@ -195,6 +231,7 @@ class StreamingSANATrainingModel:
         noise_chunk: torch.Tensor,
         chunk_start_frame: int,
         requires_grad: bool = True,
+        image_vae_embeds: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[int], Optional[int]]:
         """
         Generate a single chunk.
@@ -232,6 +269,8 @@ class StreamingSANATrainingModel:
             "requires_grad": requires_grad,
             "return_sim_step": False,
         }
+        if image_vae_embeds is not None:
+            kwargs["image_vae_embeds"] = image_vae_embeds
 
         # Add switching logic for SanaSwitchTrainingPipeline
         if isinstance(self.inference_pipeline, SanaSwitchTrainingPipeline):
@@ -264,10 +303,12 @@ class StreamingSANATrainingModel:
         unconditional_dict: Dict,
         conditional_dict_real: Dict,
         unconditional_dict_real: Dict,
+        reverse_conditional_dict: Optional[Dict] = None,
         initial_latent: Optional[torch.Tensor] = None,
         switch_conditional_dict: Optional[Dict] = None,
         switch_frame_index: Optional[int] = None,
         temp_max_length: Optional[int] = None,
+        image_vae_embeds: Optional[torch.Tensor] = None,
     ):
         """Set up a new sequence"""
 
@@ -279,6 +320,9 @@ class StreamingSANATrainingModel:
             self.inference_pipeline._initialize_kv_cache(batch_size=batch_size, dtype=self.dtype, device=self.device)
             if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
                 print(f"[StreamingTrain-Model] init kv_cache: chunks={len(self.inference_pipeline.kv_cache)}")
+
+        if self.reverse_pipeline is not None and self.reverse_pipeline.kv_cache is None:
+            self.reverse_pipeline._initialize_kv_cache(batch_size=batch_size, dtype=self.dtype, device=self.device)
 
         # Reset state
         self.reset_state()
@@ -300,6 +344,7 @@ class StreamingSANATrainingModel:
             "unconditional_dict": unconditional_dict,
             "conditional_dict_real": conditional_dict_real,
             "unconditional_dict_real": unconditional_dict_real,
+            "reverse_conditional_dict": reverse_conditional_dict,
         }
 
         # DMDSwitch related information
@@ -317,6 +362,107 @@ class StreamingSANATrainingModel:
         else:
             if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
                 print(f"[StreamingTrain-Model] No initial latent")
+
+        if image_vae_embeds is not None:
+            if image_vae_embeds.shape[2] < temp_max_length:
+                raise ValueError(
+                    f"Source latent has {image_vae_embeds.shape[2]} frames, expected at least {temp_max_length}"
+                )
+            self.state["image_vae_embeds"] = image_vae_embeds
+
+    def run_reverse_denoise(
+        self,
+        chunk: torch.Tensor,
+        chunk_info: Dict[str, Any],
+        requires_grad: bool = True,
+    ) -> Optional[Dict[str, torch.Tensor]]:
+        """Run the optional edit-to-source cycle without sharing the forward cache."""
+        if self.reverse_pipeline is None:
+            return None
+
+        reverse_conditional_dict = self.state["conditional_info"].get("reverse_conditional_dict")
+        source_chunk = chunk_info.get("chunk_image_vae_embeds")
+        if reverse_conditional_dict is None or source_chunk is None:
+            return None
+
+        edited_chunk = rearrange(chunk.detach(), "b f c h w -> b c f h w")
+        gradient_mask = chunk_info.get("gradient_mask")
+
+        kwargs = {
+            "source_chunk_bcfhw": source_chunk,
+            "edited_chunk_bcfhw": edited_chunk,
+            "prompt_embeds": reverse_conditional_dict["prompt_embeds"],
+            "mask": reverse_conditional_dict.get("mask"),
+            "current_start_frame": chunk_info["chunk_start_frame"],
+        }
+        if requires_grad:
+            result = self.reverse_pipeline.denoise_chunk(**kwargs)
+        else:
+            with torch.no_grad():
+                result = self.reverse_pipeline.denoise_chunk(**kwargs)
+
+        result["source_chunk_bcfhw"] = source_chunk
+        result["gradient_mask"] = gradient_mask
+        return result
+
+    def compute_reverse_reg_loss(
+        self, result: Optional[Dict[str, torch.Tensor]]
+    ) -> Tuple[torch.Tensor, Dict[str, Any]]:
+        """Compute the source-reconstruction loss for cycle-reverse regularization."""
+        zero = torch.tensor(0.0, device=self.device)
+        log_dict = {
+            "reverse_reg_loss": zero,
+            "reverse_reg_weighted_loss": zero,
+        }
+        if result is None:
+            return zero, log_dict
+
+        source = rearrange(result["source_chunk_bcfhw"], "b c f h w -> b f c h w")
+        pred_x0 = rearrange(result["pred_x0"], "b c f h w -> b f c h w")
+        noise = rearrange(result["noise"], "b c f h w -> b f c h w")
+        reverse_timestep = result["timestep"]
+        batch_size, num_frames = source.shape[:2]
+
+        if reverse_timestep.dim() == 1:
+            timestep = reverse_timestep[:, None].expand(-1, num_frames)
+        else:
+            chunk_indices = self.reverse_pipeline.create_autoregressive_segments(num_frames)
+            timestep = torch.empty(batch_size, num_frames, device=self.device, dtype=reverse_timestep.dtype)
+            for chunk_idx in range(reverse_timestep.shape[1]):
+                timestep[:, chunk_indices[chunk_idx] : chunk_indices[chunk_idx + 1]] = reverse_timestep[
+                    :, chunk_idx : chunk_idx + 1
+                ]
+        timestep = timestep.flatten(0, 1)
+
+        if getattr(self.base_model.args, "denoising_loss_type", "mse") == "flow":
+            flow_pred = rearrange(result["flow_pred"], "b c f h w -> b f c h w").flatten(0, 1)
+            pred_noise = None
+        else:
+            flow_pred = None
+            noisy_source = self.scheduler.add_noise(source.flatten(0, 1), noise.flatten(0, 1), timestep)
+            pred_noise = self.scheduler.convert_x0_to_noise(
+                x0=pred_x0.flatten(0, 1), xt=noisy_source, timestep=timestep
+            )
+
+        gradient_mask = result.get("gradient_mask")
+        reverse_loss = self.denoising_loss_func(
+            x=source.flatten(0, 1),
+            x_pred=pred_x0.flatten(0, 1),
+            noise=noise.flatten(0, 1),
+            noise_pred=pred_noise,
+            alphas_cumprod=self.scheduler.alphas_cumprod,
+            timestep=timestep,
+            flow_pred=flow_pred,
+            gradient_mask=gradient_mask.flatten(0, 1) if gradient_mask is not None else None,
+        )
+        weighted_loss = reverse_loss * self.reverse_reg_weight
+        log_dict.update(
+            {
+                "reverse_reg_loss": reverse_loss.detach(),
+                "reverse_reg_weighted_loss": weighted_loss.detach(),
+            }
+        )
+        return weighted_loss, log_dict
 
     def can_generate_more(self) -> bool:
         """Check whether more chunks can be generated"""
@@ -375,6 +521,7 @@ class StreamingSANATrainingModel:
 
         # Check if previous_frames can be used for overlap and auto-compute overlap frame count
         previous_frames = self.state.get("previous_frames")
+        image_vae_embeds = self.state.get("image_vae_embeds")
         if previous_frames is not None:
             # Randomly select number of new frames (min=min_new_frame, max=chunk_size, step=3)
             max_new_frames = min(self.state["temp_max_length"] - current_length + 1, self.chunk_size)
@@ -429,29 +576,48 @@ class StreamingSANATrainingModel:
             [batch_size, new_frames_to_generate, *self.image_or_video_shape[2:]], device=self.device, dtype=self.dtype
         )
 
+        current_image_vae_embeds = (
+            image_vae_embeds[:, :, current_length : current_length + new_frames_to_generate]
+            if image_vae_embeds is not None
+            else None
+        )
+
         # Generate new frames - note chunk_start_frame should consider overlap
         generated_new_frames, denoised_timestep_from, denoised_timestep_to = self._generate_chunk(
             noise_chunk=noise_chunk,
             chunk_start_frame=current_length,
             requires_grad=requires_grad,
+            image_vae_embeds=current_image_vae_embeds,
         )
 
         # Build the full chunk for loss computation
         if previous_frames is not None and overlap_frames_to_use > 0:
             # Concatenate specified overlap frames and newly generated frames
             full_chunk = torch.cat([previous_frames, generated_new_frames], dim=1)
+            previous_image_vae_embeds = self.state.get("previous_image_vae_embeds")
+            full_image_vae_embeds = (
+                torch.cat([previous_image_vae_embeds, current_image_vae_embeds], dim=2)
+                if previous_image_vae_embeds is not None
+                else current_image_vae_embeds
+            )
         else:
             full_chunk = generated_new_frames  # B,F,C,H,W
+            full_image_vae_embeds = current_image_vae_embeds
 
         # Update state - save the last 21 frames as previous_frames for the next chunk
         # The frames saved here should be those before _process_first_frame_encoding
         frames_to_save = full_chunk.detach().clone()[:, -self.chunk_size :, ...]
+        image_vae_embeds_to_save = (
+            full_image_vae_embeds.detach().clone()[:, :, -self.chunk_size :]
+            if full_image_vae_embeds is not None
+            else None
+        )
         if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
             print(f"[StreamingTrain-Model] Saved last {frames_to_save.shape[1]} frames as previous_frames")
 
         # Process first-frame encoding (if there is overlap)
         if previous_frames is not None and self.independent_first_frame:
-            full_chunk = self._process_first_frame_encoding(full_chunk)
+            full_chunk, full_image_vae_embeds = self._process_first_frame_encoding(full_chunk, full_image_vae_embeds)
 
         if previous_frames is not None:
             # Create gradient_mask: only newly generated frames require gradients
@@ -478,6 +644,7 @@ class StreamingSANATrainingModel:
                 )
 
         self.state["previous_frames"] = frames_to_save
+        self.state["previous_image_vae_embeds"] = image_vae_embeds_to_save
 
         # Return info
         info = {
@@ -489,6 +656,7 @@ class StreamingSANATrainingModel:
             "current_length": self.state["current_length"],
             "gradient_mask": gradient_mask,  # Mask frames that do not require gradients for loss computation
             "overlap_frames_used": overlap_frames_to_use,
+            "chunk_image_vae_embeds": full_image_vae_embeds,
         }
         if not dist.is_initialized() or dist.get_rank() == 0:
             print(
@@ -518,6 +686,7 @@ class StreamingSANATrainingModel:
         unconditional_dict = self.state["conditional_info"]["unconditional_dict"]
         conditional_dict_real = self.state["conditional_info"]["conditional_dict_real"]
         unconditional_dict_real = self.state["conditional_info"]["unconditional_dict_real"]
+        chunk_image_vae_embeds = chunk_info.get("chunk_image_vae_embeds")
 
         # Fetch gradient_mask to compute loss only on newly generated frames
         gradient_mask = chunk_info.get("gradient_mask", None)
@@ -532,6 +701,9 @@ class StreamingSANATrainingModel:
         )
 
         # Compute DMD loss
+        v2v_loss_kwargs = (
+            {"data_info": {"image_vae_embeds": chunk_image_vae_embeds}} if chunk_image_vae_embeds is not None else {}
+        )
         dmd_loss, dmd_log_dict = self.base_model.compute_distribution_matching_loss(
             image_or_video=chunk,
             conditional_dict=conditional_dict,
@@ -542,6 +714,7 @@ class StreamingSANATrainingModel:
             denoised_timestep_from=chunk_info["denoised_timestep_from"],
             denoised_timestep_to=chunk_info["denoised_timestep_to"],
             current_length=self.state["current_length"],
+            **v2v_loss_kwargs,
         )
 
         # Update log dict
@@ -618,6 +791,7 @@ class StreamingSANATrainingModel:
         # Use the same timestep range logic as non-streaming training
         denoised_timestep_from = chunk_info.get("denoised_timestep_from", None)
         denoised_timestep_to = chunk_info.get("denoised_timestep_to", None)
+        chunk_image_vae_embeds = chunk_info.get("chunk_image_vae_embeds")
 
         self.base_model.decode_and_save_clip(
             chunk, f"critic_gen_f{self.state['current_length']}_t{int(denoised_timestep_to)}"
@@ -671,10 +845,19 @@ class StreamingSANATrainingModel:
             assert "mask" in conditional_dict
             condition = conditional_dict["prompt_embeds"].clone()
             mask = conditional_dict.get("mask", None)
+            v2v_model_kwargs = (
+                {"data_info": {"image_vae_embeds": chunk_image_vae_embeds}}
+                if chunk_image_vae_embeds is not None
+                else {}
+            )
             # BFCHW -> BCFHW
             noisy_bcfhw = rearrange(noisy_chunk, "b f c h w -> b c f h w")
             _, pred_fake_image_bcfhw, _ = self.fake_score(
-                noisy_image_or_video=noisy_bcfhw, condition=condition, timestep=critic_timestep, mask=mask
+                noisy_image_or_video=noisy_bcfhw,
+                condition=condition,
+                timestep=critic_timestep,
+                mask=mask,
+                **v2v_model_kwargs,
             )
             # BCFHW -> BFCHW
             pred_fake_image = rearrange(pred_fake_image_bcfhw, "b c f h w -> b f c h w")

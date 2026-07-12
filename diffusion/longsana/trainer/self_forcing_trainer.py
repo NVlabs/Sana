@@ -15,7 +15,13 @@ from torchvision.io import write_video
 
 from diffusion.longsana.model import DMDSana
 from diffusion.longsana.pipeline import SanaInferencePipeline
-from diffusion.longsana.utils.dataset import ShardingLMDBDataset, TextDataset, TwoTextDataset, cycle
+from diffusion.longsana.utils.dataset import (
+    LongV2VManifestDataset,
+    ShardingLMDBDataset,
+    TextDataset,
+    TwoTextDataset,
+    cycle,
+)
 from diffusion.longsana.utils.debug_option import DEBUG
 from diffusion.longsana.utils.distributed import EMA_FSDP, fsdp_state_dict, fsdp_wrap, launch_distributed_job
 from diffusion.longsana.utils.misc import merge_dict_list, set_seed
@@ -26,6 +32,8 @@ class Trainer:
     def __init__(self, config):
         self.config = config
         self.step = 0
+        self.v2v = bool(getattr(config, "v2v", False))
+        self.long_v2v = self.v2v and getattr(config, "trainer", None) == "longsana"
 
         # Step 1: Initialize the distributed training environment (rank, seed, dtype, logging etc.)
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -103,7 +111,7 @@ class Trainer:
             cpu_offload=getattr(config, "text_encoder_cpu_offload", False),
         )
 
-        if not config.no_visualize or config.load_raw_video:
+        if not config.no_visualize or config.load_raw_video or self.long_v2v:
             self.model.vae = self.model.vae.to(
                 device=self.device, dtype=torch.bfloat16 if config.mixed_precision else torch.float32
             )
@@ -131,7 +139,7 @@ class Trainer:
 
         ##############################################################################################################
         # (If resuming) Load the model and optimizer, lr_scheduler, ema's statedicts
-        if getattr(config, "generator_ckpt", False):
+        if getattr(config, "generator_ckpt", False) and not self.long_v2v:
             print(f"Loading pretrained generator from {config.generator_ckpt}")
             state_dict = find_model(config.generator_ckpt)
             if "generator" in state_dict:
@@ -155,14 +163,19 @@ class Trainer:
             weight_decay=config.weight_decay,
         )
         # Step 5: Initialize the dataloader
-        if self.config.i2v:
+        if self.long_v2v:
+            dataset = LongV2VManifestDataset(
+                config.data_path,
+                data_root=getattr(config, "data_root", None),
+            )
+        elif self.config.i2v:
             dataset = ShardingLMDBDataset(config.data_path, max_pair=int(1e8))
         elif getattr(self.config, "switch_prompt_path", None) is not None:
             dataset = TwoTextDataset(config.data_path, config.switch_prompt_path)
         else:
             dataset = TextDataset(config.data_path)
 
-        sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True, drop_last=True)
+        sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True, drop_last=not self.long_v2v)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size, sampler=sampler, num_workers=8)
 
         if dist.get_rank() == 0:
@@ -222,7 +235,7 @@ class Trainer:
                 print("Auto resume disabled, starting from scratch")
 
         if checkpoint_path is None:
-            if getattr(config, "generator_ckpt", False):
+            if getattr(config, "generator_ckpt", False) and not self.long_v2v:
                 checkpoint_path = config.generator_ckpt
                 if self.is_main_process:
                     print(f"Using explicit checkpoint: {checkpoint_path}")

@@ -55,6 +55,121 @@ The released V2V checkpoints were validated with `torch==2.10.0`,
 LTX-2 VAE path are sensitive to runtime package versions; use the pinned
 package versions in `pyproject.toml` for reproducible bidirectional inference.
 
+## 🧑‍💻 Bidirectional V2V Training
+
+This release includes bidirectional short-video V2V flow matching and the final
+long-video fine-tuning stage.
+
+The public path reuses the existing video trainer and released V2V model:
+
+- trainer: `train_video_scripts/train_video_ivjoint_chunk.py`
+- paired loader: `diffusion/data/datasets/video/sana_v2v_pair_data.py`
+- recipe: `configs/sana_streaming/train/sana_streaming_bidirectional_2b_720p.yaml`
+
+### Prepare the 1k example subset locally
+
+The local example data contains 1,000 quality-filtered reverse pairs. The local layout is:
+
+```text
+data/sana_streaming_1k/data/example_data/
+|-- manifest.jsonl
+|-- dataset_info.json
+|-- checksums.sha256
+|-- DATA_LICENSE.md
+`-- data/train-00000-of-00010.zip ... train-00009-of-00010.zip
+```
+
+Validate it before training:
+
+```bash
+cd data/sana_streaming_1k/data/example_data
+sha256sum -c checksums.sha256
+cd ../../../..
+```
+
+### Fine-tune the released bidirectional checkpoint
+
+The default recipe loads the released bidirectional weights and performs
+on-the-fly LTX-2 VAE encoding of both sides of each pair:
+
+```bash
+torchrun --nproc_per_node=8 --master_port=29500 \
+  train_video_scripts/train_video_ivjoint_chunk.py \
+  --config_path=configs/sana_streaming/train/sana_streaming_bidirectional_2b_720p.yaml
+```
+
+The target video is the clean diffusion sample. The source video is encoded
+separately and concatenated with the noisy target along the latent-channel
+dimension by `SanaMSVideoV2V`. Image joint training is disabled in this recipe.
+
+
+## 🧑‍💻 Long V2V Training
+
+### Download checkpoints locally
+
+Training reads only local paths. Download the two released checkpoints before
+launching it:
+
+```bash
+hf download Efficient-Large-Model/SANA-Streaming \
+  --include dit/sana_streaming_ar.pth \
+  --local-dir checkpoints/sana_streaming
+
+hf download Efficient-Large-Model/SANA-Streaming_bidirectional \
+  --include dit/sana_bidirectional_short.pth \
+  --local-dir checkpoints/sana_streaming_bidirectional
+```
+
+### Prepare a local long-video manifest
+
+Use a separate directory for each training horizon. Every JSONL row contains an
+editing prompt, the instruction that maps the edited video back to the source,
+and a source-video path relative to the manifest directory. Set `data_root` in
+the YAML only when the videos live under a different local directory:
+
+```text
+data/sana_streaming_long_489/
+|-- manifest.jsonl
+`-- videos/
+    `-- example.mp4
+```
+
+```json
+{"prompt":"Transform the scene into a watercolor painting.","reverse_prompt":"Transform the watercolor scene back into a realistic video.","source_video":"videos/example.mp4"}
+```
+
+### Train the 489 stage
+
+```bash
+DISABLE_XFORMERS=1 torchrun --nproc_per_node=8 --master_port=29500 \
+  train_video_scripts/train_longsana.py \
+  --config_path configs/sana_streaming/train/sana_streaming_long_489_2b_720p.yaml \
+  --logdir output/sana_streaming_long_489_2b_720p \
+  --disable-wandb \
+  --max_iters 5000
+```
+
+The generator starts from `sana_streaming_ar.pth`; the trainable fake score and
+frozen real score start from `sana_bidirectional_short.pth`.
+
+### Continue with the 969 stage
+
+Place the 969-frame manifest under `data/sana_streaming_long_969`, then continue
+from the 489-stage step-5000 checkpoint:
+
+```bash
+DISABLE_XFORMERS=1 torchrun --nproc_per_node=8 --master_port=29500 \
+  train_video_scripts/train_longsana.py \
+  --config_path configs/sana_streaming/train/sana_streaming_long_969_2b_720p.yaml \
+  --logdir output/sana_streaming_long_969_2b_720p \
+  --disable-wandb \
+  --max_iters 10000
+```
+
+The 969 recipe initializes both the generator and trainable fake score from
+`output/sana_streaming_long_489_2b_720p/checkpoint_model_005000/model.pt`, while
+the frozen real score remains the released bidirectional model.
+
 ## 🏃 Inference
 
 All DiT checkpoints and demo source videos are fetched on first use from the

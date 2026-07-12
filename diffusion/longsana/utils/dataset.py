@@ -1,6 +1,6 @@
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import datasets
 import lmdb
@@ -35,6 +35,96 @@ class TextDataset(Dataset):
         if self.extended_prompt_list is not None:
             batch["extended_prompts"] = self.extended_prompt_list[idx]
         return batch
+
+
+class LongV2VManifestDataset(Dataset):
+    """Local long-video V2V samples described by a JSONL manifest.
+
+    Each non-empty line must contain ``prompt``, ``reverse_prompt``, and
+    ``source_video``. Video paths are relative to ``data_root`` (the manifest's
+    parent directory by default); absolute paths and parent traversal are
+    rejected.
+    """
+
+    REQUIRED_FIELDS = ("prompt", "reverse_prompt", "source_video")
+
+    def __init__(self, manifest_path: str, data_root: str | None = None):
+        self.manifest_path = Path(manifest_path).expanduser().resolve()
+        if not self.manifest_path.is_file():
+            raise FileNotFoundError(f"Long V2V manifest not found: {self.manifest_path}")
+
+        self.data_root = Path(data_root).expanduser().resolve() if data_root is not None else self.manifest_path.parent
+        if not self.data_root.is_dir():
+            raise FileNotFoundError(f"Long V2V data root not found: {self.data_root}")
+
+        self.records = []
+        with open(self.manifest_path, encoding="utf-8") as f:
+            for line_number, line in enumerate(f, start=1):
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"Invalid JSON on manifest line {line_number}: {exc.msg}") from exc
+                self.records.append(self._validate_record(record, line_number))
+
+        if not self.records:
+            raise ValueError(f"Long V2V manifest is empty: {self.manifest_path}")
+
+    def _validate_record(self, record, line_number):
+        if not isinstance(record, dict):
+            raise ValueError(f"Manifest line {line_number} must be a JSON object")
+
+        missing = [field for field in self.REQUIRED_FIELDS if field not in record]
+        if missing:
+            raise ValueError(f"Manifest line {line_number} is missing fields: {', '.join(missing)}")
+
+        for field in ("prompt", "reverse_prompt"):
+            if not isinstance(record[field], str) or not record[field].strip():
+                raise ValueError(f"Manifest line {line_number} field {field!r} must be a non-empty string")
+
+        source_video = record["source_video"]
+        if not isinstance(source_video, str) or not source_video.strip():
+            raise ValueError(f"Manifest line {line_number} field 'source_video' must be a non-empty string")
+
+        relative_path = Path(source_video)
+        windows_path = PureWindowsPath(source_video)
+        if (
+            relative_path.is_absolute()
+            or windows_path.is_absolute()
+            or windows_path.drive
+            or ".." in relative_path.parts
+            or ".." in windows_path.parts
+        ):
+            raise ValueError(f"Manifest line {line_number} field 'source_video' must stay within the local data root")
+
+        resolved_path = (self.data_root / relative_path).resolve()
+        try:
+            resolved_path.relative_to(self.data_root)
+        except ValueError as exc:
+            raise ValueError(
+                f"Manifest line {line_number} field 'source_video' resolves outside the local data root"
+            ) from exc
+        if not resolved_path.is_file():
+            raise FileNotFoundError(f"Source video on manifest line {line_number} not found: {resolved_path}")
+
+        return {
+            "prompt": record["prompt"].strip(),
+            "reverse_prompt": record["reverse_prompt"].strip(),
+            "source_video_path": str(resolved_path),
+        }
+
+    def __len__(self):
+        return len(self.records)
+
+    def __getitem__(self, idx):
+        record = self.records[idx]
+        return {
+            "prompts": record["prompt"],
+            "reverse_prompts": record["reverse_prompt"],
+            "source_video_paths": record["source_video_path"],
+            "idx": idx,
+        }
 
 
 class TwoTextDataset(Dataset):

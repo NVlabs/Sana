@@ -133,12 +133,17 @@ class ModelVideoConfig(ModelConfig):
     t_kernel_size: int = 3
     flash_attn_window_count: Optional[List[int]] = None
     pack_latents: bool = False
+    additional_inchannels: int = 0
     encode_image_prompt_embeds: bool = False
     # stage3
     cross_attn_image_embeds: bool = False
     image_latent_mode: str = "video_zero"
     # chunkcasual
     chunk_index: Optional[List[int]] = None
+    # V2V hybrid attention
+    softmax_ratio: Optional[float] = 0.0
+    softmax_layer_indices: Optional[List[int]] = None
+    softmax_attn_type: str = "V2VGatedSoftmaxAttention"
 
 
 @dataclass
@@ -501,3 +506,22 @@ def model_video_init_config(config: SanaVideoConfig, latent_size: int = 32):
         "flash_attn_window_count": config.model.flash_attn_window_count,
         "pack_latents": config.model.pack_latents,
     }
+
+
+def model_v2v_init_config(config: SanaVideoConfig, latent_size: int = 32):
+    """Build the shared SANA-Streaming V2V model arguments.
+
+    V2V concatenates the noisy target and clean source latents along the
+    channel dimension. Keeping this helper in the public config module makes
+    training and inference use the same doubled-input model definition.
+    """
+
+    model_kwargs = model_video_init_config(config, latent_size=latent_size)
+    model_kwargs.update(
+        additional_inchannels=config.model.additional_inchannels,
+        timestep_norm_scale_factor=config.scheduler.timestep_norm_scale_factor,
+        softmax_ratio=config.model.softmax_ratio,
+        softmax_layer_indices=config.model.softmax_layer_indices,
+        softmax_attn_type=config.model.softmax_attn_type,
+    )
+    return model_kwargs

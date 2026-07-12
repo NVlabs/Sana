@@ -18,7 +18,6 @@ import argparse
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 os.environ["DISABLE_XFORMERS"] = "1"
 os.environ.setdefault("USE_CHUNKWISE_GDN", "1")
@@ -37,7 +36,13 @@ from diffusion import DPMS
 from diffusion.data.transforms import ResizeCrop, ToTensorVideo
 from diffusion.model.builder import build_model, get_tokenizer_and_text_encoder, get_vae, vae_decode, vae_encode
 from diffusion.model.utils import get_weight_dtype
-from diffusion.utils.config import AEConfig, ModelConfig, SchedulerConfig, TextEncoderConfig
+from diffusion.utils.config import (
+    AEConfig,
+    ModelVideoConfig,
+    SchedulerConfig,
+    TextEncoderConfig,
+    model_v2v_init_config,
+)
 from sana.tools import resolve_hf_path
 from tools.download import find_model
 
@@ -69,69 +74,12 @@ DEFAULT_NEGATIVE_PROMPT = (
 
 
 @dataclass
-class V2VModelConfig(ModelConfig):
-    rope_fhw_dim: Optional[Tuple[int, int, int]] = None
-    t_kernel_size: int = 3
-    flash_attn_layer_idx: Optional[List[int]] = None
-    flash_attn_layer_type: Optional[str] = None
-    flash_attn_window_count: Optional[List[int]] = None
-    pack_latents: bool = False
-    addition_layers_num: int = 0
-    cross_attn_image_embeds: bool = False
-    chunk_index: Optional[List[int]] = None
-    softmax_ratio: Optional[float] = 0.25
-    softmax_layer_indices: Optional[List[int]] = None
-    softmax_attn_type: str = "V2VGatedSoftmaxAttention"
-
-
-@dataclass
 class InferenceConfig:
-    model: V2VModelConfig
+    model: ModelVideoConfig
     vae: AEConfig
     text_encoder: TextEncoderConfig
     scheduler: SchedulerConfig
     work_dir: str = ""
-
-
-def model_v2v_init_config(config: InferenceConfig, latent_size: int = 32):
-    pred_sigma = getattr(config.scheduler, "pred_sigma", True)
-    learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
-    return {
-        "input_size": latent_size,
-        "pe_interpolation": config.model.pe_interpolation,
-        "config": config,
-        "model_max_length": config.text_encoder.model_max_length,
-        "qk_norm": config.model.qk_norm,
-        "micro_condition": config.model.micro_condition,
-        "caption_channels": config.text_encoder.caption_channels,
-        "class_dropout_prob": config.model.class_dropout_prob,
-        "y_norm": config.text_encoder.y_norm,
-        "attn_type": config.model.attn_type,
-        "ffn_type": config.model.ffn_type,
-        "mlp_ratio": config.model.mlp_ratio,
-        "mlp_acts": list(config.model.mlp_acts),
-        "in_channels": config.vae.vae_latent_dim,
-        "additional_inchannels": config.vae.vae_latent_dim,
-        "use_pe": config.model.use_pe,
-        "pos_embed_type": config.model.pos_embed_type,
-        "rope_fhw_dim": config.model.rope_fhw_dim,
-        "linear_head_dim": config.model.linear_head_dim,
-        "pred_sigma": pred_sigma,
-        "learn_sigma": learn_sigma,
-        "cross_norm": config.model.cross_norm,
-        "cross_attn_type": config.model.cross_attn_type,
-        "cross_attn_image_embeds": config.model.cross_attn_image_embeds,
-        "t_kernel_size": config.model.t_kernel_size,
-        "flash_attn_layer_idx": config.model.flash_attn_layer_idx,
-        "flash_attn_layer_type": config.model.flash_attn_layer_type,
-        "flash_attn_window_count": config.model.flash_attn_window_count,
-        "pack_latents": config.model.pack_latents,
-        "addition_layers_num": config.model.addition_layers_num,
-        "timestep_norm_scale_factor": config.scheduler.timestep_norm_scale_factor,
-        "softmax_ratio": config.model.softmax_ratio,
-        "softmax_layer_indices": config.model.softmax_layer_indices,
-        "softmax_attn_type": config.model.softmax_attn_type,
-    }
 
 
 def str2bool(value):

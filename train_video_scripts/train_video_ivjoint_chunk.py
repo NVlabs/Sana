@@ -52,7 +52,7 @@ from diffusion.model.builder import (
 from diffusion.model.respace import IncrementalTimesteps, process_timesteps
 from diffusion.model.utils import get_weight_dtype
 from diffusion.utils.checkpoint import load_checkpoint, save_checkpoint
-from diffusion.utils.config import SanaVideoConfig, model_video_init_config
+from diffusion.utils.config import SanaVideoConfig, model_v2v_init_config, model_video_init_config
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, AspectRatioBatchSamplerVideo
 from diffusion.utils.dist_utils import flush, get_world_size
 from diffusion.utils.git import save_git_snapshot
@@ -62,7 +62,10 @@ from diffusion.utils.misc import DebugUnderflowOverflow, init_random_seed, set_r
 from diffusion.utils.optimizer import auto_scale_lr, build_optimizer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
+# The public fused V2V inference kernel is forward-only. Bidirectional
+# training must select the autograd-safe PyTorch recurrence before models are
+# imported and registered.
+os.environ["USE_CHUNKWISE_GDN"] = "0"
 
 def set_fsdp_env():
     # Basic FSDP settings
@@ -299,10 +302,13 @@ def train(
 
     skip_step = max(config.train.skip_step, video_step) % train_dataloader_len
     skip_step = skip_step if skip_step < (train_dataloader_len - 20) else 0
-    skip_step_image = max(config.train.skip_step, image_step) % train_dataloader_image_len
-    skip_step_image = skip_step_image if skip_step_image < (train_dataloader_image_len - 20) else 0
+    skip_step_image = 0
+    if train_dataloader_image_len:
+        skip_step_image = max(config.train.skip_step, image_step) % train_dataloader_image_len
+        skip_step_image = skip_step_image if skip_step_image < (train_dataloader_image_len - 20) else 0
     loss_nan_timer = 0
-    model_instance.to(accelerator.device)
+    if model_instance is not None:
+        model_instance.to(accelerator.device)
 
     time_sampler = IncrementalTimesteps(
         F=config.model.get("chunk_index", None),
@@ -318,11 +324,13 @@ def train(
             if (num_replicas > 1 or config.model.multi_scale)
             else train_dataloader.sampler
         )
-        image_sampler = (
-            train_dataloader_image.batch_sampler.sampler
-            if (num_replicas > 1 or config.model.multi_scale)
-            else train_dataloader_image.sampler
-        )
+        image_sampler = None
+        if train_dataloader_image is not None:
+            image_sampler = (
+                train_dataloader_image.batch_sampler.sampler
+                if (num_replicas > 1 or config.model.multi_scale)
+                else train_dataloader_image.sampler
+            )
         if train_dataloader.dataset.shuffle_dataset:
             logger.info(f"Shuffled dataset, no skip step")
         else:
@@ -331,10 +339,11 @@ def train(
             sampler.set_epoch(epoch)
             sampler.set_start(set_start_value)
 
-            set_image_start_value = max((skip_step_image - 1) * config.train.train_batch_size_image, 0)
-            os.environ[f"CURRENT_IMAGE_STEP_START_RANK_{rank}"] = str(set_image_start_value)
-            image_sampler.set_epoch(epoch)
-            image_sampler.set_start(set_image_start_value)
+            if image_sampler is not None:
+                set_image_start_value = max((skip_step_image - 1) * config.train.train_batch_size_image, 0)
+                os.environ[f"CURRENT_IMAGE_STEP_START_RANK_{rank}"] = str(set_image_start_value)
+                image_sampler.set_epoch(epoch)
+                image_sampler.set_start(set_image_start_value)
 
             if skip_step > 1 and accelerator.is_main_process:
                 logger.info(f"Skipped video training Steps: {skip_step}")
@@ -348,14 +357,17 @@ def train(
 
         # Create dataloader iterators for joint training
         video_dataloader_iter = iter(train_dataloader)
-        image_dataloader_iter = iter(train_dataloader_image)
+        image_dataloader_iter = iter(train_dataloader_image) if train_dataloader_image is not None else None
 
         # Use range instead of enumerating train_dataloader
         for step in range(train_dataloader_len):
 
             # Determine if this is an image training step
             is_image_step = (
-                joint_training_interval > 0 and (global_step % joint_training_interval == 0) and (global_step > 0)
+                train_dataloader_image is not None
+                and joint_training_interval > 0
+                and (global_step % joint_training_interval == 0)
+                and (global_step > 0)
             )
 
             if is_image_step:
@@ -402,7 +414,14 @@ def train(
                             data_info=data_info,
                         )  # B,F,C,H,W -> B,C,F,H,W
 
-                        if config.task == "ti2v":
+                        if config.task == "v2v":
+                            data_info["image_vae_embeds"] = vae_encode(
+                                config.vae.vae_type,
+                                vae,
+                                batch[8].permute(0, 2, 1, 3, 4).to(vae_dtype),
+                                device=accelerator.device,
+                            )
+                        elif config.task == "ti2v":
                             if config.model.image_latent_mode == "repeat":
                                 image_vae_embeds = vae_encode(
                                     config.vae.vae_type,
@@ -651,10 +670,11 @@ def train(
                 )
                 log_buffer.average()
 
+                image_step_offset = (
+                    image_sampler.step_start // config.train.train_batch_size_image if image_sampler is not None else 0
+                )
                 current_step = (
-                    global_step
-                    - sampler.step_start // config.train.train_batch_size
-                    - image_sampler.step_start // config.train.train_batch_size_image
+                    global_step - sampler.step_start // config.train.train_batch_size - image_step_offset
                 ) % train_dataloader_len
                 current_step = train_dataloader_len if current_step == 0 else current_step
 
@@ -865,6 +885,8 @@ def main(cfg: SanaVideoConfig) -> None:
     # 1.Initialize training mode
     if config.train.use_fsdp:
         set_fsdp_env()
+        if config.task == "v2v":
+            os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaV2VVideoMSBlock"
         init_train = "FSDP"
     else:
         init_train = "DDP"
@@ -1017,17 +1039,19 @@ def main(cfg: SanaVideoConfig) -> None:
         k: data if data.startswith(("https://", "http://", "gs://", "/", "~")) else osp.abspath(osp.expanduser(data))
         for k, data in config.data.data_dir.items()
     }
-    config.image_data.data_dir = (
-        config.image_data.data_dir if isinstance(config.image_data.data_dir, list) else [config.image_data.data_dir]
-    )
-    config.image_data.data_dir = [
-        data if data.startswith(("https://", "http://", "gs://", "/", "~")) else osp.abspath(osp.expanduser(data))
-        for data in config.image_data.data_dir
-    ]
-
     num_replicas = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["RANK"])
     joint_training_interval = config.train.joint_training_interval
+    if joint_training_interval > 0:
+        if config.image_data is None:
+            raise ValueError("image_data is required when train.joint_training_interval > 0")
+        config.image_data.data_dir = (
+            config.image_data.data_dir if isinstance(config.image_data.data_dir, list) else [config.image_data.data_dir]
+        )
+        config.image_data.data_dir = [
+            data if data.startswith(("https://", "http://", "gs://", "/", "~")) else osp.abspath(osp.expanduser(data))
+            for data in config.image_data.data_dir
+        ]
 
     # video dataset
     set_random_seed(int(time.time()) % (2**31) + int(os.environ["LOCAL_RANK"]))
@@ -1045,21 +1069,24 @@ def main(cfg: SanaVideoConfig) -> None:
     )
     sampler = DistributedRangedSampler(dataset, num_replicas=num_replicas, rank=rank)
 
-    # image dataset
-    if config.model.aspect_ratio_type is not None:
-        config.image_data.aspect_ratio_type = config.model.aspect_ratio_type
-    dataset_image = build_dataset(
-        asdict(config.image_data),
-        resolution=config.image_data.image_size,
-        max_length=max_length,
-        config=config,
-        caption_proportion=config.image_data.caption_proportion,
-        sort_dataset=config.image_data.sort_dataset,
-        vae_downsample_rate=config.vae.vae_stride[-1],
-        num_frames=config.image_data.num_frames,
-    )
-
-    image_sampler = DistributedRangedSampler(dataset_image, num_replicas=num_replicas, rank=rank)
+    dataset_image = None
+    image_sampler = None
+    train_dataloader_image = None
+    train_dataloader_image_len = 0
+    if joint_training_interval > 0:
+        if config.model.aspect_ratio_type is not None:
+            config.image_data.aspect_ratio_type = config.model.aspect_ratio_type
+        dataset_image = build_dataset(
+            asdict(config.image_data),
+            resolution=config.image_data.image_size,
+            max_length=max_length,
+            config=config,
+            caption_proportion=config.image_data.caption_proportion,
+            sort_dataset=config.image_data.sort_dataset,
+            vae_downsample_rate=config.vae.vae_stride[-1],
+            num_frames=config.image_data.num_frames,
+        )
+        image_sampler = DistributedRangedSampler(dataset_image, num_replicas=num_replicas, rank=rank)
 
     if config.model.multi_scale:
         batch_sampler = AspectRatioBatchSamplerVideo(
@@ -1077,23 +1104,24 @@ def main(cfg: SanaVideoConfig) -> None:
         )
         train_dataloader_len = len(train_dataloader)
 
-        batch_sampler_image = AspectRatioBatchSampler(
-            sampler=image_sampler,
-            dataset=dataset_image,
-            batch_size=config.train.train_batch_size_image,
-            aspect_ratios=dataset_image.aspect_ratio,
-            drop_last=True,
-            ratio_nums=dataset_image.ratio_nums,
-            config=config,
-            clipscore_filter_thres=args.data.del_img_clip_thr,
-        )
-        train_dataloader_image = build_dataloader(
-            dataset_image,
-            batch_sampler=batch_sampler_image,
-            num_workers=config.train.num_workers,
-            dataloader_type="image",
-        )
-        train_dataloader_image_len = len(train_dataloader_image)
+        if dataset_image is not None:
+            batch_sampler_image = AspectRatioBatchSampler(
+                sampler=image_sampler,
+                dataset=dataset_image,
+                batch_size=config.train.train_batch_size_image,
+                aspect_ratios=dataset_image.aspect_ratio,
+                drop_last=True,
+                ratio_nums=dataset_image.ratio_nums,
+                config=config,
+                clipscore_filter_thres=args.data.del_img_clip_thr,
+            )
+            train_dataloader_image = build_dataloader(
+                dataset_image,
+                batch_sampler=batch_sampler_image,
+                num_workers=config.train.num_workers,
+                dataloader_type="image",
+            )
+            train_dataloader_image_len = len(train_dataloader_image)
 
     else:
         train_dataloader = build_dataloader(
@@ -1106,16 +1134,16 @@ def main(cfg: SanaVideoConfig) -> None:
         )
         train_dataloader_len = len(train_dataloader)
 
-        # Build image dataloader for joint training
-        train_dataloader_image = build_dataloader(
-            dataset_image,
-            num_workers=config.train.num_workers,
-            batch_size=config.train.train_batch_size_image,
-            shuffle=False,
-            sampler=image_sampler,
-            dataloader_type="image",
-        )
-        train_dataloader_image_len = len(train_dataloader_image)
+        if dataset_image is not None:
+            train_dataloader_image = build_dataloader(
+                dataset_image,
+                num_workers=config.train.num_workers,
+                batch_size=config.train.train_batch_size_image,
+                shuffle=False,
+                sampler=image_sampler,
+                dataloader_type="image",
+            )
+            train_dataloader_image_len = len(train_dataloader_image)
 
     logger.info(
         f"Video set DataLoader length: {train_dataloader_len}, Image DataLoader length: {train_dataloader_image_len}"
@@ -1311,7 +1339,11 @@ def main(cfg: SanaVideoConfig) -> None:
     os.environ["AUTOCAST_LINEAR_ATTN"] = "true" if config.model.autocast_linear_attn else "false"
     image_size = config.model.image_size
     latent_size = int(image_size) // config.vae.vae_stride[-1]
-    model_kwargs = model_video_init_config(config, latent_size=latent_size)
+    model_kwargs = (
+        model_v2v_init_config(config, latent_size=latent_size)
+        if config.task == "v2v"
+        else model_video_init_config(config, latent_size=latent_size)
+    )
     model = build_model(
         config.model.model,
         config.train.grad_checkpointing,
@@ -1341,7 +1373,9 @@ def main(cfg: SanaVideoConfig) -> None:
         )
     )
 
-    if config.train.use_fsdp:
+    if config.task == "v2v" and not config.train.visualize:
+        model_instance = None
+    elif config.train.use_fsdp:
         model_instance = deepcopy(model)
     elif model_ema is not None:
         model_instance = deepcopy(model_ema)
@@ -1358,7 +1392,7 @@ def main(cfg: SanaVideoConfig) -> None:
             model=model,
             model_ema=model_ema,
             FSDP=config.train.use_fsdp,
-            load_ema=config.model.resume_from.get("load_ema", False),
+            load_ema=(config.model.resume_from or {}).get("load_ema", False),
             null_embed_path=null_embed_path,
         )
 

@@ -102,7 +102,6 @@ The target video is the clean diffusion sample. The source video is encoded
 separately and concatenated with the noisy target along the latent-channel
 dimension by `SanaMSVideoV2V`. Image joint training is disabled in this recipe.
 
-
 ## 🧑‍💻 Long V2V Training
 
 ### Download checkpoints locally

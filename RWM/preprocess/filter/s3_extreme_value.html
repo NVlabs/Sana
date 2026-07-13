@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FILTER S3 — Extreme Value</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1050px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="index.html">← FILTER Evidence</a> · <a href="../index.html">Preprocess index</a></p>
+<h1>S3 — Extreme Value</h1>
+<p>S3 是 Qwen-RobotManip-inspired 的 per-dimension distribution outlier filter。它检查 packed state/action value 是否落在同 embodiment、同 channel 的预期数值带之外，目的是避免极端值扭曲训练使用的 quantile normalization 或造成异常梯度。</p>
+<p class="warn"><b>不是物理合法性证明：</b>S3 只判断“相对当前 corpus 分布是否极端”。常见但系统性的单位、坐标轴或 producer 错误可能通过；正确但罕见的任务姿态或快速动作也可能被命中。Source meaning、units、frames 和 packing 仍属于 ALIGN。</p>
+
+<h2>Qwen-RobotManip 方法</h2>
+<p>对每个 embodiment type 的每个 state/action dimension，跨 episode 汇总有效值并计算第一与第九十九百分位：</p>
+<pre><code>R = q99 - q1
+lower = q1  - alpha * R
+upper = q99 + alpha * R
+
+channel_flag[t] = value[t] &lt; lower OR value[t] &gt; upper
+row_flag[t]     = any(channel_flag[t])</code></pre>
+<p>论文按 frame 排除越界值，并明确豁免 gripper dimensions，因为开/关状态通常是双峰分布，不满足该 percentile 假设。论文没有公布可直接移植的 <code>alpha</code>；原文见 <a href="https://arxiv.org/abs/2606.17846">Qwen-RobotManip technical report</a>。</p>
+
+<h2>为什么这里可以使用 motion80</h2>
+<table>
+  <tr><th>Stage</th><th>是否需要独立 command</th><th><code>motion80</code> 的角色</th></tr>
+  <tr><td>S2 trend alignment</td><td>需要；否则 command-state comparison 会循环。</td><td>不能替代 issued <code>command80</code>。</td></tr>
+  <tr><td>S3 extreme value</td><td>不需要；只检查实际训练 tensor 的数值分布。</td><td>是模型侧 observed pseudo-action/action target，应直接检查。</td></tr>
+</table>
+
+<h2>跨数据集 General Requirements</h2>
+<p>S3 必须针对“实际要送入某个训练 loss 的 exact tensor view”建立分布，而不是对来源和语义混杂的全库直接拟合一组 band。以下要求适用于新的 robot dataset、schema 或 hardware stratum。</p>
+<table>
+  <tr><th>Requirement</th><th>General contract</th></tr>
+  <tr><td>Frozen training view</td><td>声明检查 <code>state</code>、observed <code>motion</code>、genuine <code>command</code> 或其他 view，以及 named field/loss、units、time indexing 和 exact slot mapping。只读 canonical values/masks；mask=false 的 numeric placeholder 与 reserved slots 不进入拟合，但必须 accounting。若 canonical mask=true 而 value non-finite，这是 L0/sidecar defect：立即 <code>INPUT_REJECTED</code> 并返回 ALIGN，禁止静默从 fit 中丢掉。</td></tr>
+  <tr><td>同质 strata</td><td>至少按 dataset/source revision、schema、embodiment、side/entity、hardware/tool/mount、camera role、EEF frame/origin/transform revision、producer/control mode、FPS/time regime 和 normalization revision 检查是否同分布。不能把单位、basis、origin、control semantics 或量程不同的 strata 混成一个 percentile band；相同 slot index 不代表相同物理语义。</td></tr>
+  <tr><td>Transition 与 physical time</td><td>Canonical <code>motion80</code> 是每个 valid contiguous incoming edge 的 displacement，不是天然的 per-second velocity。不同 physical <code>dt</code>、FPS 或 gap regime 的 transition values 不得直接 pooling；policy 必须绑定 authoritative <code>dt</code> distribution/time stratum，或另行计算仅用于 FILTER 诊断的 per-second metric。不得为拟合方便静默改写 canonical motion units。</td></tr>
+  <tr><td>变量类型</td><td>连续 joint/translation/velocity/delta 可按物理 channel 建 band；binary/discrete/categorical、gripper 开合和 mode channels 应显式豁免或使用专门的 support/range policy。Rotation 必须使用 SO(3) 上的 angle/rotvec 等物理统计，禁止直接对 quaternion/Rot6D components 做 percentile 合法性判断。</td></tr>
+  <tr><td>Calibration data</td><td>Policy fitting partition 与 selection/evaluation partition 分离；每个 channel 记录有效样本数、quantiles、range、degeneracy 和 source coverage。样本不足、near-constant range 或 numeric precision 主导时必须触发 minimum-scale/REVIEW policy，不能生成近零 band 后大量误报。</td></tr>
+  <tr><td>Threshold policy</td><td>Quantiles、<code>alpha</code>、minimum physical scale、FILTER selection envelope、exemptions 和 threshold precedence 都必须版本化并 hash 绑定。Source physical validity envelope、unit conversion、gripper hard valid range 和 canonical masks 由 ALIGN 冻结，S3 不得重新定义 canonical validity。统计 band 不能替代 URDF joint limits、workspace、安全范围或 source semantics 检查；系统性错单位可能很常见而不被 S3 捕获。</td></tr>
+  <tr><td>Evidence scope</td><td>最小记录为 <code>view + entity + channel + row/transition</code>，保存 value、lower/upper、exceedance、policy stratum 和连续 range。State row 与 incoming transition 必须分开解释；由 motion 命中不能推断同一 RGB/state row 损坏。</td></tr>
+  <tr><td>Selection 与 accounting</td><td>先报告 row、transition、window、duration、split/episode 的 before/after 分布和 reason counts。只有 named-loss 与 window boundary policy 冻结后才写 eligibility；不删除 source、不改 canonical tensor/mask，也不跨 excluded transition 拼接窗口。</td></tr>
+</table>
+
+<h2>AgiBotWorld-Beta pilot 输入</h2>
+<p>S3 读取 exact packed <code>state80</code>/<code>motion80</code> training slots，并使用各自 frozen canonical masks。Mask=false 的 slots 不参与 band fitting，也不会被 S3 伪装成有效数据；mask=true 且 non-finite 必须作为 L0 input defect 拒绝，而不是由 S3 跳过。当前 Beta motion policy 针对 authoritative timestamps 下的 contiguous、近 30 Hz per-transition displacement；它不能直接用于其他 <code>dt</code>/FPS strata。</p>
+<table>
+  <tr><th>View</th><th>Evaluated channels</th><th>Policy</th></tr>
+  <tr><td>State</td><td>14 joint radians、6 EEF translation meters、3 camera translation meters。</td><td>参与 per-channel q1/q99 band。</td></tr>
+  <tr><td>Motion</td><td>14 joint delta radians、6 EEF delta translation meters、3 camera delta translation meters。</td><td>参与 per-channel q1/q99 band。</td></tr>
+  <tr><td>Gripper</td><td>state/motion 左右 closedness，共 4 channels。</td><td>保留 summary，但 <code>exempt=true</code>、不产生 S3 flag。</td></tr>
+  <tr><td>Rotation</td><td>Packed Rot6D。</td><td>排除；component-wise percentile 不是 SO(3) 的物理统计。</td></tr>
+  <tr><td>Command</td><td><code>command80</code>。</td><td>Beta provenance 不可靠且 masks=false，不参与。</td></tr>
+</table>
+
+<h2>Provisional band 与 split 输出</h2>
+<p>当前 pilot 将 10 个 long parent 的 178 个 action-config splits pooled 后拟合统一 per-channel policy，再逐 split 评估：</p>
+<pre><code>quantiles = [0.01, 0.99]
+alpha     = 1.5
+
+threshold_basis = pilot_arbitrary_not_paper_specified
+evidence_only   = true</code></pre>
+<p><code>alpha=1.5</code> 是本 pilot 的 provisional choice，不是论文公开参数。阈值在同一 10-parent 样本上拟合并回测，因此 flag rate 是 in-sample policy evidence，不是可外推的 full-corpus 坏数据率。</p>
+
+<h2>当前 10-long pilot 结果</h2>
+<table>
+  <tr><th>Evidence</th><th>Result</th><th>Interpretation</th></tr>
+  <tr><td>S3 unique row union</td><td>1,036 / 69,245 = <code>1.50%</code></td><td>1,036 个唯一 target frame rows；同一行多 signal/channel 命中只计一次。</td></tr>
+  <tr><td>Motion camera translation</td><td>691 rows</td><td>数量主导；与 joint/EEF rows 有重叠。</td></tr>
+  <tr><td>Motion joint delta</td><td>326 rows</td><td>命中分量约 1.18°–9.66°/frame，中位数约 2.03°/frame；可能是快速合法动作。</td></tr>
+  <tr><td>Motion EEF delta translation</td><td>104 rows</td><td>命中分量约 6.68–17.56 mm/frame，中位数约 9.34 mm/frame。</td></tr>
+  <tr><td>All state signals</td><td>0 rows</td><td>不能解释成 state 已证明干净；当前 pooled state bands 很宽。</td></tr>
+  <tr><td>Gripper</td><td>0 rows</td><td>按 Qwen policy 显式豁免，不是 gripper quality PASS。</td></tr>
+</table>
+<p>这里的 row <code>t</code> 同时承载 <code>state80[t]</code> 与 incoming <code>motion80[t]=[t-1]→[t]</code>。当前全部 1,036 个 union flags 均来自 motion signals，所以更准确的语义是：这些 target rows 的 incoming transition 至少一个非豁免 channel 越过 provisional band；它不证明 RGB[t] 或 state[t] 损坏。</p>
+
+<h2>Policy 暴露出的两类尺度问题</h2>
+<h3>1. Near-constant camera motion：band 过窄</h3>
+<pre><code>camera delta X band ≈ [-1.641, +1.642] micrometers
+camera delta Y band ≈ [-0.986, +0.988] micrometers
+camera delta Z band ≈ [-1.678, +1.678] micrometers</code></pre>
+<p>Camera motion 的 q1–q99 span 接近数值精度尺度，因此微小量化/周期更新也会越界。Flagged camera delta 全部小于约 77.3 µm，多数小于 10 µm，且不少呈约 27-frame 周期；它们更像 near-zero channel 的 numeric jitter，而不是独立的物理坏轨迹证据。</p>
+
+<h3>2. Cross-task absolute state：band 过宽</h3>
+<p>不同任务/workspace pooled 后，一些 joint band 已扩到约 <code>-7.4～6.6 rad</code>，camera Z band 为约 <code>0.509～1.602 m</code>。因此 state 0 flags 主要说明当前 S3 对 absolute-state outlier 不敏感，不能替代 URDF joint limit、workspace、source-stratum 或 alignment checks。</p>
+
+<h2>已讨论完成的 selection direction</h2>
+<p class="ok"><b>Decision：</b>用户确认当前 1,036 / 69,245 的比例足够小，下一版 selection 可将所有 S3-flagged target rows 排除，不再为 camera micro-jitter 单独保留例外。</p>
+<ul>
+  <li>“排除”写入新的 filter eligibility/selection manifest；不删除或重写 canonical sidecar，不改变 canonical masks。</li>
+  <li>训练 window 不允许跨 excluded row/transition 拼接。对于 motion supervision，任何包含被排除 incoming edge 的 window 均不可用。</li>
+  <li>最终实施前仍须声明 named training loss、window length 和 reason precedence；不同 loss 的 eligibility 必须分别输出。</li>
+  <li>当前 <code>agibot_beta_qwen_s1_s5_10long_v1</code> artifacts 仍是 <code>EVIDENCE_COMPUTED</code>、<code>selection_effect=NONE</code>；本页记录的是下一版 policy direction，不伪称已经执行。</li>
+  <li>1.50% 只属于 10-long in-sample pilot。Full-corpus 运行必须重新报告 row、transition、window、duration 和 task/source-stratum retention。</li>
+</ul>
+
+<h2>已知 artifact 文案问题与下一 gate</h2>
+<p>当前每个 S3 stage JSON 的 <code>details.method</code> 继承 collection-time 文案 <code>no bands fitted yet</code>，但 <code>provisional_policy.json</code> 中的 bands 实际已经拟合并用于 evaluation。这是 metadata label bug，不改变现有数值结果；下一次生成 selection artifacts 前应修正并重新绑定 hashes。</p>
+<ol>
+  <li>冻结 S3 policy revision，并为 near-degenerate channels 记录 physical-scale diagnostic，即使本轮仍选择全部排除。</li>
+  <li>修正 method metadata，增加稳定 reason code 与 named-loss/window eligibility。</li>
+  <li>在 stratified full corpus 上先 fit calibration partition，再在 held-out/full selection partition 上运行，发布 before/after accounting。</li>
+</ol>
+
+<h2>代码与 artifacts</h2>
+<ul>
+  <li>Metrics / policy / evaluation：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/qwen_signal_filters.py"><code>filtering/qwen_signal_filters.py</code></a></li>
+  <li>Beta packed signal extraction：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/agibot_beta_qwen_pilot.py"><code>filtering/agibot_beta_qwen_pilot.py</code></a></li>
+  <li>Policy：<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/provisional_policy.json"><code>provisional_policy.json</code></a></li>
+  <li>Run summary：<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/summary.json"><code>summary.json</code></a></li>
+  <li>每个 split 的记录：<code>splits/episode_*/split_*/qwen_s3_extreme_value.json</code></li>
+</ul>
+</body>
+</html>

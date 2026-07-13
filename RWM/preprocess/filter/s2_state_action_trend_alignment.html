@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FILTER S2 — State–Action Trend Alignment</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1050px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="index.html">← FILTER Evidence</a> · <a href="../index.html">Preprocess index</a></p>
+<h1>S2 — State–Action Trend Alignment</h1>
+<p>S2 检查一条独立记录的 issued action/command 是否在时间上领先或同时于后续 observed state response，并且两者的运动趋势方向一致。它针对 action/state 时钟不同步、packet loss、错误配对和 channel mapping 问题，不是轨迹平滑度检查。</p>
+<pre><code>expected: action command[t] -- nonnegative response delay --&gt; state change[t+d]
+
+bad ordering: state changes before its recorded action
+bad trend:    action increases while aligned state mainly decreases</code></pre>
+<p class="warn"><b>独立性是前提：</b>名称中叫 action 的 tensor 并不自动满足 S2。若 action 是从同一 observed state 相邻帧派生出来的，command-to-state agreement 会成为循环验证，不能发现原始 action/state 的时间错位。</p>
+
+<h2>Qwen-RobotManip 方法</h2>
+<p>论文对 state/action 共有的每个 joint dimension 分别执行：</p>
+<ol>
+  <li>平滑 state trajectory 与 action trajectory。</li>
+  <li>若 source action 是 delta parameterization，先积分恢复 absolute trajectory。</li>
+  <li>在 lag search window 内用 cross-correlation 寻找最佳 temporal lag。</li>
+  <li>对 lag-aligned 一阶差分计算 directional agreement（DA）：只在信号发生足够变化的时刻比较两边 derivative sign 是否一致。</li>
+  <li>DA 低于 dataset-specific threshold 的 dimension 被标记；论文给出的典型阈值为 <code>0.6–0.7</code>，并按 episode 排除。</li>
+</ol>
+<pre><code>lag* = argmax_lag corr(action[t], state[t+lag])
+
+DA = mean(sign(delta_action[t]) == sign(delta_state[t+lag*]))
+     over active-change frames</code></pre>
+<p>在上面的符号约定中，合法 causal response 要求最佳 lag 表示 action 领先或与 state 同时；若最佳解释是 state 领先 action，则不满足 S2。论文没有发布可直接移植的 smoothing kernel、lag window 和 activity epsilon，必须按 source FPS、控制模式与执行延迟冻结 dataset-specific policy。原文见 <a href="https://arxiv.org/abs/2606.17846">Qwen-RobotManip technical report</a>。</p>
+
+<h2>Canonical 三种 view</h2>
+<table>
+  <tr><th>View</th><th>冻结语义</th><th>可否作为本 S2 的 action</th></tr>
+  <tr><td><code>state80[t]</code></td><td>与 RGB[t] 对齐的 observed absolute state。</td><td>作为 observed response。</td></tr>
+  <tr><td><code>motion80[t]</code></td><td>observed incoming transition <code>[t-1]→[t]</code>；由相邻 canonical state 派生，也是模型侧 pseudo-action/action target。</td><td>否；不是独立 issued command。</td></tr>
+  <tr><td><code>command80[t]</code></td><td>在 t 时刻真正下发的 source command；仅 provenance 与 issuance semantics 可靠时有效。</td><td>是；但必须有有效 mask、control-mode 和 timestamp 证据。</td></tr>
+</table>
+<p>以 joint slots 为例，当前 contract 中 <code>motion80[t]=state80[t]-state80[t-1]</code>。用它与 observed state difference 做 DA 等于把同一量与自己比较；EEF motion 虽使用 SE(3) 运算，仍由同一对 observed endpoints 派生。这样的检查属于 ALIGN L1 packing/reconstruction，不是 S2。</p>
+
+<h2>跨数据集 General Requirements</h2>
+<p>S2 是条件性检查，不是每个 dataset 都必须产生数值结果。只有 genuine issued command 与后续 observed response 的 producer、语义和时间关系都可证明时才是 <code>APPLICABLE</code>；其他情况必须按原因 fail closed，不能把所有缺证据都笼统写成 <code>NOT_APPLICABLE</code>。</p>
+<table>
+  <tr><th>Requirement</th><th>General contract</th></tr>
+  <tr><td>Applicability status</td><td>Frozen dataset profile 明确不存在/未发布 genuine issued command 时为 <code>NOT_APPLICABLE</code>；command 存在且语义完整、但该 split 活动量或有效样本不足时为 <code>INSUFFICIENT_EVIDENCE</code>；source 声称有 command、但 identity/provenance/clock/unit/frame/control-mode contract 缺失或不匹配时为 <code>INPUT_REJECTED</code>；疑似 ALIGN producer/mapping defect 时为 <code>REVIEW_REQUIRED</code> 并返回 ALIGN。</td></tr>
+  <tr><td>独立 producer</td><td>Command 必须是 controller/teleoperation stack 实际下发的记录，不能是 observation copy、相邻 state 差分、post-hoc target、planner hindsight label 或 index-resampled state。若独立性未知，禁止用 S2 声称 state–action consistency。</td></tr>
+  <tr><td>Command semantics</td><td>逐 channel 冻结 absolute target、delta target、velocity、effort 或其他 control mode，以及 units、joint order/sign、frame/basis、side/entity、saturation 和 reset semantics。只有数学与 producer 语义都支持时才积分 delta；velocity/effort 不得伪装成 absolute position。</td></tr>
+  <tr><td>Supported signal types</td><td>Qwen/当前 baseline 只定义语义匹配的 scalar joint dimensions。Cartesian EEF translation 只有在 command/response 具有 verified common basis 与 origin、并冻结独立 policy 后才能比较；EEF orientation 必须使用 SO(3) manifold-aware relative rotation/angular-velocity metric，禁止逐分量对 quaternion、Euler 或 Rot6D 做 cross-correlation/DA。在对应 policy 实现并冻结前，EEF command-response S2 记为 <code>NOT_APPLICABLE</code>，reason 为 <code>UNSUPPORTED_SIGNAL_TYPE</code>，不能回退到 component-wise scalar 算法。</td></tr>
+  <tr><td>共同可比较量</td><td>显式声明 command channel 对应哪个 observed response 及预期方向。若需要 frame、origin、joint mapping 或 unit conversion，它必须已在 ALIGN 中版本化；FILTER 不通过拟合 permutation/sign 来“提高”agreement。</td></tr>
+  <tr><td>双时钟与因果性</td><td>保留 issuance 与 observation 两套 authoritative timestamps，声明 transport/controller delay 和允许的 lag window。双向 lag 可用于诊断，但合格的因果解释只能是 command 领先或与 response 同时；不能接受 state 系统性领先 command。</td></tr>
+  <tr><td>连续性与活动量</td><td>不跨 gap、packet loss、mode change、reset、split 或 clean-segment boundary。只在 command/response 有足够非零变化的 active support 上计算；idle、短段、常数或饱和段应输出 insufficient evidence，不能让大量 <code>0==0</code> 制造高 DA。</td></tr>
+  <tr><td>Policy calibration</td><td>Smoothing、lag range、activity epsilon、minimum active samples、correlation/DA thresholds 必须按 dataset、controller、FPS 和 latency stratum 校准并在 held-out splits 审计。论文的 <code>0.6–0.7</code> 只能作为典型范围，不是通用阈值。</td></tr>
+  <tr><td>Output 与作用域</td><td>保存每个 entity/dimension 的 best lag、correlation、DA、active count、measured ranges、threshold revision 和 reason；先按 dimension/split 产 evidence，再由单独的 named-loss policy 决定 REVIEW/DROP。不得用一个 episode label覆盖所有行，也不得修改 canonical command/state。</td></tr>
+</table>
+
+<h2>为什么 AgiBotWorld-Beta 是 NOT_APPLICABLE</h2>
+<p>Beta source 中存在若干名为 <code>agibot.action.*</code> 的 candidate，但当前 adapter evidence 表明 joint/EEF candidate 是 state-filled 或 index-resampled，不能作为独立 issued command；gripper producer/issuance semantics 也未冻结。当前 exact canonical profile 因此明确“不提供可用于 S2 的 genuine command”，<code>command80</code> 全部保持 zero with mask=false，所以本 scope 为 <code>NOT_APPLICABLE</code>。如果未来 source revision 声称发布 genuine command 却缺 provenance/clock contract，则应是 <code>INPUT_REJECTED/REVIEW_REQUIRED</code>，不能继续沿用这个 N/A。</p>
+<table>
+  <tr><th>Pilot evidence</th><th>Result</th><th>Interpretation</th></tr>
+  <tr><td>178 action-config splits</td><td>178/178 S2 records 为 <code>NOT_APPLICABLE</code>。</td><td>缺少可信 issued command；没有计算 cross-correlation 或 DA。</td></tr>
+  <tr><td>Selection effect</td><td><code>NONE</code></td><td>没有 frame、split 或 parent 因 S2 被删除。</td></tr>
+  <tr><td>Claim</td><td>既不是 <code>PASS</code>，也不是 <code>FAIL</code>。</td><td>只说明当前输入不足以提出 state–command alignment claim。</td></tr>
+</table>
+
+<h2>启用 S2 所需的下一 gate</h2>
+<ol>
+  <li>确认每个 joint action field 是 genuine issued command，而不是 observation、post-hoc target copy 或 index-resampled state。</li>
+  <li>冻结 issuance timestamp、observation timestamp、control mode（absolute target、delta、velocity 或 effort）、units、per-dimension masks 与预期 actuator delay。</li>
+  <li>以 action-config split 为评估单位，不跨配置、gap 或 clean-segment boundary；搜索双向 lag 用于诊断，但 causal pass 只允许 action lead/coincide。</li>
+  <li>对运动事件不足的 idle/short split 输出 insufficient evidence，而不是用大量 <code>0==0</code> 造成虚假高 DA。</li>
+  <li>在 stratified calibration 与 held-out splits 上冻结 smoothing、lag window、epsilon 和 DA threshold 后，才讨论 split-level REVIEW/DROP policy。</li>
+</ol>
+
+<h2>代码与 artifacts</h2>
+<ul>
+  <li>S2 record contract：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/qwen_stage_records.py"><code>filtering/qwen_stage_records.py</code></a></li>
+  <li>Beta command provenance：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/real_robot/adapters.py"><code>real_robot/adapters.py</code></a></li>
+  <li>Run summary：<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/summary.json"><code>summary.json</code></a></li>
+  <li>每个 split 的记录：<code>splits/episode_*/split_*/qwen_s2_state_action_trend.json</code></li>
+</ul>
+</body>
+</html>

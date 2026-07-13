@@ -1,0 +1,82 @@
+{
+  "canonical_mutation_allowed": false,
+  "dataset": "agibot_beta",
+  "details": {
+    "alignment_components": [
+      "source_world_frame",
+      "T_source_eef_canonical",
+      "camera_binding",
+      "canonical_state_and_motion"
+    ],
+    "authoritative_stage": "ALIGN",
+    "data_operation": "NONE",
+    "filter_operation": "VERIFY_EXACT_BINDINGS_ONLY",
+    "on_drift": "REJECT_INPUT_AND_RETURN_TO_ALIGN"
+  },
+  "evidence_references": [
+    {
+      "artifact_schema": "real_robot.canonical_release_receipt.v1",
+      "claim": "exact_alignment_input_binding_without_status_promotion",
+      "kind": "ALIGNMENT_RECEIPT",
+      "producer": "dev.rwm.preprocess.real_robot.release_full_canonical",
+      "schema_version": "rwm_filter_evidence_reference_v1",
+      "scope": {
+        "alignment_status": "UNVERIFIED",
+        "run_fingerprint": "7444b87618e752fb375886d302969fee10d4ea2f3bf4c8aabde406b9f6cdb6f3",
+        "unit": "canonical_release"
+      },
+      "sha256": "3acabfe11000d5fc22d24b31cee4c3c1f81e0cd42f8ce059d2c33addbffeb1ec",
+      "uri": "canonical://meta/release_receipt.json",
+      "use": "REFERENCE_ONLY"
+    }
+  ],
+  "input_bindings": {
+    "alignment_receipt_sha256": "3acabfe11000d5fc22d24b31cee4c3c1f81e0cd42f8ce059d2c33addbffeb1ec",
+    "canonical_checksums_sha256": "b15181fd69268bb0e97eae2d8459c3f36bdc711bed35403cea8ec12f92a3420b",
+    "canonical_manifest_sha256": "086fd6b4c4e1556dc950b52f68d1b57d0f264bb9d0b0883b06636a35a4c01b37",
+    "canonical_meta_sha256": "e19db981342252c9891926e926bba141b526bbbdc1bafeacb54aa28e32842b82",
+    "canonical_schema_id": "rwm_robot80_v5_cosmos_incoming_motion_t_robot",
+    "canonical_sidecar_kind": "canonical_parquet_zip_member",
+    "canonical_sidecar_sha256": "fab2d0951cc5692ab5e9d9f5f8203443079f64fdfea85e0a7720b688dfaf1002",
+    "canonical_validation_sha256": "f44dd0bebe93c3d9ee68644aadbb2f28049de095f3eeb8410b493de7cf8b8190",
+    "code_hashes": {
+      "geometry_qa_sha256": "5ca166a30975a6bb01e588d160c54066419418d077df1ecdb725aee813c83ae1",
+      "pilot_runner_sha256": "c704888a306a59ce7c63c6ebd9eb07c717416dadaca3d44f9ac366714fc2c87c",
+      "signal_filters_sha256": "ea5ada4413fe4cba0b20c8370e331dfa2d1b8aa914fd86db698a751a08619b7a",
+      "split_io_sha256": "6d8ff5f71c302716b9dfa5b8ec51a2b2e522e127ee7af4e182b109d93dc56c09",
+      "stage_records_sha256": "8c11c49d64ece0178150043fe680f3cccd1a55e491429321f7776cf7900cc460"
+    },
+    "conversion_plan_sha256": "6ed97d297eb8845d687d87aaf831b4d6f57f4763d505b75503ceb830cd03971e",
+    "provisional_policy_sha256": "b72b4c09d1ba8b138176c639c1e2928d55bd34b78f01c0766675e93baa67006b",
+    "source_manifest_sha256": "c466a13293244009ec79b8735f0bf23a8d9c1c45cda782891dbbf62ac00d9a15",
+    "source_manifest_snapshot_sha256": "3ed19c42de549b57d106b3b8c1083e35ffa72d9f72b04fc21a2affd8a5ca6200",
+    "split_sha256": "59e58fe2cbc6205bb2a4c61300dfcce4f02387564990ba9140b8448d9dd587f0",
+    "task_info_sha256": "8c5d7d6d2ba06d7f233ae2f7c183dac717e67400e741fc4cb519f707fa32e258"
+  },
+  "rationale": "Base-frame and EEF-orientation alignment is already frozen in the canonical ALIGN sidecar and matching receipt; FILTER only verifies their exact identities.",
+  "record_semantic_sha256": "8323df072bf8cbae8d8a8f9f49e87953eb93be2b72f17f575368949e6ec66164",
+  "schema_version": "rwm_filter_qwen_stage_record_v1",
+  "scope": {
+    "canonical_alignment_status": "UNVERIFIED",
+    "eligibility": "NOT_EVALUATED",
+    "frame_bounds": [
+      251,
+      852
+    ],
+    "frame_count": 601,
+    "internal_incoming_motion_bounds": [
+      252,
+      852
+    ],
+    "parent_episode_index": 1232000022,
+    "readiness": "NOT_EVALUATED",
+    "split_id": "agibot_beta/1232000022/action_config/1/251:852",
+    "split_index": 1,
+    "split_sha256": "59e58fe2cbc6205bb2a4c61300dfcce4f02387564990ba9140b8448d9dd587f0",
+    "unit": "split_episode"
+  },
+  "selection_effect": "NONE",
+  "stage_id": "S5",
+  "stage_name": "base_and_eef_orientation_alignment",
+  "status": "ALREADY_APPLIED_BY_ALIGN"
+}

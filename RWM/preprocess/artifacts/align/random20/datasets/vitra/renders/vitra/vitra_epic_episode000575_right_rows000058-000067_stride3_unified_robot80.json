@@ -1,0 +1,2159 @@
+{
+  "alignment_field_verdicts": {
+    "camera": "REVIEW",
+    "command": "MASKED",
+    "eef": "REVIEW",
+    "gripper": "REVIEW"
+  },
+  "alignment_status": "IN_REVIEW",
+  "artifact_layout": "flat_dataset_episode_side_rows_prefixed",
+  "artifact_status": "SUCCESS",
+  "audit_stride_rows": 3,
+  "coordinate_contract": {
+    "camera_C": {
+      "+X": "image right",
+      "+Y": "image down",
+      "+Z": "into scene / away from camera"
+    },
+    "eef_E_expected_canonical": {
+      "+X": "approach",
+      "+Y": "normal",
+      "+Z": "jaw"
+    },
+    "next_rgb": "T_Ctarget_Epred = inv(T_Csource_Ctarget) @ T_Csource_Epred",
+    "rotation": "R_Csource_Etarget = dR_Csource @ R_Csource_Esource (left multiply, right-hand rule)",
+    "translation": "dp is expressed in transition source camera C[source]"
+  },
+  "covered_motion_storage_rows": [
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67
+  ],
+  "covered_transition_rows": [
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66
+  ],
+  "crop_policy": "one_fixed_source_pixel_crop_shared_by_all_panels",
+  "crop_xyxy_source_pixels": [
+    107,
+    0,
+    831,
+    561
+  ],
+  "data_contract": {
+    "absolute_sidecar_used_for_display_only": true,
+    "camera_delta": "state-derived endpoint from packed camera state80; packed camera motion80 is used only for hidden one-step validation",
+    "eef_current_pose": "decoded only from packed state80/state_mask80",
+    "eef_delta": "state-derived endpoint from packed EEF state80; packed motion80 is used only for hidden one-step validation",
+    "packed_motion_validation_independent_of_absolute_sidecar": true,
+    "raw_absolute_eef_displayed": true,
+    "raw_eef_axis_mapping_applied_by_renderer": false,
+    "time_indexing": "motion80[target] stores source->target; spatial basis C[source]"
+  },
+  "dataset": "vitra_epic",
+  "eef_axis_glyph_length_m": 0.1,
+  "eef_frame_contract": {
+    "T_raw_E_available": true,
+    "canonical_frame_label": "qwen_virtual_gripper_xyz",
+    "canonical_origin_type": "virtual_jaw_center",
+    "provenance": {
+      "absolute_transform_column": "T_world_right_eef_raw",
+      "absolute_validity_column": "right_world_gripper_valid",
+      "action_gripper_semantics": "observed_normalized_closedness_at_t_0_open_1_closed",
+      "eef_frame_evidence": null,
+      "eef_frame_label_source": "canonical_meta.coordinates.eef_axes",
+      "frame_contract": {
+        "canonical_column": "T_world_right_eef_raw",
+        "canonical_origin_type": "virtual_jaw_center",
+        "evidence": null,
+        "raw_column": "T_world_right_eef_raw",
+        "raw_frame_label": "human_virtual_gripper_from_metric_keypoints",
+        "raw_origin_type": "virtual_jaw_center",
+        "transform_status": "UNVERIFIED",
+        "verification_method": "UNVERIFIED"
+      },
+      "no_dataset_axis_correction_applied": true,
+      "raw_absolute_transform_column": "T_world_right_eef_raw",
+      "raw_absolute_validity_column": "right_world_gripper_valid",
+      "robot80_motion_source": "motion80_and_motion_mask80",
+      "robot80_state_pose_semantics": "T_camera_t_eef",
+      "robot80_state_position_slots": [
+        36,
+        39
+      ],
+      "robot80_state_reference_frame": "selected_camera_t",
+      "robot80_state_rotation_slots": [
+        39,
+        45
+      ]
+    },
+    "raw_frame_label": "human_virtual_gripper_from_metric_keypoints",
+    "raw_origin_type": "virtual_jaw_center",
+    "raw_pose_available": true,
+    "transform_revision": "unspecified",
+    "transform_status": "UNVERIFIED"
+  },
+  "episode_index": 575,
+  "image_path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/lezhao/sana-rwm/output/full_release_visual_random20_seed20260704/datasets/vitra/renders/vitra/vitra_epic_episode000575_right_rows000058-000067_stride3_unified_robot80.png",
+  "input_locator": {
+    "canonical": {
+      "meta_member": "episode_000575/canonical_meta.json",
+      "parquet_member": "episode_000575/canonical.parquet",
+      "storage": "zip",
+      "zip_path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/human-action/VITRA/canonical_v4/chunks/00000000.zip"
+    },
+    "video": {
+      "member": "episode_000575/videos/observation.images.ego_view.mp4",
+      "storage": "zip",
+      "zip_path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/human-action/VITRA/chunks/00000000.zip"
+    }
+  },
+  "levels": {
+    "L0": {
+      "checks": {
+        "camera_intrinsics_valid_rows_finite": true,
+        "camera_state80_valid_rows_are_se3": true,
+        "camera_world_pose_valid_rows_are_se3": true,
+        "command80_finite": true,
+        "command80_masked_zero": true,
+        "command80_not_exact_state80_alias": true,
+        "command80_present": true,
+        "command_camera_pose_mask_all_or_none": true,
+        "command_eef_pose_masks_all_or_none": true,
+        "contiguous_transition_has_consecutive_source_rows": true,
+        "discontinuous_transition_motion_mask_empty": true,
+        "frame_index_strictly_increasing": true,
+        "initial_motion_mask_empty": true,
+        "initial_transition_false": true,
+        "left_T_raw_E_constant_over_span": true,
+        "left_T_raw_E_valid_rows_are_se3": true,
+        "left_canonical_valid_rows_are_se3": true,
+        "left_command_gripper_in_0_1": true,
+        "left_motion_gripper_in_0_1": true,
+        "left_raw_T_raw_E_canonical_closure": true,
+        "left_raw_valid_rows_are_se3": true,
+        "left_state_gripper_in_0_1": true,
+        "motion80_finite": true,
+        "motion80_masked_zero": true,
+        "motion_camera_pose_mask_all_or_none": true,
+        "motion_eef_pose_masks_all_or_none": true,
+        "raw_time_gaps_not_bridged": true,
+        "reserved_command_mask_false": true,
+        "reserved_command_zero": true,
+        "reserved_motion_mask_false": true,
+        "reserved_motion_zero": true,
+        "reserved_state_mask_false": true,
+        "reserved_state_zero": true,
+        "right_T_raw_E_constant_over_span": true,
+        "right_T_raw_E_valid_rows_are_se3": true,
+        "right_canonical_valid_rows_are_se3": true,
+        "right_command_gripper_in_0_1": true,
+        "right_motion_gripper_in_0_1": true,
+        "right_raw_T_raw_E_canonical_closure": true,
+        "right_raw_valid_rows_are_se3": true,
+        "right_state_gripper_in_0_1": true,
+        "source_frame_index_strictly_increasing": true,
+        "state80_finite": true,
+        "state80_masked_zero": true,
+        "state_camera_pose_mask_all_or_none": true,
+        "state_eef_pose_masks_all_or_none": true,
+        "storage_boundary_motion_mask_empty": true,
+        "storage_boundary_transition_false": true,
+        "terminal_motion_mask_empty": null,
+        "terminal_transition_false": null,
+        "time_episode_time_sec_contains_no_inf": true,
+        "time_episode_time_sec_finite_rows_strictly_increasing": true,
+        "time_model_time_sec_contains_no_inf": true,
+        "time_model_time_sec_finite_rows_strictly_increasing": true,
+        "time_motion_source_time_sec_contains_no_inf": true,
+        "time_motion_source_time_sec_finite_rows_strictly_increasing": true,
+        "time_motion_target_time_sec_contains_no_inf": true,
+        "time_motion_target_time_sec_finite_rows_strictly_increasing": true,
+        "time_source_time_sec_contains_no_inf": true,
+        "time_source_time_sec_finite_rows_strictly_increasing": true,
+        "time_verification_time_sec_contains_no_inf": true,
+        "time_verification_time_sec_finite_rows_strictly_increasing": true,
+        "timestamps_finite": true,
+        "timestamps_strictly_increasing": true
+      },
+      "level": "L0",
+      "metrics": {
+        "authoritative_median_dt_sec": 0.016683484555755967,
+        "covered_span": [
+          58,
+          67
+        ],
+        "derived_gap_threshold_sec": 0.04170871138938992,
+        "motion_indexing": "target_row_incoming",
+        "raw_gap_rows": [],
+        "selected_rows": [
+          58,
+          61,
+          64,
+          67
+        ],
+        "storage_boundary": "initial",
+        "storage_boundary_row": 0
+      },
+      "reasons": [],
+      "verdict": "PASS"
+    },
+    "L1": {
+      "checks": {
+        "all_required_reconstructions_pass": true,
+        "initial_motion_mask_empty": true,
+        "no_failed_transition": true,
+        "no_masked_required_transition": true,
+        "storage_boundary_motion_mask_empty": true,
+        "terminal_motion_mask_empty": null
+      },
+      "level": "L1",
+      "metrics": {
+        "absolute_state80": {
+          "camera_max_position_error_m": 0.0,
+          "camera_max_rotation_error_deg": 1.1359871376527872e-06,
+          "eef_max_position_error_m": 6.588270194642601e-08,
+          "eef_max_rotation_error_deg": 3.4292908520737776e-06
+        },
+        "end_row": 67,
+        "position_tolerance_m": 0.0001,
+        "rotation_tolerance_deg": 0.001,
+        "side": "right",
+        "start_row": 58,
+        "steps": [
+          {
+            "camera_position_error_m": 6.415997404902743e-09,
+            "camera_rotation_error_deg": 3.038991103908728e-06,
+            "eef_position_error_m": 8.133583248350018e-09,
+            "eef_rotation_error_deg": 3.6426764474437793e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 59,
+            "reasons": [],
+            "row": 58,
+            "source_row": 58,
+            "status": "PASS",
+            "target_row": 59
+          },
+          {
+            "camera_position_error_m": 2.5255334113636967e-09,
+            "camera_rotation_error_deg": 1.8893608425951682e-07,
+            "eef_position_error_m": 1.3154923870230564e-08,
+            "eef_rotation_error_deg": 5.050295281287895e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 60,
+            "reasons": [],
+            "row": 59,
+            "source_row": 59,
+            "status": "PASS",
+            "target_row": 60
+          },
+          {
+            "camera_position_error_m": 5.978583657083296e-09,
+            "camera_rotation_error_deg": 2.1743172287810437e-07,
+            "eef_position_error_m": 2.291840478097773e-08,
+            "eef_rotation_error_deg": 3.328668472378141e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 61,
+            "reasons": [],
+            "row": 60,
+            "source_row": 60,
+            "status": "PASS",
+            "target_row": 61
+          },
+          {
+            "camera_position_error_m": 3.734670406340741e-09,
+            "camera_rotation_error_deg": 1.100710604458524e-06,
+            "eef_position_error_m": 2.73362553692832e-08,
+            "eef_rotation_error_deg": 3.2811981468817853e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 62,
+            "reasons": [],
+            "row": 61,
+            "source_row": 61,
+            "status": "PASS",
+            "target_row": 62
+          },
+          {
+            "camera_position_error_m": 7.982282553862839e-09,
+            "camera_rotation_error_deg": 7.19316687950127e-07,
+            "eef_position_error_m": 7.127031454741614e-08,
+            "eef_rotation_error_deg": 3.358713257770182e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 63,
+            "reasons": [],
+            "row": 62,
+            "source_row": 62,
+            "status": "PASS",
+            "target_row": 63
+          },
+          {
+            "camera_position_error_m": 6.788810702084645e-09,
+            "camera_rotation_error_deg": 1.5316277126370696e-06,
+            "eef_position_error_m": 2.2410317379762512e-08,
+            "eef_rotation_error_deg": 1.8067212947444058e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 64,
+            "reasons": [],
+            "row": 63,
+            "source_row": 63,
+            "status": "PASS",
+            "target_row": 64
+          },
+          {
+            "camera_position_error_m": 1.1685882663995042e-08,
+            "camera_rotation_error_deg": 1.1934393110323923e-06,
+            "eef_position_error_m": 1.6628180784985868e-08,
+            "eef_rotation_error_deg": 1.517370000822714e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 65,
+            "reasons": [],
+            "row": 64,
+            "source_row": 64,
+            "status": "PASS",
+            "target_row": 65
+          },
+          {
+            "camera_position_error_m": 1.6590356833254982e-09,
+            "camera_rotation_error_deg": 7.030174642210345e-07,
+            "eef_position_error_m": 2.2847275340856197e-08,
+            "eef_rotation_error_deg": 1.7184863136063207e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 66,
+            "reasons": [],
+            "row": 65,
+            "source_row": 65,
+            "status": "PASS",
+            "target_row": 66
+          },
+          {
+            "camera_position_error_m": 1.1723391110942773e-08,
+            "camera_rotation_error_deg": 1.0958683417208098e-06,
+            "eef_position_error_m": 2.6832435699682098e-08,
+            "eef_rotation_error_deg": 1.3522005737970178e-06,
+            "gripper_abs_error": 0.0,
+            "joint_max_abs_error": null,
+            "motion_row": 67,
+            "reasons": [],
+            "row": 66,
+            "source_row": 66,
+            "status": "PASS",
+            "target_row": 67
+          }
+        ]
+      },
+      "reasons": [],
+      "verdict": "PASS"
+    },
+    "L2": {
+      "checks": {
+        "independent_source_semantics_reviewed": null
+      },
+      "level": "L2",
+      "metrics": {},
+      "reasons": [
+        "requires_independent_source_evidence"
+      ],
+      "verdict": "REVIEW"
+    },
+    "L3": {
+      "checks": {
+        "rgb_physical_reviewed": null
+      },
+      "level": "L3",
+      "metrics": {},
+      "reasons": [
+        "requires_rgb_physical_review"
+      ],
+      "verdict": "REVIEW"
+    }
+  },
+  "motion_indexing": "target_row_incoming",
+  "packed_eef_frame_label": "qwen_virtual_gripper_xyz",
+  "panels": [
+    {
+      "absolute_canonical_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            420.7789568627024,
+            279.17706226639353
+          ],
+          [
+            329.67801859686085,
+            180.78453019524028
+          ],
+          [
+            317.40244200565496,
+            357.18633110133726
+          ],
+          [
+            454.21473870349564,
+            229.41803610279422
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.6463854780818497,
+            -0.5736914005131729,
+            0.5030545792543042,
+            -0.17611740460505318
+          ],
+          [
+            -0.7410868821677722,
+            0.6289493523911154,
+            -0.2349743277417384,
+            -0.064931385338239
+          ],
+          [
+            -0.18159312776873296,
+            -0.5246912225713978,
+            -0.8316989450823931,
+            0.5295024258098795
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "absolute_canonical_vs_packed_position_m": 3.483412773236168e-08,
+      "absolute_canonical_vs_packed_rotation_deg": 2.151523129356463e-06,
+      "absolute_geometry_reasons": [],
+      "component_endpoints_camera": [
+        [
+          -0.13910466421213574,
+          -0.06493137776851654,
+          0.5295023918151855
+        ],
+        [
+          -0.176117405295372,
+          -0.0857691747850735,
+          0.5295023918151855
+        ],
+        [
+          -0.176117405295372,
+          -0.06493137776851654,
+          0.5368456858099548
+        ]
+      ],
+      "endpoint_source_rows": [
+        58,
+        61
+      ],
+      "endpoint_target_state_gripper": 0.8225969672203064,
+      "hidden_one_step_motion80_validation": {
+        "end_row": 61,
+        "first_failed_row": null,
+        "max_camera_position_error_m": 6.415997404902743e-09,
+        "max_camera_rotation_error_deg": 3.038991103908728e-06,
+        "max_eef_position_error_m": 2.291840478097773e-08,
+        "max_eef_rotation_error_deg": 5.050295281287895e-06,
+        "passed": true,
+        "passed_steps": 3,
+        "position_tolerance_m": 1e-05,
+        "requested_steps": 3,
+        "rotation_tolerance_deg": 0.001,
+        "start_row": 58,
+        "steps": [
+          {
+            "camera_position_error_m": 6.415997404902743e-09,
+            "camera_rotation_error_deg": 3.038991103908728e-06,
+            "eef_position_error_m": 8.133583248350018e-09,
+            "eef_rotation_error_deg": 3.6426764474437793e-06,
+            "motion_row": 59,
+            "passed": true,
+            "reasons": [],
+            "row": 58,
+            "source_row": 58,
+            "target_row": 59
+          },
+          {
+            "camera_position_error_m": 2.5255334113636967e-09,
+            "camera_rotation_error_deg": 1.8893608425951682e-07,
+            "eef_position_error_m": 1.3154923870230564e-08,
+            "eef_rotation_error_deg": 5.050295281287895e-06,
+            "motion_row": 60,
+            "passed": true,
+            "reasons": [],
+            "row": 59,
+            "source_row": 59,
+            "target_row": 60
+          },
+          {
+            "camera_position_error_m": 5.978583657083296e-09,
+            "camera_rotation_error_deg": 2.1743172287810437e-07,
+            "eef_position_error_m": 2.291840478097773e-08,
+            "eef_rotation_error_deg": 3.328668472378141e-06,
+            "motion_row": 61,
+            "passed": true,
+            "reasons": [],
+            "row": 60,
+            "source_row": 60,
+            "target_row": 61
+          }
+        ]
+      },
+      "incoming_endpoint_state_on_this_rgb": null,
+      "incoming_endpoint_vs_state80_position_m": null,
+      "incoming_endpoint_vs_state80_rotation_deg": null,
+      "incoming_motion80_prediction_on_this_rgb": null,
+      "incoming_prediction_vs_state80_position_m": null,
+      "incoming_prediction_vs_state80_rotation_deg": null,
+      "mask_reasons": [],
+      "motion_gripper": null,
+      "motion_storage_row": 59,
+      "outgoing_endpoint_visualizable": true,
+      "outgoing_motion80_visualizable": false,
+      "outgoing_transition_requested": true,
+      "packed_motion80_delta_position_camera": null,
+      "packed_motion80_delta_rotation_camera": null,
+      "packed_motion80_direction_words": null,
+      "packed_motion80_rotation_angle_deg": null,
+      "packed_motion80_rotation_axis_camera": null,
+      "packed_prediction_transform_under_camera_next": null,
+      "packed_prediction_under_camera_t": null,
+      "packed_state80_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            420.7789419291762,
+            279.1770664998287
+          ],
+          [
+            329.67799445003845,
+            180.7845321048526
+          ],
+          [
+            317.4024190693902,
+            357.1863468245886
+          ],
+          [
+            454.21472735489635,
+            229.4180356590972
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.6463855007646291,
+            -0.5736914243262226,
+            0.503054603453551,
+            -0.176117405295372
+          ],
+          [
+            -0.7410868519459795,
+            0.6289493916740992,
+            -0.2349743402705457,
+            -0.06493137776851654
+          ],
+          [
+            -0.18159312287104237,
+            -0.5246911590329403,
+            -0.8316989391351968,
+            0.5295023918151855
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "packed_state80_pose_valid": true,
+      "raw_absolute_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            420.7789568627024,
+            279.17706226639353
+          ],
+          [
+            329.67801859686085,
+            180.78453019524028
+          ],
+          [
+            317.40244200565496,
+            357.18633110133726
+          ],
+          [
+            454.21473870349564,
+            229.41803610279422
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.6463854780818497,
+            -0.5736914005131729,
+            0.5030545792543042,
+            -0.17611740460505318
+          ],
+          [
+            -0.7410868821677722,
+            0.6289493523911154,
+            -0.2349743277417384,
+            -0.064931385338239
+          ],
+          [
+            -0.18159312776873296,
+            -0.5246912225713978,
+            -0.8316989450823931,
+            0.5295024258098795
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "row": 58,
+      "state_endpoint_delta_position_camera": [
+        0.03701274108323627,
+        -0.020837797016556955,
+        0.0073432939947692955
+      ],
+      "state_endpoint_delta_rotation_camera": [
+        [
+          0.9806009899273126,
+          -0.1959926709123776,
+          -0.0029277127944619835
+        ],
+        [
+          0.19563024729159892,
+          0.9795041531890475,
+          -0.04796269623400192
+        ],
+        [
+          0.012268043780581547,
+          0.04645951822866573,
+          0.9988448369330232
+        ]
+      ],
+      "state_endpoint_direction_words": {
+        "X": "RIGHT",
+        "Y": "UP",
+        "Z": "INTO SCENE"
+      },
+      "state_endpoint_rotation_angle_deg": 11.62853366908394,
+      "state_endpoint_rotation_axis_camera": [
+        0.23422189374960323,
+        -0.03769429579912996,
+        0.97145213188945
+      ],
+      "state_endpoint_transform_under_target_camera": [
+        [
+          -0.4833532190790295,
+          -0.6895791434519496,
+          0.5393053592557887,
+          -0.14173850417137146
+        ],
+        [
+          -0.8455373499672187,
+          0.5273413351223062,
+          -0.08353266475958211,
+          -0.0831017792224884
+        ],
+        [
+          -0.22679562477339107,
+          -0.49637860669805195,
+          -0.837957053431826,
+          0.5355207920074463
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "state_endpoint_under_camera_t": {
+        "origin_and_eef_axis_pixels": [
+          [
+            469.2187680251342,
+            254.69968229875826
+          ],
+          [
+            399.2646832210654,
+            142.04045423675552
+          ],
+          [
+            358.92897259213794,
+            315.4831204002983
+          ],
+          [
+            516.5171238828611,
+            221.93577598613078
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.4880670179243029,
+            -0.684295704730584,
+            0.5417840663047888,
+            -0.13910466421213574
+          ],
+          [
+            -0.8436405089247245,
+            0.5289927487578601,
+            -0.09185512213717749,
+            -0.0857691747850735
+          ],
+          [
+            -0.22374377693180714,
+            -0.5019024409672436,
+            -0.8354834899837413,
+            0.5368456858099548
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "state_gripper": 0.8100190162658691,
+      "video_frame_index": 58
+    },
+    {
+      "absolute_canonical_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            465.55464250267386,
+            257.7220848190831
+          ],
+          [
+            395.7203452429641,
+            144.53198637351534
+          ],
+          [
+            354.1926279030404,
+            318.806635581737
+          ],
+          [
+            511.88274366460314,
+            226.56143744309458
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.483353214683663,
+            -0.6895791287240981,
+            0.5393053406191921,
+            -0.14173849889960335
+          ],
+          [
+            -0.8455373241561117,
+            0.5273413569625711,
+            -0.08353267386176415,
+            -0.08310177110070885
+          ],
+          [
+            -0.2267956446673287,
+            -0.4963786633500625,
+            -0.837957077098333,
+            0.5355207832292588
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "absolute_canonical_vs_packed_position_m": 1.306948423054818e-08,
+      "absolute_canonical_vs_packed_rotation_deg": 1.3650634423202138e-06,
+      "absolute_geometry_reasons": [],
+      "component_endpoints_camera": [
+        [
+          -0.1033828388873631,
+          -0.0831017792224884,
+          0.5355207920074463
+        ],
+        [
+          -0.14173850417137146,
+          -0.10584041311953535,
+          0.5355207920074463
+        ],
+        [
+          -0.14173850417137146,
+          -0.0831017792224884,
+          0.5732059052947513
+        ]
+      ],
+      "endpoint_source_rows": [
+        61,
+        64
+      ],
+      "endpoint_target_state_gripper": 0.8246058821678162,
+      "hidden_one_step_motion80_validation": {
+        "end_row": 64,
+        "first_failed_row": null,
+        "max_camera_position_error_m": 7.982282553862839e-09,
+        "max_camera_rotation_error_deg": 1.5316277126370696e-06,
+        "max_eef_position_error_m": 7.127031454741614e-08,
+        "max_eef_rotation_error_deg": 3.358713257770182e-06,
+        "passed": true,
+        "passed_steps": 3,
+        "position_tolerance_m": 1e-05,
+        "requested_steps": 3,
+        "rotation_tolerance_deg": 0.001,
+        "start_row": 61,
+        "steps": [
+          {
+            "camera_position_error_m": 3.734670406340741e-09,
+            "camera_rotation_error_deg": 1.100710604458524e-06,
+            "eef_position_error_m": 2.73362553692832e-08,
+            "eef_rotation_error_deg": 3.2811981468817853e-06,
+            "motion_row": 62,
+            "passed": true,
+            "reasons": [],
+            "row": 61,
+            "source_row": 61,
+            "target_row": 62
+          },
+          {
+            "camera_position_error_m": 7.982282553862839e-09,
+            "camera_rotation_error_deg": 7.19316687950127e-07,
+            "eef_position_error_m": 7.127031454741614e-08,
+            "eef_rotation_error_deg": 3.358713257770182e-06,
+            "motion_row": 63,
+            "passed": true,
+            "reasons": [],
+            "row": 62,
+            "source_row": 62,
+            "target_row": 63
+          },
+          {
+            "camera_position_error_m": 6.788810702084645e-09,
+            "camera_rotation_error_deg": 1.5316277126370696e-06,
+            "eef_position_error_m": 2.2410317379762512e-08,
+            "eef_rotation_error_deg": 1.8067212947444058e-06,
+            "motion_row": 64,
+            "passed": true,
+            "reasons": [],
+            "row": 63,
+            "source_row": 63,
+            "target_row": 64
+          }
+        ]
+      },
+      "incoming_endpoint_state_on_this_rgb": {
+        "origin_and_eef_axis_pixels": [
+          [
+            465.5546388739051,
+            257.7220764996893
+          ],
+          [
+            395.7203430317719,
+            144.53197714229486
+          ],
+          [
+            354.19262725005717,
+            318.80662282654123
+          ],
+          [
+            511.88274185283603,
+            226.56143021314023
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.4833532190790295,
+            -0.6895791434519496,
+            0.5393053592557887,
+            -0.14173850417137146
+          ],
+          [
+            -0.8455373499672187,
+            0.5273413351223062,
+            -0.08353266475958211,
+            -0.0831017792224884
+          ],
+          [
+            -0.22679562477339107,
+            -0.49637860669805195,
+            -0.837957053431826,
+            0.5355207920074463
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "incoming_endpoint_vs_state80_position_m": 0.0,
+      "incoming_endpoint_vs_state80_rotation_deg": 1.183347000525085e-14,
+      "incoming_motion80_prediction_on_this_rgb": null,
+      "incoming_prediction_vs_state80_position_m": null,
+      "incoming_prediction_vs_state80_rotation_deg": null,
+      "mask_reasons": [],
+      "motion_gripper": null,
+      "motion_storage_row": 62,
+      "outgoing_endpoint_visualizable": true,
+      "outgoing_motion80_visualizable": false,
+      "outgoing_transition_requested": true,
+      "packed_motion80_delta_position_camera": null,
+      "packed_motion80_delta_rotation_camera": null,
+      "packed_motion80_direction_words": null,
+      "packed_motion80_rotation_angle_deg": null,
+      "packed_motion80_rotation_axis_camera": null,
+      "packed_prediction_transform_under_camera_next": null,
+      "packed_prediction_under_camera_t": null,
+      "packed_state80_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            465.5546388739051,
+            257.7220764996893
+          ],
+          [
+            395.7203430317719,
+            144.53197714229486
+          ],
+          [
+            354.19262725005717,
+            318.80662282654123
+          ],
+          [
+            511.88274185283603,
+            226.56143021314023
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.4833532190790295,
+            -0.6895791434519496,
+            0.5393053592557887,
+            -0.14173850417137146
+          ],
+          [
+            -0.8455373499672186,
+            0.5273413351223062,
+            -0.08353266475958213,
+            -0.0831017792224884
+          ],
+          [
+            -0.22679562477339107,
+            -0.49637860669805195,
+            -0.8379570534318259,
+            0.5355207920074463
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "packed_state80_pose_valid": true,
+      "raw_absolute_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            465.55464250267386,
+            257.7220848190831
+          ],
+          [
+            395.7203452429641,
+            144.53198637351534
+          ],
+          [
+            354.1926279030404,
+            318.806635581737
+          ],
+          [
+            511.88274366460314,
+            226.56143744309458
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.483353214683663,
+            -0.6895791287240981,
+            0.5393053406191921,
+            -0.14173849889960335
+          ],
+          [
+            -0.8455373241561117,
+            0.5273413569625711,
+            -0.08353267386176415,
+            -0.08310177110070885
+          ],
+          [
+            -0.2267956446673287,
+            -0.4963786633500625,
+            -0.837957077098333,
+            0.5355207832292588
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "row": 61,
+      "state_endpoint_delta_position_camera": [
+        0.038355665284008356,
+        -0.022738633897046945,
+        0.03768511328730506
+      ],
+      "state_endpoint_delta_rotation_camera": [
+        [
+          0.9844196325747657,
+          -0.15334416227204073,
+          0.08604391261704392
+        ],
+        [
+          0.16826632683260168,
+          0.9635742541044399,
+          -0.20787279783881477
+        ],
+        [
+          -0.051033618876457375,
+          0.21911235639314977,
+          0.9743640721107351
+        ]
+      ],
+      "state_endpoint_direction_words": {
+        "X": "RIGHT",
+        "Y": "UP",
+        "Z": "INTO SCENE"
+      },
+      "state_endpoint_rotation_angle_deg": 16.017185013000006,
+      "state_endpoint_rotation_axis_camera": [
+        0.7737322346338653,
+        0.24839576671310168,
+        0.5827846704980285
+      ],
+      "state_endpoint_transform_under_target_camera": [
+        [
+          -0.36244588359463126,
+          -0.8059142818678797,
+          0.46811873680369476,
+          -0.10413850098848346
+        ],
+        [
+          -0.8499535150793381,
+          0.4918871768415229,
+          0.1887485826785302,
+          -0.10453067719936371
+        ],
+        [
+          -0.382376782335937,
+          -0.32946801899464556,
+          -0.8632721591654391,
+          0.5721570849418641
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "state_endpoint_under_camera_t": {
+        "origin_and_eef_axis_pixels": [
+          [
+            521.1263179281817,
+            238.30050175707208
+          ],
+          [
+            467.6026975249589,
+            125.046915935696
+          ],
+          [
+            415.84309516916255,
+            291.25760514651756
+          ],
+          [
+            563.9069727094334,
+            241.7145256651816
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.36567856464909354,
+            -0.8024103197536364,
+            0.4716109266217713,
+            -0.1033828388873631
+          ],
+          [
+            -0.8489254509900028,
+            0.49528319388154096,
+            0.18444548386968046,
+            -0.10584041311953535
+          ],
+          [
+            -0.3815819256956483,
+            -0.3329147587767279,
+            -0.8623009900093086,
+            0.5732059052947513
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "state_gripper": 0.8225969672203064,
+      "video_frame_index": 61
+    },
+    {
+      "absolute_canonical_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            520.0379078315398,
+            239.58616558602256
+          ],
+          [
+            466.70458527624464,
+            126.04029826304799
+          ],
+          [
+            414.19837493100727,
+            292.35367044457007
+          ],
+          [
+            562.2285470158145,
+            243.79613849910172
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.36244590025369106,
+            -0.8059142863151515,
+            0.4681187444337169,
+            -0.10413851492006453
+          ],
+          [
+            -0.8499534476189767,
+            0.4918871843680177,
+            0.18874857746070245,
+            -0.10453067018948706
+          ],
+          [
+            -0.382376810481005,
+            -0.3294680093979613,
+            -0.8632721519053981,
+            0.5721570663480934
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "absolute_canonical_vs_packed_position_m": 2.4268408042813572e-08,
+      "absolute_canonical_vs_packed_rotation_deg": 2.0386844820455055e-06,
+      "absolute_geometry_reasons": [],
+      "component_endpoints_camera": [
+        [
+          -0.05084732985241776,
+          -0.10453067719936371,
+          0.572157084941864
+        ],
+        [
+          -0.10413850098848343,
+          -0.13170508208292653,
+          0.572157084941864
+        ],
+        [
+          -0.10413850098848343,
+          -0.10453067719936371,
+          0.6244282363584626
+        ]
+      ],
+      "endpoint_source_rows": [
+        64,
+        67
+      ],
+      "endpoint_target_state_gripper": 0.8216867446899414,
+      "hidden_one_step_motion80_validation": {
+        "end_row": 67,
+        "first_failed_row": null,
+        "max_camera_position_error_m": 1.1723391110942773e-08,
+        "max_camera_rotation_error_deg": 1.1934393110323923e-06,
+        "max_eef_position_error_m": 2.6832435699682098e-08,
+        "max_eef_rotation_error_deg": 1.7184863136063207e-06,
+        "passed": true,
+        "passed_steps": 3,
+        "position_tolerance_m": 1e-05,
+        "requested_steps": 3,
+        "rotation_tolerance_deg": 0.001,
+        "start_row": 64,
+        "steps": [
+          {
+            "camera_position_error_m": 1.1685882663995042e-08,
+            "camera_rotation_error_deg": 1.1934393110323923e-06,
+            "eef_position_error_m": 1.6628180784985868e-08,
+            "eef_rotation_error_deg": 1.517370000822714e-06,
+            "motion_row": 65,
+            "passed": true,
+            "reasons": [],
+            "row": 64,
+            "source_row": 64,
+            "target_row": 65
+          },
+          {
+            "camera_position_error_m": 1.6590356833254982e-09,
+            "camera_rotation_error_deg": 7.030174642210345e-07,
+            "eef_position_error_m": 2.2847275340856197e-08,
+            "eef_rotation_error_deg": 1.7184863136063207e-06,
+            "motion_row": 66,
+            "passed": true,
+            "reasons": [],
+            "row": 65,
+            "source_row": 65,
+            "target_row": 66
+          },
+          {
+            "camera_position_error_m": 1.1723391110942773e-08,
+            "camera_rotation_error_deg": 1.0958683417208098e-06,
+            "eef_position_error_m": 2.6832435699682098e-08,
+            "eef_rotation_error_deg": 1.3522005737970178e-06,
+            "motion_row": 67,
+            "passed": true,
+            "reasons": [],
+            "row": 66,
+            "source_row": 66,
+            "target_row": 67
+          }
+        ]
+      },
+      "incoming_endpoint_state_on_this_rgb": {
+        "origin_and_eef_axis_pixels": [
+          [
+            520.037927778476,
+            239.58616142418236
+          ],
+          [
+            466.7046114790377,
+            126.04029066306762
+          ],
+          [
+            414.19839988817165,
+            292.3536631684501
+          ],
+          [
+            562.2285677410628,
+            243.796133970838
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.36244588359463126,
+            -0.8059142818678797,
+            0.46811873680369476,
+            -0.10413850098848346
+          ],
+          [
+            -0.8499535150793381,
+            0.4918871768415229,
+            0.1887485826785302,
+            -0.10453067719936371
+          ],
+          [
+            -0.382376782335937,
+            -0.32946801899464556,
+            -0.8632721591654391,
+            0.5721570849418641
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "incoming_endpoint_vs_state80_position_m": 1.1443916996305594e-16,
+      "incoming_endpoint_vs_state80_rotation_deg": 1.7209158085328932e-14,
+      "incoming_motion80_prediction_on_this_rgb": null,
+      "incoming_prediction_vs_state80_position_m": null,
+      "incoming_prediction_vs_state80_rotation_deg": null,
+      "mask_reasons": [],
+      "motion_gripper": null,
+      "motion_storage_row": 65,
+      "outgoing_endpoint_visualizable": true,
+      "outgoing_motion80_visualizable": false,
+      "outgoing_transition_requested": true,
+      "packed_motion80_delta_position_camera": null,
+      "packed_motion80_delta_rotation_camera": null,
+      "packed_motion80_direction_words": null,
+      "packed_motion80_rotation_angle_deg": null,
+      "packed_motion80_rotation_axis_camera": null,
+      "packed_prediction_transform_under_camera_next": null,
+      "packed_prediction_under_camera_t": null,
+      "packed_state80_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            520.037927778476,
+            239.58616142418234
+          ],
+          [
+            466.7046114790377,
+            126.0402906630676
+          ],
+          [
+            414.1983998881716,
+            292.3536631684501
+          ],
+          [
+            562.2285677410628,
+            243.79613397083796
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.3624458835946312,
+            -0.8059142818678797,
+            0.46811873680369476,
+            -0.10413850098848343
+          ],
+          [
+            -0.849953515079338,
+            0.4918871768415229,
+            0.18874858267853017,
+            -0.10453067719936371
+          ],
+          [
+            -0.382376782335937,
+            -0.3294680189946456,
+            -0.8632721591654391,
+            0.572157084941864
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "packed_state80_pose_valid": true,
+      "raw_absolute_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            520.0379078315398,
+            239.58616558602256
+          ],
+          [
+            466.70458527624464,
+            126.04029826304799
+          ],
+          [
+            414.19837493100727,
+            292.35367044457007
+          ],
+          [
+            562.2285470158145,
+            243.79613849910172
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.36244590025369106,
+            -0.8059142863151515,
+            0.4681187444337169,
+            -0.10413851492006453
+          ],
+          [
+            -0.8499534476189767,
+            0.4918871843680177,
+            0.18874857746070245,
+            -0.10453067018948706
+          ],
+          [
+            -0.382376810481005,
+            -0.3294680093979613,
+            -0.8632721519053981,
+            0.5721570663480934
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "row": 64,
+      "state_endpoint_delta_position_camera": [
+        0.05329117113606567,
+        -0.02717440488356282,
+        0.05227115141659855
+      ],
+      "state_endpoint_delta_rotation_camera": [
+        [
+          0.9870971088428203,
+          -0.032536103391493126,
+          0.15678233220055018
+        ],
+        [
+          0.06801725067527281,
+          0.971609505269018,
+          -0.22660234526913303
+        ],
+        [
+          -0.14495844688986817,
+          0.23434242306290226,
+          0.9612859498756261
+        ]
+      ],
+      "state_endpoint_direction_words": {
+        "X": "RIGHT",
+        "Y": "UP",
+        "Z": "INTO SCENE"
+      },
+      "state_endpoint_rotation_angle_deg": 16.260965498377665,
+      "state_endpoint_rotation_axis_camera": [
+        0.82307818670385,
+        0.5387982907519376,
+        0.17955138666992418
+      ],
+      "state_endpoint_transform_under_target_camera": [
+        [
+          -0.3831413397828329,
+          -0.8701517701842576,
+          0.30990096901206854,
+          -0.05260264128446578
+        ],
+        [
+          -0.7648269553226779,
+          0.4869778404027222,
+          0.42177281961802976,
+          -0.13194353878498075
+        ],
+        [
+          -0.517921270234442,
+          -0.07542201138861293,
+          -0.8520968712751139,
+          0.6212734580039978
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "state_endpoint_under_camera_t": {
+        "origin_and_eef_axis_pixels": [
+          [
+            586.3297602172763,
+            220.98299838928773
+          ],
+          [
+            536.6466108857363,
+            120.64918735560278
+          ],
+          [
+            493.231267067402,
+            272.3349102233721
+          ],
+          [
+            617.029070234466,
+            249.20530771653506
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.3900650320776279,
+            -0.863174514053063,
+            0.32059168585529163,
+            -0.05084732985241776
+          ],
+          [
+            -0.763828011154787,
+            0.4977644086019379,
+            0.4108495623759208,
+            -0.13170508208292653
+          ],
+          [
+            -0.5142140022652062,
+            -0.08461886207236473,
+            -0.8534773623570671,
+            0.6244282363584626
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "state_gripper": 0.8246058821678162,
+      "video_frame_index": 64
+    },
+    {
+      "absolute_canonical_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            584.1950482145345,
+            220.02410750629124
+          ],
+          [
+            534.7765634730799,
+            118.77583895058581
+          ],
+          [
+            490.0624022396478,
+            270.60118368951555
+          ],
+          [
+            613.4271859501033,
+            249.63163734290504
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.38314131870517987,
+            -0.8701517520067161,
+            0.3099009542177268,
+            -0.05260264872906867
+          ],
+          [
+            -0.7648269276361745,
+            0.4869778391272154,
+            0.4217727720055751,
+            -0.131943536689914
+          ],
+          [
+            -0.517921257474915,
+            -0.07542202939573658,
+            -0.8520969019108515,
+            0.6212734478304925
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "absolute_canonical_vs_packed_position_m": 1.2779343729052683e-08,
+      "absolute_canonical_vs_packed_rotation_deg": 1.6837786127581663e-06,
+      "absolute_geometry_reasons": [],
+      "component_endpoints_camera": null,
+      "endpoint_source_rows": null,
+      "endpoint_target_state_gripper": null,
+      "hidden_one_step_motion80_validation": null,
+      "incoming_endpoint_state_on_this_rgb": {
+        "origin_and_eef_axis_pixels": [
+          [
+            584.1950570261638,
+            220.02410757582226
+          ],
+          [
+            534.7765712937282,
+            118.77583709039101
+          ],
+          [
+            490.0624112077627,
+            270.60118332078935
+          ],
+          [
+            613.4271975784461,
+            249.63164334633143
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.3831413397828329,
+            -0.8701517701842576,
+            0.30990096901206854,
+            -0.05260264128446578
+          ],
+          [
+            -0.7648269553226779,
+            0.4869778404027222,
+            0.42177281961802976,
+            -0.13194353878498075
+          ],
+          [
+            -0.517921270234442,
+            -0.07542201138861293,
+            -0.8520968712751139,
+            0.6212734580039978
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "incoming_endpoint_vs_state80_position_m": 2.8609792490763984e-17,
+      "incoming_endpoint_vs_state80_rotation_deg": 1.2568300231100714e-14,
+      "incoming_motion80_prediction_on_this_rgb": null,
+      "incoming_prediction_vs_state80_position_m": null,
+      "incoming_prediction_vs_state80_rotation_deg": null,
+      "mask_reasons": [],
+      "motion_gripper": null,
+      "motion_storage_row": null,
+      "outgoing_endpoint_visualizable": false,
+      "outgoing_motion80_visualizable": false,
+      "outgoing_transition_requested": false,
+      "packed_motion80_delta_position_camera": null,
+      "packed_motion80_delta_rotation_camera": null,
+      "packed_motion80_direction_words": null,
+      "packed_motion80_rotation_angle_deg": null,
+      "packed_motion80_rotation_axis_camera": null,
+      "packed_prediction_transform_under_camera_next": null,
+      "packed_prediction_under_camera_t": null,
+      "packed_state80_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            584.1950570261638,
+            220.02410757582223
+          ],
+          [
+            534.7765712937282,
+            118.7758370903909
+          ],
+          [
+            490.0624112077627,
+            270.6011833207893
+          ],
+          [
+            613.4271975784461,
+            249.63164334633137
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.3831413397828329,
+            -0.8701517701842576,
+            0.3099009690120685,
+            -0.05260264128446579
+          ],
+          [
+            -0.7648269553226781,
+            0.4869778404027222,
+            0.4217728196180298,
+            -0.13194353878498077
+          ],
+          [
+            -0.5179212702344421,
+            -0.07542201138861293,
+            -0.8520968712751139,
+            0.6212734580039978
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "packed_state80_pose_valid": true,
+      "raw_absolute_eef_pose": {
+        "origin_and_eef_axis_pixels": [
+          [
+            584.1950482145345,
+            220.02410750629124
+          ],
+          [
+            534.7765634730799,
+            118.77583895058581
+          ],
+          [
+            490.0624022396478,
+            270.60118368951555
+          ],
+          [
+            613.4271859501033,
+            249.63163734290504
+          ]
+        ],
+        "projection_valid": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "transform_camera_eef": [
+          [
+            -0.38314131870517987,
+            -0.8701517520067161,
+            0.3099009542177268,
+            -0.05260264872906867
+          ],
+          [
+            -0.7648269276361745,
+            0.4869778391272154,
+            0.4217727720055751,
+            -0.131943536689914
+          ],
+          [
+            -0.517921257474915,
+            -0.07542202939573658,
+            -0.8520969019108515,
+            0.6212734478304925
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "row": 67,
+      "state_endpoint_delta_position_camera": null,
+      "state_endpoint_delta_rotation_camera": null,
+      "state_endpoint_direction_words": null,
+      "state_endpoint_rotation_angle_deg": null,
+      "state_endpoint_rotation_axis_camera": null,
+      "state_endpoint_transform_under_target_camera": null,
+      "state_endpoint_under_camera_t": null,
+      "state_gripper": 0.8216867446899414,
+      "video_frame_index": 67
+    }
+  ],
+  "render_config": {
+    "audit_stride_rows": 3,
+    "crop_margin_px": 80,
+    "crop_size_wh": [
+      640,
+      560
+    ],
+    "eef_axis_length_m": 0.1,
+    "panel_image_size_wh": [
+      800,
+      620
+    ]
+  },
+  "report_path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/lezhao/sana-rwm/output/full_release_visual_random20_seed20260704/datasets/vitra/renders/vitra/vitra_epic_episode000575_right_rows000058-000067_stride3_unified_robot80.json",
+  "rows": [
+    58,
+    61,
+    64,
+    67
+  ],
+  "schema_version": "geometry_audit_unified_robot80_endpoint_sequence_v3",
+  "scope": "sample",
+  "selection": {
+    "audit_stride_rows": 3,
+    "mode": "automatic_visible_valid_windows",
+    "requested_examples": 1,
+    "sequence_length": 4,
+    "window": {
+      "audit_stride_rows": 3,
+      "eligible": true,
+      "endpoint_reconstruction_identity_position_m": [
+        0.0,
+        1.1443916996305594e-16,
+        2.8609792490763984e-17
+      ],
+      "minimum_visible_source_dp_px": 1.0,
+      "next_rgb_pixel_motion": [
+        49.650575352077105,
+        57.42247108480218,
+        67.07317782892541
+      ],
+      "reasons": [],
+      "rows": [
+        58,
+        61,
+        64,
+        67
+      ],
+      "score": 113.95861386709927,
+      "source_dp_pixel_motion": [
+        54.27300516401745,
+        58.867725269408815,
+        68.85263047260315
+      ],
+      "start": 58
+    }
+  },
+  "side": "right",
+  "spans": [
+    {
+      "end_row": 61,
+      "hidden_one_step_motion80_validation": {
+        "end_row": 61,
+        "first_failed_row": null,
+        "max_camera_position_error_m": 6.415997404902743e-09,
+        "max_camera_rotation_error_deg": 3.038991103908728e-06,
+        "max_eef_position_error_m": 2.291840478097773e-08,
+        "max_eef_rotation_error_deg": 5.050295281287895e-06,
+        "passed": true,
+        "passed_steps": 3,
+        "position_tolerance_m": 1e-05,
+        "requested_steps": 3,
+        "rotation_tolerance_deg": 0.001,
+        "start_row": 58,
+        "steps": [
+          {
+            "camera_position_error_m": 6.415997404902743e-09,
+            "camera_rotation_error_deg": 3.038991103908728e-06,
+            "eef_position_error_m": 8.133583248350018e-09,
+            "eef_rotation_error_deg": 3.6426764474437793e-06,
+            "motion_row": 59,
+            "passed": true,
+            "reasons": [],
+            "row": 58,
+            "source_row": 58,
+            "target_row": 59
+          },
+          {
+            "camera_position_error_m": 2.5255334113636967e-09,
+            "camera_rotation_error_deg": 1.8893608425951682e-07,
+            "eef_position_error_m": 1.3154923870230564e-08,
+            "eef_rotation_error_deg": 5.050295281287895e-06,
+            "motion_row": 60,
+            "passed": true,
+            "reasons": [],
+            "row": 59,
+            "source_row": 59,
+            "target_row": 60
+          },
+          {
+            "camera_position_error_m": 5.978583657083296e-09,
+            "camera_rotation_error_deg": 2.1743172287810437e-07,
+            "eef_position_error_m": 2.291840478097773e-08,
+            "eef_rotation_error_deg": 3.328668472378141e-06,
+            "motion_row": 61,
+            "passed": true,
+            "reasons": [],
+            "row": 60,
+            "source_row": 60,
+            "target_row": 61
+          }
+        ]
+      },
+      "start_row": 58,
+      "state_endpoint_delta_position_camera": [
+        0.03701274108323627,
+        -0.020837797016556955,
+        0.0073432939947692955
+      ],
+      "state_endpoint_delta_rotation_camera": [
+        [
+          0.9806009899273126,
+          -0.1959926709123776,
+          -0.0029277127944619835
+        ],
+        [
+          0.19563024729159892,
+          0.9795041531890475,
+          -0.04796269623400192
+        ],
+        [
+          0.012268043780581547,
+          0.04645951822866573,
+          0.9988448369330232
+        ]
+      ]
+    },
+    {
+      "end_row": 64,
+      "hidden_one_step_motion80_validation": {
+        "end_row": 64,
+        "first_failed_row": null,
+        "max_camera_position_error_m": 7.982282553862839e-09,
+        "max_camera_rotation_error_deg": 1.5316277126370696e-06,
+        "max_eef_position_error_m": 7.127031454741614e-08,
+        "max_eef_rotation_error_deg": 3.358713257770182e-06,
+        "passed": true,
+        "passed_steps": 3,
+        "position_tolerance_m": 1e-05,
+        "requested_steps": 3,
+        "rotation_tolerance_deg": 0.001,
+        "start_row": 61,
+        "steps": [
+          {
+            "camera_position_error_m": 3.734670406340741e-09,
+            "camera_rotation_error_deg": 1.100710604458524e-06,
+            "eef_position_error_m": 2.73362553692832e-08,
+            "eef_rotation_error_deg": 3.2811981468817853e-06,
+            "motion_row": 62,
+            "passed": true,
+            "reasons": [],
+            "row": 61,
+            "source_row": 61,
+            "target_row": 62
+          },
+          {
+            "camera_position_error_m": 7.982282553862839e-09,
+            "camera_rotation_error_deg": 7.19316687950127e-07,
+            "eef_position_error_m": 7.127031454741614e-08,
+            "eef_rotation_error_deg": 3.358713257770182e-06,
+            "motion_row": 63,
+            "passed": true,
+            "reasons": [],
+            "row": 62,
+            "source_row": 62,
+            "target_row": 63
+          },
+          {
+            "camera_position_error_m": 6.788810702084645e-09,
+            "camera_rotation_error_deg": 1.5316277126370696e-06,
+            "eef_position_error_m": 2.2410317379762512e-08,
+            "eef_rotation_error_deg": 1.8067212947444058e-06,
+            "motion_row": 64,
+            "passed": true,
+            "reasons": [],
+            "row": 63,
+            "source_row": 63,
+            "target_row": 64
+          }
+        ]
+      },
+      "start_row": 61,
+      "state_endpoint_delta_position_camera": [
+        0.038355665284008356,
+        -0.022738633897046945,
+        0.03768511328730506
+      ],
+      "state_endpoint_delta_rotation_camera": [
+        [
+          0.9844196325747657,
+          -0.15334416227204073,
+          0.08604391261704392
+        ],
+        [
+          0.16826632683260168,
+          0.9635742541044399,
+          -0.20787279783881477
+        ],
+        [
+          -0.051033618876457375,
+          0.21911235639314977,
+          0.9743640721107351
+        ]
+      ]
+    },
+    {
+      "end_row": 67,
+      "hidden_one_step_motion80_validation": {
+        "end_row": 67,
+        "first_failed_row": null,
+        "max_camera_position_error_m": 1.1723391110942773e-08,
+        "max_camera_rotation_error_deg": 1.1934393110323923e-06,
+        "max_eef_position_error_m": 2.6832435699682098e-08,
+        "max_eef_rotation_error_deg": 1.7184863136063207e-06,
+        "passed": true,
+        "passed_steps": 3,
+        "position_tolerance_m": 1e-05,
+        "requested_steps": 3,
+        "rotation_tolerance_deg": 0.001,
+        "start_row": 64,
+        "steps": [
+          {
+            "camera_position_error_m": 1.1685882663995042e-08,
+            "camera_rotation_error_deg": 1.1934393110323923e-06,
+            "eef_position_error_m": 1.6628180784985868e-08,
+            "eef_rotation_error_deg": 1.517370000822714e-06,
+            "motion_row": 65,
+            "passed": true,
+            "reasons": [],
+            "row": 64,
+            "source_row": 64,
+            "target_row": 65
+          },
+          {
+            "camera_position_error_m": 1.6590356833254982e-09,
+            "camera_rotation_error_deg": 7.030174642210345e-07,
+            "eef_position_error_m": 2.2847275340856197e-08,
+            "eef_rotation_error_deg": 1.7184863136063207e-06,
+            "motion_row": 66,
+            "passed": true,
+            "reasons": [],
+            "row": 65,
+            "source_row": 65,
+            "target_row": 66
+          },
+          {
+            "camera_position_error_m": 1.1723391110942773e-08,
+            "camera_rotation_error_deg": 1.0958683417208098e-06,
+            "eef_position_error_m": 2.6832435699682098e-08,
+            "eef_rotation_error_deg": 1.3522005737970178e-06,
+            "motion_row": 67,
+            "passed": true,
+            "reasons": [],
+            "row": 66,
+            "source_row": 66,
+            "target_row": 67
+          }
+        ]
+      },
+      "start_row": 64,
+      "state_endpoint_delta_position_camera": [
+        0.05329117113606567,
+        -0.02717440488356282,
+        0.05227115141659855
+      ],
+      "state_endpoint_delta_rotation_camera": [
+        [
+          0.9870971088428203,
+          -0.032536103391493126,
+          0.15678233220055018
+        ],
+        [
+          0.06801725067527281,
+          0.971609505269018,
+          -0.22660234526913303
+        ],
+        [
+          -0.14495844688986817,
+          0.23434242306290226,
+          0.9612859498756261
+        ]
+      ]
+    }
+  ],
+  "visual_contract": {
+    "camera_card": "sign schematic only; not an RGB projection or magnitude scale",
+    "cyan_arrow": "state-derived endpoint dp_C projection",
+    "dashed_triad": "target packed state80 E pose transformed into source camera",
+    "gray_dashed_triad": "raw absolute EEF pose projected with supplied T_world_camera; no renderer-side axis correction",
+    "solid_triad": "packed state80 canonical E pose"
+  },
+  "visualization_status": "visualizable_from_required_robot80_fields",
+  "window_failure_reasons": [],
+  "window_requirements": {
+    "intrinsics_selected_frames": true,
+    "state80_camera_pose_selected_frames": true,
+    "state80_eef_pose_selected_frames": true,
+    "transitions_contiguous_all_hidden_steps": true
+  }
+}

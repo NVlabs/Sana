@@ -1,0 +1,62 @@
+{
+  "camera_role": "observation.images.head",
+  "dataset": "agibot_beta",
+  "decode_policy": {
+    "allow_camera_fallback": false,
+    "backend": "ffmpeg_rawvideo_rgb24",
+    "error_mode": "xerror_err_detect_explode",
+    "full_sequential_decode": true,
+    "ordinal_mapping": "presentation_order_output_ordinal_equals_canonical_frame_index",
+    "require_exact_frame_count": true
+  },
+  "metric_policy": {
+    "analysis_size_hw": [
+      120,
+      160
+    ],
+    "black_luma_mean_max": 8.0,
+    "black_near_fraction_min": 0.98,
+    "blur_laplacian_variance_max": 20.0,
+    "gripper_event_debounce_frames": 3,
+    "gripper_event_excursion_min": 0.1,
+    "gripper_event_step_epsilon": 0.001,
+    "gripper_guard_after_frames": 15,
+    "gripper_guard_before_frames": 15,
+    "gripper_range_tolerance": 1e-06,
+    "min_static_frames": 60,
+    "near_black_luma_threshold": 16.0,
+    "policy_id": "agibot_beta_head_c3_evidence_v1",
+    "proprio_static_magnitude_max": 1.0,
+    "visual_static_mad_max": 1.0
+  },
+  "policy_status": "PROVISIONAL_EVIDENCE_ONLY",
+  "proprio_activity_profile": {
+    "aggregation": "max_over_valid_group_magnitude_divided_by_group_threshold",
+    "gripper_excluded_from_static_magnitude": true,
+    "gripper_reason": "observed state g[t] is evaluated by the separate critical-event detector",
+    "groups": {
+      "camera_rotation_angle_rad": 0.002,
+      "camera_translation_norm_m": 0.0005,
+      "left_eef_rotation_angle_rad": 0.005,
+      "left_eef_translation_norm_m": 0.001,
+      "left_joint_max_abs_delta_rad": 0.002,
+      "right_eef_rotation_angle_rad": 0.005,
+      "right_eef_translation_norm_m": 0.001,
+      "right_joint_max_abs_delta_rad": 0.002
+    },
+    "minimum_valid_group_count": 4
+  },
+  "qwen_numeric_thresholds_published": false,
+  "schema_version": "agibot_beta_qwen_c3_video_quality_policy_v1",
+  "selection_decisions_authorized": false,
+  "selection_effect": "NONE",
+  "split_policy": {
+    "allow_cross_split_range_merge": false,
+    "evaluation_unit": "official_task_info_action_config_half_open_split",
+    "frame_bounds": "[s,e)",
+    "incoming_edge_bounds": "[s+1,e)",
+    "reset_visual_and_proprio_edges_at_split_left_boundary": true
+  },
+  "storage_fps": 30.0,
+  "training_readiness_evaluated": false
+}

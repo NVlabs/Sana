@@ -1,0 +1,3211 @@
+{
+  "alignment_status": "IN_REVIEW",
+  "artifact_status": "SUCCESS",
+  "artifacts": {
+    "cam2base_single": {
+      "expected_sha256": "a0d9df6bdbc8c9550158e6de8e0fa3799bd70facafa25b9ffdce824eef6c518c",
+      "path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/meta/external/cam2base_extrinsics.bcb840c3.json",
+      "sha256": "a0d9df6bdbc8c9550158e6de8e0fa3799bd70facafa25b9ffdce824eef6c518c",
+      "valid": true
+    },
+    "cam2base_superset": {
+      "expected_sha256": "84eae52d2362d0020600632afba3ce4a8cbea1dce1e57c37dd3e94416c5c5caf",
+      "path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/meta/external/cam2base_extrinsic_superset.bcb840c3.json",
+      "sha256": "84eae52d2362d0020600632afba3ce4a8cbea1dce1e57c37dd3e94416c5c5caf",
+      "valid": true
+    },
+    "intrinsics": {
+      "expected_sha256": "78c76755b075ae53e74a28c543bb1b185c50aa976458e95fbc9ba880a8cd2d51",
+      "path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/meta/external/intrinsics.bcb840c3.json",
+      "sha256": "78c76755b075ae53e74a28c543bb1b185c50aa976458e95fbc9ba880a8cd2d51",
+      "valid": true
+    },
+    "source_manifest": {
+      "expected_sha256": "f88c157e38a2ccbefcb2d67ec47f7d0145f2f55a18b749eb94cc506771ee1b69",
+      "path": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/meta/episodes.jsonl",
+      "sha256": "f88c157e38a2ccbefcb2d67ec47f7d0145f2f55a18b749eb94cc506771ee1b69",
+      "valid": true
+    }
+  },
+  "calibration_contract": {
+    "join": "exact UUID + exact role serial",
+    "quality_gates": {
+      "reprojection_error_max_px": 20.0,
+      "single_IoU_min": 0.7,
+      "superset_IoU_min": 0.6,
+      "superset_num_matches": "positive finite"
+    },
+    "repository": "KarlP/droid",
+    "revision": "bcb840c3b496533e0adf548a54b51f2f00057837",
+    "selection": "prefer exterior_1; fallback exterior_2; no raw pose promotion"
+  },
+  "dataset": "droid",
+  "episode_count_loaded": 20,
+  "episode_count_requested": 20,
+  "episodes": [
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": "superset",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.06024406478230676,
+              0.4313257356121508,
+              0.2590866447968665,
+              -2.1230107739015187,
+              0.00917199508808908,
+              -2.065532998343196
+            ],
+            "quality_metric": 0.6805017072739392,
+            "reasons": [
+              "extrinsics:superset:IoU_pass"
+            ],
+            "role": "exterior_1",
+            "serial": "20103212",
+            "usable": true
+          },
+          "exterior_2": {
+            "artifact": "superset",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              -0.020569413852896207,
+              -0.4054761393190739,
+              0.30696502255618274,
+              -1.9843990921400916,
+              -0.005644453793436588,
+              -1.190593487410161
+            ],
+            "quality_metric": 0.6094699880360669,
+            "reasons": [
+              "extrinsics:superset:IoU_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "20655732",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16787047",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_1",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "20103212",
+        "exterior_2": "20655732",
+        "wrist": "16787047"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.265555381774902,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.1906743049621582
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 32,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 15459,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.8325991034507751
+        ]
+      },
+      "rows": 197,
+      "source_member_sha256": {
+        "meta": "f36e83c59832a1f80c730105d650e54227bf66a0022c3161ebf569dbdbaa3445",
+        "parquet": "5e88d6918c1dcf7f14897c563e862c80f796fb5e4fd209179b0aa955f63df090"
+      },
+      "source_members": {
+        "meta": "episode_015459/meta.json",
+        "parquet": "episode_015459/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-015.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07200002670288086,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06749987602233887
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07200002670288086,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06799983978271484
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20103212"
+      },
+      "uuid": "CLVR+13759f6e+2023-05-18-15h-20m-20s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": "superset",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.21783026916138623,
+              0.4502481754285694,
+              0.4521772636769341,
+              -1.3953215712054414,
+              -0.42945328696293017,
+              -2.4587761485800907
+            ],
+            "quality_metric": 0.6834059331137633,
+            "reasons": [
+              "extrinsics:superset:IoU_pass"
+            ],
+            "role": "exterior_1",
+            "serial": "25455306",
+            "usable": true
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.2989267629058911,
+              -0.5344135702791031,
+              0.4407946322301766,
+              -1.8910987979784435,
+              0.13852150189614099,
+              0.07943743418417826
+            ],
+            "quality_metric": 0.8043781551170262,
+            "reasons": [
+              "extrinsics:single:IoU_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "27085680",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "14436910",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_1",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "25455306",
+        "exterior_2": "27085680",
+        "wrist": "14436910"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.275166749954224,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.20000004768371582
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 55,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 20549,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9427312612533569
+        ]
+      },
+      "rows": 198,
+      "source_member_sha256": {
+        "meta": "d421a7b9c753fc5254c974aa26613b08bb2e11fa93df1602b90b482f73694165",
+        "parquet": "f5a7780a136b2266408516183e6b87c6069124c788f3a5f8c2c7d70c2567a278"
+      },
+      "source_members": {
+        "meta": "episode_020549/meta.json",
+        "parquet": "episode_020549/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-020.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07249999046325684,
+            "median_dt_sec": 0.07000017166137695,
+            "min_dt_sec": 0.06849980354309082
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07200002670288086,
+            "median_dt_sec": 0.07000017166137695,
+            "min_dt_sec": 0.0689997673034668
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "25455306"
+      },
+      "uuid": "PennPAL+acda9df3+2023-06-29-19h-59m-55s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": false,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "intrinsics:focal_positive",
+              "intrinsics:principal_in_image",
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "29431508",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": false,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "intrinsics:focal_positive",
+              "intrinsics:principal_in_image",
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "29513368",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": false,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "intrinsics:focal_positive",
+              "intrinsics:principal_in_image",
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16522755",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "29431508",
+        "exterior_2": "29513368",
+        "wrist": "16522755"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.240281343460083,
+          "gripper_max_abs": 0.0,
+          "joint_max_abs": 0.20000004768371582
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 50,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 23595,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.0
+        ]
+      },
+      "rows": 257,
+      "source_member_sha256": {
+        "meta": "cce87f2005e22871a7893fc0c2ebeee8059c799c5ad7c59c8e6c2819c87749cc",
+        "parquet": "de1298cda94add4a7e5b037048c90cf1bce4baeafd2f8c7b9c8afb367960f41d"
+      },
+      "source_members": {
+        "meta": "episode_023595/meta.json",
+        "parquet": "episode_023595/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-023.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.10000014305114746,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04900002479553223
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07450008392333984,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.06749987602233887
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07400012016296387,
+            "median_dt_sec": 0.0710000991821289,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "29431508"
+      },
+      "uuid": "TRI+52ca9b6a+2023-10-18-18h-25m-49s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "23404442",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "29838012",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "19824535",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "23404442",
+        "exterior_2": "29838012",
+        "wrist": "19824535"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 5.784769296646118,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.1888996958732605
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 45,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 6411,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.8226872682571411
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.5726872682571411
+        ]
+      },
+      "rows": 273,
+      "source_member_sha256": {
+        "meta": "9ea4f1d213fcbf29fab73df8cca163e4926aa02ba0df4d12dc7810efefda9a0e",
+        "parquet": "595412f2d003d3a74674967ef57d8546e1d5c838aacb0f2fc4a96730fbcb1fcb"
+      },
+      "source_members": {
+        "meta": "episode_006411/meta.json",
+        "parquet": "episode_006411/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-006.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.09999990463256836,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07449984550476074,
+            "median_dt_sec": 0.07149982452392578,
+            "min_dt_sec": 0.06849980354309082
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07399988174438477,
+            "median_dt_sec": 0.0710000991821289,
+            "min_dt_sec": 0.0689997673034668
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "23404442"
+      },
+      "uuid": "IRIS+7dfa2da3+2023-06-13-11h-29m-34s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20103212",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "20655732",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16787047",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "20103212",
+        "exterior_2": "20655732",
+        "wrist": "16787047"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.280027627944946,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.16594886779785156
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 16,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 11993,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9911894202232361
+        ]
+      },
+      "rows": 308,
+      "source_member_sha256": {
+        "meta": "b407bdca906b03580c48dbb87f17c4294d005366ed9c9e085dd158d1d31965b0",
+        "parquet": "23dedee21a561834ac3187539d3035c383d78e94bf126cda04e21705a5db4e68"
+      },
+      "source_members": {
+        "meta": "episode_011993/meta.json",
+        "parquet": "episode_011993/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-011.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.10000014305114746,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07350015640258789,
+            "median_dt_sec": 0.07000017166137695,
+            "min_dt_sec": 0.06799983978271484
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07300019264221191,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06800007820129395
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20103212"
+      },
+      "uuid": "CLVR+236539bc+2023-05-22-11h-55m-20s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "23404442",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.47877331393209577,
+              0.39752767371836245,
+              0.4318057414131394,
+              -2.418042009268073,
+              0.043127908441686014,
+              -2.7193722768133464
+            ],
+            "quality_metric": 0.8535279631678504,
+            "reasons": [
+              "extrinsics:single:IoU_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "29838012",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "19824535",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_2",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "23404442",
+        "exterior_2": "29838012",
+        "wrist": "19824535"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.27739953994751,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.152451753616333
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 11,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 3737,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.8678414225578308
+        ]
+      },
+      "rows": 144,
+      "source_member_sha256": {
+        "meta": "9aadeae856d7dcbeb10de8fc1a48e1b0a842fc5fd87d34afdc6791e9718f6b91",
+        "parquet": "6b2a4755aaa64e1b422478b9727d0215b7190f128e8041b55e99b19272e3b9ac"
+      },
+      "source_members": {
+        "meta": "episode_003737/meta.json",
+        "parquet": "episode_003737/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-003.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07449984550476074,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0690000057220459
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07299995422363281,
+            "median_dt_sec": 0.0710000991821289,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_2",
+        "timing_camera_serial": "29838012"
+      },
+      "uuid": "IRIS+7dfa2da3+2023-05-05-10h-42m-41s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20103212",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "20655732",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16787047",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "20103212",
+        "exterior_2": "20655732",
+        "wrist": "16787047"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.273690462112427,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.1838873028755188
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 28,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 13677,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9911894202232361
+        ]
+      },
+      "rows": 268,
+      "source_member_sha256": {
+        "meta": "ef230efbb4da78174ffb8991f4cb60a0829354d68d783aa225c65b9dae97ad6b",
+        "parquet": "7364445f9756a55d997b8ac25821d6c5ecfde18107051118d447a44dced8a45f"
+      },
+      "source_members": {
+        "meta": "episode_013677/meta.json",
+        "parquet": "episode_013677/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-013.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07299995422363281,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06850004196166992
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07200002670288086,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06799983978271484
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20103212"
+      },
+      "uuid": "CLVR+13759f6e+2023-05-16-17h-47m-39s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20540549",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "Reprojection_error",
+            "pose6_camera_to_franka_base": [
+              0.4043626622769194,
+              0.5389674836212759,
+              0.30867881972444344,
+              -1.6438318882967107,
+              -0.06227448021232962,
+              -2.8905744547324126
+            ],
+            "quality_metric": 5.5188469886779785,
+            "reasons": [
+              "extrinsics:single:reprojection_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "23960472",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "11744905",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_2",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "20540549",
+        "exterior_2": "23960472",
+        "wrist": "11744905"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.267106056213379,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.10680751502513885
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 12,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 17345,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.7522026300430298
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.5022026300430298
+        ]
+      },
+      "rows": 198,
+      "source_member_sha256": {
+        "meta": "269da63ab1083833932a6afe2aaf510dda248a9a1bf206183f03a2246db6de9e",
+        "parquet": "b78f121af000f9fa799b4cba9e18d833bcb00167c263ba9e880716e1b0e89e7e"
+      },
+      "source_members": {
+        "meta": "episode_017345/meta.json",
+        "parquet": "episode_017345/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-017.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.10000014305114746,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07350015640258789,
+            "median_dt_sec": 0.07050013542175293,
+            "min_dt_sec": 0.06849980354309082
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07299995422363281,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_2",
+        "timing_camera_serial": "23960472"
+      },
+      "uuid": "REAL+de601749+2023-08-27-10h-44m-29s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20103212",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "20655732",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16787047",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "20103212",
+        "exterior_2": "20655732",
+        "wrist": "16787047"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.2785186767578125,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.12948308885097504
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 30,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 14724,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.9867841601371765
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.7797356843948364
+        ]
+      },
+      "rows": 228,
+      "source_member_sha256": {
+        "meta": "704c6115c3064a6a41b5c59bb8148366476fd51317750ae29692f80a3365f853",
+        "parquet": "1baac893771c7b40cb194ceccfd5ca8369f6c19f69ea4a375a8462c90dc3ce26"
+      },
+      "source_members": {
+        "meta": "episode_014724/meta.json",
+        "parquet": "episode_014724/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-014.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.10000014305114746,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04900002479553223
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0755000114440918,
+            "median_dt_sec": 0.07049989700317383,
+            "min_dt_sec": 0.06750011444091797
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07699990272521973,
+            "median_dt_sec": 0.07000017166137695,
+            "min_dt_sec": 0.06799983978271484
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20103212"
+      },
+      "uuid": "CLVR+13759f6e+2023-05-15-23h-35m-28s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20521388",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "24259877",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "13062452",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "20521388",
+        "exterior_2": "24259877",
+        "wrist": "13062452"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.244305372238159,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.19715237617492676
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 17,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 3.3306690738754696e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 27759,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.9977973699569702
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.8546255826950073
+        ]
+      },
+      "rows": 120,
+      "source_member_sha256": {
+        "meta": "bc1022e5851c92c1e17146d86f703cfc3bf9ed4a6b23f000b68f211e5f3fa117",
+        "parquet": "6ed25597c9acd2797dc3c73c2f1667ff4d1a0a7ab079f1602c0cf983c9b7cf5b"
+      },
+      "source_members": {
+        "meta": "episode_027759/meta.json",
+        "parquet": "episode_027759/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-027.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.925339567787232,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [
+          32,
+          33,
+          36,
+          38,
+          67,
+          76,
+          77,
+          109,
+          110,
+          111,
+          115,
+          116,
+          117
+        ],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [
+              32,
+              33,
+              36,
+              38,
+              67,
+              76,
+              77,
+              109,
+              110,
+              111,
+              115,
+              116,
+              117
+            ],
+            "max_dt_sec": 0.16700005531311035,
+            "median_dt_sec": 0.06700015068054199,
+            "min_dt_sec": 0.016000032424926758
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.10099983215332031,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.06849980354309082
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.09999990463256836,
+            "median_dt_sec": 0.0710000991821289,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20521388"
+      },
+      "uuid": "RAIL+t3d58310+2023-05-28-16h-28m-17s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "22008760",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.3209915411878579,
+              -0.349388321751479,
+              0.3083456358467947,
+              -1.909630699159838,
+              0.02191739863041353,
+              -0.2293590012140779
+            ],
+            "quality_metric": 0.825417600575888,
+            "reasons": [
+              "extrinsics:single:IoU_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "24400334",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "18026681",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_2",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "22008760",
+        "exterior_2": "24400334",
+        "wrist": "18026681"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.277210235595703,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.17995405197143555
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 25,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 9153,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9427312612533569
+        ]
+      },
+      "rows": 170,
+      "source_member_sha256": {
+        "meta": "f902e1293f7ab525ea6eb5f3bcb700430bf82c0facc5bb3b0b901523995a4d37",
+        "parquet": "0e4c4518888dc7bbf3bf77afc72749c44de3603fc766a2a24778ac96b42d8fdd"
+      },
+      "source_members": {
+        "meta": "episode_009153/meta.json",
+        "parquet": "episode_009153/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-009.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07299995422363281,
+            "median_dt_sec": 0.07050013542175293,
+            "min_dt_sec": 0.0690000057220459
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07300019264221191,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0689997673034668
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_2",
+        "timing_camera_serial": "24400334"
+      },
+      "uuid": "AUTOLab+84bd5053+2023-07-14-14h-59m-53s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "21582473",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "28221883",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "12391924",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "21582473",
+        "exterior_2": "28221883",
+        "wrist": "12391924"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.277476787567139,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.13319158554077148
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 12,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 1704,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.9988986849784851
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.8546255826950073
+        ]
+      },
+      "rows": 137,
+      "source_member_sha256": {
+        "meta": "78c3595f244c3049339985c6521a73d70a8f639f9cbca8120c2adc4a67bc16a1",
+        "parquet": "2a01bcb90ce01619405d2b59aac9ce3cd0c2709df9fe20af66da9b95a81157da"
+      },
+      "source_members": {
+        "meta": "episode_001704/meta.json",
+        "parquet": "episode_001704/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-001.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.10000014305114746,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07249999046325684,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.06850004196166992
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07399988174438477,
+            "median_dt_sec": 0.0710000991821289,
+            "min_dt_sec": 0.0689997673034668
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "21582473"
+      },
+      "uuid": "IPRL+7790ec0a+2023-05-05-16h-22m-56s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "22008760",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "24400334",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "18026681",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "22008760",
+        "exterior_2": "24400334",
+        "wrist": "18026681"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.268203020095825,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.1845918893814087
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 7,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 10763,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9911894202232361
+        ]
+      },
+      "rows": 126,
+      "source_member_sha256": {
+        "meta": "f4b014bfbf5aceaf1af8a55cf81d12a050b0951bab22e008924d4e723fbbd67d",
+        "parquet": "73e7e3342cf6957b02034b7a7718ec6c20ef3c662b39581597431f63e2afdd42"
+      },
+      "source_members": {
+        "meta": "episode_010763/meta.json",
+        "parquet": "episode_010763/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-010.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.925339567787232,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06700015068054199,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07400012016296387,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.06850004196166992
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07500004768371582,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "22008760"
+      },
+      "uuid": "AUTOLab+84bd5053+2023-07-12-11h-58m-46s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20540549",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "23960472",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "11744905",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "20540549",
+        "exterior_2": "23960472",
+        "wrist": "11744905"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.262835741043091,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.07570290565490723
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 242,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 18577,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.9643393158912659
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9515418410301208
+        ]
+      },
+      "rows": 1188,
+      "source_member_sha256": {
+        "meta": "b6a64c7dbbcb2c78e887eb5e357f94fa937b0cec2f7d4effca36d983b6f02c63",
+        "parquet": "4243fe78ad59cdcd1b083c81455f0597bd8d5c5a20be557a3abbd1a1b9dd4164"
+      },
+      "source_members": {
+        "meta": "episode_018577/meta.json",
+        "parquet": "episode_018577/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-018.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0755000114440918,
+            "median_dt_sec": 0.07050013542175293,
+            "min_dt_sec": 0.06749987602233887
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07600021362304688,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20540549"
+      },
+      "uuid": "REAL+abf65a9e+2023-04-06-16h-03m-17s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "22246076",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "26638268",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16291792",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "22246076",
+        "exterior_2": "26638268",
+        "wrist": "16291792"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.226426839828491,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.20000004768371582
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 8,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 29016,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.9800823330879211
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9251101613044739
+        ]
+      },
+      "rows": 165,
+      "source_member_sha256": {
+        "meta": "51dba57f528731a0c63916cd682ad9a112cd95a5f27883b9db392374fcb42b40",
+        "parquet": "e677e5d313636b0fa7b079899ef1233f574c5914f0b570bbafaca7112c9c7671"
+      },
+      "source_members": {
+        "meta": "episode_029016/meta.json",
+        "parquet": "episode_029016/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-029.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07650017738342285,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06699991226196289
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07599997520446777,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06800007820129395
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "22246076"
+      },
+      "uuid": "GuptaLab+553d1bd5+2023-04-30-14h-24m-31s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "25916956",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "Reprojection_error",
+            "pose6_camera_to_franka_base": [
+              0.23724005420781724,
+              -0.5500257525275019,
+              0.3829288338626562,
+              -1.68066986966415,
+              -0.04978715408346934,
+              -0.5222119363145242
+            ],
+            "quality_metric": 5.766873836517334,
+            "reasons": [
+              "extrinsics:single:reprojection_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "27432424",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "12391924",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_2",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "25916956",
+        "exterior_2": "27432424",
+        "wrist": "12391924"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.243344068527222,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.20000004768371582
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 42,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 798,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.7566078901290894
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.5110132098197937
+        ]
+      },
+      "rows": 207,
+      "source_member_sha256": {
+        "meta": "19861e0f2b542a2c52b65e2a007f1284d12bb85506df27bc1bab9018f708e2f6",
+        "parquet": "c74c082514c3c7e653b5e39df63e6262790ae2b273c23c09d9ff0d749767fd5e"
+      },
+      "source_members": {
+        "meta": "episode_000798/meta.json",
+        "parquet": "episode_000798/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-000.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.09999990463256836,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07500004768371582,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.06750011444091797
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07500004768371582,
+            "median_dt_sec": 0.0710000991821289,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_2",
+        "timing_camera_serial": "27432424"
+      },
+      "uuid": "IPRL+2fe9715d+2023-08-24-18h-36m-19s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": "superset",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "num_matches",
+            "pose6_camera_to_franka_base": [
+              0.0159398272678336,
+              -0.5371376668341658,
+              0.47080561533261384,
+              -2.0364159028420867,
+              -0.0019944862299730026,
+              -0.7781693077152649
+            ],
+            "quality_metric": 35760.0,
+            "reasons": [
+              "extrinsics:superset:num_matches_pass"
+            ],
+            "role": "exterior_1",
+            "serial": "23404442",
+            "usable": true
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              -0.07621959541350967,
+              0.5904757062926187,
+              0.4728644266993852,
+              -1.9102747188515954,
+              -0.02098107744856481,
+              -2.2397672143284146
+            ],
+            "quality_metric": 0.8017432105364752,
+            "reasons": [
+              "extrinsics:single:IoU_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "29838012",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "19824535",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_1",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "23404442",
+        "exterior_2": "29838012",
+        "wrist": "19824535"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.276224613189697,
+          "gripper_max_abs": 0.25,
+          "joint_max_abs": 0.151075541973114
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 4,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 26025,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9911894202232361
+        ]
+      },
+      "rows": 112,
+      "source_member_sha256": {
+        "meta": "ffc47c19cc17bc8e61a2d9aa8bf783eff497fcadcdddef7660a5d3184734a9cc",
+        "parquet": "318dba2cac06fb3f276ae249838f687eac573be83bb0954c758558ba21318f45"
+      },
+      "source_members": {
+        "meta": "episode_026025/meta.json",
+        "parquet": "episode_026025/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-026.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0755000114440918,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0690000057220459
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07399988174438477,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0689997673034668
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "23404442"
+      },
+      "uuid": "TRI+938130c4+2023-08-09-13h-53m-46s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "25455306",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "Reprojection_error",
+            "pose6_camera_to_franka_base": [
+              0.21950325511581958,
+              -0.48126730975553267,
+              0.36861126751963535,
+              -1.812145136831119,
+              0.11010367252852538,
+              -0.23730109894645296
+            ],
+            "quality_metric": 3.8934409618377686,
+            "reasons": [
+              "extrinsics:single:reprojection_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "27085680",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "14436910",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_2",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "25455306",
+        "exterior_2": "27085680",
+        "wrist": "14436910"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.261946201324463,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.17153620719909668
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 49,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 4.440892098500626e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 21778,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.9911894202232361
+        ]
+      },
+      "rows": 382,
+      "source_member_sha256": {
+        "meta": "abefd81a9fc1417d57ab40b5d9dbc31e55418aaa601f8b8896375dd1f84ddcc9",
+        "parquet": "fc31c9d114a99da115a3dad72917684733cea0be0bbe2f67023b33e28d33dba6"
+      },
+      "source_members": {
+        "meta": "episode_021778/meta.json",
+        "parquet": "episode_021778/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-021.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04900002479553223
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07249999046325684,
+            "median_dt_sec": 0.07049989700317383,
+            "min_dt_sec": 0.06799983978271484
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07299995422363281,
+            "median_dt_sec": 0.07000017166137695,
+            "min_dt_sec": 0.0689997673034668
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_2",
+        "timing_camera_serial": "27085680"
+      },
+      "uuid": "PennPAL+acda9df3+2023-07-15-22h-20m-47s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_1",
+            "serial": "20103212",
+            "usable": false
+          },
+          "exterior_2": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "exterior_2",
+            "serial": "20655732",
+            "usable": false
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "16787047",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": null,
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "MASKED"
+      },
+      "camera_serials": {
+        "exterior_1": "20103212",
+        "exterior_2": "20655732",
+        "wrist": "16787047"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 0.14103126525878906,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.18761277198791504
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 19,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 4.440892098500626e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 12430,
+      "gripper": {
+        "command_range": [
+          0.0,
+          0.9878854751586914
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.7929515242576599
+        ]
+      },
+      "rows": 148,
+      "source_member_sha256": {
+        "meta": "8ae03e79c3df6367c7b4caccd8a08bdd72bf4026e62574d70144df522edf92eb",
+        "parquet": "25133ff51167747c7d4aa3640dc4af7f52b912406c30cd1cf8ee2d428ed2c00f"
+      },
+      "source_members": {
+        "meta": "episode_012430/meta.json",
+        "parquet": "episode_012430/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-012.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.92539267947249,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06699991226196289,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07299995422363281,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06750011444091797
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07200002670288086,
+            "median_dt_sec": 0.06999993324279785,
+            "min_dt_sec": 0.06799983978271484
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "20103212"
+      },
+      "uuid": "CLVR+236539bc+2023-05-17-19h-05m-27s"
+    },
+    {
+      "artifact_status": "SUCCESS",
+      "calibration": {
+        "expectation": {
+          "official_calibration_hit": null,
+          "selected_exterior_role": null
+        },
+        "join_contract": "exact_episode_uuid_plus_exact_camera_serial",
+        "reason_codes": [],
+        "roles": {
+          "exterior_1": {
+            "artifact": "single",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.24675923599519295,
+              -0.33338078201915483,
+              0.7598867368827392,
+              -2.4004309523400167,
+              -0.07084442320145734,
+              -0.33173427269716255
+            ],
+            "quality_metric": 0.9011023027161452,
+            "reasons": [
+              "extrinsics:single:IoU_pass"
+            ],
+            "role": "exterior_1",
+            "serial": "23404442",
+            "usable": true
+          },
+          "exterior_2": {
+            "artifact": "superset",
+            "extrinsics_valid": true,
+            "intrinsics_valid": true,
+            "metric_type": "IoU",
+            "pose6_camera_to_franka_base": [
+              0.4725750596062972,
+              0.5609481003710258,
+              0.17019332616719646,
+              -1.7246323361074385,
+              0.2128423277918261,
+              -2.8927516532903326
+            ],
+            "quality_metric": 0.8623799011224775,
+            "reasons": [
+              "extrinsics:superset:IoU_pass"
+            ],
+            "role": "exterior_2",
+            "serial": "29838012",
+            "usable": true
+          },
+          "wrist": {
+            "artifact": null,
+            "extrinsics_valid": false,
+            "intrinsics_valid": true,
+            "metric_type": null,
+            "pose6_camera_to_franka_base": null,
+            "quality_metric": null,
+            "reasons": [
+              "extrinsics:uuid_or_serial_not_found"
+            ],
+            "role": "wrist",
+            "serial": "19824535",
+            "usable": false
+          }
+        },
+        "selected_exterior_role": "exterior_1",
+        "selection_policy": "exterior_1_if_usable_else_exterior_2_else_masked",
+        "verdict": "PASS"
+      },
+      "camera_serials": {
+        "exterior_1": "23404442",
+        "exterior_2": "29838012",
+        "wrist": "19824535"
+      },
+      "canonical_comparison": {
+        "reason": "canonical_root_not_provided",
+        "verdict": "REVIEW"
+      },
+      "command": {
+        "explicit_vs_state_alias": {
+          "cartesian_max_abs": 6.271726608276367,
+          "gripper_max_abs": 0.2500000298023224,
+          "joint_max_abs": 0.25099992752075195
+        },
+        "gripper_column": "droid_raw.action.gripper_position",
+        "joint_column": "droid_raw.action.joint_position",
+        "pose_column": "droid_raw.action.cartesian_position",
+        "skip_action_count": 0,
+        "skip_action_masks_command_only": true,
+        "state_alias_columns": [
+          "droid_raw.action.robot_state.cartesian_position",
+          "droid_raw.action.robot_state.joint_positions",
+          "droid_raw.action.robot_state.gripper_position"
+        ]
+      },
+      "eef_pose": {
+        "degrees": false,
+        "encoding": "xyz + fixed-axis Euler xyz",
+        "max_so3_determinant_error": 3.3306690738754696e-16,
+        "max_so3_orthogonality_error": 3.3306690738754696e-16,
+        "parent_frame": "franka_base",
+        "physical_origin": "panda_link8",
+        "source_column": "droid_raw.observation.robot_state.cartesian_position"
+      },
+      "episode_index": 4556,
+      "gripper": {
+        "command_range": [
+          0.0,
+          1.0
+        ],
+        "semantics": "0.0=open,1.0=closed",
+        "state_range": [
+          0.0,
+          0.8105726838111877
+        ]
+      },
+      "rows": 83,
+      "source_member_sha256": {
+        "meta": "598c5558cadfa3b5bab0391f520d6e642af6be3dd2d04775da6ad1eaa1086f45",
+        "parquet": "c369a667771c8febd011c5effd812a627e822e77534e1fa53e0e9191e1ad58a3"
+      },
+      "source_members": {
+        "meta": "episode_004556/meta.json",
+        "parquet": "episode_004556/data.parquet"
+      },
+      "source_zip": "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/enzex/Data/InternData/debug_data_train_video/robotics/real-robot/DROID/chunks/chunk-004.zip",
+      "time": {
+        "capture_fps_from_positive_median": 14.925366123582611,
+        "diagnostic_reason_codes": [],
+        "gap_rows": [],
+        "robot_internal_nonmonotonic_rows": [],
+        "robot_internal_strictly_increasing": true,
+        "streams": [
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.0840001106262207,
+            "median_dt_sec": 0.06700003147125244,
+            "min_dt_sec": 0.04999995231628418
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07249999046325684,
+            "median_dt_sec": 0.07050013542175293,
+            "min_dt_sec": 0.06850004196166992
+          },
+          {
+            "gap_rows": [],
+            "max_dt_sec": 0.07200002670288086,
+            "median_dt_sec": 0.0709998607635498,
+            "min_dt_sec": 0.0690000057220459
+          }
+        ],
+        "terminal_masked": true,
+        "timing_camera_role": "exterior_1",
+        "timing_camera_serial": "23404442"
+      },
+      "uuid": "IRIS+ef107c48+2023-03-08-13h-27m-05s"
+    }
+  ],
+  "field_verdicts": {
+    "artifacts": {
+      "reason_codes": [],
+      "verdict": "PASS"
+    },
+    "camera_calibration_join": {
+      "reason_codes": [],
+      "verdict": "MASKED"
+    },
+    "camera_rgb_agreement": {
+      "reason_codes": [
+        "RGB_REVIEW_REQUIRED"
+      ],
+      "verdict": "REVIEW"
+    },
+    "canonical_comparison": {
+      "reason_codes": [],
+      "verdict": "REVIEW"
+    },
+    "command": {
+      "reason_codes": [],
+      "verdict": "PASS"
+    },
+    "eef_pose_encoding_origin": {
+      "reason_codes": [],
+      "verdict": "PASS"
+    },
+    "gripper": {
+      "reason_codes": [],
+      "verdict": "PASS"
+    },
+    "signed_jaw_positive": {
+      "reason_codes": [
+        "SIGNED_JAW_RGB_REVIEW_REQUIRED"
+      ],
+      "verdict": "REVIEW"
+    },
+    "source_provenance": {
+      "reason_codes": [],
+      "verdict": "PASS"
+    },
+    "time_alignment": {
+      "reason_codes": [],
+      "verdict": "PASS"
+    }
+  },
+  "levels": {
+    "L2": {
+      "reason_codes": [],
+      "verdict": "REVIEW"
+    },
+    "L3": {
+      "reason_codes": [
+        "RGB_AND_SIGNED_JAW_REVIEW_REQUIRED"
+      ],
+      "verdict": "REVIEW"
+    }
+  },
+  "reason_codes": [],
+  "reasons": [],
+  "schema_version": "droid_source_semantics_pilot_l2_v2_incoming_v5",
+  "scope": "pilot",
+  "source_code_evidence": {
+    "commit": "33ae6a67274f36d2e29525b86f23a56616ef43a7",
+    "facts": {
+      "command": "explicit action fields are created separately from action.robot_state snapshot",
+      "command_time": "control_start is recorded immediately before skip/step branch",
+      "euler": "fixed-axis scipy xyz with degrees=False (radians)",
+      "gripper": "1 - width/max_width, therefore 0=open and 1=closed",
+      "skip_action": "skip_action rows call create_action_dict but do not call env.step(action)",
+      "state_pose": "robot_model.forward_kinematics(joint_positions) at configured panda_link8"
+    },
+    "files": {
+      "config/panda/franka_panda.yaml": {
+        "expected_sha256": "e7c56671f3513302bbbcaa641329fd7039b365431171f2563b2668e82c080ce5",
+        "missing_required_tokens": [],
+        "path": "/tmp/droid-source-audit/config/panda/franka_panda.yaml",
+        "sha256": "e7c56671f3513302bbbcaa641329fd7039b365431171f2563b2668e82c080ce5",
+        "valid": true
+      },
+      "droid/franka/robot.py": {
+        "expected_sha256": "25f2edf095b13f590371a4c53c8fbf0b8948d5c08b42600542a579917442ec38",
+        "missing_required_tokens": [],
+        "path": "/tmp/droid-source-audit/droid/franka/robot.py",
+        "sha256": "25f2edf095b13f590371a4c53c8fbf0b8948d5c08b42600542a579917442ec38",
+        "valid": true
+      },
+      "droid/misc/transformations.py": {
+        "expected_sha256": "125b51eaa7014e0663d0405f2057939332d8b8e5caf8b74ba2783e8ae03b48fa",
+        "missing_required_tokens": [],
+        "path": "/tmp/droid-source-audit/droid/misc/transformations.py",
+        "sha256": "125b51eaa7014e0663d0405f2057939332d8b8e5caf8b74ba2783e8ae03b48fa",
+        "valid": true
+      },
+      "droid/trajectory_utils/misc.py": {
+        "expected_sha256": "1b59ac8a2e143cce4560d5f24d21fe24d3a9062ecc0f6b0a3715bdf43db64650",
+        "missing_required_tokens": [],
+        "path": "/tmp/droid-source-audit/droid/trajectory_utils/misc.py",
+        "sha256": "1b59ac8a2e143cce4560d5f24d21fe24d3a9062ecc0f6b0a3715bdf43db64650",
+        "valid": true
+      }
+    },
+    "reason_codes": [],
+    "repository": "droid-dataset/droid",
+    "verdict": "PASS"
+  },
+  "source_contract": {
+    "bridge_raw_gaps": false,
+    "command_columns": {
+      "gripper": "droid_raw.action.gripper_position",
+      "joint": "droid_raw.action.joint_position",
+      "pose": "droid_raw.action.cartesian_position"
+    },
+    "eef_link_name": "panda_link8",
+    "euler_degrees": false,
+    "euler_order": "xyz",
+    "gripper_closed_value": 1.0,
+    "gripper_open_value": 0.0
+  }
+}

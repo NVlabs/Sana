@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>2026-07-08 TODO — Canonical state/action、joint/URDF 与 TCP 对齐</title>
+  <style>
+    body{font:15px/1.6 system-ui,sans-serif;max-width:1080px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}
+    th,td{border:1px solid #ccd2d8;padding:8px;text-align:left;vertical-align:top}
+    th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}
+    .info{border-left:4px solid #4285f4;padding:8px 12px;background:#eef4ff}
+  </style>
+</head>
+<body>
+<p><a href="../index.html">← Preprocess index</a> · <a href="../filter/s4_joint_eef_fk_consistency.html">S4 Joint–EEF FK technical contract</a></p>
+
+<h1>2026-07-08 TODO — Canonical state/action、joint/URDF 与 TCP 对齐</h1>
+<p class="warn">
+  <b>阶段：ALIGN / planning。</b>在最终冻结 robot state/action 表示前，
+  AgiBotWorld-Beta、AgiBotWorld2026 和 DROID 都要重新完成 joint→URDF mapping、
+  joint–EEF FK consistency 与 flange/TCP origin audit；六套数据的 model-facing action
+  改为由 absolute state 按窗口起点生成 Qwen-style current-anchored action chunk。
+  这个 TODO 记录待完成工作，不表示现有数据已经被证明错误，也不产生 alignment PASS
+  或 training-ready 结论。
+</p>
+
+<h2>范围</h2>
+<table>
+  <tr><th>Dataset</th><th>Joint/URDF</th><th>EEF/TCP</th><th>当前证据边界</th></tr>
+  <tr><td>AgiBotWorld-Beta</td><td>需要冻结双臂 7D 与 waist/base mapping，并升级到 full-row FK audit</td><td>当前 canonical 使用 source arm-end/flange origin；URDF 的约 0.1 m gripper-center 仅是 candidate</td><td>已有有限 flange-level sample evidence，不是 corpus full-row PASS</td></tr>
+  <tr><td>AgiBotWorld2026</td><td>需要建立 exact URDF identity、逐侧 joint profile 与动态 parent audit</td><td>需要识别 logged EEF origin，并检查 flange/TCP residual</td><td>本 TODO 尚未建立 joint–EEF corpus oracle</td></tr>
+  <tr><td>DROID</td><td>需要绑定 robot/URDF revision、source joint producer 与 7D mapping</td><td>需要识别 source EEF/controller TCP 和 tool strata</td><td>本 TODO 尚未建立 joint–EEF corpus oracle</td></tr>
+  <tr><td>EgoDex / EgoVerse / VITRA</td><td colspan="3">不适用：human-action 没有 robot joint/URDF；继续使用 human virtual gripper contract。</td></tr>
+</table>
+
+<h2 id="urdf-research">URDF research implementation status（2026-07-08）</h2>
+<p class="info">
+  第一轮只读实现已经开始；没有修改 canonical、adapter 数值或 training cache。
+  公共 resolved-URDF/FK 内核位于 <a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/real_robot/urdf.py"><code>urdf.py</code></a>，
+  三套 source→joint 声明与 inventory 位于
+  <a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/real_robot/urdf_profiles.py"><code>urdf_profiles.py</code></a>，DROID 独立 raw-state
+  FK checker 位于 <a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/real_robot/qa_droid_urdf.py"><code>qa_droid_urdf.py</code></a>。
+  公共 parser 已从 Beta QA 中移出，2026 production geometry 不再从 QA module 导入实现。
+</p>
+<table>
+  <tr><th>Dataset</th><th>Exact model artifact</th><th>当前 profile / evidence</th><th>Origin/TCP status</th></tr>
+  <tr><td>AgiBotWorld-Beta</td><td><code>AgibotTech/genie_sim@556faf1</code><br><code>G1_120s.urdf</code><br>SHA256 <code>865dc8a8…</code></td><td>双臂 7D + 两维 dynamic waist 的 declared chain 全部匹配 URDF。官方 README 明确 <code>state/end</code> 是 flange。新 full-row run 重现 <code>1311000096</code> rows 8296–8305 的双臂 10-row mismatch；<code>40000077</code> 左/右为 5,552/5,560 bad rows。后者 ±8 row 最优仍是 lag 0，fixed residual 的姿态相关 spread 很大，因此不是简单 integer lag 或 fixed TCP。</td><td>Current canonical 保留 flange。URDF/config 的 <code>gripper_center</code> 沿 canonical <code>+X</code> 约 <code>0.1 m</code>，只登记为 G1_120s planner/controller-center candidate。</td></tr>
+  <tr><td>AgiBotWorld2026</td><td><code>AgibotTech/genie_sim@556faf1</code><br><code>G2_omnipicker_fixed_dual.urdf</code><br>SHA256 <code>eb782de0…</code></td><td><code>state162/state169/state193</code>、左右 7D 和五维 waist 的 declared chains 全匹配。当前 v6 representative run 覆盖三种 state width、每臂 96 samples，全数通过；更早的 10-episode/5-schema pilot 也通过，但尚未做 46.7M-row corpus accounting。</td><td>Logged <code>state/end</code> 是 arm-end flange；planner/controller 使用 <code>gripper_center_link</code>，两侧 candidate 均沿 canonical <code>+X</code> 前移 <code>0.13618 m</code>。</td></tr>
+  <tr><td>DROID</td><td><code>droid@33ae6a</code> → <code>fairo@0a01a7</code><br><code>franka_panda/panda_arm.urdf</code><br>SHA256 <code>cfb685b8…</code></td><td>Source config 对 Panda/FR3 都使用 <code>q[0:7]→panda_joint1…7→panda_link8</code>。新 independent random-20 检查覆盖 20 episodes、4,909/4,909 rows、9 labs：max <code>4.05e-8 m / 1.09e-5°</code>，零时延全部通过。</td><td>Logged pose 精确是 source model 的 <code>panda_link8</code>，没有隐藏 fixed residual；实际 Robotiq mount、jaw center 与 controller TCP 仍为 <code>REVIEW</code>。</td></tr>
+</table>
+<ul>
+  <li>Model inventory 的三套 exact URDF hash 与九个 declared arm/layout profiles 当前均为 chain <code>PASS</code>；这只证明声明与 model tree 一致，raw source column semantics 仍以 row-level FK 为准。</li>
+  <li>DROID random-20 同时含 serial-prefix 标记的 Panda、FR3 与未解析 serial。共享 source URDF 只证明统一 logger kinematic model，不证明 hardware mount/TCP 相同；后续必须保留 raw serial、lab、date、<code>r2d2_version</code> 和显式 resolution reason。</li>
+  <li>G1/G2 URDF 含非标准 closed-loop gripper elements；当前轻量 parser 只验证 standard arm tree、fixed mount/center links 和 mimic rule，不把 linkage root 当作实际 contact-pad/TCP oracle。</li>
+  <li>机器输出：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/output/robot_urdf_research/inventory/urdf_profiles.json"><code>URDF/profile inventory</code></a>；<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/output/robot_urdf_research/agibot_beta/episode_40000077_full_rows.json"><code>Beta 40000077 full-row + lag scan</code></a>；<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/output/robot_urdf_research/agibot_beta/episode_1311000096_full_rows.json"><code>Beta 1311000096 full-row</code></a>；<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/output/robot_urdf_research/agibotworld2026/representative_v6.json"><code>G2 representative v6</code></a>；<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/output/robot_urdf_research/droid/random20_full_rows.json"><code>DROID random-20 full-row FK</code></a>。它们是 ALIGN evidence，不是 corpus receipt。</li>
+  <li>确定性测试位于 <a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/tests/preprocess/real_robot/test_urdf_research.py"><code>test_urdf_research.py</code></a>，当前覆盖 URDF FK/strict missing joint、Beta/2026 source indices、DROID Euler decode 和 fixed-residual recovery。</li>
+</ul>
+
+<h3>当前运行命令</h3>
+<pre><code># Exact model/profile inventory; DROID URDF must come from the pinned FAIRO checkout.
+python -m dev.rwm.preprocess.real_robot.urdf_profiles \
+  --droid-urdf /path/to/fairo/polymetis/polymetis/data/franka_panda/panda_arm.urdf \
+  --output output/robot_urdf_research/inventory/urdf_profiles.json
+
+# Beta targeted full-row diagnosis; positive lag means compare FK[t] with logged EEF[t+lag].
+python -m dev.rwm.preprocess.real_robot.qa_agibot_beta_geometry \
+  --episode-indices 40000077 --frames 0 --lag-radius 8 \
+  --output output/robot_urdf_research/agibot_beta/episode_40000077_full_rows.json
+
+# DROID frozen random-20, every row; exact URDF hash is enforced.
+python -m dev.rwm.preprocess.real_robot.qa_droid_urdf \
+  --urdf /path/to/fairo/polymetis/polymetis/data/franka_panda/panda_arm.urdf \
+  --rows-per-episode 0 --lag-radius 4 \
+  --output output/robot_urdf_research/droid/random20_full_rows.json</code></pre>
+<p>上述 inventory、Beta 与 DROID CLI 默认拒绝覆盖已有 output；只有明确传 <code>--overwrite</code> 才重写。本轮运行使用 <code>svideo-js</code>；unit tests 因该环境未安装 pytest，使用具有相同 NumPy/SciPy/PyArrow 的 <code>svideo</code> test environment。</p>
+
+<h2>已确定：absolute state 是事实源，action chunk 在 dataloader 构造</h2>
+<p class="info">
+  Qwen-style EEF action 依赖当前 chunk 的起点，因此不存在一个与窗口无关的
+  per-row EEF action。相同 target row <code>u</code> 在窗口起点 <code>s=0</code> 与
+  <code>s=5</code> 下分别表示 <code>E[0]→E[u]</code> 和 <code>E[5]→E[u]</code>，
+  数值不同。新的 canonical source of truth 保存逐时刻 absolute state/geometry；
+  dataloader 对每个窗口 <code>[s,e)</code> 生成 action tokens。
+</p>
+<pre><code>canonical row t:
+  q_abs[t]
+  T_W_E[t]                 # canonical E axes and the declared EEF origin
+  gripper_closedness[t]
+  T_W_C[t]
+  field masks, timestamps, transition continuity
+  genuine_command[t]       # optional; only with verified producer/provenance
+
+model window [s,e):
+  current_state = state[s]
+  targets       = state[s+1:e]</code></pre>
+<p>令 <code>u=s+k</code>，所有未来 token 使用同一个 current EEF <code>E[s]</code> 和同一个 reference camera <code>C[s]</code>：</p>
+<pre><code>action_joint[k]   = q_abs[u]
+action_xyz[k]     = R_Cs_W @ (p_W_E[u] - p_W_E[s])
+action_rotation[k]= rotvec(R_Cs_W @ R_W_E[u] @ R_W_E[s]^T @ R_W_Cs)
+action_gripper[k] = gripper_closedness[u]</code></pre>
+<ul>
+  <li><code>state[s]</code> 是当前观测对应的 absolute state，不是 episode frame 0；下一次 replanning 使用新的观测重新 anchor。</li>
+  <li>Joint target 与 gripper target 为 absolute value；EEF xyz/rotation 为相对 current state、表达在 current reference camera <code>C[s]</code> 的 delta。</li>
+  <li><code>motion80</code> 不再是 model action，也不是新 canonical 的必需训练事实源。若 verification/filter 仍需要 adjacent transition，可从 absolute states、camera poses、timestamps 与 continuity 确定性重算，或保留为明确标记的 derived audit artifact；模型不得读取它代替 current-anchored action。</li>
+  <li>Observed future state 与 genuine issued command 必须分开。当前预训练可以把 future observed state 作为 target trajectory；以后 command provenance 可靠时，另行选择 command target，不能静默覆盖 observed state。</li>
+  <li>Action mask 由 current/target field masks、reference camera validity、时间连续性和 strict clean span 共同决定；不跨 gap 或 invalid row。任一步 invalid 时不拼接其前后轨迹。</li>
+  <li>Normalization 必须在 current-anchored action 定义完成后重新统计；现有 adjacent-motion statistics 不复用。Action rotation 固定为 rotvec3，40D/per-arm token 中的具体 slots 仍需单独冻结。</li>
+</ul>
+
+<h2>已确定：state rotation 用 absolute Rot6D，action rotation 用 relative rotvec3</h2>
+<table>
+  <tr><th>字段</th><th>表示</th><th>原因</th></tr>
+  <tr><td>Current state rotation</td><td><code>R_Cs_Es</code> 的 column-based Rot6D：<code>[R[:,0], R[:,1]]</code></td><td>State 是 absolute orientation，需要在完整 SO(3) 上稳定、连续地供网络回归；identity 为 <code>[1,0,0,0,1,0]</code>。</td></tr>
+  <tr><td>Future action rotation</td><td>Current-anchored <code>delta_R_Cs[k]</code> 的 rotvec3 / axis-angle</td><td>Action 是相对 current state 的局部变化；三维、identity 为零，适合作为 zero-centered action channel。</td></tr>
+</table>
+<pre><code>R_Cs_Es       = R_Cs_W @ R_W_E[s]
+state_rot6d   = [R_Cs_Es[:, 0], R_Cs_Es[:, 1]]
+
+delta_R_Cs[k] = R_Cs_W @ R_W_E[s+k] @ R_W_E[s]^T @ R_W_Cs
+action_rotvec[k] = Log(delta_R_Cs[k])^vee
+
+# closure
+delta_R_Cs[k] = Exp(hat(action_rotvec[k]))
+R_Cs_Etarget[k] = delta_R_Cs[k] @ R_Cs_Es</code></pre>
+<ul>
+  <li><code>rotvec3</code> 不是 Euler xyz。向量方向是旋转轴，L2 norm 是弧度角；使用 SO(3) principal log/shortest geodesic，角度范围为 <code>[0,π]</code>。</li>
+  <li>Rot6D 的两个三维向量解码时按 Gram–Schmidt 正交化，再以 cross product 得到第三列；不能把六个 component 当作独立欧氏角度解释或直接求差。</li>
+  <li>Current-anchored action 跨越多帧，角度可能明显大于 adjacent-frame motion。必须单独审计接近 <code>π</code> 的分支不连续和可能存在的 multi-turn 任务；不能复用旧 <code>motion80</code> 的角度统计。</li>
+  <li>Action normalization 在 rotvec3 构造完成后、以弧度为物理单位重新统计；state Rot6D 不与 action rotvec3 共享 rotation statistics。</li>
+  <li>Qwen paper 没有公开旧 6 个 rotation slots 如何压成 3 个 action slots。我们需要冻结新的 per-arm state/action schema；state projector 与 action projector 可以输入维度不同，不能靠保留三个无定义的 padding slots 来隐式决定协议。</li>
+</ul>
+
+<h2>已确定：gripper 保留 canonical closedness，action 使用 absolute target</h2>
+<table>
+  <tr><th>层次</th><th>表示</th><th>规则</th></tr>
+  <tr><td>Raw evidence</td><td>各 source 的 physical width、joint position 或 openness</td><td>保留 raw value、producer、单位、open/closed endpoints、clip/outlier 与 validity；不按 episode extrema 拟合。</td></tr>
+  <tr><td>Canonical state</td><td><code>g[t]∈[0,1]</code>，<code>0=open</code>、<code>1=closed</code></td><td>Human virtual width、Beta millimeter width、AgiBotWorld2026 两种 polarity 与 DROID closedness 都先转换到同一物理语义。</td></tr>
+  <tr><td>Current state condition</td><td><code>state_gripper=g[s]</code></td><td>使用窗口起点的 observed gripper state。</td></tr>
+  <tr><td>Action token</td><td><code>action_gripper[k]=g[s+k]</code></td><td>Absolute future target，不使用 <code>g[s+k]-g[s]</code>；当前预训练的 target 来自 future observed state。</td></tr>
+  <tr><td>Model value</td><td><code>g_model=2g-1</code></td><td>固定映射为 <code>open=-1</code>、<code>closed=+1</code>，不做 per-dataset quantile statistics；只对 valid value 映射，mask=false 的结构/缺失 slot 保持数值零。</td></tr>
+</table>
+<ul>
+  <li>保留连续 closedness，不在 canonical 或 world model 中提前二值化；部署 controller 若只接受 binary command，threshold 属于 controller adapter。</li>
+  <li>Active gripper source invalid 会按 strict policy 切断 clean span，不能用数值 <code>0</code> 冒充 fully open；结构上不存在的 arm 由 profile mask 处理。</li>
+  <li>Future observed gripper trajectory 与 genuine issued gripper command 必须分开。后者只有在 producer、issuance timestamp 与 control semantics 验证后才可成为 command target。</li>
+  <li>跨 embodiment 的相同 closedness 只对齐“相对开合程度”，不声称 jaw metric width、接触状态或夹持力相同；这些差异由 embodiment condition 和未来 controller adapter 表达。</li>
+  <li>Qwen 将 parallel gripper 表示为一个 joint-position 维度，并对双峰 gripper 豁免 extreme-value filtering；论文没有单独声明 gripper action 是 absolute 还是 delta。本项目在上述语义下显式选择 absolute target。</li>
+</ul>
+
+<h2>Absolute EEF pose：axes 已 canonicalized，origin 仍需分开审计</h2>
+<pre><code>T_W_E[t] = T_W_raw[t] @ T_raw_E
+T_Ct_Et  = inverse(T_W_C[t]) @ T_W_E[t]</code></pre>
+<p>
+  <code>T_raw_E</code> 的旋转部分把每套 source 的 EEF local basis 转成共同的 canonical E：
+  <code>+X</code> physical approach、<code>+Z</code> signed jaw/opening、
+  <code>+Y=+Z×+X</code>。因此保存的 <code>T_W_E</code>、由它得到的
+  <code>T_Ct_Et</code> 以及 state80 Rot6D 都使用 canonical axes；dataloader 只改变
+  parent/reference frame 和 action anchor，不应再交换或翻转 EEF local axes。
+</p>
+<table>
+  <tr><th>层面</th><th>当前含义</th><th>边界</th></tr>
+  <tr><td>EEF local axes</td><td>Human virtual gripper 直接按 canonical physical axes 构造；robot source pose 右乘逐 dataset/side 的 <code>T_raw_E</code> 后保存。</td><td>AgiBotWorld-Beta、AgiBotWorld2026、EgoDex、EgoVerse、VITRA 的 exact random-20 visual packets 已获项目 user signoff；尚不能外推为未抽样 corpus 的 strict machine PASS。</td></tr>
+  <tr><td>Episode world <code>W</code></td><td><code>T_W_E</code> 与 <code>T_W_C</code> 在同一 episode 内共享一个明确 parent，作为绝对几何事实源。</td><td>不同 dataset 的 <code>W</code> 不要求共享全局 origin 或 basis；action 最终重表达到 <code>C[s]</code>，但每个 episode 内的 <code>T_W_E/T_W_C</code> 必须方向一致、同步且可验证。</td></tr>
+  <tr><td>Camera/parent frame</td><td><code>T_W_C</code> 使用声明的 camera-to-world 方向；model state 为 <code>T_Ct_Et</code>，Qwen-style action 固定用窗口首帧 <code>C[s]</code>。</td><td>Calibration 未命中的行必须 mask；DROID 只有 official-calibration hit scope 可使用 geometry，其他 scope fail closed。</td></tr>
+  <tr><td>EEF physical origin</td><td>Human 使用 virtual jaw center；当前 robot canonical 主要在 source flange/link origin 上旋转成 canonical axes。</td><td>Robot flange→controller TCP/jaw center translation 尚未完成。Axes 对齐不等于 TCP origin 已统一；任何 verified offset 都会要求重建 absolute pose 和 action。</td></tr>
+  <tr><td>Corpus evidence</td><td>上述 rotation corrections 已实际写入当前 canonical columns。</td><td>DROID overall alignment 仍未获得与另外五套相同的 user visual signoff；六套数据都尚无覆盖所有 active strata 的 current strict corpus L0–L3 receipt。</td></tr>
+</table>
+<p class="warn">
+  新 action builder 只能消费同一 canonical E 定义下的 current/target poses。
+  禁止 current state 使用 flange origin、future target 使用 TCP origin，或在 dataloader
+  内临时修 axes。Joint/URDF/TCP audit 若改变 <code>T_raw_E</code> 的 rotation 或 translation，
+  必须先重建 absolute canonical poses，再生成 action chunk。固定 local rotation
+  <code>Q</code> 会在 <code>(R_t Q)(R_s Q)^T=R_tR_s^T</code> 中抵消，所以 relative-action
+  closure 本身不能证明 absolute EEF axes 正确；axes 仍须由 absolute pose、source geometry
+  与 RGB evidence 验证。
+</p>
+
+<h2>Robot80 的 7D joint contract</h2>
+<pre><code>q_urdf[j] = sign[j] * unit_scale[j] * q_raw[source_index[j]] + zero_offset[j]
+
+joint_profile = {
+  urdf_joint_names[0:7], source_index[0:7], unit_scale[0:7],
+  sign[0:7], zero_offset[0:7], wrap[0:7], state_producer,
+  fixed_or_mimic_joints, dynamic_base_or_waist_mapping
+}</code></pre>
+<table>
+  <tr><th>比较范围</th><th>项目决定</th></tr>
+  <tr><td>同一 robot model/revision，跨 dataset</td><td>Canonical 7D 必须绑定同一组 URDF joint names、同一顺序、unit、positive axis、zero reference 与 wrap convention。不同 source producer 必须先转换到这一共同语义，再写入 Robot80。</td></tr>
+  <tr><td>同一 dual-arm robot 的左右臂</td><td>左右侧分别冻结 exact joint-name list 与 source mapping。可以采用各自从 proximal 到 distal 的 chain order，但不能因为结构镜像就默认 sign、zero 或 raw order 相同。</td></tr>
+  <tr><td>不同 robot embodiments</td><td>7 个 slots 只提供共享结构容器。<code>joint_i</code> 是该 embodiment 的第 <code>i</code> 个 canonical arm joint，不要求对应另一 robot 的相同 named joint、转轴或物理功能；不同 robot 的 joint 数值不能直接比较或通过全局 sign/offset 强行统一。</td></tr>
+  <tr><td>少于 7 DoF</td><td>只填真实且有明确语义的 joint slots；其余值为零且 canonical mask=false，不插值、不制造虚拟 joint。</td></tr>
+  <tr><td>跨 embodiment 学习</td><td>Joint 保留 embodiment-specific kinematic semantics；跨 robot 的主要几何桥梁是 verified camera-frame EEF representation 和显式 embodiment 信息。Normalization 只处理尺度，不修复 name/order/sign/zero。</td></tr>
+</table>
+<p class="info">
+  相同 URDF hash 不是充分条件：还要证明 source joint vector 确实使用该 URDF 的
+  joint names/order/sign/zero，并区分 actual state、estimated state 与 command target。
+  按 residual 自动搜索 permutation/sign/offset 只能提出 ALIGN hypothesis，不能直接覆盖 canonical。
+</p>
+
+<h2>Joint/FK 必须先于 TCP</h2>
+<pre><code>T_W_F_fk[t]   = FK_URDF(q_urdf[t], base/waist[t])
+T_F_logged[t] = inverse(T_W_F_fk[t]) @ T_W_loggedEEF[t]
+
+TCP candidate only if T_F_logged[t] is stable in SE(3) across valid poses</code></pre>
+<ol>
+  <li>先冻结 exact robot model、URDF/SRDF、joint mapping、timestamp 和动态 base/waist semantics。</li>
+  <li>使用转换后的 q 计算明确 flange/link 的 FK，与同 timestamp、同 parent、同 origin 语义的 logged EEF 比较。</li>
+  <li>如果 residual 随时间或姿态变化，先诊断 wrong joint order/sign/zero/unit、time lag、遗漏 waist/base、错误 side/link、rotation representation 或 logger。</li>
+  <li>只有 residual transform 跨有效姿态稳定，才将其登记为 <code>T_flange_TCP</code> candidate。</li>
+  <li>Candidate 仍需 controller/tool configuration、URDF fixed link、contact-pad/fingertip geometry、两侧/tool-state coverage 与 RGB projection 独立验证。</li>
+</ol>
+<p>固定 TCP 变换采用：</p>
+<pre><code>T_W_TCP[t] = T_W_F[t] @ T_F_TCP</code></pre>
+<p>即使 <code>T_F_TCP</code> 只有 translation <code>r</code>，flange rotation 也会改变 TCP motion：</p>
+<pre><code>p_W_TCP[t] = p_W_F[t] + R_W_F[t] r
+
+delta_p_Cs_TCP = delta_p_Cs_F
+                + R_Cs_W (R_W_F[t] - R_W_F[s]) r</code></pre>
+
+<h2>执行清单</h2>
+<table>
+  <tr><th>#</th><th>ALIGN work item</th><th>完成 gate / artifact</th></tr>
+  <tr><td>1</td><td>盘点三个 robot datasets 的 robot/source revisions；收集 exact URDF/SRDF、controller/tool 配置、fixed/mimic joints、tool calibration 和换工具记录。</td><td>每个 dataset/robot/side/tool/revision 都能绑定 exact model 与 source evidence。</td></tr>
+  <tr><td>2</td><td>冻结每侧 7D source→URDF joint profile：joint names/order、source index、unit、sign、zero、wrap、state producer，以及 waist/torso/base mapping。</td><td>同 robot 跨 dataset 的 canonical slots 语义一致；不同 robot 明确为 embodiment-local slots。</td></tr>
+  <tr><td>3</td><td>用转换后的 q 和动态 base/waist 运行 FK，先在明确的 flange/link origin 与 logged EEF 做 pilot，再扩展到 full-row comparison；不先拟合 TCP。</td><td>逐 arm-row position/rotation residual、coverage、time/link identity 和 mismatch ranges。</td></tr>
+  <tr><td>4</td><td>盘点 raw EEF producer、frame name 与 origin type；区分 flange、URDF link、controller TCP、tool tip 和 jaw center。</td><td>未知项为 <code>UNKNOWN/REVIEW</code>；joint/time/base/logger 问题不被误收为 TCP。</td></tr>
+  <tr><td>5</td><td>对通过 joint/FK gate 的 strata 推导 <code>T_flange_TCP</code> candidate，分别检查 translation、rotation、跨姿态稳定性和适用 tool/hardware strata。</td><td>候选矩阵、notation、units、适用范围、uncertainty 与 first-failure rows。</td></tr>
+  <tr><td>6</td><td>用 source/controller 语义、末端几何和 RGB L3 独立验证 TCP candidate。</td><td>证据闭合才成为 verified TCP；否则继续保留 raw flange/link origin。</td></tr>
+  <tr><td>7</td><td>决定 Robot80 EEF origin policy：保留 raw flange pose，并在 verified 时生成 derived TCP pose；禁止同一 channel 混用 origin。</td><td>明确的 <code>origin_type</code>、mask、transform identity 和适用 strata。</td></tr>
+  <tr><td>8</td><td>若 joint mapping、canonical E axes 或 origin 改变，从 raw source 重建 absolute joint/EEF state、masks 和 evidence；再从 absolute state 重算任何 derived transition audit，并重建 filter cache。</td><td>新表示的 L0/L1、source L2、RGB L3、sidecars 与 exact hashes；旧、新表示不混训。</td></tr>
+  <tr><td>9</td><td>增加 wrong joint order/sign/zero/unit、time lag、base omission、wrong link/side/tool、TCP offset sign/removal 和 lever-arm mutation tests。</td><td>每种 mutation 均被对应 gate 捕获，并报告 corpus coverage 与 unresolved strata。</td></tr>
+</table>
+
+<h2>Beta 已知专项</h2>
+<ol>
+  <li>把现有 independent checker 升级成 full-row、per-arm report，并回填 178 个 split 的真实 row intersections。</li>
+  <li>优先诊断 episode <code>40000077</code>：做 joint/waist 与 logged EEF 的 ±lag scan，核对 common base/waist producer、origin 和 logger revision，不先用 TCP 拟合。</li>
+  <li>单独处理 episode <code>1311000096</code> 尾部 10 rows，不因 sample mismatch 删除整个 parent。</li>
+  <li>验证 G1_120s URDF 中沿 canonical approach 约 <code>+0.1 m</code> 的 gripper-center candidate；在 controller/geometry/RGB 证据闭合前，不称为 physical/controller TCP。</li>
+</ol>
+
+<h2>重生成与兼容性规则</h2>
+<ul>
+  <li>如果某一 stratum 证明当前 q mapping、logged EEF origin 和 canonical transform 都正确，则它无需重生成。</li>
+  <li>如果 joint order/sign/zero/unit、dynamic base、canonical E axes、EEF link/origin 或 <code>T_flange_TCP</code> 任一改变，必须重建该 stratum 的 absolute canonical state、masks、alignment evidence 和 filter cache；任何 adjacent transition audit 随之重算。</li>
+  <li>Profile-only model eligibility mask 变化不需要重建 canonical；物理坐标或 origin 变化必须重建。</li>
+  <li>旧、新 representation 不得在同一次训练中混用；已有训练可以保留为 current flange-origin baseline。</li>
+</ul>
+
+<h2>退出条件</h2>
+<ul>
+  <li>三个 robot datasets 的 active robot/side/tool/revision strata 全部有 exact joint profile 与 model identity。</li>
+  <li>所有 declared rows/workers 被 account；valid rows 有 full-row FK residual，失败和未适用范围都有原因。</li>
+  <li>Joint mapping 与 TCP/origin 分别有独立证据，未知项保持 REVIEW/MASKED。</li>
+  <li>Current-anchored action builder 对 joint/xyz/rotation/gripper、moving-camera、不同窗口起点、mask/gap 和重建 closure 均有独立 golden tests；model path 不再消费 adjacent <code>motion80</code>。</li>
+  <li>受影响 canonical 完成 L0/L1、source L2、RGB L3 与 mutation tests 后，才生成相应 alignment receipt。</li>
+  <li>本 TODO 不负责 FILTER L4 或 training-ready decision。</li>
+</ul>
+</body>
+</html>

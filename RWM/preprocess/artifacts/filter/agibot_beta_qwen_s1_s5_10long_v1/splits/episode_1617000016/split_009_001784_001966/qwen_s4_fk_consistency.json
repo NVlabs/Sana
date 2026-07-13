@@ -1,0 +1,130 @@
+{
+  "canonical_mutation_allowed": false,
+  "dataset": "agibot_beta",
+  "details": {
+    "authoritative_stage": "ALIGN",
+    "claim_limit": "DOES_NOT_PROMOTE_ALIGNMENT_STATUS",
+    "data_operation": "NONE",
+    "mode": "REFERENCE_ONLY",
+    "on_mismatch": "REVIEW_AND_RETURN_TO_ALIGN"
+  },
+  "evidence_references": [
+    {
+      "artifact_schema": "agibot_beta_g1_120s_geometry_qa_v3_align_status",
+      "claim": "sampled_parent_source_fk_and_mount_evidence_only",
+      "kind": "GEOMETRY_QA_REPORT",
+      "producer": "dev.rwm.preprocess.real_robot.qa_agibot_beta_geometry",
+      "schema_version": "rwm_filter_evidence_reference_v1",
+      "scope": {
+        "claim_limit": "source_frame_fk_and_mount_only",
+        "frames_requested": 32,
+        "left_bad_samples": 0,
+        "parent_episode_index": 1617000016,
+        "right_bad_samples": 0,
+        "sampled_frame_indices": [
+          0,
+          196,
+          393,
+          589,
+          786,
+          982,
+          1179,
+          1375,
+          1572,
+          1768,
+          1965,
+          2161,
+          2357,
+          2554,
+          2750,
+          2947,
+          3143,
+          3340,
+          3536,
+          3733,
+          3929,
+          4125,
+          4322,
+          4518,
+          4715,
+          4911,
+          5108,
+          5304,
+          5501,
+          5697,
+          5894,
+          6090
+        ],
+        "scoped_numeric_pass": true,
+        "unit": "parent_episode_sample"
+      },
+      "sha256": "17510a55fa831c2f8d1f14c4607465d66d2ac9e8e1932a3f4a9e030d52e57b12",
+      "uri": "artifact://agibot_beta_qwen_filter_pilot/geometry_qa.json",
+      "use": "REFERENCE_ONLY"
+    },
+    {
+      "artifact_schema": "real_robot.canonical_release_receipt.v1",
+      "claim": "exact_alignment_input_binding_without_status_promotion",
+      "kind": "ALIGNMENT_RECEIPT",
+      "producer": "dev.rwm.preprocess.real_robot.release_full_canonical",
+      "schema_version": "rwm_filter_evidence_reference_v1",
+      "scope": {
+        "alignment_status": "UNVERIFIED",
+        "run_fingerprint": "7444b87618e752fb375886d302969fee10d4ea2f3bf4c8aabde406b9f6cdb6f3",
+        "unit": "canonical_release"
+      },
+      "sha256": "3acabfe11000d5fc22d24b31cee4c3c1f81e0cd42f8ce059d2c33addbffeb1ec",
+      "uri": "canonical://meta/release_receipt.json",
+      "use": "REFERENCE_ONLY"
+    }
+  ],
+  "input_bindings": {
+    "alignment_receipt_sha256": "3acabfe11000d5fc22d24b31cee4c3c1f81e0cd42f8ce059d2c33addbffeb1ec",
+    "canonical_checksums_sha256": "b15181fd69268bb0e97eae2d8459c3f36bdc711bed35403cea8ec12f92a3420b",
+    "canonical_manifest_sha256": "086fd6b4c4e1556dc950b52f68d1b57d0f264bb9d0b0883b06636a35a4c01b37",
+    "canonical_meta_sha256": "bd6005f57e736717fc0bcf0f8b5732e8bdfafb32c71d8d97a09c19da89935ab2",
+    "canonical_schema_id": "rwm_robot80_v5_cosmos_incoming_motion_t_robot",
+    "canonical_sidecar_kind": "canonical_parquet_zip_member",
+    "canonical_sidecar_sha256": "cc3512d05c1ec821e5042a10f0debdf44d097641e33758d6b216781e826ff115",
+    "canonical_validation_sha256": "67fd6b8fbc1871bf87aec32bb580b5696f59081905130a5f6b943a30bbd04d4e",
+    "code_hashes": {
+      "geometry_qa_sha256": "5ca166a30975a6bb01e588d160c54066419418d077df1ecdb725aee813c83ae1",
+      "pilot_runner_sha256": "c704888a306a59ce7c63c6ebd9eb07c717416dadaca3d44f9ac366714fc2c87c",
+      "signal_filters_sha256": "ea5ada4413fe4cba0b20c8370e331dfa2d1b8aa914fd86db698a751a08619b7a",
+      "split_io_sha256": "6d8ff5f71c302716b9dfa5b8ec51a2b2e522e127ee7af4e182b109d93dc56c09",
+      "stage_records_sha256": "8c11c49d64ece0178150043fe680f3cccd1a55e491429321f7776cf7900cc460"
+    },
+    "conversion_plan_sha256": "6ed97d297eb8845d687d87aaf831b4d6f57f4763d505b75503ceb830cd03971e",
+    "provisional_policy_sha256": "b72b4c09d1ba8b138176c639c1e2928d55bd34b78f01c0766675e93baa67006b",
+    "source_manifest_sha256": "c466a13293244009ec79b8735f0bf23a8d9c1c45cda782891dbbf62ac00d9a15",
+    "source_manifest_snapshot_sha256": "3ed19c42de549b57d106b3b8c1083e35ffa72d9f72b04fc21a2affd8a5ca6200",
+    "split_sha256": "3df96994e5a96aeb14a7132c07aa0ac08ad729a4e38909af175e623b324ee786",
+    "task_info_sha256": "7b6581015e80acfbc327ff5e3dbee504c45d280eedd5c5937ae94537a429d732"
+  },
+  "rationale": "Joint/EEF FK and geometry evidence is owned by ALIGN. FILTER may bind and report exact frozen evidence but may not correct canonical values.",
+  "record_semantic_sha256": "fd669f0130fb3af01133a5cf57d48ce6a0553416a132b4205d904acb72fdb8b6",
+  "schema_version": "rwm_filter_qwen_stage_record_v1",
+  "scope": {
+    "canonical_alignment_status": "UNVERIFIED",
+    "eligibility": "NOT_EVALUATED",
+    "frame_bounds": [
+      1784,
+      1966
+    ],
+    "frame_count": 182,
+    "internal_incoming_motion_bounds": [
+      1785,
+      1966
+    ],
+    "parent_episode_index": 1617000016,
+    "readiness": "NOT_EVALUATED",
+    "split_id": "agibot_beta/1617000016/action_config/9/1784:1966",
+    "split_index": 9,
+    "split_sha256": "3df96994e5a96aeb14a7132c07aa0ac08ad729a4e38909af175e623b324ee786",
+    "unit": "split_episode"
+  },
+  "selection_effect": "NONE",
+  "stage_id": "S4",
+  "stage_name": "joint_eef_fk_consistency",
+  "status": "EVIDENCE_REFERENCE_ONLY"
+}

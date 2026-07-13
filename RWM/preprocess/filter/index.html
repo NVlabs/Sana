@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FILTER Evidence</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1050px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="../index.html">← Human/Robot Preprocess</a></p>
+<h1>FILTER Evidence</h1>
+<p>这里记录 frozen canonical sidecar 下游的数据质量研究。每个 Qwen-style <code>S*</code> stage 和后续 <code>C*</code> stage 使用独立页面；每页先定义可迁移到任意 robot dataset 的 General Requirements，再记录 dataset-specific profile、exact run 结果和限制。</p>
+<p class="warn"><b>Claim boundary：</b>当前模式是 <code>FILTER / Evidence</code>，不是 corpus-strict selection。所有 canonical values、transforms、timestamps 和 masks 都是只读输入；当前没有 <code>KEEP/DROP/REVIEW</code> manifest、named-loss eligibility 或 L4 <code>training_ready</code> 结论。发现 source meaning、frame、time 或 packing 问题时必须返回 ALIGN，不能在 FILTER 内修复。</p>
+
+<h2>跨数据集复用合同</h2>
+<pre><code>General stage contract（本组文档）
+  → dataset/source profile（field mapping、units、frames、time、model、policy）
+  → exact run evidence（input hashes、coverage、metrics、flags、failures）
+  → separately frozen named-loss selection / eligibility</code></pre>
+<p>以后接入 DROID、AgiBotWorld2026 或其他 robot data 时，只新增/版本化 dataset profile 与 run evidence；不能复制 Beta 的 field 数量、matrix、URDF、FPS、threshold 或 verdict 作为默认值。</p>
+<table>
+  <tr><th>Shared requirement</th><th>Required for every S/C run</th></tr>
+  <tr><td>Exact identity</td><td>所有 FILTER-stage S/C run 绑定 immutable source revision、canonical sidecar、schema/converter、ALIGN receipt、policy、code 和 hashes；hash/schema drift 为 <code>INPUT_REJECTED</code>，不能 fallback 到“最相近”的 profile。S4 source-FK 与 S5 等 ALIGN-owned oracle/gate 可发生在 final receipt 之前，但必须绑定 exact source/model/transform inputs，并把产物纳入后续 receipt；不能形成“先有 receipt 才能生成 L2”的循环。</td></tr>
+  <tr><td>Dataset profile</td><td>声明 dataset、embodiment/robot model、side/entity、tool/mount/hardware、camera role、control mode、FPS/time regime；每个 signal 记录 producer、semantic view、field/slot、frame/basis、origin、representation、units 与 canonical mask。</td></tr>
+  <tr><td>Four scopes</td><td>Measurement unit、aggregation unit、selection unit 与 named training loss 必须分开。Row/transition evidence 可以汇总到 range/split/episode，但不能自动变成整段 DROP。</td></tr>
+  <tr><td>States</td><td><code>artifact_status</code>、<code>alignment_status</code>、measurement flag、<code>selection_status</code>、eligibility 与 <code>training_ready</code> 分开表达；生成文件成功、没有 flag 或高 retention 都不是 alignment/readiness PASS。</td></tr>
+  <tr><td>Applicability</td><td><code>NOT_APPLICABLE</code> 表示概念上缺少所需 modality/producer；<code>INSUFFICIENT_EVIDENCE</code> 表示字段存在但有效样本或活动量不足；<code>INPUT_REJECTED</code> 表示 identity/semantic contract 不匹配；<code>EVIDENCE_COMPUTED</code> 只表示完成 measurement；疑似 ALIGN defect 使用 <code>REVIEW_REQUIRED</code>。</td></tr>
+  <tr><td>Evidence vs selection</td><td>Evidence mode 可在明确标注的 <code>UNVERIFIED/IN_REVIEW</code> 输入上做只读诊断，但不得产生 eligibility。正式 selection 必须声明 required alignment field verdicts、named loss、window boundary、reason precedence 与完整 corpus accounting。</td></tr>
+</table>
+
+<h2>统一的 per-ZIP filter sidecar 格式</h2>
+<p class="ok"><b>Project decision — 2026-07-08：</b>以后所有 corpus filter 都按 canonical ZIP 独立写 sidecar。若输入为 <code>canonical/chunks/00000100.zip</code>，名为 <code>urdf_align</code> 的 filter 写 <code>canonical/chunks/00000100_urdf_align.json</code>；其他 filter 只替换文件名后缀。文件名已经表达 ZIP 与 filter，JSON 不再增加 <code>zip/filter/problem_episodes</code> 外层。</p>
+<pre><code>{
+  "episode_97000000": {
+    "num_anomalies": 1,
+    "anomalies": [
+      {
+        "row_idx": 153,
+        "frame_idx": 153,
+        "bad_sides": ["left", "right"],
+        "left": {"position_error_m": 0.224, "rotation_error_deg": 0.0012},
+        "right": {"position_error_m": 0.224, "rotation_error_deg": 0.0011}
+      }
+    ],
+    "position_threshold_m": 0.001,
+    "rotation_threshold_deg": 0.1
+  }
+}</code></pre>
+<ul>
+  <li>顶层 key 必须来自 canonical manifest 的 exact episode member prefix；不得从 ZIP 编号推导 source chunk，也不得重新格式化 episode identity。</li>
+  <li>顶层覆盖该 canonical ZIP 的全部 episode。正常 episode 显式写空结果；读取/计算失败显式写 <code>error</code>，不能通过缺 key 冒充正常。</li>
+  <li>每个 filter 只写自身 metric、异常 frame 与实测值，不读取其他 filter 的决定，不修改 canonical values/masks，也不在此阶段生成 clean span。</li>
+  <li>所有 filter 完成后，由单独的 aggregation step 按 <code>(canonical ZIP, episode key, frame_idx)</code> 合并 flags，并且只在该步骤统一计算异常区间、transition/window eligibility 与 clean spans。</li>
+</ul>
+
+<h2>当前 pilot</h2>
+<table>
+  <tr><th>Item</th><th>Frozen scope</th></tr>
+  <tr><td>Dataset / schema</td><td>AgiBotWorld-Beta；<code>rwm_robot80_v5_cosmos_incoming_motion_t_robot</code>。本 pilot 的 frozen input receipt 字段为 <code>UNVERIFIED</code>；2026-07-05 项目 owner 已对 exact current-v5 random-20 packet 给出 <a href="../canonical_visual_alignment_signoff.html"><code>CANONICAL_ALIGNED / USER_VISUAL_PASS</code></a>。后者不回写本次 frozen JSON，也不是 corpus strict receipt。</td></tr>
+  <tr><td>Parent selection</td><td>按 parent frame count 降序，贪心要求 task 与 source chunk 均唯一；10 个 long parent。</td></tr>
+  <tr><td>Evaluation / logical split unit</td><td>178 个 <code>task_info/action_config</code> logical split；frame/state 为 <code>[s,e)</code>，内部 incoming motion 仅为 <code>[s+1,e)</code>。真正的 named-loss selection unit 尚未冻结。</td></tr>
+  <tr><td>Coverage</td><td>69,245 个 annotated frame；69,027/69,067 个最大可能内部 motion row 至少有一个有效 motion slot；不桥接 gap、invalid row 或 split 左边界。</td></tr>
+  <tr><td>Artifacts</td><td>每个 split 固定写 <code>split.json</code> 与 S1–S5 五个 JSON，共 1,068/1,068 个 split JSON。见 <a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/summary.json">summary</a>、<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/provisional_policy.json">provisional policy</a> 和 <a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/geometry_qa.json">geometry QA</a>。</td></tr>
+</table>
+
+<h2>当前 C3 standalone pilot</h2>
+<table>
+  <tr><th>Item</th><th>Frozen scope / result</th></tr>
+  <tr><td>Scope</td><td>复用并重新验证上述 frozen 10 parent / 178 split IDs 与 hashes；camera 只使用 canonical-bound <code>observation.images.head</code>，不 fallback 到 hand/fisheye view。</td></tr>
+  <tr><td>Decode</td><td>10/10 parent source MP4 member 完成 SHA-256 与 ffmpeg 7.0.2 presentation-order full decode；<code>74,980 / 74,980</code> frames，全部 exact count / return code 0。69,245 split frames 进入 C3，5,735 outside-split frames 单独 accounting。</td></tr>
+  <tr><td>Artifacts</td><td>每个 split 独立写一个 <code>qwen_c3_video_quality.json</code>，共 178/178；另有 10 个 parent <code>video_binding.json</code> 和 policy/run/summary/inventory。见 <a href="../artifacts/filter/agibot_beta_qwen_c3_10long_v1/summary.json">C3 summary</a>。</td></tr>
+  <tr><td>Evidence</td><td>Black 0、blur 0；provisional prolonged-static 为 43 ranges / 4,438 frames，155 个 gripper events 的 guard 与其中 501 frames 重叠并保护。仍为 <code>selection_effect=NONE</code>。</td></tr>
+  <tr><td>Manual review</td><td><a href="../artifacts/filter/agibot_beta_qwen_c3_review_v1/index.html"><strong>直接打开 review gallery</strong></a>：112 对同名 MP4+JSON；43/43 static ranges、12/12 protected ranges / 501/501 protected frames 全覆盖。全部 MP4 已通过 parent-vs-clip pre-encode SHA-256 逐帧选择校验与 exact decode count；人工状态仍为 <code>PENDING</code>。</td></tr>
+</table>
+
+<h2>Stage registry</h2>
+<table>
+  <tr><th>Stage</th><th>Discussion status</th><th>Current artifact status</th></tr>
+  <tr><td><a href="s1_sudden_change.html"><strong>S1 — Sudden Change</strong></a></td><td><code>DOCUMENTED / FILTER</code></td><td>178/178 <code>EVIDENCE_COMPUTED</code>；只输出候选突变范围，不作 selection。</td></tr>
+  <tr><td><a href="s2_state_action_trend_alignment.html"><strong>S2 — State–Action Trend Alignment</strong></a></td><td><code>DOCUMENTED / CONDITIONAL FILTER</code></td><td>178/178 为 <code>NOT_APPLICABLE</code>：Beta 没有 provenance 可靠的 issued <code>command80</code>；不是 PASS/FAIL，不作 selection。</td></tr>
+  <tr><td><a href="s3_extreme_value.html"><strong>S3 — Extreme Value</strong></a></td><td><code>DOCUMENTED / FILTER</code></td><td>178/178 <code>EVIDENCE_COMPUTED</code>；1,036/69,245 target rows 命中。下一版 selection direction 是全部排除，但当前 v1 仍为 <code>selection_effect=NONE</code>。</td></tr>
+  <tr><td><a href="s4_joint_eef_fk_consistency.html"><strong>S4 — Joint–EEF FK Consistency</strong></a></td><td><code>DOCUMENTED / ALIGN-QA + FILTER-MARKER</code></td><td>全量 writer 已实现为 per-canonical-ZIP <code>{zip}_urdf_align.json</code>：逐行、分臂计算 source FK residual，以 1 mm / 0.1° 初筛并记录全部异常 frame/value。该 artifact 仍不删除 frame、不切 clean span；等待所有 filter 完成后统一 aggregation。</td></tr>
+  <tr><td><a href="s5_base_eef_orientation_alignment.html"><strong>S5 — Base Frame and EEF Orientation Alignment</strong></a></td><td><code>DOCUMENTED / ALIGN-OWNED</code></td><td>Beta 178/178 为 <code>ALREADY_APPLIED_BY_ALIGN</code>；local EEF correction 已在 canonical packing 前应用，并获 2026-07-05 exact visual packet user signoff。FILTER 不重复旋转、不计算 row flags、不作 selection，只验证 exact bindings；frozen v5 machine receipt 字段仍为 <code>UNVERIFIED</code>，等待 corpus strict aggregation。</td></tr>
+  <tr><td><a href="c1_instruction_consistency.html"><strong>C1 — Instruction Consistency</strong></a></td><td><code>TODO_DOCUMENTED / NOT_IMPLEMENTED</code></td><td><code>NOT_RUN_BY_USER_REQUEST</code>；未来单独建立 VLM pipeline。当前无 model call、C1 JSON 或 selection，现有 1,068-file accounting 不变。</td></tr>
+  <tr><td><a href="c2_video_state_consistency.html"><strong>C2 — Video–State Consistency</strong></a></td><td><code>TODO_DOCUMENTED / BLOCKED_NO_ROBOT_SAM_FINE_TUNE</code></td><td>流程与通用要求已记录；当前没有 robot fine-tuned SAM checkpoint、full-body mask renderer、IoU policy 或 C2 artifacts。Model calls / C2 JSON / selection 均为 0。</td></tr>
+  <tr><td><a href="c3_video_quality_filtering.html"><strong>C3 — Video Quality Filtering</strong></a></td><td><code>DOCUMENTED / IMPLEMENTED / REVIEW_PACKET_READY / PROVISIONAL_EVIDENCE</code></td><td>10/10 parent exact full decode；178/178 split 为 <code>EVIDENCE_COMPUTED</code>。Black/blur 0 candidates；43 prolonged-static ranges / 4,438 frames，其中 501 frames 受 gripper event guard 保护。112 对人工审核 MP4+JSON 已发布；无 selection/eligibility/L4。</td></tr>
+</table>
+<p>后续每完成一次讨论，只新增或更新对应 stage 页面，并在这里改变该 stage 的 discussion status。C1/C2 页面当前只冻结 TODO/边界，不代表 executable policy；C3 已运行 provisional evidence，但 numeric thresholds 不是 Qwen 公开参数，也不是 selection policy。</p>
+
+<h2>稳定边界</h2>
+<pre><code>frozen canonical + exact release/checksum identity
+  → split view: state/frame [s,e), internal motion [s+1,e)
+  → S*/C* numeric evidence and reason ranges
+  → policy review and labeled examples
+  → only later: named-loss KEEP/DROP/REVIEW + eligibility
+  → corpus-strict only: optional L4 readiness</code></pre>
+<ul>
+  <li><code>motion80[t]</code> 是 observed <code>[t-1]→[t]</code>，不是 issued command；不能据此伪造 command-state filter。</li>
+  <li>任一 stage 的 flag 都是 evidence，不是坏数据概率，也不是整 split/episode 的删除指令。</li>
+  <li>阈值、代码、sidecar、task annotation、policy 和输出都必须用 exact hash 绑定；input drift 必须 fail closed。</li>
+  <li>当前 10-long pilot 用于发现算法和阈值问题，不能外推为 full-corpus retention 或 readiness。</li>
+</ul>
+
+<h2>Active code</h2>
+<ul>
+  <li>Split/ZIP identity：<code>dev/rwm/preprocess/filtering/agibot_beta_split_io.py</code></li>
+  <li>S1/S3 metrics：<code>dev/rwm/preprocess/filtering/qwen_signal_filters.py</code></li>
+  <li>S2/S4/S5 records：<code>dev/rwm/preprocess/filtering/qwen_stage_records.py</code></li>
+  <li>Beta full-corpus URDF filter writer：<code>dev/rwm/preprocess/filtering/agibot_beta_urdf_align.py</code></li>
+  <li>Beta URDF <code>cpu_short</code> launcher：<code>dev/rwm/preprocess/filtering/run_agibot_beta_urdf_align_cpu_short.sh</code></li>
+  <li>Pilot runner：<code>dev/rwm/preprocess/filtering/agibot_beta_qwen_pilot.py</code></li>
+  <li>C3 metrics / events：<code>dev/rwm/preprocess/filtering/c3_video_quality.py</code></li>
+  <li>C3 standalone runner：<code>dev/rwm/preprocess/filtering/agibot_beta_c3_pilot.py</code></li>
+  <li>C3 review packet runner：<code>dev/rwm/preprocess/filtering/agibot_beta_c3_review.py</code></li>
+  <li>Tests：<code>dev/rwm/tests/preprocess/filtering/</code></li>
+</ul>
+</body>
+</html>

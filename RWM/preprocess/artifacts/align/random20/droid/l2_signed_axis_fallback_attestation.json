@@ -1,0 +1,48 @@
+{
+  "schema_version": "droid_l2_signed_axis_reviewer_fallback_v1",
+  "dataset": "droid",
+  "scope": "frozen_random20_seed20260704_only",
+  "reviewed_at_utc": "2026-07-04T19:27:41Z",
+  "reviewer": {
+    "issuer_id": "workspace_user_explicit_review",
+    "kind": "human_reviewer",
+    "statement": "现在没有实际硬件来源的话，就按照L3的",
+    "statement_scope_interpretation": "When an actual DROID Robotiq mount/CAD transform is unavailable, use the bound L3 physical review as the signed-axis oracle for this frozen random-20 scope."
+  },
+  "input_bindings": {
+    "selection_manifest_sha256": "42d46c9d03e3446bcaa68fd940f086c3b52953ae20ed67489372ad06c4e9b76a",
+    "l3_reviewer_attestation_sha256": "37521eefab939faf6a5cf434056175cb2666b660d3917f696e465db4093e913a",
+    "prior_l2_evidence_receipt_sha256": "21751d8d064ed8634944bc54126aff438f70f5b3e9881abe0332cbfcd17c0d0d"
+  },
+  "fallback_condition": {
+    "condition": "actual_droid_robotiq_mount_transform_not_pinned",
+    "satisfied": true,
+    "policy": "use_bound_L3_physical_review_for_signed_axis"
+  },
+  "accepted_signed_axis": {
+    "verdict": "PASS",
+    "transform_revision": "droid_panda_link8_to_canonical_e_v2",
+    "T_panda_link8_E": [
+      [0.0, -1.0, 0.0, 0.0],
+      [0.0, 0.0, -1.0, 0.0],
+      [1.0, 0.0, 0.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+    ],
+    "axis_mapping": {
+      "E+X_approach": "+Z_panda_link8",
+      "E+Y_normal": "-X_panda_link8",
+      "E+Z_signed_jaw": "-Y_panda_link8"
+    },
+    "physical_oracle": "bound_random20_L3_reviewer_attestation"
+  },
+  "effect": {
+    "signed_jaw_field": "PASS_BY_AUTHORIZED_L3_FALLBACK",
+    "signed_normal_and_complete_transform": "PASS_BY_AUTHORIZED_L3_FALLBACK",
+    "machine_L0_L1_effect": "NONE",
+    "calibration_mask_effect": "NONE; eleven samples remain canonically MASKED",
+    "exact_random20_L2_effect": "may PASS after all bound machine gates are PASS and canonical masks are preserved",
+    "exact_random20_alignment_effect": "NONE; the L2 receipt does not aggregate full alignment",
+    "corpus_effect": "NONE; do not propagate to the 15904 renderable or 29049 total corpus episodes",
+    "training_readiness_effect": "NONE"
+  }
+}

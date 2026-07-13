@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FILTER C3 — Video Quality Filtering</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1080px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="index.html">← FILTER Evidence</a> · <a href="../index.html">Preprocess index</a></p>
+<h1>C3 — Video Quality Filtering</h1>
+<p>C3 检查训练视频的基本可用性与时间冗余：black frame、corrupted frame、blurred frame 和 prolonged static segment。静止段必须同时参考 RGB change 与 proprio activity；视觉变化小本身不能证明数据冗余。</p>
+<p class="ok"><b>当前状态：</b><code>IMPLEMENTED / EVIDENCE_COMPUTED / MANUAL_REVIEW_PACKET_READY / PROVISIONAL_POLICY_V1</code>。AgiBotWorld-Beta frozen 10-long scope 的 10/10 parent head video 已 full decode，178/178 split 各有独立 C3 JSON；另已生成 112 对可直接查看的同名 MP4+JSON。当前严格保持 <code>selection_effect=NONE</code>，没有 KEEP/DROP、eligibility 或 L4 readiness。</p>
+
+<h2>Qwen-RobotManip 明确写了什么</h2>
+<ol>
+  <li>通过 image-processing checks 识别 black、corrupted、blurred frames 和 prolonged static segments。</li>
+  <li>静止冗余判断联合使用 image 与 state/action signals；论文指出这类冗余常出现在 episode 开始或结束。</li>
+  <li>保留 task-critical key frames；论文明确举例 gripper closure，避免删掉视觉变化很小但语义重要的 transition。</li>
+</ol>
+<p>原文没有说所有静止段都坏，也没有说一帧 blur 就删除整个 episode。论文见 <a href="https://arxiv.org/abs/2606.17846">Qwen-RobotManip technical report</a>。</p>
+
+<h2>论文没有公开的关键细节</h2>
+<table>
+  <tr><th>Missing specification</th><th>本项目处理</th></tr>
+  <tr><td>Decoder/backend、camera/view、color space、resize、FPS 和 frame mapping</td><td>必须按 dataset/camera profile 冻结并 hash 绑定；当前仅为 Beta <code>observation.images.head</code>。</td></tr>
+  <tr><td>Black、blur、visual-static 的 metric 与阈值</td><td>当前数值是 project-provisional engineering thresholds，不称论文复现。</td></tr>
+  <tr><td>State/action static 的 AND/OR、字段、单位与 action 语义</td><td>当前使用 frozen observed <code>motion80</code> 的物理 group magnitude，明确不是 issued command。</td></tr>
+  <tr><td>最短静止时间、hysteresis、boundary-only 或 all-episode</td><td>当前先在 split 内全域测量，并单独标记 LEFT/RIGHT/INTERIOR，不自动删除。</td></tr>
+  <tr><td>Gripper event detector、debounce、guard band 与冲突 precedence</td><td>当前从 observed <code>state80 g[t]</code> 显式检测；保护只抵消 static removal，不掩盖 corrupt/black/blur。</td></tr>
+  <tr><td>Frame/segment/episode selection 粒度与 multi-view aggregation</td><td>尚未冻结 named-loss selection；当前每个 camera-frame/edge 测量，按 official split 汇总。</td></tr>
+</table>
+
+<h2>跨数据集 General Requirements</h2>
+<table>
+  <tr><th>Requirement</th><th>General contract</th></tr>
+  <tr><td>Applicability</td><td>Black/corrupt/blur 对任何 exact-bound RGB 都适用；prolonged-static 还需要同一时间网格上的有效 state/motion。Robot-SAM、URDF 与 camera reprojection 不是 C3 前提，因此 C3 与 C2 独立。Human virtual-gripper event 只在其 canonical gripper mask 有效时使用。</td></tr>
+  <tr><td>Exact input packet</td><td>绑定 source video ZIP/member、member SHA-256/CRC、sidecar bytes/semantic hash、camera role、frame count/FPS/shape、full-decode backend/version/hash、canonical sidecar/receipt/schema/hash、timestamps、state/motion/gripper masks、split/task hash、policy 与 code hash。Identity drift 为 <code>INPUT_REJECTED</code>，不得 fallback 到另一 camera。</td></tr>
+  <tr><td>Full decode 与 corruption</td><td>必须 presentation-order sequential decode，而不是逐 split 时间 seek；container/member/sidecar mismatch、short decode、decoder error、shape/count mismatch 和 checker crash 分开记录。Frame mapping 一旦不可信，不能把后续 decoded ordinal 假装成 canonical row。</td></tr>
+  <tr><td>Metric profile</td><td>Luma、near-black ratio、contrast、Laplacian variance 和 adjacent visual change 必须冻结 color/resize/resolution。保留 raw metric；阈值按 dataset、camera、codec、resolution、FPS 和 source revision 校准。</td></tr>
+  <tr><td>Cross-modal static</td><td>只有同一 continuous edge 同时 <code>visual-low AND proprio-low</code>，且持续达到 frozen physical duration，才标 prolonged-static candidate。Visual-only 与 proprio-only evidence 不能合并成坏样本结论。</td></tr>
+  <tr><td>Gripper/key events</td><td><code>motion80[t]</code> 的 gripper slot 是 <code>g[t]</code>，不是 Δg。Open/close 必须从连续、有效 observed <code>state80</code> 显式差分并做 cumulative excursion、debounce 和 guard band；左右手分别检测。Invalid/gap 不造 event。</td></tr>
+  <tr><td>Split 与 clean segment</td><td>Measurement unit 为 frame 或 incoming edge；aggregation unit 为同一 clean segment 内 half-open range。Official action split <code>[s,e)</code> 的内部 incoming edge 只有 <code>[s+1,e)</code>；split 左边界、timestamp gap、invalid frame/edge、decode failure 都断开 visual difference、duration、event 与 range merge。</td></tr>
+  <tr><td>Read-only / selection</td><td>C3 不修改 video、canonical values、timestamps、masks 或 split。未来 excluded frame 必须形成新的 eligibility clean-segment boundary，训练 window 不得跨过去连接 <code>motion80</code>。只有 named loss/window/reason precedence 和 held-out calibration 冻结后才能写 selection。</td></tr>
+</table>
+
+<h2>AgiBotWorld-Beta v1 pipeline</h2>
+<pre><code>frozen S1–S5 10-long scope manifest
+  → re-verify 10 exact parents + 178 split IDs/hashes
+  → bind canonical head RGB member to source ZIP member
+  → SHA-256 source MP4 + exact sidecar
+  → ffmpeg 7.0.2 full sequential decode (74,980 frames)
+  → resize each frame to 160×120 RGB
+  → reset edge/event state at every official split [s,e)
+  → black / blur / visual motion metrics
+  → normalized observed proprio activity from motion80
+  → prolonged static + gripper open/close protection
+  → one qwen_c3_video_quality.json per split
+  → summary / run manifest / inventory; atomic publish</code></pre>
+<p>视频按 parent 只 hash/decode 一次；C3 仍严格按用户指定的 split episode 处理，任何静止 range、视觉 edge 或 gripper guard 都不跨 split。74,980 个 parent frames 中 69,245 帧属于 action splits；其余 5,735 帧明确记为 outside-split，不参与本轮 C3 verdict。</p>
+
+<h2>Provisional v1 policy</h2>
+<table>
+  <tr><th>Evidence</th><th>Current threshold/profile</th></tr>
+  <tr><td>Black candidate</td><td>BT.601 luma mean ≤ <code>8</code>，或 luma≤16 的 pixel fraction ≥ <code>0.98</code>。</td></tr>
+  <tr><td>Blur candidate</td><td>160×120 luma 上 OpenCV Laplacian variance ≤ <code>20</code>。</td></tr>
+  <tr><td>Visual low motion</td><td>Adjacent-frame gray mean absolute difference ≤ <code>1.0</code>（0–255 luma scale）。</td></tr>
+  <tr><td>Proprio low motion</td><td>每个有效 group 的 magnitude 除以 frozen group threshold 后取 max；normalized max ≤ <code>1.0</code>，且至少 4/8 groups 有效。</td></tr>
+  <tr><td>Prolonged static</td><td><code>visual-low AND proprio-low</code> 连续至少 <code>60 frames = 2.0 s</code>；不跨 split/gap/invalid edge。</td></tr>
+  <tr><td>Gripper event</td><td>Observed closedness cumulative excursion ≥ <code>0.1</code>，连续确认 3 帧，step epsilon 0.001；保护前后各 15 帧（0.5 s），并裁到同一 continuous segment。</td></tr>
+</table>
+<table>
+  <tr><th>Normalized proprio group</th><th>Scale corresponding to ratio=1</th></tr>
+  <tr><td>Left/right joint max |Δq|</td><td>各 <code>0.002 rad/frame</code></td></tr>
+  <tr><td>Left/right EEF translation norm</td><td>各 <code>0.001 m/frame</code></td></tr>
+  <tr><td>Left/right EEF rotation angle</td><td>各 <code>0.005 rad/frame</code></td></tr>
+  <tr><td>Camera translation norm</td><td><code>0.0005 m/frame</code></td></tr>
+  <tr><td>Camera rotation angle</td><td><code>0.002 rad/frame</code></td></tr>
+</table>
+<p class="warn"><b>这些数值不是 Qwen 论文参数。</b>它们尚未经过 labeled sharp/blur、legitimate dark scene、waiting/contact/static truth 的 held-out calibration，因此只产生 candidate evidence。</p>
+
+<h2>10-long / 178-split 实测结果</h2>
+<table>
+  <tr><th>Evidence</th><th>Result</th><th>Interpretation</th></tr>
+  <tr><td>Exact full decode</td><td>10/10 parents；<code>74,980 / 74,980</code> frames；ffmpeg return code 均为 0</td><td>本 scope 没有 short decode 或 untrusted frame mapping；这是 decode evidence，不是整体视频质量 PASS。</td></tr>
+  <tr><td>Split C3 records</td><td><code>178 / 178 EVIDENCE_COMPUTED</code></td><td>每个 split 一个独立 JSON；完整闭账、无 worker failure。</td></tr>
+  <tr><td>Black candidate</td><td><code>0 / 69,245</code></td><td>Observed luma mean minimum 89.67，near-black fraction maximum 0.245；只说明没有越过当前 conservative threshold。</td></tr>
+  <tr><td>Blur candidate</td><td><code>0 / 69,245</code></td><td>Laplacian variance minimum 483.60，远高于 threshold 20；不证明所有帧都足够 sharp，threshold 仍需 labeled calibration。</td></tr>
+  <tr><td>Raw prolonged static</td><td><code>43 ranges / 4,438 frames / 39 splits</code>，占 split frames <code>6.41%</code></td><td>每段原始长度 60–183 帧，中位数 90 帧；只是 redundant-static candidate。</td></tr>
+  <tr><td>Static location</td><td>LEFT 4、RIGHT 5、INTERIOR 34 ranges</td><td>多数在 split 内部，而不是边界；可能包含等待、保持接触、慢操作或任务停顿，不能自动 trim。</td></tr>
+  <tr><td>Gripper key events</td><td><code>155</code> events：左 open/close 26/27，右 open/close 50/52</td><td>Guard union 覆盖 6,071 帧；多数 event 不在 static candidate 中。</td></tr>
+  <tr><td>Static protected</td><td><code>501 / 4,438</code> static frames（11.29%）</td><td>这些帧同时属于 prolonged-static 和 gripper guard，明确禁止因 static reason 删除。</td></tr>
+  <tr><td>Static unprotected</td><td><code>3,937 frames</code>（split frames 5.69%）</td><td>仍然只是待 review candidate；当前没有执行删除或 eligibility。</td></tr>
+</table>
+
+<h2>人工 review packet（已生成）</h2>
+<p class="ok"><b>直接打开：</b><a href="../artifacts/filter/agibot_beta_qwen_c3_review_v1/index.html"><code>agibot_beta_qwen_c3_review_v1/index.html</code></a>。每条 evidence 都是同一目录下的 <code>clips/filename.mp4</code> 与 <code>clips/filename.json</code>；HTML 可按 tag 筛选并直接播放。</p>
+<table>
+  <tr><th>Item</th><th>Frozen result</th></tr>
+  <tr><td>Pairs</td><td><code>112 MP4 + 112 JSON</code>；同名 stem 严格一一对应。共 11,071 frames / 369.03 s，H.264 yuv420p 640×480 @ 30 FPS。</td></tr>
+  <tr><td>Mandatory static</td><td>43/43 prolonged-static ranges 均有独立 clip；12/12 <code>static_protected</code> ranges、501/501 protected frames 全部可见。</td></tr>
+  <tr><td>Calibration slots</td><td>请求 123 slots，实际取得 118：20 blur tail、10 dark-luma tail、10 near-black tail、10 short-static near miss、10 visual-only near miss、10 proprio-only near miss、5 clean controls，加 43 mandatory static。6 个 non-static slots 已合并进能完整看到其 core 的现有 clip，因此最终为 112 pairs。另 5 个 clean-control slot 没有满足“完整 61-frame context 全部 clean”的合法 range，明确记为 unavailable，不放宽条件伪造 control。</td></tr>
+  <tr><td>Per-pair JSON</td><td>包含该 clip 每一帧的全部 6 个 C3 metrics、16 个 masks、metric summary、range/event intersection、annotation、split/parent/global frame bounds、source ZIP/member/C3 hash binding、MP4 hash、人工 label taxonomy 与 <code>PENDING</code> 状态。</td></tr>
+  <tr><td>Frame-exact gate</td><td>每个 parent 一次 decode；对 parent selected rows 与 timing-normalized clip branch 的 yuv420p pre-encode frame size+SHA-256 逐帧比较，再完整解码 MP4。112/112 均为 <code>PASS_PARENT_PREENCODE_HASH_EXACT</code> 与 <code>PASS_EXACT_FRAME_COUNT</code>。</td></tr>
+  <tr><td>Selection boundary</td><td>Review packet 只复制可查看 evidence，不修改 frozen C3/canonical，不写 KEEP/DROP、eligibility 或 readiness。人工 label 应写到新的 receipt，不能回改 deterministic packet。</td></tr>
+</table>
+
+<h2>如何解读 0 black / 0 blur 与 4,438 static</h2>
+<ul>
+  <li><b>0 black/blur 不是 PASS：</b>只表示没有越过当前阈值。尤其 blur threshold 比实测 minimum 低很多，需要 labeled blur calibration 才能决定是否过于保守。</li>
+  <li><b>Static 不等于坏数据：</b>34/43 段在 split interior，不能套用“只 trim 开头结尾”的假设。需要看对应动作、接触/等待状态和训练 loss。</li>
+  <li><b>Gripper protection有效：</b>如果直接按 prolonged-static 删除，会误伤 501 个已检测到关键 open/close guard 内的帧。</li>
+  <li><b>当前没有 clean-segment selection：</b><code>static_unprotected</code> 是保护后剩余 evidence；保护会把一个 ≥60-frame 原段切成短片段，不能再把每个碎片独立解释为“持续 ≥2 秒”。</li>
+</ul>
+
+<h2>输出与验证</h2>
+<ul>
+  <li>Policy：<a href="../artifacts/filter/agibot_beta_qwen_c3_10long_v1/policy.json"><code>policy.json</code></a></li>
+  <li>Run manifest：<a href="../artifacts/filter/agibot_beta_qwen_c3_10long_v1/run_manifest.json"><code>run_manifest.json</code></a></li>
+  <li>Summary：<a href="../artifacts/filter/agibot_beta_qwen_c3_10long_v1/summary.json"><code>summary.json</code></a></li>
+  <li>Inventory：<a href="../artifacts/filter/agibot_beta_qwen_c3_10long_v1/inventory.json"><code>inventory.json</code></a></li>
+  <li>Parent binding：<code>parents/episode_*/video_binding.json</code>；10/10 为 <code>BOUND_AND_DECODED_EXACT</code>。</li>
+  <li>Split evidence：<code>splits/episode_*/split_*/qwen_c3_video_quality.json</code>；178/178。</li>
+  <li>Post-publish verification：191 inventory entries 的 size/SHA-256 全匹配；178 stage semantic hashes 全通过；10 video bindings exact；planned/accounted parents=10/10、splits=178/178。</li>
+  <li>Manual review gallery：<a href="../artifacts/filter/agibot_beta_qwen_c3_review_v1/index.html"><code>review_v1/index.html</code></a>；<a href="../artifacts/filter/agibot_beta_qwen_c3_review_v1/summary.json">summary</a>、<a href="../artifacts/filter/agibot_beta_qwen_c3_review_v1/manifest.json">manifest</a>、<a href="../artifacts/filter/agibot_beta_qwen_c3_review_v1/inventory.json">inventory</a>。</li>
+  <li>Review post-publish verification：228 inventory files 的 size/SHA-256 全匹配；112/112 sibling pairs、record semantic hashes、6 metric/16 mask slice lengths、frame-selection hashes 与 decode counts 全通过。</li>
+</ul>
+
+<h2>代码与下一 gate</h2>
+<ul>
+  <li>Pure metrics/events：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/c3_video_quality.py"><code>filtering/c3_video_quality.py</code></a></li>
+  <li>Standalone Beta runner：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/agibot_beta_c3_pilot.py"><code>filtering/agibot_beta_c3_pilot.py</code></a></li>
+  <li>Review packet runner：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/agibot_beta_c3_review.py"><code>filtering/agibot_beta_c3_review.py</code></a></li>
+  <li>Versioned profile：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/configs/preprocess/filtering/agibot_beta_c3_video_quality_v1.json"><code>configs/preprocess/filtering/agibot_beta_c3_video_quality_v1.json</code></a></li>
+  <li>Review profile：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/configs/preprocess/filtering/agibot_beta_c3_review_v1.json"><code>configs/preprocess/filtering/agibot_beta_c3_review_v1.json</code></a></li>
+  <li>Tests：<code>tests/preprocess/filtering/test_c3_video_quality.py</code>、<code>test_agibot_beta_c3_pilot.py</code> 与 <code>test_agibot_beta_c3_review.py</code>。</li>
+</ul>
+<p>下一 gate 是使用已生成的 review packet 建立人工 labeled calibration：合法暗场、真正 black、清晰/defocus/motion blur、边界 idle、interior wait/contact/slow action，以及 gripper event guard。冻结 held-out thresholds、named loss、window length 和 reason precedence 之后，才能讨论哪些 <code>static_unprotected</code> 进入 REVIEW 或 DROP。</p>
+</body>
+</html>

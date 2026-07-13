@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FILTER S5 — Base Frame and EEF Orientation Alignment</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1050px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="index.html">← FILTER Evidence</a> · <a href="../index.html">Preprocess index</a></p>
+<h1>S5 — Base Frame and End-Effector Orientation Alignment</h1>
+<p>S5 统一不同 robot datasets 的 world/base 朝向与 EEF 局部坐标轴约定，使相同物理方向在不同 embodiment 中具有一致的几何语义。Qwen 把它列在五阶段 data pipeline 中；本项目按“谁会改变 canonical 数值与坐标语义”划分 owner，因此把 S5 明确归入 <b>ALIGN</b>，不是根据逐帧误差删除数据的 threshold filter。</p>
+<p class="ok"><b>稳定规则：</b><code>ALIGN applies and verifies; FILTER only binds and consumes.</code> 每个 dataset/source revision/side/mount/tool/hardware 在 canonical packing 前定义并应用 S5；FILTER 不再估计、旋转、修正或筛选 S5，只核对 exact sidecar/schema/transform/receipt/hash。Identity/hash/schema drift 直接 <code>INPUT_REJECTED</code>；物理语义或 receipt 未闭合则保持 <code>UNVERIFIED/REVIEW</code>、不得产生 eligibility，并返回 ALIGN，Evidence mode 仅可继续只读诊断。</p>
+<p class="warn"><b>AgiBotWorld-Beta 结论：</b>current v5 sidecar 已包含 ALIGN 应用的 canonical local EEF correction，左右侧均为 <code>Ry(-90°)</code>，原点仍为 flange；project-side world correction 为 identity，直接继承 upstream <code>agibot_aligned_world</code>。2026-07-05 项目 owner 已对 exact current-v5 random-20 packet 给出 <a href="../canonical_visual_alignment_signoff.html"><code>CANONICAL_ALIGNED / USER_VISUAL_PASS</code></a>，因此这组 local axes 与 reviewable world/camera visual mapping 作为项目 canonical contract 接受。FILTER 不再应用或重新估计 S5 correction，只保留 exact-binding 检查；不再次旋转、不计算 row flags、不筛帧。Frozen v5 machine receipt 仍为 <code>UNVERIFIED</code>，表示 full-corpus strict L0–L3 尚未聚合，不再表示“视觉 alignment 待确认”；masked/negative evidence 仍保持 MASKED。</p>
+
+<h2>Qwen-RobotManip 的 S5</h2>
+<p><a href="https://arxiv.org/abs/2606.17846">Qwen-RobotManip technical report</a> 的正文全名是 <em>Base Frame and End-Effector Orientation Alignment</em>；Figure 2 简写为 <em>Orientation Alignment</em>。论文对每个 dataset 应用 rotation correction，使 world-frame 的正 X 轴一致对应机器人前方，并让跨 embodiment 的 unified state-action representation 保持几何一致。</p>
+<p>论文没有公布 correction matrices、估计/标定方法、矩阵方向、左右臂规则、orientation-error metric、阈值或删除策略。因此 S5 提供的是 alignment 目标，不是一套可以按论文复刻的 frame-level filter。</p>
+
+<h2>在本项目中拆成两个 transform</h2>
+<p>设 dataset source world 为 <code>W_d</code>，统一 world 为 <code>W</code>，原始 flange/EEF frame 为 <code>S</code>，canonical gripper frame 为 <code>E</code>：</p>
+<pre><code>T_W_E = T_W_Wd @ T_Wd_S @ T_S_E
+        └base/world correction┘  └local EEF correction┘</code></pre>
+<table>
+  <tr><th>Component</th><th>作用</th><th>组合方向</th></tr>
+  <tr><td><code>T_W_Wd</code></td><td>统一 dataset 的 global world/base orientation，例如把 source 的 <code>+Y forward</code> 旋成 canonical <code>+X forward</code>。</td><td>左乘所有同一 source world 表达的 geometry；camera、EEF 和其他 world-frame fields 必须一致处理。</td></tr>
+  <tr><td><code>T_S_E</code></td><td>把 raw flange/link/tool 的局部轴映射为 canonical E：<code>+X</code> approach、<code>+Z</code> signed jaw、<code>+Y=+Z×+X</code>。</td><td>右乘 raw absolute EEF pose；可以随 dataset、side、mount、tool 和 hardware revision 改变。</td></tr>
+</table>
+<p>两者不能互相代替。只旋转 EEF 而不一致处理 camera/world 会破坏相对几何；只统一 world 也不会自动解决不同 flange/tool local axes。</p>
+
+<h2>跨数据集 General Requirements（ALIGN owner）</h2>
+<p>未来接入任何 robot dataset 时，S5 都是在生成 canonical state/motion 之前执行一次的 dataset profile gate，而不是在每次 FILTER run 中重新寻找一个 rotation。</p>
+<table>
+  <tr><th>Requirement</th><th>General contract</th></tr>
+  <tr><td>Source inventory</td><td>逐 dataset、source revision、embodiment、side、mount、tool 和 hardware revision 冻结 raw pose producer、world/base parent、EEF child frame、origin type、rotation convention、units、timestamps 与 raw values；未知 frame/origin 不靠名字或旧数据集猜测。</td></tr>
+  <tr><td>Global/base mapping</td><td>定义版本化 <code>T_W_Wd</code>，明确 canonical world 的物理方向，例如 <code>+X=robot forward</code>。同一 source world 中的 EEF、camera、base 与其他 geometry 必须一致左乘；不能只旋转 EEF 后仍把旧 camera 当作同一 world。</td></tr>
+  <tr><td>Local EEF mapping</td><td>定义版本化 <code>T_S_E</code>，使 canonical <code>E+X</code> 为 physical approach、<code>E+Z</code> 为 signed jaw、<code>E+Y=E+Z×E+X</code>，并保持 right-handed SO(3)。每个 side/tool/mount 独立求证，禁止套用 human side sign 或其他 robot 的 axis permutation。</td></tr>
+  <tr><td>Origin 与 TCP</td><td>Rotation 和 origin translation 分开验证。Flange、URDF link、controller TCP、tool tip、jaw center 不得静默混用；未知 <code>T_flange_TCP</code> 时保留已识别 origin。任何 verified origin/axis change 都升级 transform/schema revision。</td></tr>
+  <tr><td>Evidence 与 verification</td><td>结合 source/controller/URDF geometry、独立 FK/mount checks 和真实 RGB/camera projection，分别验证 approach、normal、unsigned jaw line、signed jaw polarity、world direction 与 origin。低 motion reconstruction error 只能证明 self-consistency，不能证明 absolute axes。</td></tr>
+  <tr><td>Regeneration</td><td>S5 mapping 一旦改变，必须从 preserved raw pose 重建 absolute EEF/camera geometry、<code>state80</code>、<code>motion80</code>、masks、L0–L3 receipts、renders、tests 和所有下游 filter artifacts；禁止只改 metadata。</td></tr>
+  <tr><td>FILTER handoff</td><td>FILTER 只验证 exact source/sidecar/schema/transform/receipt/hash binding 并尊重 alignment field verdict。匹配时 S5 data operation 为 <code>NONE</code>；identity/hash/schema mismatch 时 <code>INPUT_REJECTED</code>。物理语义或 current receipt 未闭合时保持 <code>UNVERIFIED/REVIEW</code>、不得 eligibility，并返回 ALIGN；Evidence mode 只可继续只读诊断。绝不在 FILTER 左乘/右乘 correction、改 origin 或 repack。</td></tr>
+</table>
+
+<h2>AgiBotWorld-Beta 中已应用的 ALIGN mapping</h2>
+<p>Beta adapter 将 <code>source_world_frame</code> 记录为 upstream packaged <code>agibot_aligned_world</code>，并读取 <code>head_extrinsic_params_aligned.json</code>；project side 不施加额外 world rotation，数学上等价于候选 <code>T_W_Wd=I</code>，代码中没有另存一份独立 <code>T_W_Wd</code>。这不证明 inherited world 已满足 canonical <code>+X=robot forward</code>。EEF local correction 则显式应用于左右两侧：</p>
+<pre><code>T_S_E = [[0, 0,-1, 0],
+         [0, 1, 0, 0],
+         [1, 0, 0, 0],
+         [0, 0, 0, 1]] = Ry(-90°)
+
+E+X approach = S+Z
+E+Y normal   = S+Y
+E+Z jaw      = S-X</code></pre>
+<ul>
+  <li>左右使用同一 source-frame matrix；右侧 URDF mount 已经编码左右镜像，不再人为附加 human-style side sign。</li>
+  <li>当前原点保留 <code>arm_{l,r}_end_link</code> flange origin，<code>canonical_tcp_offset_applied=false</code>。</li>
+  <li><code>canonical.py</code> 对 raw absolute EEF pose 右乘该 correction，再生成 camera-relative <code>state80</code> 和 observed <code>motion80</code>。</li>
+  <li>当前 Beta 的 0.1 m translation-only <code>gripper_center</code> candidate 会改变 origin 和 translation motion，但保持这里的 canonical axes；一般 <code>T_flange_TCP</code> 也可能含 rotation，必须逐 tool/revision 独立验证并在 ALIGN 重建。</li>
+</ul>
+
+<h2>历史 acceptance 与 current v5 状态</h2>
+<table>
+  <tr><th>Scope</th><th>Evidence / status</th><th>正确解读</th></tr>
+  <tr><td>历史 v7 Qwen-signed pilot</td><td><code>ACCEPTED PILOT</code>；8-episode independent FK/mount report；10/10 selected visual windows PASS。</td><td>支持上述 <code>Ry(-90°)</code> local EEF axes；scope 是旧 v3 pilot schema，不能自动变成 current v5 corpus receipt。</td></tr>
+  <tr><td>Current v5 canonical release</td><td>使用相同 <code>Ry(-90°)</code> matrix 与 flange-origin policy；project-side <code>T_W_Wd=I</code>，继承 upstream <code>agibot_aligned_world</code>；artifact 已生成并 hash-bound。</td><td>说明 local EEF transform 已应用、upstream world 以 identity project correction 继承；不需要 FILTER 重做。</td></tr>
+  <tr><td>2026-07-05 user visual signoff</td><td>绑定 exact current-v5 manifest SHA <code>2e7b0d…324</code>、20 samples / 20 source ZIPs / 10L+10R；15 reviewable windows 接受，5 个 deterministic negative/masked scope 保留。</td><td>项目 canonical mapping 与 reviewable visual alignment 已接受；该人工 L3 decision 不把 masked rows、TCP、command 或未抽样 corpus 自动提升为 PASS。</td></tr>
+  <tr><td>Current v5 release receipt</td><td><code>artifact_status=SUCCESS</code>、<code>alignment_status=UNVERIFIED</code>。</td><td>Full-corpus camera/RGB coverage、active source strata 与 L0–L3 strict aggregation 尚未形成 PASS receipt；不否定 transform 已应用或本轮 sample visual signoff。</td></tr>
+</table>
+<p class="warn"><b>不要混读：</b><code>CANONICAL_ALIGNED / USER_VISUAL_PASS</code> 描述项目已接受的数据 frame mapping 与 hash-bound sample visual decision；标准字段 <code>alignment_status=PASS</code> 仍要求某个 exact schema 和 scope 完成 machine L0/L1、independent L2、L3 decision 与完整 coverage 的 strict aggregation。前者已经成立，后者不能由 sample signoff 外推到 current corpus。</p>
+
+<h2>当前 10-long S5 JSON 实际做了什么</h2>
+<table>
+  <tr><th>Field</th><th>178/178 records</th><th>Meaning</th></tr>
+  <tr><td><code>status</code></td><td><code>ALREADY_APPLIED_BY_ALIGN</code></td><td>S5 correction 属于上游 canonical conversion，不在 FILTER 重复执行。</td></tr>
+  <tr><td><code>details.filter_operation</code></td><td><code>VERIFY_EXACT_BINDINGS_ONLY</code></td><td>核对 sidecar、schema、release receipt、split 和 hashes。</td></tr>
+  <tr><td><code>details.data_operation</code></td><td><code>NONE</code></td><td>不改 canonical values、frames、axes、origin 或 masks。</td></tr>
+  <tr><td><code>selection_effect</code></td><td><code>NONE</code></td><td>没有 frame、transition、split 或 parent 因 S5 被删除。</td></tr>
+  <tr><td>Evidence reference</td><td>同一 exact ALIGN release receipt；10 个 parent 使用各自 canonical sidecar hash。</td><td>只证明 identity binding，不将 receipt status 提升。</td></tr>
+</table>
+<p>178 个 JSON 并非逐字相同：它们有各自的 split scope、split hash 和 record semantic hash；但 S5 operation/status 相同。当前没有 orientation residual、threshold、flagged row 或 S5 selection policy。</p>
+
+<h2>为什么不能用 motion80 反证或验证 S5</h2>
+<p>固定的 local rotation <code>Q</code> 会从空间相邻旋转中消去：</p>
+<pre><code>(R[t] Q) @ (R[t-1] Q)^T = R[t] @ R[t-1]^T</code></pre>
+<p>同样，如果 EEF 和 camera 一致地左乘相同 world rotation，camera-relative pose 中该 global rotation 也会抵消。因此低 motion reconstruction error 证明的是 packing/self-consistency，不能独立证明 canonical absolute axes。S5 的物理语义依赖 source model/mount 和真实 RGB 上的 approach、normal、signed jaw 与 camera agreement。</p>
+
+<h2>S4 与 S5 的区别</h2>
+<table>
+  <tr><th></th><th>S4</th><th>S5</th></tr>
+  <tr><td>问题</td><td>同一 source 内 joint + URDF FK 是否与 logged EEF 一致？</td><td>即使 source 内部一致，不同 datasets 的 world/base 与 EEF orientation 是否采用统一物理语义？</td></tr>
+  <tr><td>典型操作</td><td>诊断 joint/time/base/logger；TCP 或 shoulder/world correction 返回 ALIGN。</td><td>在 ALIGN 冻结 dataset/side/mount-specific rotation corrections。</td></tr>
+  <tr><td>本项目 FILTER 行为</td><td>下一版逐 arm-row 标记 mismatch，暂不删除。</td><td>只核对 exact binding；无 row flag、无 selection。</td></tr>
+</table>
+<p>所以某个 episode 的 S4 FK mismatch（例如 <code>40000077</code>）是该 source trajectory/logging 的 evidence，不等于全局 canonical axes correction 错误，也不要求在 FILTER 重新做 S5。</p>
+
+<h2>已讨论完成的 S5 policy</h2>
+<p class="ok"><b>Decision：</b>当前 Beta 的 local EEF correction 已由 ALIGN 应用，base/world contract 沿用 upstream <code>agibot_aligned_world</code>，并已获得 exact current-v5 visual packet user signoff；项目 canonical mapping 视为已接受。FILTER 保留现有 <code>ALREADY_APPLIED_BY_ALIGN</code> + <code>selection_effect=NONE</code> 语义，不生成逐帧 filter、不删除数据、不修改 canonical sidecar。该 operation/user-visual status 仍不等于 full-corpus machine <code>alignment_status=PASS</code>。</p>
+<ul>
+  <li>Filter input hash 或 transform revision 漂移时 fail closed，拒绝混用并返回 ALIGN。</li>
+  <li>未来 world/base、EEF axes、mount/tool 或 TCP origin 发生 schema-versioned 改动时，重建 state/motion/receipts，并重新生成全部 S/C artifacts。</li>
+  <li>历史 v7 acceptance 作为 transform rationale；2026-07-05 signoff 是 current-v5 sample visual acceptance；full-corpus machine PASS 仍必须由 exact current-schema strict receipt 单独表达。</li>
+  <li>S5 本身不产生 KEEP/DROP/REVIEW，也不作 <code>training_ready</code> claim。</li>
+</ul>
+
+<h2>代码与 artifacts</h2>
+<ul>
+  <li>S5 record contract：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/qwen_stage_records.py"><code>filtering/qwen_stage_records.py</code></a></li>
+  <li>Beta adapter / correction：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/real_robot/adapters.py"><code>real_robot/adapters.py</code></a></li>
+  <li>Canonical right-multiplication：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/real_robot/canonical.py"><code>real_robot/canonical.py</code></a></li>
+  <li>历史 accepted pilot：<a href="../artifacts/align/agibotworld_beta/index.html"><code>output/robot_align/agibotworld_beta/</code></a></li>
+  <li>Current pilot summary：<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/summary.json"><code>summary.json</code></a></li>
+  <li>每个 split 的记录：<code>splits/episode_*/split_*/qwen_s5_orientation_alignment.json</code></li>
+</ul>
+</body>
+</html>

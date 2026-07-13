@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FILTER S1 — Sudden Change</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1050px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="index.html">← FILTER Evidence</a> · <a href="../index.html">Preprocess index</a></p>
+<h1>S1 — Sudden Change</h1>
+<p>S1 是 Qwen-RobotManip-inspired 的 trajectory sudden-change evidence。它寻找“当前值显著偏离局部平滑趋势，并同时伴随剧烈动态变化”的 frame，用于定位关节、EEF、camera 或 observed action 中的短促跳变。</p>
+<p class="warn"><b>不是坏数据判定：</b>S1 不检查 absolute value 是否越界、不检查 command-state agreement、不检查 FK，也不能区分 sensor glitch 与真实快速动作、接触、碰撞或急停。输出只用于 review 排序；当前不产生 <code>KEEP/DROP</code>、eligibility 或 readiness。</p>
+
+<h2>目标与非目标</h2>
+<table>
+  <tr><th>S1 尝试捕获</th><th>S1 不能证明</th></tr>
+  <tr><td>一帧或短时间的 joint jump、EEF/camera pose spike、motion delta 突变、短促控制抖动。</td><td>该 frame 一定错误；整个 split/episode 应删除；canonical axes、camera、FK 或 command 已验证。</td></tr>
+  <tr><td>同一动态事件在 state、motion、joint、EEF 等不同表示中的候选响应。</td><td>这些响应是统计独立证据；<code>motion80</code> 本身由 observed state 派生。</td></tr>
+</table>
+<pre><code>smooth example: 0.00, 0.01, 0.02, 0.03, 0.04
+spike example:  0.00, 0.01, 0.50, 0.03, 0.04</code></pre>
+
+<h2>跨数据集 General Requirements</h2>
+<p>下面是未来把 S1 应用于任意 robot dataset 时必须满足的稳定要求。具体 signal extractor、连续段规则和 threshold 属于 dataset/source-revision policy；AgiBotWorld-Beta 的数值不能直接复制到其他数据集。</p>
+<table>
+  <tr><th>Requirement</th><th>General contract</th></tr>
+  <tr><td>Stage 与 frozen input</td><td>S1 属于 FILTER。只读取 frozen canonical values、per-field masks、authoritative timestamps、continuity 和 exact ALIGN receipt；不在 S1 中修轴、换单位、补 pose、改时间或重写 canonical masks。</td></tr>
+  <tr><td>Signal inventory</td><td>逐 dataset/source revision 声明要检查的 observed state、genuine command 或 training action view，并记录 producer、frame、origin、units、side/entity 和 control mode。State-derived <code>motion</code> 与 state 不是独立证据；离散 mode、button 和允许阶跃的 gripper 不能默认套用连续信号规则。</td></tr>
+  <tr><td>可比表示</td><td>Joint/translation 使用冻结的物理单位；不同移动坐标系中的向量必须先用已有 canonical geometry 表达到同一 basis。只有 basis、world convention、camera role 和 flange/TCP origin 具有 compatible exact field verdict 的 strata 才能 component-wise pooled fit；未验证或不兼容的 strata 只能各自生成 evidence，不能共用 channel threshold。Rotation 在 SO(3) 上用 relative rotation/geodesic metric，禁止直接对 quaternion、Euler 或 packed Rot6D components 做普通差分。</td></tr>
+  <tr><td>时间与连续段</td><td>每个 dataset profile 必须指定唯一 authoritative physical-time field；不得把 storage/header FPS 或任意 model clock 默认为物理时间。遇到 invalid endpoint、非递增时间、超阈值 gap、entity dropout、split/window 边界或 clean-segment change 必须断段；不得跨边界平滑、求导或连接事件。Boundary halo 只能来自同一连续 parent context，输出必须裁回原 selection unit。</td></tr>
+  <tr><td>Policy calibration</td><td>Smoothing、window、derivative order、minimum segment length、gap threshold 和 residual/dynamics thresholds 必须按 FPS/time regime、signal class、embodiment 与 source stratum 在代表性 calibration data 上冻结，再在 held-out data 审计。阈值必须带版本和 hash；论文未公开的参数不能标成 Qwen 原始设定。</td></tr>
+  <tr><td>Evidence scope</td><td>最小 flag unit 是 <code>entity + signal + channel + row/transition</code>，同时保留 measured residual、acceleration/jerk、threshold 和连续 range，再向 split/episode 汇总。单帧命中、边界命中或多 derived views 同时命中都不能自动升级为独立的物理错误。</td></tr>
+  <tr><td>Fail-closed 与 selection</td><td>Dataset 确实没有某类 signal/modality 时为 <code>NOT_APPLICABLE</code>；字段存在但连续有效样本不足时为 <code>INSUFFICIENT_EVIDENCE</code>；预期输入存在但 identity、timestamp、mask、frame、unit 或 policy contract 缺失/不匹配时为 <code>INPUT_REJECTED</code>；疑似 ALIGN semantic defect 时为 <code>REVIEW_REQUIRED</code> 并返回 ALIGN。以上都不能当 PASS。S1 先生成 evidence；只有另行冻结 named-loss、selection unit、reason precedence 和 window policy 后才能产生 eligibility。</td></tr>
+</table>
+
+<h2>AgiBotWorld-Beta pilot 输入</h2>
+<p>S1 不对 packed Rot6D 分量做差。State joint 使用 canonical sidecar 内 preserved source-observed columns（代码字段 <code>left/right_joint_state_raw</code>）及其 exact masks，不绕过 sidecar 回读未绑定 source；EEF/camera 使用 sidecar 中的显式 world transforms。Motion joint 读取 <code>motion80</code>，motion EEF/camera 则先把 <code>C[t-1]</code> 中的 delta 旋转或共轭到统一 parent world basis，再做跨帧比较。</p>
+<table>
+  <tr><th>Class</th><th>State signals</th><th>Motion signals</th></tr>
+  <tr><td>Joint</td><td>left/right observed joint position，共 14 channels。</td><td>left/right <code>motion80</code> joint delta，共 14 channels。</td></tr>
+  <tr><td>Translation</td><td><code>T_world_left_eef</code>、<code>T_world_right_eef</code>、<code>T_world_camera</code> 的 xyz，共 9 channels。</td><td>left/right EEF delta 与 camera delta 转到 world basis 后的 xyz，共 9 channels。</td></tr>
+  <tr><td>Rotation</td><td>left/right EEF 与 camera 的 SO(3)，3 signals。</td><td>left/right EEF delta 与 camera delta 转到 world basis 后的 SO(3)，3 signals。</td></tr>
+  <tr><td>Gripper</td><td colspan="2">不进入 S1；gripper 开合本身允许真实阶跃。</td></tr>
+</table>
+<p>共 16 组 signals：4 joint、6 translation、6 rotation。每个 signal 使用自己的 validity；没有一张“所有字段同时有效”的总 mask。</p>
+
+<h2>Split、motion 与连续段</h2>
+<pre><code>logical split frames/state = [s,e)
+eligible incoming motion   = [s+1,e)
+
+local row 0 ↔ canonical row s
+motion80[s] = incoming edge s-1 → s  # crosses split left boundary
+therefore local motion row 0 is force-masked in the FILTER view only</code></pre>
+<p>canonical values/masks 不修改。每个 channel 遇到 invalid mask、非有限 timestamp、非递增时间、<code>dt&gt;0.05 s</code>、<code>transition_contiguous=false</code> 或 clean segment 变化时立即断段；S1 不跨这些边界平滑或求导。</p>
+
+<h2>每个 channel 的计算</h2>
+<h3>1. 建立局部趋势</h3>
+<ol>
+  <li>5-frame median filter，1 pass，用于压制孤立尖峰对趋势的影响。</li>
+  <li>7-frame、二阶 timestamp-space local polynomial/Savitzky–Golay smooth。</li>
+  <li>使用当前 Beta sidecar 的 <code>model_time_sec</code>。该 profile 没有另设 model grid：它是由 authoritative <code>agibot.timestamp_ns</code> 归一化得到的 <code>video_time_sec</code> 的 exact copy；因此这里仍是 physical-time derivative。未来 dataset 必须读取其 profile 指定的 authoritative physical-time field，不能照抄字段名。</li>
+</ol>
+<pre><code>raw:    x(t)
+trend:  x_hat(t)</code></pre>
+
+<h3>2. 三个 metric</h3>
+<pre><code>residual(t)     = abs(x(t) - x_hat(t))
+acceleration(t) = abs(d²x / dt²)
+jerk(t)         = abs(d³x / dt³)</code></pre>
+<ul>
+  <li><code>residual</code>：当前值偏离附近趋势多少。</li>
+  <li><code>acceleration</code>：信号弯折得多剧烈。</li>
+  <li><code>jerk</code>：弯折的变化有多突然。</li>
+</ul>
+<p>导数在 raw signal 上计算，因而会放大短促噪声。对于 state position，这些量接近物理 acceleration/jerk；对于 <code>motion80</code> delta，它们是 action-delta 序列的高阶变化指标，不能严格等同于机器人真实物理加速度或 jerk。</p>
+
+<h3>3. Rotation 处理</h3>
+<p>Rotation 先转为 SO(3)，保证 quaternion <code>xyzw</code> 符号连续，再平滑并归一化。Residual 使用 geodesic angle；angular acceleration/jerk 来自相邻 rotation 的 relative rotvec 和 physical timestamp。Rot6D components 从不直接相减。</p>
+
+<h2>Provisional threshold 与 flag rule</h2>
+<p>Qwen-RobotManip 没有发布可直接移植到本数据的 numeric threshold。当前 pilot 把 10 个 long parent 的 178 个 split pooled，并对每个 signal/channel/metric 独立取 <code>q99.5</code>：</p>
+<pre><code>T_residual[channel]     = q99.5(residual)
+T_acceleration[channel] = q99.5(acceleration)
+T_jerk[channel]         = q99.5(jerk)
+
+channel_flag = residual &gt; T_residual
+               AND
+               (acceleration &gt; T_acceleration OR jerk &gt; T_jerk)
+
+signal_flag = any(channel_flag)
+S1 row flag = any(signal_flag)</code></pre>
+<p>Conjunction 的目的，是避免仅因“运动快”或仅因“偏离趋势”就命中；但真实接触、急停、控制振荡仍可能同时满足条件。阈值状态固定为 <code>provisional</code> / <code>pilot_arbitrary_not_paper_specified</code>。</p>
+
+<h2>当前 10-long pilot 结果</h2>
+<table>
+  <tr><th>Evidence</th><th>Result</th><th>Interpretation</th></tr>
+  <tr><td>S1 row union</td><td>3,335 / 69,245 = <code>4.82%</code></td><td>多 signal/channel union 后的候选覆盖率，不是坏数据率或 DROP 率。</td></tr>
+  <tr><td>Parent concentration</td><td><code>671000026</code> 12.46%；<code>40000077</code> 9.74%；<code>456000096</code> 6.39%；三者占全部 S1 flags 的 63.2%。</td><td>任务速度、接触方式和 source stratum 显著影响分布；10-long pilot 不能外推全库。</td></tr>
+  <tr><td>Highest split</td><td><code>671000026 [5317,5602)</code>：144/285 = 50.5%；right state joint、motion joint 与 right EEF 同时响应。</td><td>优先人工/视频复核；仍可能是真实放置、接触或控制动态。</td></tr>
+  <tr><td>Short events</td><td>49% 的 S1 ranges 为 1 frame，另有约 39% 为 2 frames。</td><td>不支持因为少量命中而删除整个 split/episode。</td></tr>
+  <tr><td>Boundary enrichment</td><td>距 split 首尾 7 frames 的位置占全部帧位 3.60%，却承载 5.52% S1 flags，约 1.53× 富集。</td><td>真实动作起停和无 parent halo 的滤波边缘效应尚未分开。</td></tr>
+  <tr><td>Motion boundary</td><td>178/178 split 的 local motion row 0 均屏蔽；无跨左边界 flag。</td><td>split/motion indexing contract 正确执行。</td></tr>
+</table>
+<p class="warn"><b>当前 decisive limitation：</b>阈值在同一 10-episode pilot 上拟合并回测，且 16 signals / 多 channels 最终取并集，因此 <code>4.82%</code> 不是异常概率。每个 split 又独立 smooth，没有 parent-context halo；首尾 7–10 frames 暂不能用于自动 selection。</p>
+
+<h2>当前使用方式与下一 gate</h2>
+<p>目前只把 S1 用作 review priority。优先级较高的是：远离 split 边界、连续多帧、state+motion 同时命中、joint+EEF 同时命中的范围。Camera-only、单帧和首尾范围降级处理。</p>
+<ol>
+  <li>从 parent 读取 7–10 frame context halo，保持 canonical gap/invalid boundary，不跨 clean segment。</li>
+  <li>只把结果裁回原 split <code>[s,e)</code>，与当前无-halo flags 做 stability comparison。</li>
+  <li>对 S1-only、与其他 evidence 共同命中、以及 clean control 做分层视频/轨迹复核。</li>
+  <li>在 stratified random corpus 与 held-out split 上冻结 policy 后，才讨论 selection reason 和 named-loss eligibility。</li>
+</ol>
+
+<h2>代码与 artifacts</h2>
+<ul>
+  <li>Signal metrics / policy / evaluation：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/qwen_signal_filters.py"><code>filtering/qwen_signal_filters.py</code></a></li>
+  <li>AgiBot signal extraction / world-basis conversion：<a href="https://github.com/Efficient-Large-Model/Sana/blob/rwm/yuyang/dev/rwm/preprocess/filtering/agibot_beta_qwen_pilot.py"><code>filtering/agibot_beta_qwen_pilot.py</code></a></li>
+  <li>Policy：<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/provisional_policy.json"><code>provisional_policy.json</code></a></li>
+  <li>Run summary：<a href="../artifacts/filter/agibot_beta_qwen_s1_s5_10long_v1/summary.json"><code>summary.json</code></a></li>
+</ul>
+</body>
+</html>

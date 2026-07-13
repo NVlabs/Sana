@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Canonical Visual Alignment Signoff — 2026-07-05</title>
+  <style>
+    body{font:15px/1.55 system-ui,sans-serif;max-width:1100px;margin:32px;color:#202124}
+    table{border-collapse:collapse;width:100%;margin:12px 0 24px}th,td{border:1px solid #ccd2d8;padding:7px;text-align:left;vertical-align:top}th{background:#f2f4f6}
+    code,pre{background:#f5f7f9}code{padding:1px 3px}pre{padding:10px;overflow:auto}
+    .warn{border-left:4px solid #f9ab00;padding:8px 12px;background:#fff8e1}.ok{border-left:4px solid #34a853;padding:8px 12px;background:#eef8f0}
+  </style>
+</head>
+<body>
+<p><a href="index.html">← Human/Robot Preprocess</a> · <a href="artifacts/align/random20/index.html">Visual gallery</a></p>
+<h1>Canonical Visual Alignment Signoff</h1>
+<p class="ok"><b>Project decision — 2026-07-05：</b>项目 owner 已明确确认 AgiBotWorld2026、AgiBotWorld-Beta、EgoVerse、VITRA 与 EgoDex 的 canonical alignment 已完成，视觉 alignment 通过。本记录把该决定绑定到 <code>full_release_visual_random20_seed20260704</code> 的五份 exact manifests，共 100 个 frozen samples。</p>
+<p>本项目状态因此写为 <code>CANONICAL_ALIGNED / USER_VISUAL_PASS</code>。Visible/reviewable 的 canonical axes、camera projection 与 motion 被接受；renderer 产生的 deterministic negative evidence、不可见字段和 canonical masks 继续保持 <code>MASKED</code>，不会因为人工 signoff 被改成 PASS。</p>
+<p class="warn"><b>机器状态边界：</b>这些 canonical releases 的既有 <code>READY.json</code>、random-20 reports 与 summaries 都在本次 signoff 前生成，文件内仍保留 <code>alignment_status=UNVERIFIED</code>、L2/L3 <code>REVIEW</code>。本页和<a href="canonical_visual_alignment_signoff_20260705.json">机器可读 decision record</a>记录新的人工视觉结论，但不覆写 frozen artifacts，也不伪造 full-corpus strict L0–L3 receipt、FILTER selection、L4 或 <code>training_ready</code>。</p>
+
+<h2>Exact scope</h2>
+<table>
+  <tr><th>Dataset / current schema</th><th>Canonical release accounting</th><th>Frozen visual packet</th><th>Decision</th></tr>
+  <tr>
+    <td><b>AgiBotWorld-Beta</b><br><code>rwm_robot80_v5_cosmos_incoming_motion_t_robot</code></td>
+    <td>158,724 accepted episodes；385 个缺 aligned head extrinsic 的 episodes 显式排除。Canonical local EEF mapping 为两侧 <code>[+Fz,+Fy,-Fx]</code>，origin 保留 flange。</td>
+    <td><a href="artifacts/align/random20/manifests/agibot_beta.json">manifest</a> SHA <code>2e7b0d…324</code>；20 samples / 20 source ZIPs / 10L+10R；15 reviewable + 5 deterministic negative/masked。Machine：L0 20 PASS；L1 19 PASS + 1 MASKED；L2/L3 REVIEW。</td>
+    <td><code>CANONICAL_ALIGNED</code><br><code>USER_VISUAL_PASS</code> for reviewable packet；masked scope 保留。</td>
+  </tr>
+  <tr>
+    <td><b>AgiBotWorld2026</b><br><code>rwm_robot80_v5_cosmos_incoming_motion_t_robot</code></td>
+    <td>19,329 episodes / 46,681,700 frames；artifact/accounting 0 failures。Dynamic waist registration 与两侧 canonical mapping <code>[+Fz,-Fx,-Fy]</code> 已接受。</td>
+    <td><a href="artifacts/align/random20/manifests/agibotworld2026.json">manifest</a> SHA <code>2e0e56…12d</code>；20 samples / 20 source ZIPs / 10L+10R；20 reviewable。Machine：L0/L1 20 PASS；L2/L3 REVIEW。</td>
+    <td><code>CANONICAL_ALIGNED</code><br><code>USER_VISUAL_PASS</code> for exact packet。</td>
+  </tr>
+  <tr>
+    <td><b>EgoDex</b><br><code>rwm_robot80_v4_incoming_motion_observed_gripper_t</code></td>
+    <td>338,223 accepted episodes；11 original self-check failures / 3,300 frames 显式排除；0 unresolved terminal failures。</td>
+    <td><a href="artifacts/align/random20/manifests/egodex.json">manifest</a> SHA <code>adda12…d77</code>；20 distinct source ZIPs；17 reviewable + 3 deterministic negative/masked。Machine：L0/L1 20 PASS；L2/L3 REVIEW。</td>
+    <td><code>CANONICAL_ALIGNED</code><br><code>USER_VISUAL_PASS</code> for reviewable packet；masked scope 保留。</td>
+  </tr>
+  <tr>
+    <td><b>EgoVerse</b><br><code>rwm_robot80_v4_incoming_motion_observed_gripper_t</code></td>
+    <td>410,346 included human episodes；3,070 <code>robot_command</code> episodes 在 source scope 层排除，不是 alignment failure。</td>
+    <td><a href="artifacts/align/random20/manifests/egoverse.json">manifest</a> SHA <code>762216…0fb</code>；20 distinct source ZIPs；19 reviewable + 1 deterministic negative/masked。Machine：L0 20 PASS；L1 19 PASS + 1 MASKED；L2/L3 REVIEW。</td>
+    <td><code>CANONICAL_ALIGNED</code><br><code>USER_VISUAL_PASS</code> for reviewable packet；masked scope 保留。</td>
+  </tr>
+  <tr>
+    <td><b>VITRA / VITRA-EPIC</b><br><code>rwm_robot80_v4_incoming_motion_observed_gripper_t</code></td>
+    <td>71,939 accepted episodes；10 original self-check failures / 449 frames 显式排除；0 unresolved terminal failures。</td>
+    <td><a href="artifacts/align/random20/manifests/vitra.json">manifest</a> SHA <code>32f3b8…6b5</code>；20 samples 覆盖全部 8 source ZIPs；18 reviewable + 2 deterministic negative/masked。Machine：L0/L1 20 PASS；L2/L3 REVIEW。</td>
+    <td><code>CANONICAL_ALIGNED</code><br><code>USER_VISUAL_PASS</code> for reviewable packet；masked scope 保留。</td>
+  </tr>
+</table>
+
+<h2>如何使用这个决定</h2>
+<ul>
+  <li>后续 FILTER 研究可以把五套数据的 canonical mapping 视为项目已接受的 frozen input；FILTER 仍必须核对 exact source/sidecar/schema/transform/hash，不能重新旋转、改相机或覆盖 canonical masks。</li>
+  <li>本次 signoff 解决的是此前文档中的“视觉 signoff pending”；它不把未抽样 corpus、MASKED fields、robot TCP 或 command provenance 自动提升为 PASS。</li>
+  <li>若需要标准字段 <code>alignment_status=PASS</code> 的 full-corpus release，下一步仍应把既有 corpus L0/L1 accounting、source L2 evidence 与本 hash-bound L3 decision 聚合成新的 strict receipt；不应回写旧 READY 或 reports。</li>
+  <li>ALIGN 仍不输出 <code>training_ready</code>。训练 eligibility、selection 与 L4 属于后续 FILTER。</li>
+</ul>
+
+<h2>Bound artifacts</h2>
+<ul>
+  <li><a href="canonical_visual_alignment_signoff_20260705.json">Machine-readable user decision and hashes</a></li>
+  <li><a href="artifacts/align/random20/index.html">Frozen 100-sample visual campaign</a></li>
+  <li><a href="artifacts/align/random20/index.html">Navigable visual verification gallery</a></li>
+</ul>
+</body>
+</html>

@@ -12,15 +12,19 @@ trap cleanup EXIT
 echo "Testing SANA-Streaming CPU training helpers"
 
 python - <<'PY'
+import io
 import json
 import tempfile
 from pathlib import Path
+from zipfile import ZipFile
 
 import numpy as np
 import torch
 import yaml
 
 from diffusion.data import transforms as video_transforms
+from diffusion.data.datasets import utils as dataset_utils
+from diffusion.data.datasets.video import sana_v2v_pair_data
 from diffusion.longsana.pipeline.sana_reverse_reg_pipeline import SanaReverseRegPipeline
 from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipeline
 from diffusion.longsana.utils.dataset import LongV2VManifestDataset
@@ -122,6 +126,55 @@ def test_long_v2v_manifest_dataset():
             lambda: LongV2VManifestDataset(str(missing_field_manifest)),
             "missing fields: reverse_prompt",
         )
+
+
+def test_bidirectional_pair_dataset():
+    def encode_npy(array):
+        payload = io.BytesIO()
+        np.save(payload, array, allow_pickle=False)
+        return payload.getvalue()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        source = np.arange(3 * 4 * 4 * 3, dtype=np.uint8).reshape(3, 4, 4, 3)
+        target = source + 32
+        with ZipFile(root / "pairs.zip", "w") as archive:
+            archive.writestr("source.npy", encode_npy(source))
+            archive.writestr("target.npy", encode_npy(target))
+
+        (root / "manifest.jsonl").write_text(
+            json.dumps(
+                {
+                    "id": "sample-1",
+                    "shard": "pairs.zip",
+                    "source_member": "source.npy",
+                    "target_member": "target.npy",
+                    "prompt": "apply an edit",
+                    "width": 4,
+                    "height": 4,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        dataset_utils.SANA_STREAMING_TEST_RATIOS = {"1.0": [4, 4]}
+        dataset = sana_v2v_pair_data.SanaV2VPairDataset(
+            {"fixtures": str(root)},
+            num_frames=3,
+            aspect_ratio_type="SANA_STREAMING_TEST_RATIOS",
+            max_retries=1,
+        )
+        sample = dataset[0]
+        target_tensor, source_tensor = sample[0], sample[8]
+        assert target_tensor.shape == source_tensor.shape == (3, 3, 4, 4)
+        torch.testing.assert_close(
+            target_tensor - source_tensor,
+            torch.full_like(source_tensor, 64.0 / 255.0),
+        )
+        assert sample[1] == "apply an edit"
+        assert sample[3]["cache_key"] == "fixtures/sample-1"
+        sana_v2v_pair_data._open_zip.cache_clear()
 
 
 def test_read_video_from_path():
@@ -283,6 +336,52 @@ class DummyV2VGenerator(torch.nn.Module):
         return flow_pred, pred_x0, updated_cache
 
 
+def test_training_pipeline_multi_chunk_conditioning():
+    torch.manual_seed(3407)
+    generator = DummyV2VGenerator(num_blocks=1)
+    pipeline = make_cache_pipeline(
+        v2v=True,
+        num_blocks=1,
+        num_cached_blocks=2,
+        sink_token=True,
+    )
+    pipeline.generator = generator
+    pipeline.scheduler = DummyScheduler()
+    pipeline.denoising_step_list = [5]
+    pipeline.same_step_across_blocks = True
+    pipeline.last_step_only = False
+    pipeline.update_kv_cache_by_end = False
+
+    noise = torch.randn(1, 2, 4, 1, 1)
+    conditioning = torch.arange(8, dtype=torch.float32).reshape(1, 2, 4, 1, 1)
+    prompt_embeds = torch.ones(1, 2, 3)
+    output, timestep_from, timestep_to = pipeline.generate_chunk_with_cache(
+        noise,
+        prompt_embeds,
+        image_vae_embeds=conditioning,
+    )
+
+    assert output.shape == noise.shape
+    assert output.requires_grad
+    assert (timestep_from, timestep_to) == (5, 5)
+    assert len(generator.calls) == 4
+    expected_conditioning = (
+        conditioning[:, :, :2],
+        conditioning[:, :, :2],
+        conditioning[:, :, 2:],
+        conditioning[:, :, 2:],
+    )
+    for call, expected in zip(generator.calls, expected_conditioning):
+        torch.testing.assert_close(call["conditioning"], expected)
+    assert [call["save_kv_cache"] for call in generator.calls] == [False, True, False, True]
+    assert pipeline.kv_cache[0][0][0] is not None
+    assert pipeline.kv_cache[1][0][0] is not None
+
+    output.sum().backward()
+    assert generator.scale.grad is not None
+    assert torch.isfinite(generator.scale.grad)
+
+
 def test_reverse_reg_pipeline():
     torch.manual_seed(3407)
     generator = DummyV2VGenerator(num_blocks=1)
@@ -333,8 +432,10 @@ def test_reverse_reg_pipeline():
 
 test_release_configs()
 test_long_v2v_manifest_dataset()
+test_bidirectional_pair_dataset()
 test_read_video_from_path()
 test_training_pipeline_cache_helpers()
+test_training_pipeline_multi_chunk_conditioning()
 test_reverse_reg_pipeline()
 print("SANA-Streaming CPU training helper tests passed")
 PY

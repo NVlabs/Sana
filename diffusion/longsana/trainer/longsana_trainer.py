@@ -91,7 +91,16 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
 
             if dist.is_initialized():
                 dist.all_reduce(skip_batch, op=dist.ReduceOp.MAX)
+
+
             if skip_batch.item():
+                if not hasattr(self, "skipped_batches_count"):
+                    self.skipped_batches_count = 0
+                self.skipped_batches_count += 1
+                if self.skipped_batches_count > 10:
+                    raise RuntimeError(
+                        f"Too many batches skipped"
+                    )
                 return self.start_new_sequence()
 
             with torch.no_grad():

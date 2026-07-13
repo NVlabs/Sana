@@ -295,12 +295,6 @@ class SanaTrainingPipeline:
         chunk_indices = self.create_autoregressive_segments(video_frames)
         num_chunks = len(chunk_indices) - 1
 
-        # Determine gradient-enabled range — if requires_grad=False, disable everywhere
-        if not requires_grad:
-            start_gradient_frame_index = video_frames  # Out of range: no gradients anywhere
-        else:
-            pass
-
         if condition.shape[0] == batch_size:
             condition = condition.repeat_interleave(num_chunks, dim=0)
             mask = mask[None].repeat_interleave(num_chunks, dim=0) if mask is not None else None

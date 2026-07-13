@@ -50,23 +50,23 @@ def test_release_configs():
     assert bidirectional["model"]["additional_inchannels"] == 128
     assert bidirectional["model"]["softmax_ratio"] == 0.25
 
-    stage_489 = yaml.safe_load(
-        Path("configs/sana_streaming/train/sana_streaming_long_489_2b_720p.yaml").read_text(encoding="utf-8")
+    stage_441 = yaml.safe_load(
+        Path("configs/sana_streaming/train/sana_streaming_long_441_2b_720p.yaml").read_text(encoding="utf-8")
     )
     stage_969 = yaml.safe_load(
         Path("configs/sana_streaming/train/sana_streaming_long_969_2b_720p.yaml").read_text(encoding="utf-8")
     )
-    for config in (stage_489, stage_969):
+    for config in (stage_441, stage_969):
         assert config["v2v"] is True
         assert config["trainer"] == "longsana"
         assert config["reverse_reg_weight"] == 0.5
         assert config["num_cached_blocks"] == 2
         assert config["sink_token"] is True
         assert "teacher" not in config
-    assert stage_489["image_or_video_shape"][1] == 56
+    assert stage_441["image_or_video_shape"][1] == 56
     assert stage_969["image_or_video_shape"][1] == 122
     assert stage_969["generator_ckpt"] == stage_969["fake_ckpt"]
-    assert "sana_streaming_long_489_2b_720p" in stage_969["generator_ckpt"]
+    assert "sana_streaming_long_441_2b_720p" in stage_969["generator_ckpt"]
 
 
 def test_long_v2v_manifest_dataset():
@@ -480,7 +480,7 @@ manifest.write_text(
     encoding="utf-8",
 )
 
-config_path = Path("configs/sana_streaming/train/sana_streaming_long_489_2b_720p.yaml")
+config_path = Path("configs/sana_streaming/train/sana_streaming_long_441_2b_720p.yaml")
 config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 config["generator_ckpt"] = "hf://Efficient-Large-Model/SANA-Streaming/dit/sana_streaming_ar.pth"
 config["fake_ckpt"] = (

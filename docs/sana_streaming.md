@@ -68,7 +68,7 @@ The public path reuses the existing video trainer and released V2V model:
 
 ### Prepare the 1k example subset locally
 
-The local example data contains 1,000 quality-filtered reverse pairs. The local layout is:
+The local example data contains 1,000 quality-filtered reverse pairs. Download the dataset from [HuggingFace](https://huggingface.co/datasets/Efficient-Large-Model/SANA-Streaming-example-training-dataset). The local layout is:
 
 ```text
 data/sana_streaming_1k/data/example_data/
@@ -127,7 +127,7 @@ and a source-video path relative to the manifest directory. Set `data_root` in
 the YAML only when the videos live under a different local directory:
 
 ```text
-data/sana_streaming_long_489/
+data/sana_streaming_long_441/
 |-- manifest.jsonl
 `-- videos/
     `-- example.mp4
@@ -137,13 +137,13 @@ data/sana_streaming_long_489/
 {"prompt":"Transform the scene into a watercolor painting.","reverse_prompt":"Transform the watercolor scene back into a realistic video.","source_video":"videos/example.mp4"}
 ```
 
-### Train the 489 stage
+### Train the 441 stage
 
 ```bash
 DISABLE_XFORMERS=1 torchrun --nproc_per_node=8 --master_port=29500 \
   train_video_scripts/train_longsana.py \
-  --config_path configs/sana_streaming/train/sana_streaming_long_489_2b_720p.yaml \
-  --logdir output/sana_streaming_long_489_2b_720p \
+  --config_path configs/sana_streaming/train/sana_streaming_long_441_2b_720p.yaml \
+  --logdir output/sana_streaming_long_441_2b_720p \
   --disable-wandb \
   --max_iters 5000
 ```
@@ -154,7 +154,7 @@ frozen real score start from `sana_bidirectional_short.pth`.
 ### Continue with the 969 stage
 
 Place the 969-frame manifest under `data/sana_streaming_long_969`, then continue
-from the 489-stage step-5000 checkpoint:
+from the 441-stage step-5000 checkpoint:
 
 ```bash
 DISABLE_XFORMERS=1 torchrun --nproc_per_node=8 --master_port=29500 \
@@ -166,7 +166,7 @@ DISABLE_XFORMERS=1 torchrun --nproc_per_node=8 --master_port=29500 \
 ```
 
 The 969 recipe initializes both the generator and trainable fake score from
-`output/sana_streaming_long_489_2b_720p/checkpoint_model_005000/model.pt`, while
+`output/sana_streaming_long_441_2b_720p/checkpoint_model_005000/model.pt`, while
 the frozen real score remains the released bidirectional model.
 
 ## 🏃 Inference

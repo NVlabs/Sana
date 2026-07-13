@@ -1,0 +1,58 @@
+id = "wan22_t2v_a14b_pisa_density010_easycache030_full"
+kind = "patch"
+purpose = "delivery"
+description = "Wan2.2 A14B full optimization: accepted CP4 kernel/communication/cache stack plus PISA density 0.10 with explicit timestep tracking and dense guards."
+model_profile = "wan22_t2v_a14b"
+
+[runtime]
+root = "output/orchestrated/wan14b-20260706-155110/integrator/runtime/wan22_t2v_a14b_baseline"
+
+[env]
+PYTHON_BIN = "/cm/local/apps/python3/bin/python3.12"
+PYTHONPATH = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sparse_attn_training/.venv/lib/python3.12/site-packages"
+WAN22_CONTEXT_PARALLEL = "1"
+WAN22_CP_DEGREE = "4"
+# Use the same single-node launcher as the previously validated CP4 run.  The
+# candidate is still submitted as an exclusive 4-GPU Slurm allocation; srun
+# task-local GPU masking caused NCCL failure in the direct output A2A path.
+WAN22_NUM_PROMPTS = "5"
+WAN22_WARMUP_PASSES = "2"
+WAN22_KERNEL_PROFILE = "0"
+WAN22_KERNEL_LEDGER = "1"
+WAN22_KERNEL_STACK = "context_parallel_ulysses4,fused_qkv_projections,compiled_block_glue,compiled_qk_rope,async_qkv_ulysses_a2a,direct_ulysses_output_a2a,reusable_ulysses_a2a_buffers,invariant_rope_cache,invariant_conditioning_cache,pisa_attention"
+WAN22_CACHE_METHOD = "easycache"
+WAN22_CACHE_START_STEP = "5"
+WAN22_CACHE_TAIL_STEPS = "3"
+WAN22_CACHE_MAX_REUSE = "1"
+WAN22_EASYCACHE_THRESHOLD = "0.30"
+WAN22_CACHE_PROBE_TOKENS = "64"
+WAN22_CACHE_PROBE_CHANNELS = "128"
+WAN22_PISA_DENSITY = "0.10"
+WAN22_PISA_BLOCK_SIZE = "64"
+WAN22_PISA_DENSE_LAYERS = "0-3,40-43"
+WAN22_PISA_DENSE_STEPS = "0-3,37-39"
+WAN22_PISA_KERNEL_NUM_STAGES = "2"
+WAN22_PISA_APPROX_REMAINDER = "1"
+WAN22_STEPS = "40"
+WAN22_VAL_PROMPTS = "models/wan22_t2v_a14b/prompts/t2v_val5.json"
+PYTHONUNBUFFERED = "1"
+TORCH_NCCL_ASYNC_ERROR_HANDLING = "1"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"
+quality = "quality.json"
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+exclusive = true
+cpus_per_task = 64
+mem = "0"
+time = "03:00:00"
+job_name = "wan14b-pisa-cache-full"

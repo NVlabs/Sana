@@ -1,0 +1,61 @@
+schema_version = 1
+id = "lingbot_video"
+display_name = "LingBot-Video MoE 30B-A3B 4-GPU T2V + refiner"
+legacy_profile = "models/lingbot_video.toml"
+contract_kind = "model_baseline_minimal_copy"
+
+[baseline]
+manifest = "candidates/lingbot_video_baseline.toml"
+runtime_root = "runtime/lingbot_video_baseline"
+eval_profile = "evals/profiles/official_video_t2v_lingbot_video.toml"
+description = "Clean CP4+FSDP+batched-CFG FA2 baseline using pristine upstream core plus timing-only phase markers."
+
+[baseline.copy]
+paths_are_repo_relative = true
+include = [
+  "models/lingbot_video.toml",
+  "models/lingbot_video/**",
+  "runtime/lingbot_video_baseline/**",
+  "candidates/lingbot_video_baseline.toml",
+  "candidates/schema.md",
+  "evals/profiles/official_video_t2v_lingbot_video.toml",
+  "evals/rubrics/gemini_visual_artifact_gate.md",
+  "evals/tiers.toml",
+  "scripts/launch_candidate.py",
+  "scripts/collect_run.py",
+  "search/plan_eval.py",
+  "tools/vision/README.md",
+  "tools/vision/lpips_judge.py",
+  "tools/vision/nvidia_gemini_judge.py",
+  "efficiency/candidate_manifest.py",
+]
+exclude = [
+  ".git/**",
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "**/.pytest_cache/**",
+  "runs/**",
+  "output/**",
+  "workflow/**",
+]
+
+[[baseline.reference_only]]
+name = "lingbot_video_moe_30b_a3b_weights"
+path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/models/lingbot-video-moe-30b-a3b"
+repo = "robbyant/lingbot-video-moe-30b-a3b"
+repo_type = "model"
+reason = "122 GiB base transformer, refiner, text encoder, VAE, processor, and scheduler; shared read-only and never copied into an experiment."
+
+[[baseline.reference_only]]
+name = "lingbot_fa2_environment"
+path = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2"
+repo_type = "python_environment"
+reason = "GB200 Python/CUDA environment with torch cu130 and the FA2 shim dependency; shared read-only and never copied."
+
+[experiment_defaults]
+worktree_mode = "model_baseline_minimal_copy"
+experiments_root = "output/experiments"
+state_dir = "state"
+runs_dir = "runs"
+logs_dir = "logs"
+caches = ["tmp", "triton", "torch_extensions"]

@@ -1,0 +1,111 @@
+id = "official_video_t2v_lingbot_video"
+description = "LingBot-Video MoE 30B-A3B base 480p40 plus 1080p8 refiner on one 4xGB200 node."
+
+[official_config]
+model = "robbyant/lingbot-video-moe-30b-a3b"
+task = "t2v_refiner"
+width = 832
+height = 480
+frames = 121
+fps = 24
+duration_s = 5
+steps = 40
+guidance_scale = 3.0
+flow_shift = 3.0
+refiner_width = 1920
+refiner_height = 1088
+refiner_frames = 121
+refiner_steps = 8
+refiner_guidance_scale = 3.0
+refiner_shift = 3.0
+refiner_t_thresh = 0.85
+refiner_sigma_tail_steps = 2
+seed = 42
+num_gpus = 4
+context_parallel_degree = 4
+fsdp = true
+batch_cfg = true
+refiner_batch_cfg = true
+transformer_dtype = "bf16"
+text_encoder_dtype = "bf16"
+vae_dtype = "fp32"
+refiner_vae_dtype = "fp32"
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/benchmark.json",
+  "outputs/quality.json",
+  "outputs/risk_notes.md",
+  "outputs/collection.json",
+]
+optional = [
+  "outputs/frames",
+  "outputs/t2v_base.mp4",
+  "outputs/t2v_refined.mp4",
+  "outputs/run_config.json",
+  "outputs/gpu_peak_mib.txt",
+]
+
+[performance]
+baseline_candidate = "lingbot_video_baseline"
+primary_metric = "total_s"
+secondary_metric = "wall_total_s"
+timing_scope = "load_excluded_request_wall_from_refiner_preloaded_to_refiner_video_export"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+registered_evidence_warmup_requests = 0
+record_compile_cache_state = true
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Any non-baseline runtime must recover the registered FA2 baseline when its optimization is disabled."
+
+[quantitative_quality]
+enabled = true
+allow_non_bit_exact = true
+metrics = [
+  "frame_count",
+  "duration_s",
+  "mean_abs_pixel_diff",
+  "mse",
+  "psnr",
+  "sharpness_ratio",
+  "patch_boundary_ratio",
+  "temporal_delta_error",
+  "temporal_jitter_ratio",
+]
+frame_count_expected = 121
+duration_tolerance_s = 0.25
+sharpness_ratio_min = 0.90
+sharpness_ratio_max = 1.12
+temporal_jitter_ratio_min = 0.80
+temporal_jitter_ratio_max = 1.25
+
+[visual_artifact]
+enabled = true
+provider = "nvidia_gemini"
+base_url = "https://inference-api.nvidia.com/v1"
+model = "gcp/google/gemini-3.5-flash"
+api_key_env = "NVIDIA_API_KEY"
+rubric = "evals/rubrics/gemini_visual_artifact_gate.md"
+max_tokens = 4096
+sample_fps = 2
+side_by_side_required = true
+fail_on_new_artifacts = [
+  "snow_static_speckle",
+  "blur_detail_loss",
+  "mosaic_blocking_patch_artifacts",
+  "patch_boundary_discontinuity",
+  "banding_posterization",
+  "ghosting_smearing",
+  "melting_morphing_structure",
+  "temporal_flicker_popping",
+  "loss_of_temporal_coherence",
+  "composition_or_motion_regression",
+]

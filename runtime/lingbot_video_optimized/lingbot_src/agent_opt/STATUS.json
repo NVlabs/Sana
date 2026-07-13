@@ -1,0 +1,44 @@
+{
+  "goal": "hot-inference-latency-4gpu-parallelism",
+  "loop_mode": "fixed_budget_frontier",
+  "max_iters": 8,
+  "iter": 5,
+  "state": "frontier_found_search_closed",
+  "gpus": 4,
+  "hardware": "4xGB200-186GB-NVLink-sm100",
+  "policy": "SPEED (HOT inference only) is the metric; correctness by implementation-audit + non-degenerate-video sanity; model LOADING is OUT OF SCOPE",
+  "metric": "hot = base_denoise + refiner_vae_encode + refiner_denoise + vae_decode (from LINGBOT_PHASE_TIMING); EXCLUDE base_load/refiner_load",
+  "hot_baseline_golden_s": {
+    "config": "CP4+FSDP+batch_cfg",
+    "base_denoise": 89.1,
+    "refiner_vae_encode": 19.3,
+    "refiner_denoise": 263.2,
+    "vae_decode_misc": 4.0,
+    "hot_total": 375.6,
+    "refiner_s_per_step": 31.2,
+    "base_s_per_step": 2.16,
+    "note": "refiner_denoise 263s (70% of hot) is attention-bound -> the target"
+  },
+  "frontier": [
+    {"id": "c5_cudnn_attn", "config": "CP4+FSDP+batch_cfg+LINGBOT_ATTN_KERNEL=cudnn", "hot_total_s": 207.9, "base_denoise_s": 61.96, "refiner_vae_encode_s": 20.52, "refiner_denoise_s": 123.88, "vae_decode_s": 1.54, "refiner_s_per_step": 15.49, "base_s_per_step": 1.55, "peak_mib": 116271, "job": 4506351, "status": "BEST/frontier", "speedup_vs_golden": 1.81, "correctness": "audited + valid non-degenerate video (121,1088,1920,3) std 52.9; bf16 drift rel~5e-3"},
+    {"id": "golden_hot", "config": "CP4+FSDP+batch_cfg", "hot_total_s": 375.6, "refiner_denoise_s": 263.2, "refiner_s_per_step": 31.2, "status": "baseline (dominated)"}
+  ],
+  "best_config": {
+    "id": "c5_cudnn_attn",
+    "sbatch": "agent_opt/candidates/c5_cudnn_attn.sbatch",
+    "key_env": "LINGBOT_ATTN_KERNEL=cudnn (default fa2 preserved as OFF path)",
+    "hot_total_s": 207.9,
+    "reproduce": "sbatch agent_opt/candidates/c5_cudnn_attn.sbatch"
+  },
+  "search_closed_reason": "cuDNN attention cut refiner_denoise 2.12x (263->124s) and hot 1.81x (376->208s); refiner attention now near roofline; Ring/overlap cannot help (a2a is ~ms, negligible); EP/expert-TP predicted slower by prior RESULTS. No remaining hypothesis expected to beat c5.",
+  "discarded_wrong_objective": [
+    {"id": "c2_overlap_refiner_load", "reason": "cold-start load overlap; 0 effect on hot inference"},
+    {"id": "c3_bcast_overlap", "reason": "cold-start rank0-load+NVLink-broadcast; 0 effect on hot inference"},
+    {"id": "c4_sharded_overlap", "reason": "cold-start sharded parallel load; cancelled; 0 effect on hot inference"}
+  ],
+  "rejected": [
+    {"hypothesis": "FSDP-only-no-CP", "signature": "0 speedup; FSDP shards memory not compute"},
+    {"hypothesis": "CP4+EP4-naive", "signature": "refiner 88s/step; EP adds all-to-all without cutting attention"}
+  ],
+  "blockers": []
+}

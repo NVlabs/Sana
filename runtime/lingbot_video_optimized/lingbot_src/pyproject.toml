@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lingbot-video"
+version = "0.1.0"
+description = "LingBot-Video direct diffusers and SGLang Diffusion inference package"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "accelerate>=1.8.0",
+  "decord>=0.6.0",
+  "diffusers>=0.37.1",
+  "imageio>=2.35.0",
+  "imageio-ffmpeg>=0.5.1",
+  "json_repair>=0.30",
+  "numpy>=1.26",
+  "peft>=0.19",
+  "pillow>=10.4.0",
+  "requests>=2.31",
+  "safetensors>=0.4.5",
+  "scipy>=1.11",
+  "transformers>=5.0,<6",
+]
+
+[project.optional-dependencies]
+sglang = [
+  "sglang>=0.4.9",
+  "triton>=3.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["lingbot_video*"]
+
+[tool.setuptools.package-data]
+lingbot_video = ["default_negative_prompt.json"]

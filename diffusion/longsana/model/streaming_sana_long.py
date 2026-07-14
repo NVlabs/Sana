@@ -385,8 +385,22 @@ class StreamingSANATrainingModel:
         if reverse_conditional_dict is None or source_chunk is None:
             return None
 
-        edited_chunk = rearrange(chunk.detach(), "b f c h w -> b c f h w")
+        num_new_frames = int(chunk_info.get("new_frames_generated", chunk.shape[1]))
+        if num_new_frames <= 0 or num_new_frames > chunk.shape[1] or num_new_frames > source_chunk.shape[2]:
+            raise ValueError(
+                "Invalid new_frames_generated for reverse regularization: "
+                f"new={num_new_frames}, edited_frames={chunk.shape[1]}, source_frames={source_chunk.shape[2]}"
+            )
+
+        # The loss chunk may include historical overlap frames.  The reverse
+        # pipeline already has those frames in its independent KV cache, so
+        # feeding them again would advance the cache and RoPE positions twice.
+        # Newly generated frames are always appended at the end of the chunk.
+        edited_chunk = rearrange(chunk[:, -num_new_frames:].detach(), "b f c h w -> b c f h w")
+        source_chunk = source_chunk[:, :, -num_new_frames:]
         gradient_mask = chunk_info.get("gradient_mask")
+        if gradient_mask is not None:
+            gradient_mask = gradient_mask[:, -num_new_frames:]
 
         kwargs = {
             "source_chunk_bcfhw": source_chunk,

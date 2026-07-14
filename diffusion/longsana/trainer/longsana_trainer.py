@@ -245,7 +245,11 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
             else:
                 current_seq_length = self.streaming_model.state.get("current_length")
                 if current_seq_length == 0:
-                    generated_chunk, chunk_info = self.streaming_model.generate_next_chunk(requires_grad=False)
+                    with torch.no_grad():
+                        warmup_chunk, warmup_chunk_info = self.streaming_model.generate_next_chunk(requires_grad=False)
+                        self.streaming_model.run_reverse_denoise(
+                            chunk=warmup_chunk, chunk_info=warmup_chunk_info, requires_grad=False
+                        )
 
                 generated_chunk, chunk_info = self.streaming_model.generate_next_chunk(requires_grad=True)
 
@@ -300,7 +304,10 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
                 else:
                     current_seq_length = self.streaming_model.state.get("current_length")
                     if current_seq_length == 0:
-                        generated_chunk, chunk_info = self.streaming_model.generate_next_chunk(requires_grad=False)
+                        warmup_chunk, warmup_chunk_info = self.streaming_model.generate_next_chunk(requires_grad=False)
+                        self.streaming_model.run_reverse_denoise(
+                            chunk=warmup_chunk, chunk_info=warmup_chunk_info, requires_grad=False
+                        )
 
                     generated_chunk, chunk_info = self.streaming_model.generate_next_chunk(requires_grad=False)
 

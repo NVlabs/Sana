@@ -25,6 +25,8 @@ from .self_forcing_trainer import Trainer as SelfForcingScoreDistillationTrainer
 
 
 class LongSANATrainer(SelfForcingScoreDistillationTrainer):
+    _MAX_SKIPPED_V2V_BATCHES = 10
+
     def __init__(self, config):
         super().__init__(config)
         # streaming training configuration
@@ -47,14 +49,58 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
         self.gradient_accumulation_steps = getattr(config, "gradient_accumulation_steps", 1)
         self.is_lora_enabled = getattr(config, "is_lora_enabled", False)
 
+    def _encode_v2v_source_batch(self, batch):
+        source_video_paths = batch.get("source_video_paths")
+        if source_video_paths is None:
+            raise ValueError("V2V long training requires source_video_paths in each batch")
+
+        latent_frames, _, latent_height, latent_width = self.config.image_or_video_shape[1:]
+        vae_stride = self.config.get("vae_downsample_rate", [8, 32, 32])
+        pixel_frames = (latent_frames - 1) * vae_stride[0] + 1
+        pixel_size = (latent_height * vae_stride[1], latent_width * vae_stride[2])
+        skip_batch = torch.zeros(1, device=self.device)
+        source_videos = []
+        try:
+            source_videos = [
+                read_video_from_path(path, pixel_size, pixel_frames).permute(1, 0, 2, 3) for path in source_video_paths
+            ]
+        except (OSError, RuntimeError, ValueError) as error:
+            rank = dist.get_rank() if dist.is_initialized() else 0
+            print(colored(f"[LongSANATrainer][rank {rank}] skipping source video: {error}", "red"))
+            skip_batch.fill_(1)
+
+        if dist.is_initialized():
+            dist.all_reduce(skip_batch, op=dist.ReduceOp.MAX)
+
+        if skip_batch.item():
+            del source_videos
+            return None
+
+        with torch.no_grad():
+            image_vae_embeds = self.model.vae.encode_to_latent(torch.stack(source_videos)).to(
+                device=self.device, dtype=self.dtype
+            )
+        del source_videos
+        return image_vae_embeds
+
+    def _next_batch_with_v2v_conditioning(self):
+        if not getattr(self, "v2v", False):
+            return next(self.dataloader), None
+
+        for skipped_batches in range(self._MAX_SKIPPED_V2V_BATCHES + 1):
+            batch = next(self.dataloader)
+            image_vae_embeds = self._encode_v2v_source_batch(batch)
+            if image_vae_embeds is not None:
+                return batch, image_vae_embeds
+            if skipped_batches == self._MAX_SKIPPED_V2V_BATCHES:
+                raise RuntimeError("Too many consecutive V2V batches skipped")
+
     def start_new_sequence(self):
         if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
             print(f"[SeqTrain-Trainer] start_new_sequence called")
-
-        # Fetch a new batch
-        if DEBUG and (not dist.is_initialized() or dist.get_rank() == 0):
             print(f"[SeqTrain-Trainer] start_new_sequence: fetch new batch")
-        batch = next(self.dataloader)
+
+        batch, image_vae_embeds = self._next_batch_with_v2v_conditioning()
 
         # Prepare conditional information
         text_prompts = batch["prompts"]
@@ -67,44 +113,6 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
             ].to(device=self.device, dtype=self.dtype)
         else:
             image_latent = None
-
-        image_vae_embeds = None
-        if getattr(self, "v2v", False):
-            source_video_paths = batch.get("source_video_paths")
-            if source_video_paths is None:
-                raise ValueError("V2V long training requires source_video_paths in each batch")
-
-            latent_frames, _, latent_height, latent_width = self.config.image_or_video_shape[1:]
-            vae_stride = self.config.get("vae_downsample_rate", [8, 32, 32])
-            pixel_frames = (latent_frames - 1) * vae_stride[0] + 1
-            pixel_size = (latent_height * vae_stride[1], latent_width * vae_stride[2])
-            skip_batch = torch.zeros(1, device=self.device)
-            try:
-                source_videos = [
-                    read_video_from_path(path, pixel_size, pixel_frames).permute(1, 0, 2, 3)
-                    for path in source_video_paths
-                ]
-            except (OSError, RuntimeError, ValueError) as error:
-                rank = dist.get_rank() if dist.is_initialized() else 0
-                print(colored(f"[LongSANATrainer][rank {rank}] skipping source video: {error}", "red"))
-                skip_batch.fill_(1)
-
-            if dist.is_initialized():
-                dist.all_reduce(skip_batch, op=dist.ReduceOp.MAX)
-
-            if skip_batch.item():
-                if not hasattr(self, "skipped_batches_count"):
-                    self.skipped_batches_count = 0
-                self.skipped_batches_count += 1
-                if self.skipped_batches_count > 10:
-                    raise RuntimeError(f"Too many batches skipped")
-                return self.start_new_sequence()
-
-            with torch.no_grad():
-                image_vae_embeds = self.model.vae.encode_to_latent(torch.stack(source_videos)).to(
-                    device=self.device, dtype=self.dtype
-                )
-            del source_videos
 
         batch_size = len(text_prompts)
         image_or_video_shape = list(self.config.image_or_video_shape)

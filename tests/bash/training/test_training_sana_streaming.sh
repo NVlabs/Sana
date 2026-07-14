@@ -28,6 +28,7 @@ from diffusion.data.datasets import utils as dataset_utils
 from diffusion.data.datasets.video import sana_v2v_pair_data
 from diffusion.longsana.pipeline.sana_reverse_reg_pipeline import SanaReverseRegPipeline
 from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipeline
+from diffusion.longsana.trainer.longsana_trainer import LongSANATrainer
 from diffusion.longsana.utils.dataset import LongV2VManifestDataset
 from diffusion.scheduler.sana_streaming_sampler import SANAStreamingSampler
 
@@ -198,6 +199,34 @@ def test_read_video_from_path():
         )
     finally:
         video_transforms.iio.imiter = original_imiter
+
+
+def test_v2v_batch_retry_counter_is_local():
+    trainer = LongSANATrainer.__new__(LongSANATrainer)
+    trainer.v2v = True
+    trainer.dataloader = iter({"batch_id": index} for index in range(11))
+    outcomes = iter([None] * 10 + [torch.tensor(1.0)])
+    trainer._encode_v2v_source_batch = lambda batch: next(outcomes)
+
+    batch, conditioning = trainer._next_batch_with_v2v_conditioning()
+    assert batch["batch_id"] == 10
+    assert torch.equal(conditioning, torch.tensor(1.0))
+    assert not hasattr(trainer, "skipped_batches_count")
+
+    trainer.dataloader = iter([{"batch_id": 11}, {"batch_id": 12}])
+    outcomes = iter([None, torch.tensor(2.0)])
+    trainer._encode_v2v_source_batch = lambda batch: next(outcomes)
+    batch, conditioning = trainer._next_batch_with_v2v_conditioning()
+    assert batch["batch_id"] == 12
+    assert torch.equal(conditioning, torch.tensor(2.0))
+
+    trainer.dataloader = iter({"batch_id": index} for index in range(11))
+    trainer._encode_v2v_source_batch = lambda batch: None
+    expect_raises(
+        RuntimeError,
+        trainer._next_batch_with_v2v_conditioning,
+        "Too many consecutive V2V batches skipped",
+    )
 
 
 def make_cache_pipeline(pipeline_type=SanaTrainingPipeline, *, v2v, num_blocks, num_cached_blocks, sink_token):
@@ -481,6 +510,7 @@ test_release_configs()
 test_long_v2v_manifest_dataset()
 test_bidirectional_pair_dataset()
 test_read_video_from_path()
+test_v2v_batch_retry_counter_is_local()
 test_training_pipeline_cache_helpers()
 test_training_pipeline_multi_chunk_conditioning()
 test_reverse_reg_pipeline()

@@ -8,6 +8,10 @@ from termcolor import colored
 
 from diffusion.model.nets.basic_modules import CachedGLUMBConvTemp
 from diffusion.model.nets.sana_blocks import CachedCausalAttention
+from diffusion.scheduler.sana_streaming_cache import (
+    accumulate_fixed_rope_kv_cache,
+    promote_fixed_rope_full_history_cache,
+)
 
 
 # Generate the full long video.
@@ -657,102 +661,32 @@ class SanaTrainingPipeline:
         self.kv_cache = [self._empty_chunk_cache() for _ in range(num_chunks)]
         return self.kv_cache
 
-    def _accumulate_v2v_kv_cache(self, kv_cache, chunk_idx):
-        """Prepare one six-slot V2V cache."""
-        if chunk_idx == 0:
-            return kv_cache[0], 0, 0, 0
-
-        cur_kv_cache = kv_cache[chunk_idx]
-        start_chunk_idx = max(chunk_idx - self.num_cached_blocks, 0) if self.num_cached_blocks > 0 else 0
-        num_cached_frames = 0
-        sink_num = 0
-
-        for block_id, is_state_cached in enumerate(self.block_is_state_cached):
-            if is_state_cached:
-                prev = kv_cache[chunk_idx - 1][block_id]
-                cur_kv_cache[block_id][0] = prev[0]
-                cur_kv_cache[block_id][1] = prev[1]
-                cur_kv_cache[block_id][-1] = prev[-1]
-                continue
-
-            if self._full_history_softmax_cache:
-                prev = kv_cache[chunk_idx - 1][block_id]
-                cur_kv_cache[block_id] = [prev[0], prev[1], prev[2], None, None, prev[-1]]
-                if prev[0] is not None and self._spatial_hw > 0:
-                    num_cached_frames = prev[0].shape[-1] // self._spatial_hw
-                continue
-
-            previous_q = previous_k = previous_v = previous_tconv = None
-            valid_cached_chunks = list(range(start_chunk_idx, chunk_idx))
-            if self.num_cached_blocks > 0 and self.sink_token:
-                window_start_chunk = max(chunk_idx - self.num_cached_blocks + 1, 0)
-                if window_start_chunk > 0:
-                    valid_cached_chunks = [0] + list(range(window_start_chunk, chunk_idx))
-                    if sink_num == 0:
-                        sink_num = self._chunk_indices[1] - self._chunk_indices[0]
-
-            for cache_idx in range(chunk_idx):
-                if cache_idx not in valid_cached_chunks:
-                    kv_cache[cache_idx][block_id] = [None] * self._V2V_CACHE_SLOTS
-                    continue
-                prev = kv_cache[cache_idx][block_id]
-                if prev[0] is not None:
-                    if previous_q is None:
-                        previous_q = prev[0].clone()
-                        previous_k = prev[1].clone()
-                        previous_v = prev[2].clone()
-                    else:
-                        previous_q = torch.cat([previous_q, prev[0]], dim=-1)
-                        previous_k = torch.cat([previous_k, prev[1]], dim=-1)
-                        previous_v = torch.cat([previous_v, prev[2]], dim=-1)
-                if prev[-1] is not None:
-                    previous_tconv = (
-                        prev[-1].clone() if previous_tconv is None else torch.cat([previous_tconv, prev[-1]], dim=2)
-                    )
-
-            cur_kv_cache[block_id] = [
-                previous_q,
-                previous_k,
-                previous_v,
-                None,
-                None,
-                previous_tconv,
-            ]
-            if previous_q is not None and self._spatial_hw > 0:
-                num_cached_frames = previous_q.shape[-1] // self._spatial_hw
-
-        return cur_kv_cache, chunk_idx - start_chunk_idx, sink_num, num_cached_frames
-
     def prepare_kv_cache(self, chunk_idx: int):
         """Return ``(cache, cached_chunks, sink_frames, cached_frames)``."""
         self._ensure_kv_cache_capacity(chunk_idx + 1)
         if self.v2v:
-            return self._accumulate_v2v_kv_cache(self.kv_cache, chunk_idx)
+            return accumulate_fixed_rope_kv_cache(
+                self.kv_cache,
+                chunk_idx,
+                block_is_state_cached=self.block_is_state_cached,
+                num_cached_blocks=self.num_cached_blocks,
+                sink_token=self.sink_token,
+                full_history_softmax_cache=self._full_history_softmax_cache,
+                chunk_indices=self._chunk_indices,
+                spatial_hw=self._spatial_hw,
+                cache_slots=self._V2V_CACHE_SLOTS,
+            )
         return self._accumulate_kv_cache(self.kv_cache, chunk_idx), 0, 0, 0
 
     def promote_kv_cache(self, chunk_idx: int) -> None:
         """Promote a full-history softmax cache after saving the current chunk."""
         if not self.v2v or not self._full_history_softmax_cache or chunk_idx == 0:
             return
-
-        for block_id, is_state_cached in enumerate(self.block_is_state_cached):
-            if is_state_cached:
-                continue
-            prev = self.kv_cache[chunk_idx - 1][block_id]
-            cur = self.kv_cache[chunk_idx][block_id]
-
-            if prev[0] is not None and cur[0] is not None:
-                cur[0] = torch.cat([prev[0], cur[0]], dim=-1)
-                cur[1] = torch.cat([prev[1], cur[1]], dim=-1)
-                cur[2] = torch.cat([prev[2], cur[2]], dim=-1)
-            elif prev[0] is not None:
-                cur[0], cur[1], cur[2] = prev[0], prev[1], prev[2]
-
-            if prev[-1] is not None and cur[-1] is not None:
-                cur[-1] = torch.cat([prev[-1], cur[-1]], dim=2)
-            elif prev[-1] is not None:
-                cur[-1] = prev[-1]
-            self.kv_cache[chunk_idx - 1][block_id] = [None] * len(prev)
+        promote_fixed_rope_full_history_cache(
+            self.kv_cache,
+            chunk_idx,
+            block_is_state_cached=self.block_is_state_cached,
+        )
 
     def update_kv_cache(self, chunk_idx: int, updated_kv_cache: list) -> list:
         """Store a model-produced cache and apply full-history promotion."""

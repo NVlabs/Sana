@@ -12,6 +12,7 @@ trap cleanup EXIT
 echo "Testing SANA-Streaming CPU training helpers"
 
 python - <<'PY'
+import copy
 import io
 import json
 import tempfile
@@ -28,6 +29,7 @@ from diffusion.data.datasets.video import sana_v2v_pair_data
 from diffusion.longsana.pipeline.sana_reverse_reg_pipeline import SanaReverseRegPipeline
 from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipeline
 from diffusion.longsana.utils.dataset import LongV2VManifestDataset
+from diffusion.scheduler.sana_streaming_sampler import SANAStreamingSampler
 
 
 def expect_raises(exception_type, function, message):
@@ -246,15 +248,60 @@ def test_training_pipeline_cache_helpers():
         v2v_cache[chunk_idx][0] = [qkv.clone(), qkv.clone(), qkv.clone(), None, None, tconv.clone()]
         v2v_cache[chunk_idx][1] = [qkv.clone(), qkv.clone(), None, None, None, tconv.clone()]
 
+    sampler = SANAStreamingSampler.__new__(SANAStreamingSampler)
+    sampler.num_cached_blocks = v2v.num_cached_blocks
+    sampler.sink_token = v2v.sink_token
+    sampler._fixed_rope_full_history_softmax_cache = False
+    sampler.block_is_state_cached = list(v2v.block_is_state_cached)
+    sampler._chunk_indices = list(v2v._chunk_indices)
+    sampler._spatial_hw = v2v._spatial_hw
+    sampler_cache = copy.deepcopy(v2v_cache)
+
     prepared_v2v, cached_chunks, sink_frames, cached_frames = v2v.prepare_kv_cache(3)
+    prepared_sampler, sampler_chunks, sampler_sink, sampler_frames = sampler.accumulate_kv_cache(sampler_cache, 3)
     assert cached_chunks == 2
     assert sink_frames == 2
     assert cached_frames == 4
+    assert (sampler_chunks, sampler_sink, sampler_frames) == (cached_chunks, sink_frames, cached_frames)
     assert len(prepared_v2v[0]) == 6 and len(prepared_v2v[1]) == 6
+    for training_block, inference_block in zip(prepared_v2v, prepared_sampler):
+        for training_slot, inference_slot in zip(training_block, inference_block):
+            if training_slot is None:
+                assert inference_slot is None
+            else:
+                torch.testing.assert_close(training_slot, inference_slot)
     assert torch.equal(prepared_v2v[0][0].flatten(), torch.tensor([1.0, 1.0, 3.0, 3.0]))
     assert torch.isfinite(prepared_v2v[0][0]).all()
     assert torch.equal(prepared_v2v[1][0], v2v_cache[2][1][0])
     assert all(item is None for item in v2v_cache[1][0])
+
+    history_cache = [
+        [
+            [
+                torch.full((1, 1, 1, 2), float(chunk_idx + 1)),
+                torch.full((1, 1, 1, 2), float(chunk_idx + 1)),
+                torch.full((1, 1, 1, 2), float(chunk_idx + 1)),
+                None,
+                None,
+                torch.full((1, 1, 2, 1), float(chunk_idx + 1)),
+            ],
+            [None] * 6,
+        ]
+        for chunk_idx in range(2)
+    ]
+    v2v.kv_cache = copy.deepcopy(history_cache)
+    v2v._full_history_softmax_cache = True
+    sampler._fixed_rope_full_history_softmax_cache = True
+    sampler_history_cache = copy.deepcopy(history_cache)
+    v2v.promote_kv_cache(1)
+    sampler._promote_fixed_rope_full_history_cache(sampler_history_cache, 1)
+    for training_slot, inference_slot in zip(v2v.kv_cache[1][0], sampler_history_cache[1][0]):
+        if training_slot is None:
+            assert inference_slot is None
+        else:
+            torch.testing.assert_close(training_slot, inference_slot)
+    assert all(item is None for item in v2v.kv_cache[0][0])
+    assert all(item is None for item in sampler_history_cache[0][0])
 
     rope_start, rope_end, frame_index = v2v.cache_positions(
         chunk_idx=3,
@@ -438,6 +485,100 @@ test_training_pipeline_cache_helpers()
 test_training_pipeline_multi_chunk_conditioning()
 test_reverse_reg_pipeline()
 print("SANA-Streaming CPU training helper tests passed")
+PY
+
+echo "Testing one SANA-Streaming bidirectional V2V training step"
+
+python - <<'PY'
+import io
+import json
+from pathlib import Path
+from zipfile import ZipFile
+
+import numpy as np
+import yaml
+
+data_dir = Path("data/sana_streaming_training_ci/bidirectional")
+output_dir = Path("output/test_sana_streaming_training_ci/bidirectional")
+data_dir.mkdir(parents=True, exist_ok=True)
+output_dir.mkdir(parents=True, exist_ok=True)
+
+num_frames = 17
+height, width = 192, 352
+source = np.zeros((num_frames, height, width, 3), dtype=np.uint8)
+source[..., 0] = np.arange(num_frames, dtype=np.uint8)[:, None, None]
+source[..., 1] = np.arange(height, dtype=np.uint8)[None, :, None]
+source[..., 2] = np.arange(width, dtype=np.uint16)[None, None, :] % 256
+target = np.roll(source, shift=1, axis=-1)
+
+
+def encode_npy(array):
+    payload = io.BytesIO()
+    np.save(payload, array, allow_pickle=False)
+    return payload.getvalue()
+
+
+with ZipFile(data_dir / "pairs.zip", "w") as archive:
+    archive.writestr("source.npy", encode_npy(source))
+    archive.writestr("target.npy", encode_npy(target))
+
+manifest_rows = [
+    {
+        "id": f"ci-pair-{index}",
+        "shard": "pairs.zip",
+        "source_member": "source.npy",
+        "target_member": "target.npy",
+        "prompt": "Transform the scene into a watercolor painting.",
+        "width": width,
+        "height": height,
+    }
+    for index in range(8)
+]
+(data_dir / "manifest.jsonl").write_text(
+    "\n".join(json.dumps(row) for row in manifest_rows) + "\n",
+    encoding="utf-8",
+)
+
+config = yaml.safe_load(
+    Path("configs/sana_streaming/train/sana_streaming_bidirectional_2b_720p.yaml").read_text(encoding="utf-8")
+)
+config["data"]["data_dir"] = {"ci": str(data_dir)}
+config["data"]["image_size"] = 256
+config["data"]["aspect_ratio_type"] = "ASPECT_RATIO_VIDEO_256_TEST_DIV32"
+config["data"]["num_frames"] = num_frames
+config["model"]["image_size"] = 256
+config["model"]["aspect_ratio_type"] = "ASPECT_RATIO_VIDEO_256_TEST_DIV32"
+config["train"]["num_epochs"] = 1
+config["train"]["num_workers"] = 0
+config["train"]["log_interval"] = 1
+config["train"]["save_model_epochs"] = 100
+config["train"]["save_model_steps"] = 100
+config["train"]["work_dir"] = str(output_dir / "run")
+config["work_dir"] = str(output_dir / "run")
+config["debug"] = True
+config["report_to"] = "tensorboard"
+
+config_path = output_dir / "sana_streaming_bidirectional_ci.yaml"
+config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+print(f"Wrote {config_path}")
+PY
+
+DISABLE_XFORMERS=1 torchrun --nproc_per_node=8 --master_port=$((RANDOM % 10000 + 20000)) \
+    train_video_scripts/train_video_ivjoint_chunk.py \
+    --config_path="$TEST_OUTPUT_DIR/bidirectional/sana_streaming_bidirectional_ci.yaml" \
+    2>&1 | tee "$TEST_OUTPUT_DIR/bidirectional/train.log"
+
+python - <<'PY'
+import math
+import re
+from pathlib import Path
+
+log = Path("output/test_sana_streaming_training_ci/bidirectional/train.log").read_text(encoding="utf-8")
+assert "Global Step: 1" in log
+match = re.search(r"loss:([-+0-9.eE]+)", log)
+assert match is not None, "Missing loss in bidirectional training log"
+assert math.isfinite(float(match.group(1))), f"Non-finite bidirectional loss: {match.group(1)}"
+print("SANA-Streaming bidirectional V2V training step passed")
 PY
 
 echo "Testing one SANA-Streaming long V2V training step"

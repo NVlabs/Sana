@@ -36,6 +36,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
+- 🔥 [2026/07] 🌍 **SANA-Streaming** training is released! Includes bidirectional and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/).
 - 🔥 [2026/07] 🌍 **SANA-WM** Stage-1 training is released! Includes bidirectional, chunk-causal, and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/).
 - 🔥 [2026/06] 🎬 **SANA-Streaming: 2B Model for Real-time Streaming Editing** is released! Supports 720p, 1-min video editing. A pioneer work for streaming editing. See [Project](https://nvlabs.github.io/Sana/Streaming/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/) | [Paper](https://huggingface.co/papers/2605.30409) | [Reactor Demo](https://sana-streaming.reactor.inc).
 - 🔥 [2026/05] 🌍 **SANA-WM: 2.6B Controllable World Model** is released! Supports 720p, 1-min video generation with 6-DoF camera control. A new baseline for World Modeling and Embodied AI. See [Project](https://nvlabs.github.io/Sana/WM/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/) | [Paper](https://huggingface.co/papers/2605.15178) | [Reactor Demo](https://sana-wm.reactor.inc/).

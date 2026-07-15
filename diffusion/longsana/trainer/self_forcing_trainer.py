@@ -187,16 +187,23 @@ class Trainer:
         self.vis_interval = getattr(config, "vis_interval", -1)
         if self.vis_interval > 0 and len(getattr(config, "vis_video_lengths", [])) > 0:
             val_data_path = getattr(config, "val_data_path", None) or config.data_path
-            val_dataset = TextDataset(val_data_path)
+            if self.long_v2v:
+                val_data_root = getattr(config, "val_data_root", None) or getattr(config, "data_root", None)
+                val_dataset = LongV2VManifestDataset(val_data_path, data_root=val_data_root)
+            else:
+                val_dataset = TextDataset(val_data_path)
 
             if dist.get_rank() == 0:
                 print("VAL DATASET SIZE %d" % len(val_dataset))
 
             sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False, drop_last=False)
             # Sequential sampling to keep prompts fixed
+            val_batch_size = getattr(config, "val_batch_size", 1)
+            if self.long_v2v and val_batch_size != 1:
+                raise ValueError("Long V2V online validation currently requires val_batch_size=1")
             val_dataloader = torch.utils.data.DataLoader(
                 val_dataset,
-                batch_size=getattr(config, "val_batch_size", 1),
+                batch_size=val_batch_size,
                 sampler=sampler,
                 num_workers=8,
             )
@@ -628,7 +635,7 @@ class Trainer:
                 print(f"Reached max iterations: {self.step} > {self.config.max_iters}, stopping training")
                 break
 
-    def generate_video(self, pipeline, num_frames, prompts, image=None):
+    def generate_video(self, pipeline, num_frames, prompts, image=None, data_info=None, source_videos=None):
         batch_size = len(prompts)
         channel, h, w = self.config.image_or_video_shape[-3:]
         generator = torch.Generator(device=self.device).manual_seed(self.config.seed)
@@ -647,11 +654,15 @@ class Trainer:
                 [batch_size, channel, num_frames, h, w], device=self.device, dtype=self.dtype, generator=generator
             )
         with torch.no_grad():
+            inference_kwargs = {"data_info": data_info} if data_info is not None else {}
+            if self.long_v2v:
+                inference_kwargs["generator"] = generator
             video_latent_btchw, _ = pipeline.inference(
                 noise=sampled_noise,
                 text_prompts=prompts,
                 return_latents=True,
                 initial_latent=initial_latent,
+                **inference_kwargs,
             )
             # B,T,C,H,W
             video_latent_bcthw = video_latent_btchw.permute(0, 2, 1, 3, 4)
@@ -661,6 +672,30 @@ class Trainer:
             pixel_btchw = (
                 torch.clamp(127.5 * pixel_bcthw + 127.5, 0, 255).permute(0, 2, 3, 4, 1).to(torch.uint8).cpu().numpy()
             )
+            if source_videos is not None:
+                if source_videos.dim() != 5:
+                    raise ValueError("source_videos must be [B, C, T, H, W]")
+                if source_videos.shape[0] != pixel_btchw.shape[0]:
+                    raise ValueError(
+                        f"Source/generated batch mismatch: {source_videos.shape[0]} and {pixel_btchw.shape[0]}"
+                    )
+                generated_frames, generated_height, generated_width = pixel_btchw.shape[1:4]
+                if source_videos.shape[2] < generated_frames:
+                    raise ValueError(
+                        f"Source video has {source_videos.shape[2]} frames, generated video has {generated_frames}"
+                    )
+                if source_videos.shape[-2:] != (generated_height, generated_width):
+                    raise ValueError(
+                        "Source/generated spatial mismatch: "
+                        f"{tuple(source_videos.shape[-2:])} and {(generated_height, generated_width)}"
+                    )
+                source_btchw = (
+                    torch.clamp(127.5 * source_videos[:, :, :generated_frames] + 127.5, 0, 255)
+                    .permute(0, 2, 3, 4, 1)
+                    .to(torch.uint8)
+                    .cpu()
+                )
+                pixel_btchw = torch.cat([source_btchw, torch.from_numpy(pixel_btchw)], dim=3).numpy()
         current_video = pixel_btchw
         # clear VAE cache
         try:
@@ -709,9 +744,32 @@ class Trainer:
         prompts = batch["prompts"]
         mode_info = ""
 
+        image_vae_embeds = None
+        source_videos = None
+        if self.long_v2v:
+            vis_video_lengths = [int(length) for length in self.vis_video_lengths]
+            if any(length <= 0 for length in vis_video_lengths):
+                raise ValueError("vis_video_lengths must contain positive frame counts")
+            encoded_source = self._encode_v2v_source_batch(
+                batch,
+                latent_frames=max(vis_video_lengths),
+                return_source_videos=True,
+            )
+            if encoded_source is None:
+                raise RuntimeError("Long V2V online validation could not decode or encode its source video")
+            image_vae_embeds, source_videos = encoded_source
+
         for vid_len in self.vis_video_lengths:
+            vid_len = int(vid_len)
             print(f"Generating video of length {vid_len}")
-            videos = self.generate_video(self.vis_pipeline, vid_len, prompts)
+            data_info = {"image_vae_embeds": image_vae_embeds[:, :, :vid_len]} if image_vae_embeds is not None else None
+            videos = self.generate_video(
+                self.vis_pipeline,
+                vid_len,
+                prompts,
+                data_info=data_info,
+                source_videos=source_videos,
+            )
 
             # Save each sample
             for idx, video_np in enumerate(videos):

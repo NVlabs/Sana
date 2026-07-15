@@ -49,12 +49,15 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
         self.gradient_accumulation_steps = getattr(config, "gradient_accumulation_steps", 1)
         self.is_lora_enabled = getattr(config, "is_lora_enabled", False)
 
-    def _encode_v2v_source_batch(self, batch):
+    def _encode_v2v_source_batch(self, batch, latent_frames=None, return_source_videos=False):
         source_video_paths = batch.get("source_video_paths")
         if source_video_paths is None:
             raise ValueError("V2V long training requires source_video_paths in each batch")
 
-        latent_frames, _, latent_height, latent_width = self.config.image_or_video_shape[1:]
+        configured_frames, latent_channels, latent_height, latent_width = self.config.image_or_video_shape[1:]
+        latent_frames = configured_frames if latent_frames is None else int(latent_frames)
+        if latent_frames <= 0:
+            raise ValueError("latent_frames must be positive")
         vae_stride = self.config.get("vae_downsample_rate", [8, 32, 32])
         pixel_frames = (latent_frames - 1) * vae_stride[0] + 1
         pixel_size = (latent_height * vae_stride[1], latent_width * vae_stride[2])
@@ -64,7 +67,7 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
             source_videos = [
                 read_video_from_path(path, pixel_size, pixel_frames).permute(1, 0, 2, 3) for path in source_video_paths
             ]
-        except (OSError, RuntimeError, ValueError) as error:
+        except (OSError, RuntimeError, TypeError, ValueError) as error:
             rank = dist.get_rank() if dist.is_initialized() else 0
             print(colored(f"[LongSANATrainer][rank {rank}] skipping source video: {error}", "red"))
             skip_batch.fill_(1)
@@ -76,11 +79,41 @@ class LongSANATrainer(SelfForcingScoreDistillationTrainer):
             del source_videos
             return None
 
-        with torch.no_grad():
-            image_vae_embeds = self.model.vae.encode_to_latent(torch.stack(source_videos)).to(
-                device=self.device, dtype=self.dtype
+        source_video_batch = None
+        encode_failed = torch.zeros(1, device=self.device)
+        try:
+            source_video_batch = torch.stack(source_videos)
+            with torch.no_grad():
+                image_vae_embeds = self.model.vae.encode_to_latent(source_video_batch).to(
+                    device=self.device, dtype=self.dtype
+                )
+            expected_shape = (
+                len(source_video_paths),
+                latent_channels,
+                latent_frames,
+                latent_height,
+                latent_width,
             )
+            if image_vae_embeds.shape != expected_shape:
+                raise ValueError(
+                    f"Source VAE produced shape {tuple(image_vae_embeds.shape)}, expected {expected_shape}"
+                )
+        except (OSError, RuntimeError, TypeError, ValueError) as error:
+            rank = dist.get_rank() if dist.is_initialized() else 0
+            print(colored(f"[LongSANATrainer][rank {rank}] source VAE encoding failed: {error}", "red"))
+            image_vae_embeds = None
+            encode_failed.fill_(1)
+
+        if dist.is_initialized():
+            dist.all_reduce(encode_failed, op=dist.ReduceOp.MAX)
+
+        if encode_failed.item():
+            del source_videos, source_video_batch
+            return None
         del source_videos
+        if return_source_videos:
+            return image_vae_embeds, source_video_batch
+        del source_video_batch
         return image_vae_embeds
 
     def _next_batch_with_v2v_conditioning(self):

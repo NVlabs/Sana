@@ -26,6 +26,8 @@ import yaml
 from diffusion.data import transforms as video_transforms
 from diffusion.data.datasets import utils as dataset_utils
 from diffusion.data.datasets.video import sana_v2v_pair_data
+from diffusion.longsana.model.streaming_sana_long import StreamingSANATrainingModel
+from diffusion.longsana.pipeline.sana_inference_pipeline import SanaInferencePipeline
 from diffusion.longsana.pipeline.sana_reverse_reg_pipeline import SanaReverseRegPipeline
 from diffusion.longsana.pipeline.sana_training_pipeline import SanaTrainingPipeline
 from diffusion.longsana.trainer.longsana_trainer import LongSANATrainer
@@ -506,6 +508,109 @@ def test_reverse_reg_pipeline():
     assert generator.scale.grad.abs() > 0
 
 
+class DummyReversePipeline:
+    def __init__(self):
+        self.calls = []
+
+    def denoise_chunk(self, **kwargs):
+        self.calls.append(kwargs)
+        source = kwargs["source_chunk_bcfhw"]
+        return {
+            "flow_pred": torch.zeros_like(source),
+            "pred_x0": torch.zeros_like(source),
+            "timestep": torch.ones(source.shape[0], dtype=torch.int64),
+            "noise": torch.zeros_like(source),
+        }
+
+
+def test_reverse_overlap_uses_only_new_frames():
+    model = StreamingSANATrainingModel.__new__(StreamingSANATrainingModel)
+    model.reverse_pipeline = DummyReversePipeline()
+    model.state = {
+        "conditional_info": {
+            "reverse_conditional_dict": {
+                "prompt_embeds": torch.ones(1, 2, 3),
+                "mask": torch.ones(1, 2),
+            }
+        }
+    }
+
+    edited = torch.arange(11, dtype=torch.float32).reshape(1, 11, 1, 1, 1)
+    source = torch.arange(11, dtype=torch.float32).reshape(1, 1, 11, 1, 1) + 100
+    gradient_mask = torch.zeros_like(edited, dtype=torch.bool)
+    gradient_mask[:, 2:] = True
+    result = model.run_reverse_denoise(
+        edited,
+        {
+            "chunk_image_vae_embeds": source,
+            "gradient_mask": gradient_mask,
+            "new_frames_generated": 9,
+            "chunk_start_frame": 11,
+        },
+    )
+
+    call = model.reverse_pipeline.calls[0]
+    assert call["current_start_frame"] == 11
+    assert torch.equal(call["edited_chunk_bcfhw"], edited[:, -9:].permute(0, 2, 1, 3, 4))
+    assert torch.equal(call["source_chunk_bcfhw"], source[:, :, -9:])
+    assert result["gradient_mask"].shape[1] == 9
+    assert result["gradient_mask"].all()
+
+
+class DummyTextEncoder:
+    def forward_chi(self, prompts, use_chi_prompt=True):
+        del use_chi_prompt
+        batch_size = len(prompts)
+        return {
+            "prompt_embeds": torch.ones(batch_size, 2, 3),
+            "mask": torch.ones(batch_size, 2),
+        }
+
+
+def test_v2v_inference_pipeline_multi_chunk_conditioning():
+    torch.manual_seed(3407)
+    generator = DummyV2VGenerator(num_blocks=1)
+    pipeline = SanaInferencePipeline.__new__(SanaInferencePipeline)
+    pipeline.args = type("Args", (), {"motion_score": 0})()
+    pipeline.device = torch.device("cpu")
+    pipeline.generator = generator
+    pipeline.text_encoder = DummyTextEncoder()
+    pipeline.vae = None
+    pipeline.scheduler = DummyScheduler()
+    pipeline.num_frame_per_block = 2
+    pipeline.denoising_step_list = [5]
+    pipeline.model_device = torch.device("cpu")
+    pipeline.model_dtype = torch.float32
+    pipeline.v2v = True
+    pipeline.num_model_blocks = 1
+    pipeline.num_cached_blocks = 2
+    pipeline.sink_token = True
+    pipeline._full_history_softmax_cache = False
+    pipeline.block_is_state_cached = [False]
+
+    noise = torch.randn(1, 2, 4, 1, 1)
+    conditioning = torch.arange(8, dtype=torch.float32).reshape(1, 2, 4, 1, 1)
+    output, info = pipeline.inference(
+        noise,
+        text_prompts=["apply an edit"],
+        data_info={"image_vae_embeds": conditioning},
+        generator=torch.Generator(device="cpu").manual_seed(3407),
+    )
+
+    assert output.shape == (1, 4, 2, 1, 1)
+    assert info["chunk_indices"] == [0, 2, 4]
+    assert len(generator.calls) == 4
+    expected_conditioning = (
+        conditioning[:, :, :2],
+        conditioning[:, :, :2],
+        conditioning[:, :, 2:],
+        conditioning[:, :, 2:],
+    )
+    for call, expected in zip(generator.calls, expected_conditioning):
+        torch.testing.assert_close(call["conditioning"], expected)
+    assert [call["save_kv_cache"] for call in generator.calls] == [False, True, False, True]
+
+
 test_release_configs()
 test_long_v2v_manifest_dataset()
 test_bidirectional_pair_dataset()
@@ -514,6 +619,8 @@ test_v2v_batch_retry_counter_is_local()
 test_training_pipeline_cache_helpers()
 test_training_pipeline_multi_chunk_conditioning()
 test_reverse_reg_pipeline()
+test_reverse_overlap_uses_only_new_frames()
+test_v2v_inference_pipeline_multi_chunk_conditioning()
 print("SANA-Streaming CPU training helper tests passed")
 PY
 

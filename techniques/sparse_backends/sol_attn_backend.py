@@ -61,6 +61,9 @@ class _SolContext:
     block_size = DEFAULT_BLOCK_SIZE
     tau = None
     grid = None
+    # HunyuanVideo joint [video, text] mode: >0 enables the masked split-merge
+    # path (sparse video x video ⊕ dense video x text). 0 = Wan pure-video mode.
+    video_len = 0
 
 
 _SOL_CTX = _SolContext()
@@ -339,6 +342,90 @@ def _dense(q, k, v, dense_fn):
     return torch.nn.functional.scaled_dot_product_attention(q, k, v)
 
 
+def sol_attn_attention_hunyuan(q, k, v, *, video_len, key_valid, grid,
+                               tau=None, target_density=DEFAULT_TARGET_DENSITY,
+                               block_size=DEFAULT_BLOCK_SIZE):
+    """Exact SOL for HunyuanVideo joint ``[video, text]`` self-attention.
+
+    ``q,k,v``: ``[B,H,S,D]``; first ``video_len`` tokens are the video ``F*H*W``
+    grid (``grid``), the trailing ``S-video_len`` are text (padded to
+    ``max_sequence_length``). ``key_valid``: bool ``[B,S]`` — attendable keys
+    (all video True; text True up to the real prompt length).
+
+    Video queries: sparse routing over video keys (SOL colmask kernel, on
+    Morton-reordered tokens) online-softmax-merged with a dense pass over the
+    VALID text keys, using the kernel's own per-query LSE. Text queries: a plain
+    dense pass over all valid keys (cheap, ~256 rows). This is exact w.r.t. the
+    sparse video x video approximation while keeping text conditioning intact and
+    honoring the text-padding mask the kernel cannot consume. Falls back to full
+    dense SDPA on any kernel/constraint failure.
+    """
+    import torch
+    F = torch.nn.functional
+    scale = _FIXED_SCALE
+    B, H, S, D = q.shape
+    tl = S - video_len
+
+    q0 = q.contiguous().to(torch.bfloat16)
+    k0 = k.contiguous().to(torch.bfloat16)
+    v0 = v.contiguous().to(torch.bfloat16)
+
+    def _dense_full():
+        am = torch.zeros(B, 1, 1, S, device=q.device, dtype=q0.dtype)
+        am = am.masked_fill(~key_valid[:, None, None, :], float("-inf"))
+        return F.scaled_dot_product_attention(q0, k0, v0, attn_mask=am).to(q.dtype)
+
+    if tl <= 0 or not sol_attn_supported(q0):
+        return _dense_full()
+    try:
+        cm = _load_colmask()
+        os.environ.setdefault("PISA2_ALLOW_LOW_TAU", "1")
+        qv, kv, vv = q0[:, :, :video_len], k0[:, :, :video_len], v0[:, :, :video_len]
+        # Morton reorder the video sub-range: 64-token blocks become 3D-compact.
+        perm, inv = _morton3d_perm(grid, q0.device)
+        qv_r = qv[:, :, perm, :].contiguous()
+        kv_r = kv[:, :, perm, :].contiguous()
+        vv_r = vv[:, :, perm, :].contiguous()
+        _tau = tau
+        if _tau is None:
+            ck = (tuple(qv_r.shape), round(float(target_density), 4))
+            _tau = _TAU_CACHE.get(ck)
+            if _tau is None:
+                _tau = float(cm["calibrate_tau"](
+                    qv_r, kv_r, vv_r, target_density=target_density,
+                    block_size=block_size)["threshold"])
+                _TAU_CACHE[ck] = _tau
+        # Sparse video x video with the kernel's per-query LSE over routed keys.
+        out_vv_r, lse_vv_r = cm["run"](
+            qv_r, kv_r, vv_r, tau=_tau, block_size=block_size, return_lse=True)
+        out_vv = out_vv_r[:, :, inv, :].float()          # [B,H,video_len,D]
+        lse_vv = lse_vv_r[:, :, inv]                      # [B,H,video_len] fp32
+        # Dense video -> valid text tail; its own LSE for the merge.
+        kt, vt = k0[:, :, video_len:].float(), v0[:, :, video_len:].float()
+        tvalid = key_valid[:, video_len:]                 # [B,tl] bool
+        s_vt = torch.einsum("bhqd,bhkd->bhqk", qv.float(), kt) * scale
+        s_vt = s_vt.masked_fill(~tvalid[:, None, None, :], float("-inf"))
+        lse_vt = torch.logsumexp(s_vt, dim=-1)            # [B,H,video_len]
+        out_vt = torch.einsum("bhqk,bhkd->bhqd", torch.softmax(s_vt, dim=-1), vt)
+        # Online-softmax merge of the two disjoint key sets.
+        m = torch.maximum(lse_vv, lse_vt)
+        w_vv = torch.exp(lse_vv - m).unsqueeze(-1)
+        w_vt = torch.exp(lse_vt - m).unsqueeze(-1)
+        out_v = (w_vv * out_vv + w_vt * out_vt) / (w_vv + w_vt)
+        # Text queries: dense over all valid keys (cheap).
+        qt = q0[:, :, video_len:]
+        am_t = torch.zeros(B, 1, tl, S, device=q.device, dtype=q0.dtype)
+        am_t = am_t.masked_fill(~key_valid[:, None, None, :], float("-inf"))
+        out_t = F.scaled_dot_product_attention(qt, k0, v0, attn_mask=am_t)
+        out = torch.cat([out_v.to(q0.dtype), out_t], dim=2)
+    except Exception as exc:  # never break the model
+        if os.environ.get("SOL_ATTN_STRICT", "0") == "1":
+            raise
+        print(f"[sol_attn:hunyuan] fell back to dense: {type(exc).__name__}: {exc}")
+        return _dense_full()
+    return out.to(q.dtype)
+
+
 # ---------------------------------------------------------------------------
 # Dispatch hook (mirrors the PISA pattern the Wan runtime installs). A model
 # runtime installs this over diffusers' ``dispatch_attention_fn`` and it fires
@@ -391,13 +478,38 @@ def _ensure_sol_op():
         # Real op always returns a contiguous [B, H, S, D] tensor.
         return torch.empty(q.shape, dtype=q.dtype, device=q.device)
 
+    # HunyuanVideo joint [video, text] variant: opaque split-merge over a
+    # text-padding mask (see sol_attn_attention_hunyuan). Also compile-safe.
+    @torch.library.custom_op(
+        "sol::sparse_attn_hunyuan", mutates_args=(),
+        schema="(Tensor q, Tensor k, Tensor v, Tensor key_valid) -> Tensor",
+    )
+    def _sol_sparse_attn_hunyuan(q, k, v, key_valid):
+        layer = _SOL_CTX.layer
+        _SOL_CTX.layer += 1
+        kv = key_valid.bool()
+        if _SOL_CTX.step < _SOL_CTX.dense_steps or layer in _SOL_CTX.dense_layers:
+            B, _H, S, _D = q.shape
+            am = torch.zeros(B, 1, 1, S, device=q.device, dtype=q.dtype)
+            am = am.masked_fill(~kv[:, None, None, :], float("-inf"))
+            return torch.nn.functional.scaled_dot_product_attention(
+                q.contiguous(), k.contiguous(), v.contiguous(), attn_mask=am)
+        return sol_attn_attention_hunyuan(
+            q, k, v, video_len=_SOL_CTX.video_len, key_valid=kv,
+            grid=_SOL_CTX.grid, tau=_SOL_CTX.tau,
+            target_density=_SOL_CTX.target_density, block_size=_SOL_CTX.block_size)
+
+    @_sol_sparse_attn_hunyuan.register_fake
+    def _(q, k, v, key_valid):
+        return torch.empty(q.shape, dtype=q.dtype, device=q.device)
+
     _SOL_OP_REGISTERED = True
 
 
 def make_sol_attn_dispatch(original_dispatch, *, tau=None,
                            target_density=DEFAULT_TARGET_DENSITY,
                            dense_steps=0, dense_layers="", grid=None,
-                           block_size=DEFAULT_BLOCK_SIZE):
+                           block_size=DEFAULT_BLOCK_SIZE, video_len=0):
     """Build a drop-in replacement for diffusers ``dispatch_attention_fn``.
 
     Fires only for eligible real self-attention (head_dim 128, non-causal,
@@ -415,11 +527,15 @@ def make_sol_attn_dispatch(original_dispatch, *, tau=None,
     _SOL_CTX.block_size = int(block_size)
     _SOL_CTX.tau = None if tau is None else float(tau)
     _SOL_CTX.grid = grid
+    _SOL_CTX.video_len = int(video_len)
     _ensure_sol_op()
-    # Capture the op ONCE at creation; a per-call ``import torch`` in the traced
+    # Capture the ops ONCE at creation; a per-call ``import torch`` in the traced
     # dispatch could itself graph-break under regional_compile.
     import torch
     _sparse_op = torch.ops.sol.sparse_attn
+    _hunyuan_op = torch.ops.sol.sparse_attn_hunyuan
+    _bool_dtype = torch.bool
+    _hunyuan_video_len = int(video_len)
 
     def sol_attn_dispatch_attention_fn(
         query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False,
@@ -433,23 +549,38 @@ def make_sol_attn_dispatch(original_dispatch, *, tau=None,
                 parallel_config=parallel_config,
             )
 
-        # Under static-shape regional_compile these predicates fold at trace
-        # time, so the self-attn branch becomes a straight-line op call with no
-        # runtime branch and no graph break.
-        self_attn = (
+        # Common eligibility (mask handled per-mode below). Under static-shape
+        # regional_compile these predicates fold at trace time.
+        eligible = (
             parallel_config is None
-            and attn_mask is None
             and not is_causal
             and dropout_p == 0.0
             and query.shape[-1] == HEAD_DIM
             and key.shape[1] == query.shape[1]   # self-attention (same seqlen)
             and sol_attn_supported(query)
         )
-        if not self_attn:
+        if not eligible:
             return _dense()
 
         # diffusers passes [B, S, H, D]; the kernel wants [B, H, S, D]. The
         # transposes are traceable views; the opaque op owns everything else.
+        if _hunyuan_video_len > 0:
+            # HunyuanVideo joint [video, text] mode needs the text-padding mask.
+            if attn_mask is None or query.shape[1] <= _hunyuan_video_len:
+                return _dense()
+            key_valid = attn_mask
+            if key_valid.dtype != _bool_dtype:
+                key_valid = key_valid > -1.0   # additive mask: 0 valid, -inf out
+            key_valid = key_valid.reshape(key_valid.shape[0], -1)  # [B, S]
+            q = query.transpose(1, 2)
+            k = key.transpose(1, 2)
+            val = value.transpose(1, 2)
+            out = _hunyuan_op(q, k, val, key_valid)
+            return out.transpose(1, 2)
+
+        # Wan pure-video mode: SOL only for unmasked self-attention.
+        if attn_mask is not None:
+            return _dense()
         q = query.transpose(1, 2)
         k = key.transpose(1, 2)
         val = value.transpose(1, 2)

@@ -128,7 +128,7 @@ def _run_compiled(
         }
         _COMPILED_OPS[key] = entry
     entry["compiled_op"](*op_args, stream=stream)
-    return output, entry, cache_hit
+    return output, lse, entry, cache_hit
 
 
 def _emit_event(payload: dict[str, Any]) -> None:
@@ -250,7 +250,7 @@ def _correctness_gate(
     kc, vc, threshold, _, _ = aligned.prepare_qkv(
         q_gate, k_gate, v_gate, tau=tau, block_size=block_size, scale=scale
     )
-    candidate_output, candidate, cache_hit = _run_compiled(
+    candidate_output, _candidate_lse, candidate, cache_hit = _run_compiled(
         q_gate, k_gate, v_gate, kc, vc, threshold, scale
     )
     reference = aligned.make_prepared_runner(
@@ -295,8 +295,17 @@ def run(
     *,
     tau: float,
     block_size: int = 64,
+    return_lse: bool = False,
 ) -> torch.Tensor:
-    """Run the release SM100 colmask kernel on Wan BHTD tensors."""
+    """Run the release SM100 colmask kernel on Wan BHTD tensors.
+
+    When ``return_lse=True`` returns ``(output, lse)`` where ``lse`` is the
+    per-query log-sum-exp over the routed keys ([B, H, T], fp32). The kernel
+    already computes it; exposing it lets a caller online-softmax-merge the
+    sparse video x video result with a dense video x text tail (HunyuanVideo),
+    which is how SOL stays exact under a joint video+text sequence with a
+    text-padding mask the kernel itself does not consume.
+    """
 
     _validate_qkv(q, k, v, block_size)
     q = q.contiguous()
@@ -309,7 +318,7 @@ def run(
     kc, vc, threshold, _, _ = aligned.prepare_qkv(
         q, k, v, tau=tau, block_size=block_size, scale=scale
     )
-    output, runner, cache_hit = _run_compiled(q, k, v, kc, vc, threshold, scale)
+    output, lse, runner, cache_hit = _run_compiled(q, k, v, kc, vc, threshold, scale)
     if _EVENT_COUNT < 4:
         _emit_event(
             {
@@ -323,6 +332,8 @@ def run(
                 "physical_route_tile_size": 128,
             }
         )
+    if return_lse:
+        return output, lse
     return output
 
 

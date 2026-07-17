@@ -145,10 +145,24 @@ def main() -> int:
             make_sol_attn_dispatch, sol_attn_begin_forward,
         )
         from diffusers.models.transformers import transformer_hunyuan_video as _thv
+        # HunyuanVideo self-attention is a JOINT [video, text] sequence with a
+        # text-padding mask, so SOL runs the masked split-merge path: it needs
+        # the video grid (F,H,W) and the video token count so the reorder +
+        # sparse routing apply to the video sub-range only (text stays dense).
+        _cfg = pipe.transformer.config
+        _pt = int(getattr(_cfg, "patch_size", 2))
+        _ptt = int(getattr(_cfg, "patch_size_t", 1))
+        _vs = int(getattr(pipe, "vae_scale_factor_spatial", 8))
+        _vt = int(getattr(pipe, "vae_scale_factor_temporal", 4))
+        _Flat = (num_frames - 1) // _vt + 1
+        _grid = (_Flat // _ptt, (height // _vs) // _pt, (width // _vs) // _pt)
+        _video_len = _grid[0] * _grid[1] * _grid[2]
         _sol_kw = dict(
             target_density=float(os.environ.get("HUNYUAN_SOL_DENSITY", "0.05")),
             dense_steps=int(os.environ.get("HUNYUAN_SOL_DENSE_STEPS", "0")),
             dense_layers=os.environ.get("HUNYUAN_SOL_DENSE_LAYERS", ""),
+            grid=_grid,
+            video_len=_video_len,
         )
         _sol_tau = os.environ.get("HUNYUAN_SOL_TAU")
         if _sol_tau is not None:
@@ -157,7 +171,9 @@ def main() -> int:
             _thv.dispatch_attention_fn, **_sol_kw
         )
         pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_attn_begin_forward())
-        print(f"[opt] SOL Attention installed tau={_sol_tau} density_target={_sol_kw['target_density']} "
+        print(f"[opt] SOL Attention (Hunyuan joint video+text) installed "
+              f"grid={_grid} video_len={_video_len} tau={_sol_tau} "
+              f"density_target={_sol_kw['target_density']} "
               f"dense_steps={_sol_kw['dense_steps']} dense_layers='{_sol_kw['dense_layers']}'", flush=True)
 
     # --- Optional kernel: torch.compile the transformer, gated on HUNYUAN_COMPILE ---

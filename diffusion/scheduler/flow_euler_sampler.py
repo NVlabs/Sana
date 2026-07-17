@@ -128,7 +128,7 @@ class LTXFlowEuler(FlowEuler):
         condition_frame_info = self.model_kwargs["data_info"].pop(
             "condition_frame_info", {}
         )  # {frame_idx: frame_weight}
-        condition_mask = torch.zeros_like(latents)  # 1,C,F,H,W
+        condition_mask = torch.zeros_like(latents, dtype=torch.float32)  # 1,C,F,H,W
         image_cond_noise_scale = 0.0
         for frame_idx, frame_weight in condition_frame_info.items():
             condition_mask[:, :, frame_idx] = 1

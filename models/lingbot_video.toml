@@ -1,0 +1,136 @@
+# LingBot-Video MoE 30B-A3B + refiner, registered from ~/code/lingbot.
+
+id = "lingbot_video"
+spec = "LingBotVideoMoE30BA3B"
+display_name = "LingBot-Video MoE 30B-A3B 4-GPU T2V + 1080p refiner"
+family = "video_t2v"
+submodule = "models/lingbot_video/baseline"
+base_commit = "snapshot:fec75d7be5d3d67b773bc68a096ea6cd8b7c46ec6f54494d7ba94136cab9a472"
+run_script = "scripts/run_lingbot_video_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_lingbot_video.toml"
+
+[official_config]
+model = "robbyant/lingbot-video-moe-30b-a3b"
+task = "t2v_refiner"
+width = 832
+height = 480
+frames = 121
+fps = 24
+duration_s = 5
+steps = 40
+guidance_scale = 3.0
+flow_shift = 3.0
+refiner_width = 1920
+refiner_height = 1088
+refiner_frames = 121
+refiner_steps = 8
+refiner_guidance_scale = 3.0
+refiner_shift = 3.0
+refiner_t_thresh = 0.85
+refiner_sigma_tail_steps = 2
+seed = 42
+num_gpus = 4
+context_parallel_degree = 4
+fsdp = true
+batch_cfg = true
+refiner_batch_cfg = true
+transformer_dtype = "bf16"
+text_encoder_dtype = "bf16"
+vae_dtype = "fp32"
+refiner_vae_dtype = "fp32"
+
+[baseline]
+variant = "cp4_fsdp_batch_cfg_fa2"
+run_id = "agent_opt_iter1_profile_4495666"
+slurm_job_id = "4495666"
+total_s = 375.55
+load_excluded_request_s = 375.55
+wall_total_s = 609.72
+host_interval_base_pipeline_s = 89.09
+host_interval_base_video_export_s = 0.65
+host_interval_refiner_input_prepare_s = 19.25
+host_interval_refiner_pipeline_s = 263.24
+host_interval_refiner_video_export_s = 1.49
+max_device_memory_used_mib = 117251
+timing_scope = "load_excluded_request_wall_from_refiner_preloaded_to_refiner_video_export"
+warm_steady_state = false
+warmup_requests = 0
+hardware = "4x NVIDIA GB200 186GB, single NVLink node"
+status = "measured_cp4_fsdp_batch_cfg_fa2"
+note = "The authoritative total is the contiguous wall interval after both models are resident. Host-observed sub-intervals are not pure denoise/decode because pipeline calls include VAE decode and CUDA work is asynchronous."
+
+[env]
+PYTHON_BIN = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2/bin/python"
+LINGBOT_CONDA_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3"
+LINGBOT_CONDA_ENV = "lingbot-fa2"
+LINGBOT_MODEL_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/models/lingbot-video-moe-30b-a3b"
+LINGBOT_PROMPT_JSON = "models/lingbot_video/prompts/t2v_example_1.json"
+LINGBOT_CACHE_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/.cache/lingbot_video"
+HF_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/.cache/huggingface"
+HF_HUB_CACHE = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/.cache/huggingface/hub"
+LINGBOT_NPROC = "4"
+LINGBOT_CONTEXT_PARALLEL_DEGREE = "4"
+LINGBOT_CONTEXT_PARALLEL_ULYSSES = "1"
+LINGBOT_ENABLE_FSDP = "1"
+LINGBOT_BATCH_CFG = "1"
+LINGBOT_REFINER_BATCH_CFG = "1"
+LINGBOT_REUSE_CONDITION_FEATURES = "1"
+LINGBOT_HEIGHT = "480"
+LINGBOT_WIDTH = "832"
+LINGBOT_NUM_FRAMES = "121"
+LINGBOT_FPS = "24"
+LINGBOT_DURATION = "5"
+LINGBOT_STEPS = "40"
+LINGBOT_REFINER_HEIGHT = "1088"
+LINGBOT_REFINER_WIDTH = "1920"
+LINGBOT_REFINER_STEPS = "8"
+LINGBOT_GUIDANCE_SCALE = "3"
+LINGBOT_REFINER_GUIDANCE_SCALE = "3"
+LINGBOT_SHIFT = "3"
+LINGBOT_REFINER_SHIFT = "3"
+LINGBOT_REFINER_T_THRESH = "0.85"
+LINGBOT_REFINER_SIGMA_TAIL_STEPS = "2"
+LINGBOT_SEED = "42"
+LINGBOT_ATTN_KERNEL = "fa2"
+LINGBOT_SOURCE_VARIANT = "baseline_pristine_plus_timing"
+LINGBOT_PHASE_TIMING = "1"
+LINGBOT_MOE_EXPERT_BACKEND = "grouped_mm"
+LINGBOT_MOE_PAD_BACKEND = "vectorized"
+LINGBOT_FUSED_QKV_LINEAR = "0"
+LINGBOT_MOE_REORDER_BACKEND = "sort"
+LINGBOT_MOE_RESTORE_BACKEND = "scatter"
+LINGBOT_MOE_RESTORE_CHUNK_SIZE = "128"
+LINGBOT_QWEN_ATTN_IMPLEMENTATION = "sdpa"
+DIFFUSERS_ATTN_BACKEND = "_native_flash"
+LINGBOT_MOE_EP = "0"
+LINGBOT_COMPILE_MOE = "0"
+LINGBOT_OVERLAP_REFINER_LOAD = "0"
+LINGBOT_BCAST_WEIGHTS = "0"
+LINGBOT_SHARDED_LOAD = "0"
+LINGBOT_OFFLOAD_BASE_BEFORE_REFINER = "0"
+NCCL_NET_PLUGIN = "none"
+NCCL_DEBUG = "WARN"
+
+[orchestration]
+default_techniques = ["kernel", "cache", "pisa", "topology"]
+inference_world_size = 4
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+cpus_per_task = 64
+mem = "0"
+time = "02:00:00"
+job_name = "autovideo-lingbot-video-cp4-baseline"
+exclusive = true
+
+[reference_only]
+weights_repo = "robbyant/lingbot-video-moe-30b-a3b"
+weights_path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/models/lingbot-video-moe-30b-a3b"
+weights_size = "122 GiB"
+python_env = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2"
+upstream_repo = "https://github.com/robbyant/lingbot-video.git"
+upstream_commit = "a2bb04b78edd848500dc27a26e035a95442ae186"
+source_snapshot = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/lingbot"

@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from efficiency.techniques.payload_cache import PABBroadcastController  # noqa: E402
+from techniques.methods.payload_cache import PABBroadcastController  # noqa: E402
 
 PUBLIC_VIDEOSYS = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/VideoSys")
 PUBLIC_PAB_MGR = PUBLIC_VIDEOSYS / "videosys" / "core" / "pab" / "pab_mgr.py"

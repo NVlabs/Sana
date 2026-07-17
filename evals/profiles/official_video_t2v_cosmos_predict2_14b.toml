@@ -1,0 +1,45 @@
+id = "official_video_t2v_cosmos_predict2_14b"
+description = "Cosmos-Predict2 14B Video2World (image-to-video) evaluation profile, official prompts+config (single GB200 GPU)."
+
+[official_config]
+model = "cosmos_predict2_14b"
+width = 1280
+height = 704
+frames = 93
+fps = 16
+steps = 35
+guidance_scale = 7.0
+seed = 1
+num_gpus = 4
+pipeline = "Cosmos2VideoToWorld (Video2World I2V)"
+
+[artifacts]
+required = ["outputs/run.log", "outputs/out.mp4", "outputs/benchmark.json"]
+optional = ["outputs/videos", "outputs/frames", "outputs/run_config.json"]
+
+[performance]
+baseline_candidate = "cosmos_predict2_14b_baseline"
+primary_metric = "total_s"
+secondary_metric = "denoise_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+notes = "total_s = Video2World I2V (image+text -> video) median; baseline runs the first official prompt only (yellow-scrubber)."
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is the exact vanilla diffusers Cosmos-Predict2 2-stage reference; optimizations must recover it when disabled."
+
+[quantitative_quality]
+enabled = true
+metrics = ["frame_count", "duration_s", "mean_abs_pixel_diff", "psnr", "sharpness_ratio", "temporal_delta_error"]
+frame_count_expected = 93
+duration_tolerance_s = 0.25
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate."

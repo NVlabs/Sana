@@ -6,16 +6,16 @@ contract_kind = "model_baseline_minimal_copy"
 
 [baseline]
 manifest = "candidates/wan22_t2v_a14b_baseline.toml"
-runtime_root = "runtime/wan22_t2v_a14b_baseline"
+runtime_root = "models/wan22_t2v_a14b/baseline"
 eval_profile = "evals/profiles/official_video_t2v_wan22_t2v_a14b.toml"
-description = "Wan2.2-T2V-A14B t2v baseline (2-expert MoE). Runnable code vendored in runtime/wan22_t2v_a14b_baseline; weights referenced read-only by absolute path via WAN22_WEIGHTS; diffusers/torch env is the sparse_attn_training .venv."
+description = "Wan2.2-T2V-A14B t2v baseline (2-expert MoE). Runnable code vendored in models/wan22_t2v_a14b/baseline; weights referenced read-only by absolute path via WAN22_WEIGHTS; diffusers/torch env is the sparse_attn_training .venv."
 
 [baseline.copy]
 paths_are_repo_relative = true
 include = [
   "models/wan22_t2v_a14b.toml",
   "models/wan22_t2v_a14b/**",
-  "runtime/wan22_t2v_a14b_baseline/**",
+  "models/wan22_t2v_a14b/baseline/**",
   "candidates/wan22_t2v_a14b_baseline.toml",
   "candidates/schema.md",
   "evals/profiles/official_video_t2v_wan22_t2v_a14b.toml",

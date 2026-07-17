@@ -1,0 +1,57 @@
+schema_version = 1
+id = "wan22_ti2v_5b"
+display_name = "Wan2.2-TI2V-5B 720p121 T2V pristine baseline (diffusers WanPipeline)"
+legacy_profile = "models/wan22_ti2v_5b.toml"
+contract_kind = "model_baseline_minimal_copy"
+
+[baseline]
+manifest = "candidates/wan22_ti2v_5b_baseline.toml"
+runtime_root = "models/wan22_ti2v_5b/baseline"
+eval_profile = "evals/profiles/official_video_t2v_wan22_ti2v_5b.toml"
+description = "Wan2.2-TI2V-5B t2v baseline. Runnable code (gpu_infer.py + run shim) is vendored in models/wan22_ti2v_5b/baseline; weights referenced read-only by absolute path via WAN22_WEIGHTS; the diffusers/torch env is the sparse_attn_training .venv."
+
+[baseline.copy]
+paths_are_repo_relative = true
+include = [
+  "models/wan22_ti2v_5b.toml",
+  "models/wan22_ti2v_5b/**",
+  "models/wan22_ti2v_5b/baseline/**",
+  "candidates/wan22_ti2v_5b_baseline.toml",
+  "candidates/schema.md",
+  "evals/profiles/official_video_t2v_wan22_ti2v_5b.toml",
+  "evals/tiers.toml",
+  "scripts/launch_candidate.py",
+  "scripts/collect_run.py",
+  "search/plan_eval.py",
+  "efficiency/candidate_manifest.py",
+]
+exclude = [
+  ".git/**",
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "runs/**",
+  "output/**",
+  "workflow/**",
+  "search_space/**",
+]
+
+[[baseline.reference_only]]
+name = "wan22_ti2v_5b_diffusers_weights"
+path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yuchaog/workplace/pretrained_models/Wan2.2-TI2V-5B-Diffusers"
+repo = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+repo_type = "model"
+reason = "~32G Wan2.2 TI2V-5B diffusers weights (WanPipeline: transformer + vae + UMT5 text encoder); referenced by absolute path via WAN22_WEIGHTS. Neutral, never copied."
+
+[[baseline.reference_only]]
+name = "wan22_diffusers_env"
+path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sparse_attn_training/.venv"
+repo_type = "python_env"
+reason = "venv with torch 2.11+cu128 + diffusers 0.37.1 (has WanPipeline); used via PYTHON_BIN. Neutral, never copied."
+
+[experiment_defaults]
+worktree_mode = "model_baseline_minimal_copy"
+experiments_root = "output/experiments"
+state_dir = "state"
+runs_dir = "runs"
+logs_dir = "logs"
+caches = ["tmp", "triton", "torch_extensions", "python_deps"]

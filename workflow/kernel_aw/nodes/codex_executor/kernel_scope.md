@@ -62,12 +62,20 @@ METHOD, not of how close the output lands.
 A candidate is admissible iff, by reasoning about the method, it:
 - computes the *same mathematical function / algorithm* — the change is an
   implementation transformation (e.g. fusing, reordering, compiling with any
-  aggressiveness, re-laying-out, re-placing / residency, caching a provably
-  step-invariant quantity, reorganizing communication, staying within 16-bit
-  precision), NOT an algorithmic approximation; and
+  aggressiveness, changing a local operator layout, caching a provably
+  step-invariant local-operator quantity, or staying within 16-bit precision),
+  NOT an algorithmic approximation; and
 - preserves the algorithm's semantics and work: the SAME denoising-step count,
   the SAME model/DiT-call count, with nothing skipped, dropped, rank-reduced,
   sparsified, or sub-16-bit-quantized (the denylist above).
+
+Cross-rank partitioning and scheduling are owned by the `topology` executor. Do
+not change CP/SP/TP/EP/FSDP/CFG degrees, process groups, rank maps, collective
+algorithms or ordering, parameter/expert placement, distributed loading, or
+multi-device stage scheduling in a kernel candidate. Preserve the frozen
+baseline topology while measuring local kernels. If profiling exposes a
+distributed bottleneck, record it for the topology executor instead of claiming
+it as kernel work.
 
 Establish and record this as a **method / semantics argument** — what you changed
 and why it is the same mathematics — together with the structural invariants
@@ -113,14 +121,11 @@ checklist, not exhaustive, and none guaranteed to apply here:
 
 - work that is provably invariant across denoising steps (or across sequence
   segments, or across guidance branches) yet recomputed every time;
-- avoidable movement, eviction, or re-materialization of large invariant
-  tensors/parameters as execution crosses the pipeline's stages — including where
-  those tensors physically reside during the hot loop;
+- avoidable local movement, eviction, or re-materialization of invariant tensors
+  inside one rank's operator/module path;
 - whether every core exact operation is dispatched through the fastest available
   *equivalent* implementation/primitive for the real shapes, dtype, and hardware,
   rather than a slower default that returns the same result;
-- communication, gather/scatter, and intermediate-tensor overhead when the exact
-  computation is executed across multiple devices;
 - kernel-launch volume and host↔device synchronization stalls surrounding
   otherwise-cheap work.
 
@@ -254,12 +259,11 @@ documentation, when available.
 ## Execution round limit
 
 You have a hard budget of **40 optimization rounds** (candidate attempts) for this
-workflow. This budget is deliberately larger than a fusion-only search needs,
-because the lossless space above spans several distinct families and its
-highest-impact levers (data placement/movement, primitive/backend selection,
-cross-step or cross-segment invariant reuse, multi-device communication) usually
-require a **full-inference** validation rather than a cheap module microbenchmark,
-so they cost more per round. Spend the budget in proportion to profiled impact:
+workflow. The lossless local-implementation space spans several distinct
+families, and its highest-impact levers (local layout/movement,
+primitive/backend selection, and exact invariant preparation) may require a
+**full-inference** validation rather than a cheap module microbenchmark, so they
+cost more per round. Spend the budget in proportion to profiled impact:
 screen broadly and cheaply where you can, invest full-inference rounds on the
 ranked high-impact levers, and **deliver early if the lossless frontier plateaus** —
 do not burn rounds refining a converged operator-fusion stack when your profile

@@ -1,0 +1,28 @@
+id = "hunyuan_video_kernel_cache"
+kind = "patch"
+purpose = "optimization"
+description = "HunyuanVideo-13B optimized: TeaCache (step reuse) + torch.compile kernel. Single-GPU; 1 warmup pass amortizes compile before timing. (SOL Attention deferred: vendored CuteDSL kernel's stream API is incompatible with torch 2.11 and its per-call route calibration is too slow; backend is integrated but not enabled here.)"
+model_profile = "hunyuan_video"
+
+[runtime]
+root = "models/hunyuan_video/optimized"
+
+[env]
+SGLANG_HQ_TEACACHE_THRESHOLD = "0.15"
+SGLANG_HQ_TEACACHE_START_STEP = "6"
+SGLANG_HQ_TEACACHE_MAX_HITS = "2"
+HUNYUAN_COMPILE = "1"
+HUNYUAN_COMPILE_MODE = "default"
+HUNYUAN_WARMUP_PASSES = "1"
+TORCHINDUCTOR_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/torch_inductor"
+TRITON_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/triton"
+TORCH_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/torch"
+XDG_CACHE_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/xdg"
+TMPDIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/tmp"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"

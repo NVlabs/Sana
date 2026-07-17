@@ -1,9 +1,0 @@
-name = "eval_gate"
-kind = "orchestration"
-callable_by = ["workflow/attention_pa/workflow.py"]
-description = "Validate LPIPS, blind Codex visual evidence, and the final three-tier PISA recipe contract."
-
-inputs = ["AGENT-STATUS.json", "PISA-SEARCH-STATE.json", "PISA-RECIPES.json", "runs/*/outputs/benchmark.json", "runs/*/codex_visual_verdict.json", "runs/*/assess_verdict.json"]
-outputs = ["runs/<run_id>/assess_verdict.json", "recipe_contract_ok"]
-outcomes = ["smooth", "missing", "infra_blocked", "quality_failed", "failed"]
-side_effects = ["read_only_validation"]

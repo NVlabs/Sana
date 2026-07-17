@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from efficiency.sparse_attention_policies import (  # noqa: E402
+from techniques.sparse_attention_policies import (  # noqa: E402
     SparseVideoGenSAPPlan,
     sparse_videogen_sap_plan,
 )

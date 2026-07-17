@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from efficiency.candidate_manifest import dry_run_manifest, load_toml  # noqa: E402
+from techniques.candidate_manifest import dry_run_manifest, load_toml  # noqa: E402
 
 
 EXPECTED_COUNTS = {

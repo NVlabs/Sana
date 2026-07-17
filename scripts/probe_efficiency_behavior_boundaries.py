@@ -20,13 +20,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from efficiency.schedule import at_steps
-from efficiency.spec import ModelSpec
-from efficiency.technique import Capability, TechniqueContext
-from efficiency.techniques.payload_cache import PABBroadcastController
-from efficiency.techniques.step_cache import StepCache
-from efficiency.techniques.teacache import TeaCache, TeaCacheResidual
-from efficiency.techniques.token_prune import (
+from techniques.schedule import at_steps
+from techniques.spec import ModelSpec
+from techniques.technique import Capability, TechniqueContext
+from techniques.methods.payload_cache import PABBroadcastController
+from techniques.methods.step_cache import StepCache
+from techniques.methods.teacache import TeaCache, TeaCacheResidual
+from techniques.methods.token_prune import (
     CatPruneState,
     TokenPrune,
     cat_convergence_stale_indices,

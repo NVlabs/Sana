@@ -91,6 +91,47 @@ def test_collect_run_timing_and_canonical_outputs() -> None:
         assert not (output_dir / "report.md").exists()
 
 
+def test_runner_benchmark_metadata_survives_collection() -> None:
+    collect_run = load_collect_run()
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        benchmark_path = root / "benchmark.json"
+        benchmark_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "total_s": 210.07,
+                    "denoise_s": None,
+                    "decode_s": None,
+                    "timing_scope": "load_excluded_request",
+                    "timing_note": "host-observed intervals",
+                    "warm_steady_state": False,
+                    "warmup_requests": 0,
+                    "includes_model_load": False,
+                    "load_excluded_request_s": 210.07,
+                    "source_phase_subset_s": 207.9,
+                    "wall_total_s": 449.95,
+                    "max_device_memory_used_mib": 116271,
+                    "config": {"model": "lingbot_video", "num_frames": 121},
+                    "aggregate": {"total_s": 210.07, "warmup_requests": 0},
+                    "timings": {"wall_total_s": 449.95},
+                    "memory": {"max_device_memory_used_mib": 116271},
+                }
+            )
+        )
+        collected = collect_run.build_benchmark(
+            benchmark_path,
+            root / "missing.log",
+            model_hint="lingbot_video",
+        )
+        assert collected["total_s"] == 210.07
+        assert collected["denoise_s"] is None
+        assert collected["timing_scope"] == "load_excluded_request"
+        assert collected["config"]["num_frames"] == 121
+        assert collected["warmup_requests"] == 0
+        assert collected["memory"]["max_device_memory_used_mib"] == 116271
+
+
 def test_quality_blocks_promotion_without_baseline_frames() -> None:
     collect_run = load_collect_run()
     with tempfile.TemporaryDirectory() as tmp:

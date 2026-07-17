@@ -1,0 +1,26 @@
+id = "lingbot_video_baseline"
+kind = "baseline"
+purpose = "control"
+description = "LingBot-Video MoE+refiner hot baseline: CP4 Ulysses + FSDP + batched CFG + FA2 on 4x GB200."
+model_profile = "lingbot_video"
+
+[runtime]
+root = "models/lingbot_video/baseline"
+
+[env]
+LINGBOT_ATTN_KERNEL = "fa2"
+LINGBOT_SOURCE_VARIANT = "baseline_pristine_plus_timing"
+LINGBOT_VAL_PROMPTS = "models/lingbot_video/prompts/t2v_val3.json"
+LINGBOT_NUM_PROMPTS = "3"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"
+quality = "quality.json"
+risk_notes = "risk_notes.md"
+collection = "collection.json"
+patch_summary = "patch_summary.md"
+

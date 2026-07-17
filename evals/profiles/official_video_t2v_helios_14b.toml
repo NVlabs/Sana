@@ -1,0 +1,44 @@
+id = "official_video_t2v_helios_14b"
+description = "Helios-Base 14B text-to-video evaluation profile, official prompts+config (single GB200 GPU)."
+
+[official_config]
+model = "helios_14b"
+width = 640
+height = 384
+frames = 99
+fps = 24
+steps = 50
+guidance_scale = 5.0
+seed = 42
+num_gpus = 4
+pipeline = "HeliosPipeline"
+
+[artifacts]
+required = ["outputs/run.log", "outputs/out.mp4", "outputs/benchmark.json"]
+optional = ["outputs/videos", "outputs/frames", "outputs/run_config.json"]
+
+[performance]
+baseline_candidate = "helios_14b_baseline"
+primary_metric = "total_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+notes = "total_s = text-to-video median over the official prompt suite (Helios-Base standard sampling). Distilled/pyramid real-time modes are a separate track."
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is vanilla diffusers HeliosPipeline; optimizations must recover it when disabled."
+
+[quantitative_quality]
+enabled = true
+metrics = ["frame_count", "duration_s", "mean_abs_pixel_diff", "psnr", "sharpness_ratio", "temporal_delta_error"]
+frame_count_expected = 99
+duration_tolerance_s = 0.25
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate."

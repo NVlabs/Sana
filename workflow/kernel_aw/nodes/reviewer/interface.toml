@@ -1,9 +1,0 @@
-name = "reviewer"
-kind = "orchestration"
-callable_by = ["workflow/kernel_aw/workflow.py"]
-description = "Run or inspect the reviewer; only this node may request exit or discard a method."
-
-inputs = ["system_prompt.md", "executor_goal_dir", "gate_assess.json", "dit_eval.json", "REVIEWER-STATUS.json"]
-outputs = ["REVIEWER-STATUS.json", "goals/<id>-reviewer/agent_last.md"]
-outcomes = ["accepted", "discarded", "needs_executor_resume", "invalid_status", "failed"]
-side_effects = ["may_write_goal_dir", "may_modify_worktree"]

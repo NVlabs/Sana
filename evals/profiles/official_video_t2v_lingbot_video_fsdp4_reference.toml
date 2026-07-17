@@ -1,0 +1,54 @@
+id = "official_video_t2v_lingbot_video_fsdp4_reference"
+description = "Historical LingBot-Video 4-GPU FSDP-only deployment reference; not comparable to the primary CP4 baseline."
+
+[official_config]
+model = "robbyant/lingbot-video-moe-30b-a3b"
+task = "t2v_refiner"
+width = 832
+height = 480
+frames = 121
+fps = 24
+duration_s = 5
+steps = 40
+guidance_scale = 3.0
+flow_shift = 3.0
+refiner_width = 1920
+refiner_height = 1088
+refiner_frames = 121
+refiner_steps = 8
+refiner_guidance_scale = 3.0
+refiner_shift = 3.0
+refiner_t_thresh = 0.85
+refiner_sigma_tail_steps = 2
+seed = 42
+num_gpus = 4
+context_parallel_degree = 1
+fsdp = true
+batch_cfg = false
+refiner_batch_cfg = false
+transformer_dtype = "bf16"
+text_encoder_dtype = "bf16"
+vae_dtype = "fp32"
+refiner_vae_dtype = "fp32"
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/benchmark.json",
+  "outputs/collection.json",
+]
+optional = [
+  "outputs/frames",
+  "outputs/t2v_base.mp4",
+  "outputs/t2v_refined.mp4",
+  "outputs/run_config.json",
+  "outputs/gpu_peak_mib.txt",
+]
+
+[performance]
+baseline_candidate = "lingbot_video_fsdp4_reference"
+primary_metric = "total_s"
+secondary_metric = "wall_total_s"
+timing_scope = "load_excluded_request_wall_from_refiner_preloaded_to_refiner_video_export"
+comparable_to_primary_cp4_baseline = false

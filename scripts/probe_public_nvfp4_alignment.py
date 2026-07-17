@@ -212,8 +212,8 @@ def source_checks() -> dict[str, bool]:
 
 
 def transform_env_probe() -> dict[str, Any]:
-    from efficiency import Capability, ModelSpec, compose
-    from efficiency.transforms.nvfp4_ffn import NVFP4FFN
+    from techniques import Capability, ModelSpec, compose
+    from techniques.transforms.nvfp4_ffn import NVFP4FFN
 
     spec = ModelSpec(
         name="ManifestNVFP4Probe",

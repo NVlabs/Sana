@@ -1,0 +1,59 @@
+# LEGACY FLAT PROFILE — the file scripts/launch_candidate.py reads (via a
+# candidate's model_profile="wan22_ti2v_5b"). Supplies submodule/run_script/
+# eval_profile/official_config + the [env] (weights + sampling knobs) and [slurm].
+id = "wan22_ti2v_5b"
+spec = "Wan2.2-TI2V-5B"
+display_name = "Wan2.2-TI2V-5B 720p121 text-to-video baseline"
+submodule = "models/wan22_ti2v_5b/baseline"
+run_script = "scripts/run_wan22_ti2v_5b_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_wan22_ti2v_5b.toml"
+
+[official_config]
+model = "wan22_ti2v_5b_diffusers"
+width = 1280
+height = 704
+frames = 121
+fps = 24
+steps = 50
+flow_shift = 5.0
+guidance_mode = "cfg"
+guidance_scale = 5.0
+seed = 1024
+num_gpus = 4   # whole-node QOS (inference itself uses 1 GPU / cuda:0)
+
+[env]
+PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sparse_attn_training/.venv/bin/python"
+WAN22_WEIGHTS = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yuchaog/workplace/pretrained_models/Wan2.2-TI2V-5B-Diffusers"
+WAN22_MODEL_LABEL = "wan22_ti2v_5b"
+HF_HUB_OFFLINE = "1"
+TRANSFORMERS_OFFLINE = "1"
+TOKENIZERS_PARALLELISM = "false"
+WAN22_HEIGHT = "704"
+WAN22_WIDTH = "1280"
+WAN22_FRAMES = "121"
+WAN22_STEPS = "50"
+WAN22_GUIDANCE = "5.0"
+WAN22_FPS = "24"
+WAN22_SEED = "1024"
+WAN22_NUM_PROMPTS = "5"
+WAN22_WARMUP_PASSES = "1"
+WAN22_VAL_PROMPTS = "models/wan22_ti2v_5b/prompts/t2v_val5.json"
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+exclusive = true
+cpus_per_task = 64
+mem = "0"
+time = "01:00:00"
+job_name = "wan22_ti2v_5b_baseline"
+
+[baseline]
+run_id = "20260706-102948-wan22_ti2v_5b_baseline"
+total_s = 70.25
+denoise_s = 63.6
+timing_scope = "text_to_video_hot_after_warmup_pass"
+measured_on = "GB200 (single GPU), launcher run"
+note = "vanilla diffusers WanPipeline, 5-prompt median, official prompts"

@@ -1,0 +1,1 @@
+../../wan22_ti2v_5b/baseline/gpu_infer.py

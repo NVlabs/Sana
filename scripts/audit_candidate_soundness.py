@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from efficiency.candidate_manifest import (  # noqa: E402
+from techniques.candidate_manifest import (  # noqa: E402
     dry_run_manifest,
     load_toml,
     manifest_dimension,
@@ -32,7 +32,7 @@ from efficiency.candidate_manifest import (  # noqa: E402
     resolve_capabilities,
     schema_errors,
 )
-from efficiency.sparse_attention_policies import canonical_route_mode  # noqa: E402
+from techniques.sparse_attention_policies import canonical_route_mode  # noqa: E402
 
 
 EXPECTED = {

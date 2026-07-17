@@ -27,6 +27,8 @@ Current local profiles include:
   experiments.
 - `sana_video`: Sana 5B 720p193 baseline wrapper for the private
   `yitongl/sana_video` minimal inference bundle.
+- `lingbot_video`: LingBot-Video MoE 30B-A3B two-stage T2V on 4x GB200, with
+  physically isolated CP4/FA2 baseline and cuDNN-optimized runtimes.
 
 ## Directory-Style Model Contracts
 

@@ -1,9 +1,0 @@
-name = "eval_gate"
-kind = "orchestration"
-callable_by = ["workflow/cache_ca/workflow.py"]
-description = "Require completed full Sana diffusion plus LPIPS and independent blind Codex visual assessment."
-
-inputs = ["AGENT-STATUS.json", "runs/*/outputs/benchmark.json", "runs/*/codex_visual_verdict.json", "runs/*/assess_verdict.json"]
-outputs = ["runs/<run_id>/assess_verdict.json"]
-outcomes = ["smooth", "missing", "infra_blocked", "quality_failed", "failed"]
-side_effects = ["read_only_validation"]

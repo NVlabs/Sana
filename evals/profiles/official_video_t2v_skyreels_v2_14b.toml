@@ -1,0 +1,44 @@
+id = "official_video_t2v_skyreels_v2_14b"
+description = "SkyReels-V2 T2V-14B-540P text-to-video evaluation profile, official prompts+config (single GB200 GPU)."
+
+[official_config]
+model = "skyreels_v2_14b"
+width = 960
+height = 544
+frames = 97
+fps = 24
+steps = 50
+guidance_scale = 6.0
+seed = 42
+num_gpus = 4
+pipeline = "SkyReelsV2Pipeline"
+
+[artifacts]
+required = ["outputs/run.log", "outputs/out.mp4", "outputs/benchmark.json"]
+optional = ["outputs/videos", "outputs/frames", "outputs/run_config.json"]
+
+[performance]
+baseline_candidate = "skyreels_v2_14b_baseline"
+primary_metric = "total_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+notes = "total_s = standard-T2V median over the official prompt suite. Diffusion-Forcing long-video mode is a separate track."
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is vanilla diffusers SkyReelsV2Pipeline; optimizations must recover it when disabled."
+
+[quantitative_quality]
+enabled = true
+metrics = ["frame_count", "duration_s", "mean_abs_pixel_diff", "psnr", "sharpness_ratio", "temporal_delta_error"]
+frame_count_expected = 97
+duration_tolerance_s = 0.25
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate."

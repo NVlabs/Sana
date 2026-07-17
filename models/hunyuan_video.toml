@@ -1,0 +1,48 @@
+# LEGACY FLAT PROFILE for HunyuanVideo-13B (read by launch_candidate via a
+# candidate's model_profile="hunyuan_video"). Vanilla diffusers HunyuanVideoPipeline.
+# Baseline is PRISTINE (no TeaCache). Optimization = baseline + TeaCache (cache) +
+# kernel (lossless fusion/compile) + SOL Attention.
+id = "hunyuan_video"
+spec = "HunyuanVideo-13B"
+display_name = "HunyuanVideo 13B 720p text-to-video baseline (diffusers, no cache)"
+submodule = "models/hunyuan_video/baseline"
+run_script = "scripts/run_hunyuan_diffusers_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_wan22_ti2v_5b.toml"
+
+[official_config]
+model = "hunyuanvideo_13b_diffusers"
+width = 1280
+height = 720
+frames = 129
+fps = 24
+steps = 50
+guidance_mode = "cfg"
+guidance_scale = 6.0
+seed = 42
+num_gpus = 4   # whole-node QOS (inference itself uses 1 GPU / cuda:0)
+
+[env]
+PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sparse_attn_training/.venv/bin/python"
+MODEL_REPO = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/pretrained_models/HunyuanVideo"
+HF_HUB_OFFLINE = "1"
+TRANSFORMERS_OFFLINE = "1"
+TOKENIZERS_PARALLELISM = "false"
+HUNYUAN_HEIGHT = "720"
+HUNYUAN_WIDTH = "1280"
+HUNYUAN_NUM_FRAMES = "129"
+HUNYUAN_NUM_INFERENCE_STEPS = "50"
+HUNYUAN_GUIDANCE_SCALE = "6.0"
+HUNYUAN_FPS = "24"
+SEED = "42"
+PROMPT = "A cinematic shot of a majestic lion walking across the savanna at golden hour, photorealistic, high detail, smooth camera motion."
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+exclusive = true
+cpus_per_task = 64
+mem = "0"
+time = "01:30:00"
+job_name = "hunyuan_video_baseline"

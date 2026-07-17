@@ -1,0 +1,20 @@
+id = "hunyuan_video_teacache"
+kind = "patch"
+purpose = "optimization"
+description = "HunyuanVideo-13B + TeaCache (step reuse). Cache optimization on the pristine baseline; same runtime, TeaCache seam enabled via SGLANG_HQ_TEACACHE_* env."
+model_profile = "hunyuan_video"
+
+[runtime]
+root = "models/hunyuan_video/baseline"
+
+[env]
+SGLANG_HQ_TEACACHE_THRESHOLD = "0.15"
+SGLANG_HQ_TEACACHE_START_STEP = "6"
+SGLANG_HQ_TEACACHE_MAX_HITS = "2"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"

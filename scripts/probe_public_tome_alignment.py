@@ -80,8 +80,8 @@ def _fixture():
 def probe() -> dict[str, Any]:
     torch = _torch()
     sys.path.insert(0, str(ROOT))
-    from efficiency.techniques.token_prune import keep_indices
-    from efficiency.techniques.token_prune import tome_bipartite_soft_matching
+    from techniques.methods.token_prune import keep_indices
+    from techniques.methods.token_prune import tome_bipartite_soft_matching
 
     tome_merge = load_module(PUBLIC_TOME_MERGE, "public_tome_merge_probe")
     hidden = _fixture()

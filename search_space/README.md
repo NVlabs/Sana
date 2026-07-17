@@ -23,6 +23,10 @@ not a recipe archive and must not be treated as a fixed hyperparameter grid.
   dense fusion, compile or CUDA graph capture, layout/copy elimination, launch
   batching, stream overlap, decode/postprocess fusion, backend selection,
   approximate kernel/backend paths, and fallback policy.
+- `06_parallel_topology.md`: mathematically equivalent multi-GPU topology search,
+  including CP/SP, TP, EP, FSDP/replication, CFG execution, process groups,
+  placement, collectives, and communication/compute overlap under a frozen
+  resource and timing envelope.
 
 Goal agents should turn these directions into target-model experiments by
 reading the live inference code directly. Layer, step, signal, threshold,

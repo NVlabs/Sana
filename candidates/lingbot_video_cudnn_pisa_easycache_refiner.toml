@@ -1,0 +1,69 @@
+id = "lingbot_video_cudnn_pisa_easycache_refiner"
+kind = "patch"
+purpose = "frontier"
+description = "base+REFINER cache: cudnn+PISA+step-EasyCache: LingBot-Video CP4+FSDP+batched-CFG full stack with the accepted cuDNN attention kernel, existing condition-feature Cache, and PISA sparse Attention at density 0.10 with timestep-aware Dense Guards."
+model_profile = "lingbot_video"
+submodule = "models/lingbot_video/optimized"
+base_commit = "snapshot:0d519e1048bba509e2500b28dca98e062ae24b9986b7f43db3112f255fe04ea0"
+run_script = "scripts/run_lingbot_video_gpu.sh"
+
+[runtime]
+root = "models/lingbot_video/optimized"
+
+[env]
+LINGBOT_ATTN_KERNEL = "cudnn"
+LINGBOT_SOURCE_VARIANT = "optimized_c5_cudnn_pisa_easycache"
+LINGBOT_EASYCACHE_ENABLE = "1"
+LINGBOT_EASYCACHE_THRESHOLD = "0.08"
+LINGBOT_EASYCACHE_HEAD_STEPS = "4"
+LINGBOT_EASYCACHE_TAIL_STEPS = "2"
+LINGBOT_EASYCACHE_MAX_REUSE = "2"
+LINGBOT_EASYCACHE_REFINER_ENABLE = "1"
+LINGBOT_EASYCACHE_REFINER_THRESHOLD = "0.25"
+LINGBOT_EASYCACHE_REFINER_HEAD_STEPS = "2"
+LINGBOT_EASYCACHE_REFINER_TAIL_STEPS = "1"
+LINGBOT_EASYCACHE_REFINER_MAX_REUSE = "2"
+LINGBOT_EASYCACHE_MIN_STEPS = "20"
+LINGBOT_VAL_PROMPTS = "models/lingbot_video/prompts/t2v_val3.json"
+LINGBOT_NUM_PROMPTS = "3"
+LINGBOT_PISA_ENABLED = "1"
+LINGBOT_PISA_BASE_ENABLED = "0"
+LINGBOT_PISA_REFINER_ENABLED = "1"
+LINGBOT_PISA_DENSITY = "0.10"
+LINGBOT_PISA_BLOCK_SIZE = "64"
+LINGBOT_PISA_DENSE_LAYERS = "0-3"
+LINGBOT_PISA_DENSE_HEAD_STEPS = "2"
+LINGBOT_PISA_DENSE_TAIL_STEPS = "1"
+LINGBOT_PISA_KERNEL_NUM_STAGES = "2"
+LINGBOT_PISA_APPROX_REMAINDER = "1"
+LINGBOT_MOE_EP = "0"
+LINGBOT_COMPILE_MOE = "0"
+LINGBOT_OVERLAP_REFINER_LOAD = "0"
+LINGBOT_BCAST_WEIGHTS = "0"
+LINGBOT_SHARDED_LOAD = "0"
+LINGBOT_OFFLOAD_BASE_BEFORE_REFINER = "0"
+
+[slurm]
+job_name = "autovideo-lingbot-easycache-base-refiner"
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+exclusive = true
+cpus_per_task = 64
+mem = "0"
+time = "03:00:00"
+
+[patch]
+summary = "Apply PISA after CP4 Ulysses gather per packed CFG segment; keep CP4 topology, cuDNN dense fallback, grouped_mm MoE and condition-feature Cache unchanged."
+touch_points = [
+  "models/lingbot_video/optimized/lingbot_src/lingbot_video/transformer_lingbot_video.py",
+  "models/lingbot_video/optimized/lingbot_src/lingbot_video/pipeline_lingbot_video.py",
+  "models/lingbot_video/optimized/gpu_infer.py",
+]
+
+[verification]
+mode = "gpu"
+allow_non_bit_exact = true
+quality_gate = "valid_non_degenerate_plus_aligned_visual_review"
+baseline_candidate = "lingbot_video_cudnn_optimized"

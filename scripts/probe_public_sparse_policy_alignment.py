@@ -183,7 +183,7 @@ def behavior_probe() -> dict[str, Any]:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
-    from efficiency.sparse_attention_policies import (  # noqa: E402
+    from techniques.sparse_attention_policies import (  # noqa: E402
         build_sparse_route_mask,
         minference_dynamic_pattern_bank_mask,
         spargeattn_headwise_topk_budget_block_map,

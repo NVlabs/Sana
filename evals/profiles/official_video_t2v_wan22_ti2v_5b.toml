@@ -1,0 +1,66 @@
+id = "official_video_t2v_wan22_ti2v_5b"
+description = "Wan2.2-TI2V-5B 720p121 text-to-video evaluation profile (vanilla diffusers WanPipeline, single GB200 GPU)."
+
+[official_config]
+model = "wan22_ti2v_5b_diffusers"
+width = 1280
+height = 704
+frames = 121
+fps = 24
+steps = 50
+flow_shift = 5.0
+guidance_mode = "cfg"
+guidance_scale = 5.0
+seed = 1024
+num_gpus = 1
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/benchmark.json",
+]
+optional = [
+  "outputs/videos",
+  "outputs/frames",
+  "outputs/run_config.json",
+  "outputs/quality.json",
+]
+
+[performance]
+baseline_candidate = "wan22_ti2v_5b_baseline"
+primary_metric = "total_s"
+secondary_metric = "denoise_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+baseline_total_s = 68.80
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is the exact vanilla diffusers WanPipeline reference; optimizations must recover it when disabled."
+
+[quantitative_quality]
+enabled = true
+metrics = [
+  "frame_count",
+  "duration_s",
+  "mean_abs_pixel_diff",
+  "mse",
+  "psnr",
+  "sharpness_ratio",
+  "temporal_delta_error",
+  "temporal_jitter_ratio",
+]
+frame_count_expected = 121
+duration_tolerance_s = 0.25
+sharpness_ratio_min = 0.95
+sharpness_ratio_max = 1.08
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate (external Gemini key retired); enable a provider here if wiring an automated gate."

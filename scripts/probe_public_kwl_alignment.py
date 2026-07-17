@@ -111,8 +111,8 @@ def source_checks() -> dict[str, bool]:
 
 
 def transform_env_probe() -> dict[str, Any]:
-    from efficiency import Capability, ModelSpec, compose
-    from efficiency.transforms.kwl_fusions import (
+    from techniques import Capability, ModelSpec, compose
+    from techniques.transforms.kwl_fusions import (
         KWLFusions,
         kwl_backend_selection_plan,
         kwl_compile_capture_plan,

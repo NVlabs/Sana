@@ -1,9 +1,0 @@
-name = "dit_profile"
-kind = "agent_callable"
-owned_by = "kernel_aw"
-callable_by = ["workflow/kernel_aw/nodes/codex_executor"]
-description = "Profile and benchmark the registry-resolved full Sana DiT for one official-shape diffusion step."
-inputs = ["candidate_manifest", "official_shape", "off_path", "on_path"]
-outputs = ["runs/<profile_id>/dit_profile.json", "runs/<profile_id>/gate_assess.json"]
-outcomes = ["profiled", "smooth", "needs_retry", "infra_blocked"]
-forbidden = ["full_diffusion", "video_generation", "synthetic_module_only", "bundled_wall_as_denoise"]

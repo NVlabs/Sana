@@ -26,8 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from efficiency.technique import TechniqueContext  # noqa: E402
-from efficiency.techniques.teacache import (  # noqa: E402
+from techniques.technique import TechniqueContext  # noqa: E402
+from techniques.methods.teacache import (  # noqa: E402
     TeaCacheResidual,
     teacache_indicator,
     teacache_poly_rescale,

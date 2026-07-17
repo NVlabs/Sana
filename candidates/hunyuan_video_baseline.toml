@@ -1,0 +1,15 @@
+id = "hunyuan_video_baseline"
+kind = "baseline"
+purpose = "control"
+description = "HunyuanVideo-13B 720p text-to-video baseline; vanilla diffusers HunyuanVideoPipeline, single GB200 GPU, NO TeaCache (pristine). Optimization target: + TeaCache (cache) + kernel (lossless fusion/compile) + SOL Attention."
+model_profile = "hunyuan_video"
+
+[runtime]
+root = "models/hunyuan_video/baseline"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"

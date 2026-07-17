@@ -1,0 +1,43 @@
+id = "official_video_t2v_hunyuanvideo_13b"
+description = "HunyuanVideo 13B 720p129 text-to-video evaluation profile (diffusers HunyuanVideoPipeline, single GB200 GPU)."
+
+[official_config]
+model = "hunyuanvideo_13b"
+width = 1280
+height = 720
+frames = 129
+fps = 15
+steps = 50
+guidance_scale = 6.0
+seed = 42
+num_gpus = 4
+
+[artifacts]
+required = ["outputs/run.log", "outputs/out.mp4", "outputs/benchmark.json"]
+optional = ["outputs/videos", "outputs/frames", "outputs/run_config.json"]
+
+[performance]
+baseline_candidate = "hunyuanvideo_13b_baseline"
+primary_metric = "total_s"
+secondary_metric = "denoise_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is the exact vanilla diffusers HunyuanVideoPipeline reference; optimizations must recover it when disabled."
+
+[quantitative_quality]
+enabled = true
+metrics = ["frame_count", "duration_s", "mean_abs_pixel_diff", "psnr", "sharpness_ratio", "temporal_delta_error"]
+frame_count_expected = 129
+duration_tolerance_s = 0.25
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate."

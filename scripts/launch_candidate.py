@@ -9,6 +9,7 @@ shell script, and either stops at dry-run, executes locally, or submits Slurm.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -28,7 +29,7 @@ REPO_FOR_IMPORT = Path(__file__).resolve().parents[1]
 if str(REPO_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(REPO_FOR_IMPORT))
 
-from efficiency.candidate_manifest import (  # noqa: E402
+from techniques.candidate_manifest import (  # noqa: E402
     dry_run_manifest,
     load_model_profile as load_efficiency_model_profile,
     manifest_id,
@@ -289,8 +290,70 @@ def run_git_commit(path: Path) -> str | None:
     return out.strip()
 
 
+def vendored_snapshot_identity(path: Path) -> str | None:
+    snapshot_path = path / "SOURCE_SNAPSHOT.json"
+    if not snapshot_path.is_file():
+        return None
+    try:
+        snapshot = json.loads(snapshot_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"Invalid vendored source snapshot: {snapshot_path}: {exc}") from exc
+    core_hashes = snapshot.get("core_sha256", {})
+    if not isinstance(core_hashes, dict) or not core_hashes:
+        raise SystemExit(f"Vendored source snapshot has no core_sha256 entries: {snapshot_path}")
+    source_root = path / "lingbot_src"
+    for relative, expected in core_hashes.items():
+        source_path = source_root / str(relative)
+        if not source_path.is_file():
+            raise SystemExit(f"Vendored source file is missing: {source_path}")
+        actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        if actual != str(expected):
+            raise SystemExit(
+                f"Vendored source integrity mismatch for {source_path}: "
+                f"expected {expected}, got {actual}"
+            )
+    digest = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
+    return f"snapshot:{digest}"
+
+
 def toml_string(value: Any) -> str:
     return json.dumps(str(value))
+
+
+def toml_literal(value: Any) -> str | None:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return repr(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, (list, tuple)):
+        items = [toml_literal(item) for item in value]
+        if any(item is None for item in items):
+            return None
+        return "[" + ", ".join(item for item in items if item is not None) + "]"
+    return None
+
+
+def append_toml_table(lines: list[str], name: str, values: dict[str, Any]) -> None:
+    serializable = []
+    for key, value in values.items():
+        literal = toml_literal(value)
+        if literal is not None:
+            serializable.append((str(key), literal))
+    if not serializable:
+        return
+    lines.extend(["", f"[{name}]"])
+    for key, literal in serializable:
+        lines.append(f"{key} = {literal}")
+
+
+def redact_resolved_env(env: dict[str, Any]) -> dict[str, Any]:
+    sensitive = ("API_KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
+    return {
+        key: "<redacted>" if any(marker in key.upper() for marker in sensitive) else value
+        for key, value in env.items()
+    }
 
 
 def write_resolved_manifest(
@@ -298,11 +361,29 @@ def write_resolved_manifest(
     run_dir: Path,
     data: dict[str, Any],
     resolved: dict[str, Any],
+    effective_env: dict[str, Any],
 ) -> None:
     original = candidate_path.read_text()
     lines = [original.rstrip(), "", "[resolved]"]
     for key, value in resolved.items():
         lines.append(f"{key} = {toml_string(value)}")
+    resolved_profile = {
+        key: data[key]
+        for key in ("model_profile", "submodule", "base_commit", "run_script", "eval_profile")
+        if key in data
+    }
+    append_toml_table(lines, "resolved_profile", resolved_profile)
+    append_toml_table(
+        lines,
+        "resolved_profile.official_config",
+        data.get("official_config", {}) if isinstance(data.get("official_config"), dict) else {},
+    )
+    append_toml_table(lines, "resolved_profile.env", redact_resolved_env(effective_env))
+    append_toml_table(
+        lines,
+        "resolved_profile.slurm",
+        data.get("slurm", {}) if isinstance(data.get("slurm"), dict) else {},
+    )
     (run_dir / "manifest.resolved.toml").write_text("\n".join(lines) + "\n")
 
 
@@ -413,6 +494,8 @@ def write_metadata(
         "runtime_root": str(runtime_root),
         "runtime_python": runtime_python,
         "base_commit": data.get("base_commit"),
+        "eval_profile": data.get("eval_profile"),
+        "official_config": data.get("official_config", {}),
         "source_commit": source_commit,
         "runtime_commit": runtime_commit,
         "current_commit": current_commit,
@@ -669,11 +752,15 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
             raise SystemExit(f"--env expects KEY=VALUE, got: {item}")
         key, value = item.split("=", 1)
         env[key] = value
+    # Immutable run identity: candidate-specific wrappers may use this to reject
+    # CLI env overrides that would otherwise execute a different topology under
+    # the same candidate label.
+    env["AUTOVIDEO_CANDIDATE_ID"] = candidate_id(data)
     runtime_python = resolve_runtime_python(data, env)
     validate_runtime_python(runtime_python, args.mode)
 
-    source_commit = run_git_commit(source_root)
-    runtime_commit = run_git_commit(runtime_root)
+    source_commit = run_git_commit(source_root) or vendored_snapshot_identity(source_root)
+    runtime_commit = run_git_commit(runtime_root) or vendored_snapshot_identity(runtime_root)
     current_commit = runtime_commit or source_commit
     expected_commit = data.get("base_commit")
     if expected_commit and current_commit and expected_commit != current_commit:
@@ -698,7 +785,7 @@ def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, A
         "runtime_commit": runtime_commit or "",
         "current_commit": current_commit or "",
     }
-    write_resolved_manifest(candidate_path, run_dir, data, resolved)
+    write_resolved_manifest(candidate_path, run_dir, data, resolved, env)
     launch_script = write_launch_script(run_dir, runtime_root, run_script, env, output_dir)
     job_script = write_sbatch_script(run_dir, launch_script, data.get("slurm", {}))
     write_metadata(

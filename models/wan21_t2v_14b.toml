@@ -1,0 +1,53 @@
+# LEGACY FLAT PROFILE for Wan2.1-T2V-14B (read by launch_candidate via a
+# candidate's model_profile="wan21_t2v_14b"). Reuses the generic diffusers
+# WanPipeline runner (dense, no transformer_2 => moe=False). Optimization target
+# for kernel (lossless fusion/compile) + cache (EasyCache few-step) + SOL Attention.
+id = "wan21_t2v_14b"
+spec = "Wan2.1-T2V-14B"
+display_name = "Wan2.1-T2V-14B 480p text-to-video baseline (diffusers WanPipeline)"
+submodule = "models/wan21_t2v_14b/baseline"
+run_script = "scripts/run_wan22_ti2v_5b_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_wan22_ti2v_5b.toml"
+
+[official_config]
+model = "wan21_t2v_14b_diffusers"
+width = 1280
+height = 720
+frames = 81
+fps = 16
+steps = 50
+flow_shift = 5.0
+guidance_mode = "cfg"
+guidance_scale = 5.0
+seed = 37
+num_gpus = 4   # whole-node QOS (inference itself uses 1 GPU / cuda:0)
+
+[env]
+PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/sparse_attn_training/.venv/bin/python"
+WAN22_WEIGHTS = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/pretrained_models/Wan2.1-T2V-14B-Diffusers"
+WAN22_MODEL_LABEL = "wan21_t2v_14b"
+HF_HUB_OFFLINE = "1"
+TRANSFORMERS_OFFLINE = "1"
+TOKENIZERS_PARALLELISM = "false"
+WAN22_HEIGHT = "720"
+WAN22_WIDTH = "1280"
+WAN22_FRAMES = "81"
+WAN22_STEPS = "50"
+WAN22_GUIDANCE = "5.0"
+WAN22_FLOW_SHIFT = "5.0"
+WAN22_FPS = "16"
+WAN22_SEED = "37"
+WAN22_NUM_PROMPTS = "1"
+WAN22_WARMUP_PASSES = "1"
+WAN22_VAL_PROMPTS = "models/wan21_t2v_14b/prompts/t2v_val5.json"
+
+[slurm]
+account = "nvr_elm_llm"
+partition = "batch"
+nodes = 1
+gpus_per_node = 4
+exclusive = true
+cpus_per_task = 64
+mem = "0"
+time = "02:00:00"
+job_name = "wan21_t2v_14b_baseline"

@@ -49,6 +49,20 @@ ERROR_PATTERNS = (
 )
 
 TIMING_FIELDS = ("total_s", "denoise_s", "decode_s")
+PRESERVED_RUNNER_BENCHMARK_FIELDS = (
+    "schema_version",
+    "timing_scope",
+    "timing_note",
+    "warm_steady_state",
+    "warmup_requests",
+    "includes_model_load",
+    "load_excluded_request_s",
+    "source_phase_subset_s",
+    "wall_total_s",
+    "max_device_memory_used_mib",
+    "config",
+    "aggregate",
+)
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 LOG_TIMING_PATTERNS = {
     "denoise_s": re.compile(
@@ -215,6 +229,10 @@ def parse_existing_benchmark(path: Path) -> dict[str, Any]:
             if isinstance(value, (int, float))
         }
 
+    for field in PRESERVED_RUNNER_BENCHMARK_FIELDS:
+        if field in data:
+            timing[field] = data[field]
+
     stage_seconds = data.get("stage_seconds")
     if isinstance(stage_seconds, dict):
         timing["stage_seconds"] = {
@@ -294,6 +312,9 @@ def build_benchmark(benchmark_path: Path, log_path: Path, model_hint: str = "") 
         benchmark["timings"] = existing["timings"]
     if existing.get("memory"):
         benchmark["memory"] = existing["memory"]
+    for field in PRESERVED_RUNNER_BENCHMARK_FIELDS:
+        if field in existing:
+            benchmark[field] = existing[field]
     benchmark["collected_at_utc"] = datetime.now(timezone.utc).isoformat()
     return benchmark
 
@@ -993,7 +1014,13 @@ def render_patch_summary(
     quality: dict[str, Any],
     log_errors: list[str],
 ) -> str:
-    official = manifest.get("official_config", {})
+    resolved_profile = manifest.get("resolved_profile", {})
+    resolved_official = (
+        resolved_profile.get("official_config", {})
+        if isinstance(resolved_profile, dict)
+        else {}
+    )
+    official = manifest.get("official_config", {}) or resolved_official
     artifacts = manifest.get("artifacts", {})
     lines = [
         f"# Candidate Report: {metadata.get('candidate_id', run_dir.name)}",

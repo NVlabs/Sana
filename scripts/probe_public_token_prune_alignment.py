@@ -170,7 +170,7 @@ def behavior_probe() -> dict[str, Any]:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
-    from efficiency.techniques.token_prune import (  # noqa: E402
+    from techniques.methods.token_prune import (  # noqa: E402
         CatPruneState,
         _cat_torch_kmeans_labels,
         cat_convergence_stale_indices,

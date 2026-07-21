@@ -96,10 +96,9 @@ methods across these levels.
 [**SOL Attention**](techniques/sparse_backends/) is our sparse attention
 technique for video DiTs: video-token self-attention runs through a sparse
 kernel that computes only the most relevant key blocks, while using light weight compensating operation to maintain visual quality. It plugs
-into a model runtime through env-gated hooks (all flags off = byte-identical
-baseline) and powers the optimization stacks of
+into a model runtime through env-gated hooks and powers the optimization stacks of
 [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and
-[**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**).
+[**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**). The full paper of **SOL Attention** is coming soon! 🚀
 
 ## 🚀 Quick start (agent-native)
 

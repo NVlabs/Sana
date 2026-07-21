@@ -60,8 +60,8 @@ support a wider range of models.
 | **[Wan2.2 TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B)** | 5B | EasyCache + kernel fusion + compile | **~2.89×** |
 | **[Wan2.2-A14B](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers)** | 14B (MoE) | kernel fusion + EasyCache + PISA | **~2.17×** |
 | **[LingBot-Video](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b)** | 30B-A3B (MoE) | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
-| **[HunyuanVideo-13B](https://huggingface.co/hunyuanvideo-community/HunyuanVideo)** | 13B | TeaCache + compile + [**SOL Attention**](techniques/sparse_backends/) | **~5.03×** |
-| **[Wan2.1-T2V-14B](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers)** | 14B | kernel compile + EasyCache + [**SOL Attention**](techniques/sparse_backends/) | **~3.48×** |
+| **[HunyuanVideo-13B](https://huggingface.co/hunyuanvideo-community/HunyuanVideo)** | 13B | kernel fusion + TeaCache  + [**SOL Attention**](techniques/sparse_backends/) | **~5.03×** |
+| **[Wan2.1-T2V-14B](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers)** | 14B | kernel fusion + EasyCache + [**SOL Attention**](techniques/sparse_backends/) | **~3.48×** |
 
 </div>
 

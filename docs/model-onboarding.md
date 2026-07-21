@@ -24,7 +24,7 @@ profile, then express each candidate's required capabilities in its manifest.
 | Model | Runtime | Canonical `model.toml` | Notes |
 | --- | --- | --- | --- |
 | **HunyuanVideo-13B** | `models/hunyuan_video/` | yes | joint `[video, text]` self-attention; **SOL Attention v2/v3** (`techniques/sparse_backends/sol_attn_hunyuan_v{2,3}.py`) + TeaCache + compile; audited hot delivery 5.03x (`candidates/hunyuan_video_full_v3.toml`) |
-| **Wan2.1-T2V-14B** | `models/wan21_t2v_14b/` | yes | pure-video self-attention; **SOL Attention v1** (`techniques/sparse_backends/sol_attn_backend.py`, colmask + Morton + dense guard) + EasyCache + compile; 3.08x (`candidates/wan21_14b_fullstack.toml`) |
+| **Wan2.1-T2V-14B** | `models/wan21_t2v_14b/` | yes | pure-video self-attention; **SOL Attention v1** (`techniques/sparse_backends/sol_attn_backend.py`, colmask + Morton + dense guard) + EasyCache + compile; 3.48x (`candidates/wan21_14b_fullstack.toml`) |
 | Wan2.2 TI2V-5B / T2V-A14B | `models/wan22_*/` | yes | kernel + EasyCache (+ PISA on A14B CP4) |
 | SANA-Video 5B | `models/sana_video/` | yes | kernel/cache + EasyCache + PISA |
 | LingBot-Video | `models/lingbot_video/` | yes | kernel + phase-specific PISA |

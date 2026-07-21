@@ -148,7 +148,7 @@ root_branch = "codex/token-prune"
 submodule_branch = "codex/token-prune-sol"
 interactive_required = true
 write_scope = [
-  "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py",
+  "techniques/transforms/sparse_attention.py",
 ]
 ```
 
@@ -178,9 +178,7 @@ code = "..."
 notes = "Canonical paper/repo or closest open-source implementation."
 
 [references.local]
-generic_impl = "efficiency/transforms/sparse_attention.py"
-model_adapter_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/sparse_video_gen_2_attn.py"
-runtime_example = "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/layers/attention/backends/sparse_video_gen_2_attn.py"
+generic_impl = "techniques/transforms/sparse_attention.py"
 
 [requirements]
 capabilities = [

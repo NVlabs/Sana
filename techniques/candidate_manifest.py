@@ -75,15 +75,18 @@ def schema_errors(data: dict[str, Any], repo_root: Path) -> list[str]:
     for key in ("paper", "code", "notes"):
         if not str(ext.get(key, "")).strip():
             errors.append(f"[references.external].{key} is required")
+    # generic_impl is required. model_adapter_example / runtime_example are
+    # OPTIONAL: they used to point into the engine submodule that was removed;
+    # when present they must point at an existing file in this repo.
     for key in ("generic_impl", "model_adapter_example", "runtime_example"):
         value = str(loc.get(key, "")).strip()
         if not value:
-            errors.append(f"[references.local].{key} is required")
+            if key == "generic_impl":
+                errors.append(f"[references.local].{key} is required")
             continue
-        if key in {"generic_impl", "model_adapter_example", "runtime_example"}:
-            path = repo_root / value
-            if not path.exists():
-                errors.append(f"[references.local].{key} does not exist: {value}")
+        path = repo_root / value
+        if not path.exists():
+            errors.append(f"[references.local].{key} does not exist: {value}")
 
     req = data.get("requirements", {})
     caps = req.get("capabilities") if isinstance(req, dict) else None

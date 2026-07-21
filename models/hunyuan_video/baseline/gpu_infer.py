@@ -143,6 +143,24 @@ def main() -> int:
         print(f"[seam] not enabled (type={type(exc).__name__})", flush=True)
         seam_diag = None
 
+    # Warmup pass(es) for a HOT steady-state measurement (parity with the Wan
+    # runners: timing_scope = text_to_video_hot_after_warmup_pass). Default 1;
+    # set HUNYUAN_WARMUP_PASSES=0 for the legacy cold single-pass measurement.
+    _warmup = int(os.environ.get("HUNYUAN_WARMUP_PASSES", "1") or "0")
+    for _wi in range(_warmup):
+        print(f"[baseline] warmup pass {_wi + 1}/{_warmup}", flush=True)
+        _wg = torch.Generator(device=device).manual_seed(seed)
+        pipe(
+            prompt=prompt, negative_prompt=negative, height=height, width=width,
+            num_frames=num_frames, num_inference_steps=steps, guidance_scale=guidance,
+            true_cfg_scale=true_cfg, max_sequence_length=max_seq, generator=_wg,
+        )
+        torch.cuda.synchronize()
+    # Cold-start the TeaCache controller (if the seam is enabled) so the timed
+    # pass measures a fresh generation, not a warmup-warmed schedule.
+    if _warmup and seam_diag is not None and callable(seam_diag.get("reset")):
+        seam_diag["reset"]()
+
     generator = torch.Generator(device=device).manual_seed(seed)
     torch.cuda.synchronize()
     t = time.perf_counter()
@@ -173,6 +191,20 @@ def main() -> int:
     wall_total_s = time.perf_counter() - wall0
 
     benchmark = {
+        # Schema v2 flat keys (parity with the Wan runners). The diffusers
+        # pipe() is a single fused generate (denoise + VAE decode), so decode
+        # is not separately timed and total_s == denoise_s by convention.
+        "schema_version": 2,
+        "model_id": "hunyuan_video",
+        "pipeline": "HunyuanVideoPipeline",
+        "total_s": generate_s,
+        "denoise_s": generate_s,
+        "decode_s": 0.0,
+        "timing_scope": ("text_to_video_hot_after_warmup_pass" if _warmup
+                         else "text_to_video_single_pass"),
+        "warm_steady_state": bool(_warmup),
+        "baseline_class": "pristine_unoptimized",
+        # Nested timings kept for existing collectors (collect_run reads both).
         "timings": {
             "generate_s": generate_s,   # collector maps -> total_s/denoise_s (speedup metric)
             "load_s": load_s,

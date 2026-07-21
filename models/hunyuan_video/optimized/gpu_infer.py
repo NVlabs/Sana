@@ -176,6 +176,101 @@ def main() -> int:
               f"density_target={_sol_kw['target_density']} "
               f"dense_steps={_sol_kw['dense_steps']} dense_layers='{_sol_kw['dense_layers']}'", flush=True)
 
+    # --- Optional SOL Attention v2 (independent dense-text / sparse-video path),
+    # gated on HUNYUAN_SOL_V2. Same install seam as v1 but a separate module +
+    # custom op (techniques/sparse_backends/sol_attn_hunyuan_v2.py); mutually
+    # exclusive with HUNYUAN_SOL_ATTN (v1 wins if both are set).
+    if (os.environ.get("HUNYUAN_SOL_V2") == "1"
+            and os.environ.get("HUNYUAN_SOL_ATTN") != "1"):
+        import sys as _sys_sol2
+        _repo_sol2 = os.environ.get(
+            "AUTOVIDEO_REPO_ROOT", str(Path(__file__).resolve().parents[3])
+        )
+        if _repo_sol2 not in _sys_sol2.path:
+            _sys_sol2.path.insert(0, _repo_sol2)
+        from techniques.sparse_backends.sol_attn_hunyuan_v2 import (
+            make_sol_v2_dispatch, sol_v2_begin_forward,
+        )
+        from diffusers.models.transformers import transformer_hunyuan_video as _thv2
+        _cfg2 = pipe.transformer.config
+        _pt2 = int(getattr(_cfg2, "patch_size", 2))
+        _ptt2 = int(getattr(_cfg2, "patch_size_t", 1))
+        _vs2 = int(getattr(pipe, "vae_scale_factor_spatial", 8))
+        _vt2 = int(getattr(pipe, "vae_scale_factor_temporal", 4))
+        _Flat2 = (num_frames - 1) // _vt2 + 1
+        _grid2 = (_Flat2 // _ptt2, (height // _vs2) // _pt2, (width // _vs2) // _pt2)
+        _video_len2 = _grid2[0] * _grid2[1] * _grid2[2]
+        _v2_kw = dict(
+            target_density=float(
+                os.environ.get("HUNYUAN_SOLV2_DENSITY",
+                               os.environ.get("HUNYUAN_SOL_DENSITY", "0.15"))),
+            dense_steps=int(os.environ.get("HUNYUAN_SOLV2_DENSE_STEPS", "0")),
+            dense_layers=os.environ.get("HUNYUAN_SOLV2_DENSE_LAYERS", ""),
+            q_chunk=int(os.environ.get("HUNYUAN_SOLV2_QCHUNK", "32768")),
+            grid=_grid2,
+            video_len=_video_len2,
+        )
+        _v2_tau = os.environ.get("HUNYUAN_SOLV2_TAU")
+        if _v2_tau is not None:
+            _v2_kw["tau"] = float(_v2_tau)
+        _thv2.dispatch_attention_fn = make_sol_v2_dispatch(
+            _thv2.dispatch_attention_fn, **_v2_kw
+        )
+        pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_v2_begin_forward())
+        print(f"[opt] SOL Attention v2 (dense-text/sparse-video) installed "
+              f"grid={_grid2} video_len={_video_len2} tau={_v2_tau} "
+              f"density_target={_v2_kw['target_density']} "
+              f"q_chunk={_v2_kw['q_chunk']} "
+              f"dense_steps={_v2_kw['dense_steps']} "
+              f"dense_layers='{_v2_kw['dense_layers']}'", flush=True)
+
+    # --- Optional SOL Attention v3 (PISA hyvideo piecewise, aligned with
+    # Sparse-VideoGen pisa-bidirectional), gated on HUNYUAN_SOL_V3. Top-k
+    # routing + centroid fallback for non-selected blocks + exact text sink,
+    # one fused kernel over the joint sequence (text padding cropped outside).
+    # Mutually exclusive with the v1/v2 gates (they win if set).
+    if (os.environ.get("HUNYUAN_SOL_V3") == "1"
+            and os.environ.get("HUNYUAN_SOL_ATTN") != "1"
+            and os.environ.get("HUNYUAN_SOL_V2") != "1"):
+        import sys as _sys_sol3
+        _repo_sol3 = os.environ.get(
+            "AUTOVIDEO_REPO_ROOT", str(Path(__file__).resolve().parents[3])
+        )
+        if _repo_sol3 not in _sys_sol3.path:
+            _sys_sol3.path.insert(0, _repo_sol3)
+        from techniques.sparse_backends.sol_attn_hunyuan_v3 import (
+            make_sol_v3_dispatch, sol_v3_begin_forward,
+        )
+        from diffusers.models.transformers import transformer_hunyuan_video as _thv3
+        _cfg3 = pipe.transformer.config
+        _pt3 = int(getattr(_cfg3, "patch_size", 2))
+        _ptt3 = int(getattr(_cfg3, "patch_size_t", 1))
+        _vs3 = int(getattr(pipe, "vae_scale_factor_spatial", 8))
+        _vt3 = int(getattr(pipe, "vae_scale_factor_temporal", 4))
+        _Flat3 = (num_frames - 1) // _vt3 + 1
+        _grid3 = (_Flat3 // _ptt3, (height // _vs3) // _pt3, (width // _vs3) // _pt3)
+        _video_len3 = _grid3[0] * _grid3[1] * _grid3[2]
+        _v3_kw = dict(
+            target_density=float(
+                os.environ.get("HUNYUAN_SOLV3_DENSITY",
+                               os.environ.get("HUNYUAN_SOL_DENSITY", "0.15"))),
+            dense_steps=int(os.environ.get("HUNYUAN_SOLV3_DENSE_STEPS", "0")),
+            dense_layers=os.environ.get("HUNYUAN_SOLV3_DENSE_LAYERS", ""),
+            video_len=_video_len3,
+            grid=_grid3,
+            morton=os.environ.get("HUNYUAN_SOLV3_MORTON", "0") == "1",
+        )
+        _thv3.dispatch_attention_fn = make_sol_v3_dispatch(
+            _thv3.dispatch_attention_fn, **_v3_kw
+        )
+        pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_v3_begin_forward())
+        print(f"[opt] SOL Attention v3 (PISA hyvideo piecewise, upstream-aligned) "
+              f"installed grid={_grid3} video_len={_video_len3} "
+              f"density_target={_v3_kw['target_density']} "
+              f"morton={_v3_kw['morton']} "
+              f"dense_steps={_v3_kw['dense_steps']} "
+              f"dense_layers='{_v3_kw['dense_layers']}'", flush=True)
+
     # --- Optional kernel: torch.compile the transformer, gated on HUNYUAN_COMPILE ---
     if os.environ.get("HUNYUAN_COMPILE") == "1":
         _mode = os.environ.get("HUNYUAN_COMPILE_MODE", "max-autotune-no-cudagraphs")
@@ -198,7 +293,9 @@ def main() -> int:
 
     # Warmup pass(es) to amortize torch.compile autotune + CuteDSL kernel compile
     # BEFORE the timed pass, so generate_s reflects steady-state (not compile cost).
-    _warmup = _i("HUNYUAN_WARMUP_PASSES", 0)
+    # Default 1: HOT steady-state measurement (parity with the Wan runners).
+    # Set HUNYUAN_WARMUP_PASSES=0 for the legacy cold single-pass measurement.
+    _warmup = _i("HUNYUAN_WARMUP_PASSES", 1)
     for _wi in range(_warmup):
         print(f"[opt] warmup pass {_wi + 1}/{_warmup}", flush=True)
         _wg = torch.Generator(device=device).manual_seed(seed)
@@ -208,6 +305,26 @@ def main() -> int:
             true_cfg_scale=true_cfg, max_sequence_length=max_seq, generator=_wg,
         )
         torch.cuda.synchronize()
+
+    # Reset the SOL step clocks after warmup: the transformer forward pre-hooks
+    # advance the (step, layer) clock, so a full warmup pass exhausts
+    # *_DENSE_STEPS before the timed pass even starts. Direct ctx reset — no
+    # module edits, covers v1/v2/v3 alike.
+    import sys as _sys_solreset
+    for _mod, _ctx in (("sol_attn_backend", "_SOL_CTX"),
+                       ("sol_attn_hunyuan_v2", "_V2_CTX"),
+                       ("sol_attn_hunyuan_v3", "_V3_CTX")):
+        _m = _sys_solreset.modules.get("techniques.sparse_backends." + _mod)
+        _c = getattr(_m, _ctx, None) if _m is not None else None
+        if _c is not None:
+            _c.step = -1
+            _c.layer = 0
+    # Same for the TeaCache controller: without a reset the timed pass inherits
+    # the warmup pass's schedule state (start_step guard already consumed,
+    # signal history warm), reusing 32/50 steps where a fresh generation
+    # reuses 30/50 — which inflates the measured speedup by ~10%.
+    if seam_diag is not None and callable(seam_diag.get("reset")):
+        seam_diag["reset"]()
 
     generator = torch.Generator(device=device).manual_seed(seed)
     torch.cuda.synchronize()
@@ -239,6 +356,19 @@ def main() -> int:
     wall_total_s = time.perf_counter() - wall0
 
     benchmark = {
+        # Schema v2 flat keys (parity with the Wan runners). The diffusers
+        # pipe() is a single fused generate (denoise + VAE decode), so decode
+        # is not separately timed and total_s == denoise_s by convention.
+        "schema_version": 2,
+        "model_id": "hunyuan_video",
+        "pipeline": "HunyuanVideoPipeline",
+        "total_s": generate_s,
+        "denoise_s": generate_s,
+        "decode_s": 0.0,
+        "timing_scope": ("text_to_video_hot_after_warmup_pass" if _warmup
+                         else "text_to_video_single_pass"),
+        "warm_steady_state": bool(_warmup),
+        # Nested timings kept for existing collectors (collect_run reads both).
         "timings": {
             "generate_s": generate_s,   # collector maps -> total_s/denoise_s (speedup metric)
             "load_s": load_s,

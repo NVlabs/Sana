@@ -117,8 +117,19 @@ def maybe_enable(pipe) -> dict | None:
         return out
 
     transformer.forward = wrapped
+
+    def _reset():
+        # Cold-start the controller between passes (e.g. after a warmup pass):
+        # step clock, cached step output/accumulator, and the rel_l1 signal
+        # history all go back to first-call state, so a timed pass measures
+        # exactly what a fresh generation would do.
+        ctx.step = 0
+        ctx.scratch.clear()
+        _log["prev"] = None
+
     return {
         "technique": "teacache",
+        "reset": _reset,
         "variant": "whole_step_output_cache",
         "threshold": threshold,
         "start_step": kwargs.get("start_step"),

@@ -17,7 +17,6 @@ autovideo/
     profiles/
       official_video_t2v.toml
     rubrics/
-  snippets/
     README.md
   search_space/
     README.md

@@ -1,0 +1,32 @@
+id = "hunyuan_video_full_v3"
+kind = "patch"
+purpose = "optimization"
+description = "HunyuanVideo-13B full optimization v3: TeaCache (step reuse, thr 0.15/start 6/maxhits 2) + torch.compile kernel + SOL Attention v3 (PISA hyvideo piecewise, upstream-aligned, Morton fixed lanes, density 0.15, dense first 10 steps). Single-GPU; 1 warmup pass amortizes compile/kernel before timing."
+model_profile = "hunyuan_video"
+
+[runtime]
+root = "models/hunyuan_video/optimized"
+
+[env]
+SGLANG_HQ_TEACACHE_THRESHOLD = "0.15"
+SGLANG_HQ_TEACACHE_START_STEP = "6"
+SGLANG_HQ_TEACACHE_MAX_HITS = "2"
+HUNYUAN_COMPILE = "1"
+HUNYUAN_COMPILE_MODE = "default"
+HUNYUAN_SOL_V3 = "1"
+HUNYUAN_SOLV3_DENSITY = "0.15"
+HUNYUAN_SOLV3_MORTON = "1"
+HUNYUAN_SOLV3_DENSE_STEPS = "10"
+HUNYUAN_WARMUP_PASSES = "1"
+TORCHINDUCTOR_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/torch_inductor"
+TRITON_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/triton"
+TORCH_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/torch"
+XDG_CACHE_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/xdg"
+TMPDIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/tmp"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+frames_dir = "frames"

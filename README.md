@@ -39,7 +39,7 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/07/21]** 🔥 **SOL Attention merged** — [**SOL Attention**](techniques/sparse_backends/) block-sparse video attention lands as a first-class technique and powers two new models: [**HunyuanVideo-13B**](models/hunyuan_video/) **~5.03×** and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) **~3.48×** end-to-end.
+- **[2026/07/21]** 🔥 **SOL Attention merged** — [**SOL Attention**](techniques/sparse_backends/) block-sparse video attention lands as a acceleration technique and powers two new models: [**HunyuanVideo-13B**](models/hunyuan_video/) **~5.03×** and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) **~3.48×** end-to-end. (paper of SOL Attention coming soon🚀)
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.
 - **[2026/06]** 📖 **Docs release** — full documentation site live: [3 pipeline designs + 5 acceleration techniques](https://nvlabs.github.io/Sana/Sol-Engine/docs/).

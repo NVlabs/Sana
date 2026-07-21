@@ -1,0 +1,122 @@
+site_name: Sol-Engine Documentation
+site_description: Agent-native full-stack acceleration for video-diffusion inference
+site_author: Sol-Engine Team
+site_url: https://nvlabs.github.io/Sana/Sol-Engine/docs/
+repo_name: NVlabs/Sana:sol-engine
+repo_url: https://github.com/NVlabs/Sana/tree/sol-engine
+docs_dir: site_docs
+
+theme:
+  name: material
+  logo: assets/sol-engine-logo.png
+  favicon: assets/sol-engine-logo.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Overview: index.md
+  - Installation: installation.md
+  - Agent workflow: agent-workflow.md
+  - Pipelines:
+      - Cosmos3-Super: pipelines/cosmos3.md
+      - LTX-2.3: pipelines/ltx.md
+      - SANA-Video: pipelines/sana.md
+      - Wan2.2-A14B: pipelines/wan14b.md
+      - Wan2.2 TI2V-5B: pipelines/wan5b.md
+      - LingBot-Video: pipelines/lingbot.md
+      - HunyuanVideo-13B: pipelines/hunyuan.md
+      - Wan2.1-T2V-14B: pipelines/wan21_14b.md
+  - Techniques:
+      - Cache:
+          - Overview: techniques/cache.md
+          - TeaCache: techniques/cache/teacache.md
+          - EasyCache: techniques/cache/easycache.md
+          - TaylorSeer: techniques/cache/taylorseer.md
+          - Fixed-step cache: techniques/cache/fixed_step.md
+          - Cache-DiT / DBCache: techniques/cache/cache_dit.md
+      - Token pruning:
+          - Overview: techniques/token_prune.md
+          - Feature-norm pruning: techniques/token_prune/feature_norm.md
+          - ToMe-SD: techniques/token_prune/tome_sd.md
+      - Sparse attention:
+          - Overview: techniques/sparse.md
+          - PISA: techniques/sparse/pisa.md
+          - SpargeAttention: techniques/sparse/spargeattention.md
+          - Sparse VideoGen: techniques/sparse/sparse_videogen.md
+          - Sparse VideoGen2: techniques/sparse/sparse_videogen2.md
+      - Quantization:
+          - Overview: techniques/quant.md
+          - NVFP4: techniques/quant/nvfp4.md
+          - Diffusion PTQ: techniques/quant/diffusion_ptq.md
+          - SVDQuant / Nunchaku: techniques/quant/svdquant.md
+          - SageAttention: techniques/quant/sageattention.md
+          - ModelOpt / FP8: techniques/quant/modelopt_fp8.md
+      - Kernel fusion:
+          - Overview: techniques/kernel.md
+          - AdaLN and residual gate fusion: techniques/kernel/adaln_residual_gate.md
+          - GEMM epilogues: techniques/kernel/gemm_epilogues.md
+          - QK-norm + RoPE fusion: techniques/kernel/qknorm_rope.md
+          - Attention output gate fusion: techniques/kernel/attention_output_gate.md
+          - Residual and modulation glue fusion: techniques/kernel/residual_modulation.md
+          - QKV merge: techniques/kernel/qkv_merge.md
+          - torch.compile: techniques/kernel/torch_compile.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/NVlabs/Sana/tree/sol-engine
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - stylesheets/extra.js
+
+copyright: Copyright &copy; 2026 Sol-Engine Team

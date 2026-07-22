@@ -22,7 +22,7 @@ from pisa_hyvideo_kernels.piecewise_sparse_attn_0th import (
     chunk_reduce_qkv,
     piecewise_attn_fwd,
 )
-from pisa_hyvideo_kernels.piecewise_sparse_attn_v2 import (
+from pisa_hyvideo_kernels.sol_attention import (
     GROUP_SIZE,
     compute_global_qck_threshold,
     contiguous,
@@ -131,7 +131,7 @@ def calibrate_hyvideo_text_sink_density(
     fine_step: float,
     text_sink_tokens: int = 0,
 ) -> dict[str, object]:
-    """Calibrate PISA2 threshold for HYVideo with a dense text suffix."""
+    """Calibrate SOL Attention threshold for HYVideo with a dense text suffix."""
     from pisa_hyvideo_kernels.utils import calibrate_density
 
     return calibrate_density(

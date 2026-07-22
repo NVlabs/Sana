@@ -2,7 +2,7 @@
 
 This document records the minimum framework integration and the completed
 Wan 2.1 T2V experiment for the CuTeDSL colmask kernel in
-`release/sm100-pisa2-colmask`.
+`release/sm100-sol_attn-colmask`.
 
 ## Outcome
 
@@ -53,7 +53,7 @@ The video itself is not stored in Git.
 - BF16 KC/VC summaries and FP32 global threshold prepared with the release
   semantics;
 - logical routing group size 256 over physical route tiles of 128;
-- no substitution with the older INT8 Sparse-VideoGen PISA2 path.
+- no substitution with the older INT8 Sparse-VideoGen SOL Attention path.
 
 ### Correctness reference (R)
 
@@ -146,7 +146,7 @@ The completed run used:
 
 - Sol-Attn commit `fc0d18eb58b531a9b4072a53479afe702491ebff`;
 - release kernel SHA256
-  `261d1d0e71fc6b907948eb9547adabe9c0c00932db318f8a32932f628b4b1f3e`;
+  `e4e47b7e5fc2015b41e4462507372651e1f6eaf05ee7ddd54af3cac1301f283b`;
 - Sparse-VideoGen integration commit
   `82dd1d9029143d7264080e59dff0fe028c8dda34`;
 - full Wan Slurm job `5425361`;

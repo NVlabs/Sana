@@ -18,8 +18,8 @@ _COMPILED_OPS: dict[tuple[str, int, int, int], dict[str, Any]] = {}
 
 
 def _load_release() -> tuple[Any, Any]:
-    from kernels import online_piecewise_sparse_attn_bf16_aligned as aligned
-    from kernels import piecewise_sparse_attn_v2 as canonical
+    from kernels import sol_attention_bf16_aligned as aligned
+    from kernels import sol_attention as canonical
 
     return aligned, canonical
 
@@ -63,15 +63,15 @@ def _run_compiled(
     import cuda.bindings.driver as cuda
     import cutlass.cute as cute
 
-    from experiments.pisa2.native_bf16_claude50_colmask_full45_runner import (
+    from experiments.sol_attn.native_bf16_claude50_colmask_full45_runner import (
         _validate_kernel_identity,
     )
-    from experiments.pisa2.native_bf16_lean6_routeidx_g256_cursor_ballotscatter_packedgmemo_tworowhoist_inlineu32_fusedroute_n128_pair_tmemp_hybrid_massreuse_terminalo_runner import (
+    from experiments.sol_attn.native_bf16_lean6_routeidx_g256_cursor_ballotscatter_packedgmemo_tworowhoist_inlineu32_fusedroute_n128_pair_tmemp_hybrid_massreuse_terminalo_runner import (
         _to_cute_tensor,
         _validate_prepared,
     )
-    from kernels.pisa2_sm100.native_bf16_claude49_g256_colmask_fwd import (
-        build_pisa2_sm100_lean6_routeidx_g256_cursor_ballotscatter_packedgmemo_tworowhoist_inlineu32_fusedroute_n128_pair_tmemp_bf16_fwd,
+    from kernels.sol_attn_sm100.native_bf16_claude49_g256_colmask_fwd import (
+        build_sol_attn_sm100_lean6_routeidx_g256_cursor_ballotscatter_packedgmemo_tworowhoist_inlineu32_fusedroute_n128_pair_tmemp_bf16_fwd,
     )
 
     tokens = int(q.shape[2])
@@ -111,7 +111,7 @@ def _run_compiled(
     cache_hit = entry is not None
     if entry is None:
         kernel_sha256 = _validate_kernel_identity()
-        op = build_pisa2_sm100_lean6_routeidx_g256_cursor_ballotscatter_packedgmemo_tworowhoist_inlineu32_fusedroute_n128_pair_tmemp_bf16_fwd(
+        op = build_sol_attn_sm100_lean6_routeidx_g256_cursor_ballotscatter_packedgmemo_tworowhoist_inlineu32_fusedroute_n128_pair_tmemp_bf16_fwd(
             tokens
         )
         started = time.perf_counter()
@@ -134,9 +134,9 @@ def _run_compiled(
 def _emit_event(payload: dict[str, Any]) -> None:
     global _EVENT_COUNT
     _EVENT_COUNT += 1
-    event = {"event": "wan_pisa2_sm100_colmask", "index": _EVENT_COUNT, **payload}
-    print("WAN_PISA2_SM100 " + json.dumps(event, sort_keys=True), flush=True)
-    path = os.getenv("PISA2_SM100_EVENT_LOG")
+    event = {"event": "wan_sol_attn_sm100_colmask", "index": _EVENT_COUNT, **payload}
+    print("WAN_SOL_ATTN_SM100 " + json.dumps(event, sort_keys=True), flush=True)
+    path = os.getenv("SOL_ATTN_SM100_EVENT_LOG")
     if path:
         output = Path(path)
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -161,7 +161,7 @@ def calibrate_tau(
         raise ValueError(f"target_density must be in (0, 1], got {target_density}")
     aligned, canonical = _load_release()
 
-    sample_heads = max(1, int(os.getenv("PISA2_CALIBRATE_SAMPLE_HEADS", "2")))
+    sample_heads = max(1, int(os.getenv("SOL_ATTN_CALIBRATE_SAMPLE_HEADS", "2")))
     q_sample = q[:1, :sample_heads].contiguous()
     k_sample = k[:1, :sample_heads].contiguous()
     v_sample = v[:1, :sample_heads].contiguous()
@@ -201,8 +201,8 @@ def calibrate_tau(
         trials.append({"tau": tau, "density": density})
         return density
 
-    low = float(os.getenv("PISA2_CALIBRATE_COARSE_START", "0.0"))
-    high = float(os.getenv("PISA2_CALIBRATE_COARSE_END", "4.0"))
+    low = float(os.getenv("SOL_ATTN_CALIBRATE_COARSE_START", "0.0"))
+    high = float(os.getenv("SOL_ATTN_CALIBRATE_COARSE_END", "4.0"))
     evaluate(low)
     evaluate(high)
     for _ in range(iterations):
@@ -239,7 +239,7 @@ def _correctness_gate(
     block_size: int,
 ) -> None:
     global _GATE_DONE
-    if _GATE_DONE or os.getenv("PISA2_SM100_CORRECTNESS_GATE", "1") != "1":
+    if _GATE_DONE or os.getenv("SOL_ATTN_SM100_CORRECTNESS_GATE", "1") != "1":
         return
 
     aligned, _ = _load_release()

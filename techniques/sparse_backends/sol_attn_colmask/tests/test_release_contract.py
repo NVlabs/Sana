@@ -9,8 +9,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-KERNEL = ROOT / "kernels/pisa2_sm100/native_bf16_claude49_g256_colmask_fwd.py"
-RUNNER = ROOT / "experiments/pisa2/native_bf16_claude50_colmask_full45_runner.py"
+KERNEL = ROOT / "kernels/sol_attn_sm100/native_bf16_claude49_g256_colmask_fwd.py"
+RUNNER = ROOT / "experiments/sol_attn/native_bf16_claude50_colmask_full45_runner.py"
 SUMMARY = ROOT / "evidence/full45/full45-summary.json"
 PER_CASE = ROOT / "evidence/full45/per-case-results.csv"
 
@@ -21,17 +21,17 @@ def _sha256(path: Path) -> str:
 
 def test_evidence_bound_kernel_and_runner_bytes() -> None:
     assert _sha256(KERNEL) == (
-        "261d1d0e71fc6b907948eb9547adabe9c0c00932db318f8a32932f628b4b1f3e"
+        "e4e47b7e5fc2015b41e4462507372651e1f6eaf05ee7ddd54af3cac1301f283b"
     )
     assert _sha256(RUNNER) == (
-        "dc6529fd79ac66d3d724b29e2a0c766465ac96f89086d8c4928c532d893201ae"
+        "b01cd7cb329db3315c3f3b7d258037ab239b75b0e4214ffe04b01f7f3f843b65"
     )
 
 
 def test_public_api_signature_is_stable() -> None:
-    from sol_attn import make_pisa2_sm100
+    from sol_attn import make_sol_attn_sm100
 
-    parameters = inspect.signature(make_pisa2_sm100).parameters
+    parameters = inspect.signature(make_sol_attn_sm100).parameters
     assert tuple(parameters) == (
         "T",
         "q",
@@ -57,13 +57,13 @@ def test_full45_release_claims() -> None:
     assert summary["candidate_kernel_sha256"] == _sha256(KERNEL)
     assert summary["checks"]["all_45_correct"] is True
 
-    pisa2 = summary["references"]["triton_pisa2"]
+    sol_attn = summary["references"]["triton_sol_attn"]
     assert math.isclose(
-        pisa2["overall"]["geomean"], 0.7461636856364493, abs_tol=1e-15
+        sol_attn["overall"]["geomean"], 0.7461636856364493, abs_tol=1e-15
     )
-    assert pisa2["wins"] == 45
+    assert sol_attn["wins"] == 45
     assert math.isclose(
-        pisa2["worst_case"]["ratio"], 0.7986808060511288, abs_tol=1e-15
+        sol_attn["worst_case"]["ratio"], 0.7986808060511288, abs_tol=1e-15
     )
 
     pisa0 = summary["references"]["triton_pisa0"]
@@ -82,5 +82,5 @@ def test_per_case_evidence_is_complete() -> None:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 45
     assert all(row["correctness_pass"] == "True" for row in rows)
-    assert sum(row["win_vs_triton_pisa2"] == "True" for row in rows) == 45
+    assert sum(row["win_vs_triton_sol_attn"] == "True" for row in rows) == 45
     assert sum(row["win_vs_triton_pisa0"] == "True" for row in rows) == 30

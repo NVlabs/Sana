@@ -1,1 +1,1 @@
-"""Vendored FlashAttention Cute Python helpers used by PISA2 SM90."""
+"""Vendored FlashAttention Cute Python helpers used by SOL Attention SM90."""

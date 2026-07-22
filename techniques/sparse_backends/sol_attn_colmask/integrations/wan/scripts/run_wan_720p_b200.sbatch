@@ -22,13 +22,13 @@ cd "$WAN_REPO"
 
 export PYTHONPATH="$SOL_REPO:$WAN_REPO${WAN_FAST_KERNELS:+:$WAN_FAST_KERNELS}${PYTHONPATH:+:$PYTHONPATH}"
 export TOKENIZERS_PARALLELISM=false
-export PISA2_AUTO_CALIBRATE=1
-export PISA2_CALIBRATE_SAMPLE_HEADS=2
-export PISA2_CALIBRATE_COARSE_START=0.0
-export PISA2_CALIBRATE_COARSE_END=4.0
-export PISA2_SM100_CORRECTNESS_GATE=1
-export PISA2_SM100_EVENT_LOG="$OUT_ROOT/sm100_events.jsonl"
-export PISA2_CALIBRATION_LOG="$OUT_ROOT/calibration.json"
+export SOL_ATTN_AUTO_CALIBRATE=1
+export SOL_ATTN_CALIBRATE_SAMPLE_HEADS=2
+export SOL_ATTN_CALIBRATE_COARSE_START=0.0
+export SOL_ATTN_CALIBRATE_COARSE_END=4.0
+export SOL_ATTN_SM100_CORRECTNESS_GATE=1
+export SOL_ATTN_SM100_EVENT_LOG="$OUT_ROOT/sm100_events.jsonl"
+export SOL_ATTN_CALIBRATION_LOG="$OUT_ROOT/calibration.json"
 export CUDA_VISIBLE_DEVICES=0
 
 git status --short --branch >"$OUT_ROOT/wan_git_status.txt"
@@ -42,8 +42,8 @@ python -c 'import sys, torch, triton, cutlass; print(sys.version); print(torch._
 /usr/bin/time -f 'real_sec=%e\nmax_rss_kb=%M' -o "$OUT_ROOT/time.txt" \
   python wan_t2v_inference.py \
     --model_id Wan-AI/Wan2.1-T2V-14B-Diffusers \
-    --pattern pisa2 \
-    --pisa2_impl sm100-colmask \
+    --pattern sol_attn \
+    --sol_attn_impl sm100-colmask \
     --prompt "$PROMPT" \
     --height 720 \
     --width 1280 \
@@ -56,8 +56,8 @@ python -c 'import sys, torch, triton, cutlass; print(sys.version); print(torch._
     --pisa_threshold 1.7 \
     --pisa_block_size 64 \
     --pisa_reorder_order morton3d \
-    --output_file "$OUT_ROOT/pisa2_sm100_colmask.mp4" \
+    --output_file "$OUT_ROOT/sol_attn_sm100_colmask.mp4" \
     >"$OUT_ROOT/run.log" 2>&1
 
-test -s "$OUT_ROOT/pisa2_sm100_colmask.mp4"
+test -s "$OUT_ROOT/sol_attn_sm100_colmask.mp4"
 echo "WAN_720P_SM100_OK OUT=$OUT_ROOT"

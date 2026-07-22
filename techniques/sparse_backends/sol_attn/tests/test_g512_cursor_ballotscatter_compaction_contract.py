@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from experiments.pisa2.g512_cursor_ballotscatter_compaction_contract import (
+from experiments.sol_attn.g512_cursor_ballotscatter_compaction_contract import (
     CANDIDATE_PATH,
     PARENT_PATH,
     contract,
@@ -22,7 +22,7 @@ def test_only_systemic_owner_warp_axis_is_explicit() -> None:
     assert parent.count("route_indices[route_rank]") == 1
     assert "if exact_pred:" in candidate
     assert "if lane < Int32(4):" not in candidate
-    assert "pisa2_bfind_b32(" not in candidate
+    assert "sol_attn_bfind_b32(" not in candidate
     assert "lane_mask_lt = Int32(0x7FFFFFFF) >> (" in candidate
     assert "new_cross_warp_handoff\": False" in candidate
     assert '"shape_or_density_fast_path": False' in candidate

@@ -6,7 +6,7 @@ the text tail (padding keys invisible; no causal mask). This module decomposes
 that attention so that EVERYTHING involving text stays exact dense and ONLY the
 text-independent block — video queries x video keys — runs sparse:
 
-  1. video -> video : SPARSE. PISA2 SM100 colmask kernel on Morton-reordered
+  1. video -> video : SPARSE. SOL Attention SM100 colmask kernel on Morton-reordered
      video tokens; the kernel returns its own per-query LSE (natural log of
      ``sum(exp(q.k * scale))`` over the routed keys).
   2. video -> text  : DENSE over the VALID text keys only, computed in fp32 in
@@ -171,7 +171,7 @@ def sol_attn_hunyuan_v2(q, k, v, *, video_len, key_valid, grid,
 
     try:
         cm = _load_colmask_v2()
-        os.environ.setdefault("PISA2_ALLOW_LOW_TAU", "1")
+        os.environ.setdefault("SOL_ATTN_ALLOW_LOW_TAU", "1")
 
         qv, kvid, vvid = (t[:, :, :video_len] for t in (q0, k0, v0))
         kt, vt = k0[:, :, video_len:], v0[:, :, video_len:]

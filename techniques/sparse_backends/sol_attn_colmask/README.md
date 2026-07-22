@@ -1,6 +1,6 @@
-# Sol-Attn: colmask PISA2 for B200
+# SOL Attention: colmask backend for B200
 
-This branch is the compact release of the `colmask` BF16 PISA2 forward backend
+This branch is the compact release of the `colmask` BF16 SOL Attention forward backend
 for NVIDIA B200 / SM100. The complete optimization history remains on the
 project's history branch; this tree carries the promoted source, its import
 closure, the public wrapper, tests, and release evidence.
@@ -8,7 +8,7 @@ closure, the public wrapper, tests, and release evidence.
 ## Result
 
 - Correctness: 45/45.
-- Versus Triton PISA2: GM 0.7462, 45/45 wins, worst 0.7987.
+- Versus Triton SOL Attention: GM 0.7462, 45/45 wins, worst 0.7987.
 - Versus Triton PISA0: GM 1.0003 (statistical parity), 30/45 wins, worst
   1.1696 at `T32768-B4-H12-d0.05`.
 - Fixed point: 0.714 ms.
@@ -18,8 +18,8 @@ REG168, zero spill, TMEM256, six warps, and two CTA/SM. Its routing schedule is
 logical G256 over physical N128 tiles. The backend is a single kernel with
 online routing and no fast paths.
 
-- Kernel SHA256: `261d1d0e71fc6b907948eb9547adabe9c0c00932db318f8a32932f628b4b1f3e`
-- Runner SHA256: `dc6529fd79ac66d3d724b29e2a0c766465ac96f89086d8c4928c532d893201ae`
+- Kernel SHA256: `e4e47b7e5fc2015b41e4462507372651e1f6eaf05ee7ddd54af3cac1301f283b`
+- Runner SHA256: `b01cd7cb329db3315c3f3b7d258037ab239b75b0e4214ffe04b01f7f3f843b65`
 
 ## Mechanism lineage
 
@@ -36,9 +36,9 @@ phase graph, and launch topology of its parent.
 ## Public API
 
 ```python
-from sol_attn import make_pisa2_sm100
+from sol_attn import make_sol_attn_sm100
 
-run = make_pisa2_sm100(
+run = make_sol_attn_sm100(
     T,
     q,
     k,
@@ -58,8 +58,8 @@ non-causal. The public signature is unchanged from the previous compact
 release.
 
 The public wrapper is intentionally thin. The evidence-bound kernel and runner
-remain byte-for-byte unchanged under `kernels/pisa2_sm100/` and
-`experiments/pisa2/`; the exact G256 parent kernel/runner and matching support
+remain byte-for-byte unchanged under `kernels/sol_attn_sm100/` and
+`experiments/sol_attn/`; the exact G256 parent kernel/runner and matching support
 modules are retained as their import closure.
 
 ## Numerical Notes
@@ -111,9 +111,9 @@ The release contracts do not require a GPU:
 
 ```bash
 PYTHONPATH=. python3 -m py_compile \
-  kernels/pisa2_sm100/native_bf16_claude49_g256_colmask_fwd.py \
-  experiments/pisa2/native_bf16_claude50_colmask_full45_runner.py \
-  sol_attn/pisa2_sm100.py \
+  kernels/sol_attn_sm100/native_bf16_claude49_g256_colmask_fwd.py \
+  experiments/sol_attn/native_bf16_claude50_colmask_full45_runner.py \
+  sol_attn/sol_attn_sm100.py \
   sol_attn/__init__.py
 PYTHONPATH=. python3 -c 'import sol_attn'
 python3 -m pytest tests/
@@ -123,7 +123,7 @@ shasum -a 256 --check SHA256SUMS
 ## Matched NCU (promotion-grade, cu128)
 
 Five-leg matched NCU at the fixed point (colmask / packedsel parent /
-G256 baseline / Triton PISA2 / fixed Triton PISA0), same GPU, same
+G256 baseline / Triton SOL Attention / fixed Triton PISA0), same GPU, same
 prepared inputs, canonical `torch 2.11.0+cu128 / triton 3.7.0` runtime
 (signature-gated).  Evidence in `evidence/matched-ncu/`; archive SHA256
 `f50517b31b4b9b9a25333101be926ef2c15022ed73084b448d5a096d1a630d2f`.

@@ -1,7 +1,7 @@
 id = "hunyuan_video_sol_v2_only"
 kind = "patch"
 purpose = "optimization"
-description = "HunyuanVideo-13B SOL Attention v2 ONLY (independent dense-text / sparse-video split: text<->anything exact dense, video x video PISA2 colmask sparse at density 0.15, exact disjoint-key LSE merge). No compile, no cache — isolates the v2 path's correctness+quality+speed. Single-GPU; 1 warmup pass amortizes kernel compile before timing."
+description = "HunyuanVideo-13B SOL Attention v2 ONLY (independent dense-text / sparse-video split: text<->anything exact dense, video x video SOL Attention colmask sparse at density 0.15, exact disjoint-key LSE merge). No compile, no cache — isolates the v2 path's correctness+quality+speed. Single-GPU; 1 warmup pass amortizes kernel compile before timing."
 model_profile = "hunyuan_video"
 
 [runtime]
@@ -11,7 +11,7 @@ root = "models/hunyuan_video/optimized"
 HUNYUAN_SOL_V2 = "1"
 HUNYUAN_SOLV2_DENSITY = "0.15"
 HUNYUAN_WARMUP_PASSES = "1"
-PISA2_ALLOW_LOW_TAU = "1"
+SOL_ATTN_ALLOW_LOW_TAU = "1"
 TORCHINDUCTOR_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/torch_inductor"
 TRITON_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/triton"
 TORCH_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/hunyuan_video/torch"

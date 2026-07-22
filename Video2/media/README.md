@@ -18,8 +18,10 @@ The entire experience uses one native document scroll. Wheel, trackpad, touch,
 keyboard, and scrollbar dragging all follow the same continuous timeline; no
 wheel events are captured and no scroll position is forced at section
 boundaries. The demo grid advances only after its sticky stage completely fills
-the viewport. Once a section reaches its final row, the current scene rolls out
-while the next scene rolls in. The last demo then releases naturally into the
+the viewport. Once a section reaches its final row, crossing a single boundary
+triggers a fixed-time animation for the title, description, and grid. That
+animation is not scrubbed by scroll, so the scrollbar cannot rest on a mixed
+half-old, half-new section. The last demo then releases naturally into the
 citation page, and the same path plays in reverse when scrolling upward.
 
 The title and citation remain normal document sections. The title-page media

@@ -6,6 +6,7 @@
   const saveData = Boolean(navigator.connection && navigator.connection.saveData);
   const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+  const delay = duration => new Promise(resolve => window.setTimeout(resolve, duration));
   let hlsLoader;
 
   function loadHlsLibrary() {
@@ -228,6 +229,8 @@
         entries,
         rowCount,
         batchCount: scene.querySelector("[data-batch-count]"),
+        headingPanel: scene.querySelector(".scene-heading-panel"),
+        descriptionPanel: scene.querySelector(".scene-description-panel"),
       });
     });
 
@@ -248,6 +251,9 @@
     let resizeFrame = 0;
     let activeModelIndex = -1;
     let lastMediaWindow = "";
+    let transitionRunning = false;
+    let pendingModelIndex = null;
+    const transitionDuration = reduceMotion ? 0 : 420;
 
     models.forEach((model, modelIndex) => {
       const button = document.createElement("button");
@@ -293,21 +299,16 @@
       const viewportHeight = window.innerHeight;
       const compact = window.matchMedia("(max-width: 600px)").matches;
       let cursor = 0;
-      timeline = models.map((model, modelIndex) => {
+      timeline = models.map(model => {
         layoutGrid(model);
         const contentSpan = Math.max(
           viewportHeight * (compact ? 0.82 : 0.92),
           model.gridTravel * 1.65
         );
-        const transitionSpan = modelIndex < models.length - 1
-          ? viewportHeight * (compact ? 0.36 : 0.42)
-          : 0;
         const frame = {
           start: cursor,
-          contentEnd: cursor + contentSpan,
-          end: cursor + contentSpan + transitionSpan,
-          contentSpan,
-          transitionSpan
+          end: cursor + contentSpan,
+          contentSpan
         };
         cursor = frame.end;
         return frame;
@@ -343,10 +344,63 @@
       storyCount.textContent = `${String(modelIndex + 1).padStart(2, "0")} / ${String(totalSections).padStart(2, "0")}`;
     }
 
-    function setScenePosition(modelIndex, y, visible) {
-      const scene = models[modelIndex].element;
-      scene.classList.toggle("is-visible", visible);
-      scene.style.transform = visible ? `translate3d(0, ${y}px, 0)` : "translate3d(0, 110%, 0)";
+    function sceneLayers(model) {
+      return [model.headingPanel, model.descriptionPanel, model.scrollPanel].filter(Boolean);
+    }
+
+    function clearTransitionClasses(model) {
+      sceneLayers(model).forEach(layer => {
+        layer.classList.remove(
+          "section-exit-forward",
+          "section-exit-backward",
+          "section-enter-forward",
+          "section-enter-backward"
+        );
+      });
+    }
+
+    function showOnly(modelIndex) {
+      models.forEach((model, index) => {
+        clearTransitionClasses(model);
+        model.element.classList.toggle("is-visible", index === modelIndex);
+      });
+      setActiveModel(modelIndex);
+    }
+
+    async function transitionTo(modelIndex) {
+      const nextIndex = clamp(modelIndex, 0, models.length - 1);
+      if (nextIndex === activeModelIndex && !transitionRunning) return;
+      if (transitionRunning) {
+        pendingModelIndex = nextIndex;
+        return;
+      }
+
+      const previousIndex = activeModelIndex;
+      if (previousIndex < 0 || transitionDuration === 0) {
+        showOnly(nextIndex);
+        return;
+      }
+
+      transitionRunning = true;
+      pendingModelIndex = null;
+      const direction = nextIndex > previousIndex ? "forward" : "backward";
+      const outgoing = models[previousIndex];
+      const incoming = models[nextIndex];
+      outgoing.element.classList.add("is-visible");
+      incoming.element.classList.add("is-visible");
+      clearTransitionClasses(outgoing);
+      clearTransitionClasses(incoming);
+      void incoming.element.offsetHeight;
+      sceneLayers(outgoing).forEach(layer => layer.classList.add(`section-exit-${direction}`));
+      sceneLayers(incoming).forEach(layer => layer.classList.add(`section-enter-${direction}`));
+
+      await delay(transitionDuration);
+      showOnly(nextIndex);
+      transitionRunning = false;
+
+      const queuedIndex = pendingModelIndex;
+      pendingModelIndex = null;
+      if (queuedIndex !== null && queuedIndex !== activeModelIndex) transitionTo(queuedIndex);
     }
 
     function updateGrid(modelIndex, progress) {
@@ -364,29 +418,16 @@
     function render() {
       renderFrame = 0;
       const travel = clamp(window.scrollY - story.offsetTop, 0, totalTravel);
-      let sectionIndex = timeline.findIndex(frame => travel <= frame.end + 0.5);
+      let sectionIndex = timeline.findIndex(frame => travel < frame.end - 0.5);
       if (sectionIndex < 0) sectionIndex = models.length - 1;
       const frame = timeline[sectionIndex];
-      const inTransition = frame.transitionSpan > 0 && travel > frame.contentEnd;
       const contentProgress = clamp((travel - frame.start) / Math.max(1, frame.contentSpan));
-
-      models.forEach((_, index) => setScenePosition(index, 0, false));
       const firstRow = updateGrid(sectionIndex, contentProgress);
 
-      if (inTransition) {
-        const transitionProgress = clamp((travel - frame.contentEnd) / frame.transitionSpan);
-        const nextIndex = Math.min(models.length - 1, sectionIndex + 1);
-        setScenePosition(sectionIndex, -transitionProgress * window.innerHeight, true);
-        setScenePosition(nextIndex, (1 - transitionProgress) * window.innerHeight, true);
-        const nextFirstRow = updateGrid(nextIndex, 0);
-        const activeIndex = transitionProgress < 0.5 ? sectionIndex : nextIndex;
-        setActiveModel(activeIndex);
-        pauseOutsideViewport(activeIndex, activeIndex === sectionIndex ? firstRow : nextFirstRow);
-      } else {
-        setScenePosition(sectionIndex, 0, true);
-        setActiveModel(sectionIndex);
-        pauseOutsideViewport(sectionIndex, firstRow);
-      }
+      if (activeModelIndex < 0) showOnly(sectionIndex);
+      else if (transitionRunning) pendingModelIndex = sectionIndex;
+      else if (sectionIndex !== activeModelIndex) transitionTo(sectionIndex);
+      pauseOutsideViewport(sectionIndex, firstRow);
 
       if (progressBar) progressBar.style.transform = `scaleX(${travel / totalTravel})`;
     }

@@ -161,8 +161,6 @@ video {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transform: translate3d(0, 110%, 0);
-  will-change: transform;
 }
 
 .scene.is-visible,
@@ -434,9 +432,7 @@ video {
 }
 
 .demo-scene {
-  background:
-    radial-gradient(circle at 82% 20%, rgba(118, 185, 0, 0.08), transparent 27%),
-    var(--ink);
+  background: transparent;
 }
 
 .scene-header {
@@ -589,6 +585,38 @@ video {
   font-weight: 800;
   letter-spacing: 0.11em;
   text-transform: uppercase;
+}
+
+.section-exit-forward {
+  animation: section-exit-forward 400ms cubic-bezier(.65, 0, .35, 1) both;
+}
+
+.section-exit-backward {
+  animation: section-exit-backward 400ms cubic-bezier(.65, 0, .35, 1) both;
+}
+
+.section-enter-forward {
+  animation: section-enter-forward 400ms cubic-bezier(.65, 0, .35, 1) both;
+}
+
+.section-enter-backward {
+  animation: section-enter-backward 400ms cubic-bezier(.65, 0, .35, 1) both;
+}
+
+@keyframes section-exit-forward {
+  to { transform: translate3d(0, -110%, 0); }
+}
+
+@keyframes section-exit-backward {
+  to { transform: translate3d(0, 110%, 0); }
+}
+
+@keyframes section-enter-forward {
+  from { transform: translate3d(0, 110%, 0); }
+}
+
+@keyframes section-enter-backward {
+  from { transform: translate3d(0, -110%, 0); }
 }
 
 .quick-nav {
@@ -1010,6 +1038,13 @@ video {
   }
 
   .intro-reel {
+    animation: none;
+  }
+
+  .section-exit-forward,
+  .section-exit-backward,
+  .section-enter-forward,
+  .section-enter-backward {
     animation: none;
   }
 }

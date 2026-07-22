@@ -6,7 +6,6 @@
   const saveData = Boolean(navigator.connection && navigator.connection.saveData);
   const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
-  const delay = duration => new Promise(resolve => window.setTimeout(resolve, duration));
   let hlsLoader;
 
   function loadHlsLibrary() {
@@ -229,8 +228,6 @@
         entries,
         rowCount,
         batchCount: scene.querySelector("[data-batch-count]"),
-        headingPanel: scene.querySelector(".scene-heading-panel"),
-        descriptionPanel: scene.querySelector(".scene-description-panel"),
       });
     });
 
@@ -244,22 +241,13 @@
     const storyLabel = document.querySelector("[data-story-label]");
     const storyCount = document.querySelector("[data-story-count]");
     const citation = document.querySelector("#citation");
-    const totalSteps = Math.max(1, models.length);
-    let displayedStep = 0;
-    let thresholdStep = 0;
-    let pendingRequest = null;
-    let transitioning = false;
-    let ignoreScrollUntil = 0;
-    let storyWheelArmed = story.getBoundingClientRect().top <= 1;
-    let storyArmTimer = 0;
-    let wheelActive = false;
-    let lastWheelTime = 0;
-    let lastWheelMagnitude = 0;
-    let wheelEndTimer = 0;
-    let releasingStory = false;
-    let lastDocumentY = window.scrollY;
-
-    story.style.height = `${Math.max(300, totalSteps * 100)}svh`;
+    const totalSections = Math.max(1, models.length);
+    let timeline = [];
+    let totalTravel = 1;
+    let renderFrame = 0;
+    let resizeFrame = 0;
+    let activeModelIndex = -1;
+    let lastMediaWindow = "";
 
     models.forEach((model, modelIndex) => {
       const button = document.createElement("button");
@@ -269,17 +257,13 @@
       button.setAttribute("aria-label", `Jump to ${model.label}`);
       quickNav.appendChild(button);
     });
+
     const citationButton = document.createElement("button");
     citationButton.type = "button";
     citationButton.textContent = "BibTeX";
     citationButton.dataset.citationJump = "true";
     quickNav.appendChild(citationButton);
     const navButtons = Array.from(quickNav.querySelectorAll("[data-step-jump]"));
-
-    function stepScrollTop(stepIndex) {
-      const range = Math.max(1, story.offsetHeight - window.innerHeight);
-      return story.offsetTop + (stepIndex / Math.max(1, totalSteps - 1)) * range;
-    }
 
     function layoutGrid(model) {
       const gap = Number.parseFloat(window.getComputedStyle(model.grid).rowGap) || 0;
@@ -294,8 +278,9 @@
       const bottomBuffer = Math.max(baseBottomBuffer, viewportHeight - topBuffer - (rowHeight * 2 + gap));
       model.columnCount = columnCount;
       model.rowCount = Math.max(1, Math.ceil(model.entries.length / columnCount));
-      const rowsHeight = model.rowCount * rowHeight + Math.max(0, model.rowCount - 1) * gap;
       model.rowDistance = rowHeight + gap;
+      model.gridTravel = Math.max(0, (model.rowCount - 2) * model.rowDistance);
+      const rowsHeight = model.rowCount * rowHeight + Math.max(0, model.rowCount - 1) * gap;
       model.grid.style.gridTemplateColumns = `repeat(${columnCount}, minmax(0, 1fr))`;
       model.grid.style.gridAutoRows = `${rowHeight}px`;
       model.grid.style.top = `${topBuffer}px`;
@@ -304,233 +289,124 @@
       model.gridPanel.style.height = `${topBuffer + rowsHeight + bottomBuffer}px`;
     }
 
-    function maxScroll(model) {
-      return Math.max(0, model.scrollPanel.scrollHeight - model.scrollPanel.clientHeight);
+    function buildTimeline() {
+      const viewportHeight = window.innerHeight;
+      const compact = window.matchMedia("(max-width: 600px)").matches;
+      let cursor = 0;
+      timeline = models.map((model, modelIndex) => {
+        layoutGrid(model);
+        const contentSpan = Math.max(
+          viewportHeight * (compact ? 0.82 : 0.92),
+          model.gridTravel * 1.65
+        );
+        const transitionSpan = modelIndex < models.length - 1
+          ? viewportHeight * (compact ? 0.36 : 0.42)
+          : 0;
+        const frame = {
+          start: cursor,
+          contentEnd: cursor + contentSpan,
+          end: cursor + contentSpan + transitionSpan,
+          contentSpan,
+          transitionSpan
+        };
+        cursor = frame.end;
+        return frame;
+      });
+      totalTravel = Math.max(1, cursor);
+      story.style.height = `${Math.ceil(totalTravel + viewportHeight)}px`;
     }
 
-    function pauseOutsideViewport(activeModelIndex, firstRow) {
-      models.forEach((model, modelIndex) => {
+    function pauseOutsideViewport(modelIndex, firstRow) {
+      const mediaWindow = `${modelIndex}:${firstRow}`;
+      if (mediaWindow === lastMediaWindow) return;
+      lastMediaWindow = mediaWindow;
+      models.forEach((model, currentModelIndex) => {
         model.entries.forEach((entry, entryIndex) => {
           const row = Math.floor(entryIndex / (model.columnCount || 3));
-          const visible = modelIndex === activeModelIndex && row >= firstRow - 1 && row <= firstRow + 2;
+          const visible = currentModelIndex === modelIndex && row >= firstRow - 1 && row <= firstRow + 2;
           if (!visible) pauseStream(entry.video);
         });
       });
     }
 
-    function updateModelState(modelIndex = displayedStep) {
-      const model = models[modelIndex];
-      if (!model) return;
-      const distance = model.rowDistance || 1;
-      const firstRow = clamp(Math.floor(model.scrollPanel.scrollTop / distance), 0, model.rowCount - 1);
-      const lastRow = Math.min(model.rowCount, firstRow + 3);
-      const innerProgress = maxScroll(model) ? model.scrollPanel.scrollTop / maxScroll(model) : 0;
-      if (model.batchCount) {
-        model.batchCount.textContent = `Rows ${String(firstRow + 1).padStart(2, "0")}–${String(lastRow).padStart(2, "0")} / ${String(model.rowCount).padStart(2, "0")}`;
-      }
-      storyLabel.textContent = model.label;
-      storyCount.textContent = `${String(modelIndex + 1).padStart(2, "0")} / ${String(totalSteps).padStart(2, "0")}`;
-      if (progressBar) {
-        progressBar.style.transform = `scaleX(${(modelIndex + innerProgress) / totalSteps})`;
-      }
-      pauseOutsideViewport(modelIndex, firstRow);
-    }
-
-    function applyStep(stepIndex) {
-      displayedStep = clamp(stepIndex, 0, totalSteps - 1);
-      models.forEach((model, modelIndex) => {
-        const active = modelIndex === displayedStep;
+    function setActiveModel(modelIndex) {
+      if (modelIndex === activeModelIndex) return;
+      activeModelIndex = modelIndex;
+      models.forEach((model, index) => {
+        const active = index === modelIndex;
         model.element.classList.toggle("is-active", active);
         model.element.inert = !active;
         model.element.setAttribute("aria-hidden", active ? "false" : "true");
       });
-      navButtons.forEach((button, modelIndex) => button.classList.toggle("is-active", modelIndex === displayedStep));
-      updateModelState();
+      navButtons.forEach((button, index) => button.classList.toggle("is-active", index === modelIndex));
+      storyLabel.textContent = models[modelIndex].label;
+      storyCount.textContent = `${String(modelIndex + 1).padStart(2, "0")} / ${String(totalSections).padStart(2, "0")}`;
     }
 
-    function layers(model) {
-      return [model.headingPanel, model.descriptionPanel, model.scrollPanel].filter(Boolean);
+    function setScenePosition(modelIndex, y, visible) {
+      const scene = models[modelIndex].element;
+      scene.classList.toggle("is-visible", visible);
+      scene.style.transform = visible ? `translate3d(0, ${y}px, 0)` : "translate3d(0, 110%, 0)";
     }
 
-    async function transitionTo(stepIndex, entryEdge = "auto") {
-      const nextStep = clamp(stepIndex, 0, totalSteps - 1);
-      if (nextStep === displayedStep) return;
-      if (transitioning) {
-        pendingRequest = { step: nextStep, edge: entryEdge };
-        return;
+    function updateGrid(modelIndex, progress) {
+      const model = models[modelIndex];
+      const gridOffset = model.gridTravel * clamp(progress);
+      model.grid.style.transform = `translate3d(0, ${-gridOffset}px, 0)`;
+      const firstRow = clamp(Math.floor((gridOffset + 1) / Math.max(1, model.rowDistance)), 0, model.rowCount - 1);
+      const lastRow = Math.min(model.rowCount, firstRow + 2);
+      if (model.batchCount) {
+        model.batchCount.textContent = `Rows ${String(firstRow + 1).padStart(2, "0")}–${String(lastRow).padStart(2, "0")} / ${String(model.rowCount).padStart(2, "0")}`;
+      }
+      return firstRow;
+    }
+
+    function render() {
+      renderFrame = 0;
+      const travel = clamp(window.scrollY - story.offsetTop, 0, totalTravel);
+      let sectionIndex = timeline.findIndex(frame => travel <= frame.end + 0.5);
+      if (sectionIndex < 0) sectionIndex = models.length - 1;
+      const frame = timeline[sectionIndex];
+      const inTransition = frame.transitionSpan > 0 && travel > frame.contentEnd;
+      const contentProgress = clamp((travel - frame.start) / Math.max(1, frame.contentSpan));
+
+      models.forEach((_, index) => setScenePosition(index, 0, false));
+      const firstRow = updateGrid(sectionIndex, contentProgress);
+
+      if (inTransition) {
+        const transitionProgress = clamp((travel - frame.contentEnd) / frame.transitionSpan);
+        const nextIndex = Math.min(models.length - 1, sectionIndex + 1);
+        setScenePosition(sectionIndex, -transitionProgress * window.innerHeight, true);
+        setScenePosition(nextIndex, (1 - transitionProgress) * window.innerHeight, true);
+        const nextFirstRow = updateGrid(nextIndex, 0);
+        const activeIndex = transitionProgress < 0.5 ? sectionIndex : nextIndex;
+        setActiveModel(activeIndex);
+        pauseOutsideViewport(activeIndex, activeIndex === sectionIndex ? firstRow : nextFirstRow);
+      } else {
+        setScenePosition(sectionIndex, 0, true);
+        setActiveModel(sectionIndex);
+        pauseOutsideViewport(sectionIndex, firstRow);
       }
 
-      transitioning = true;
-      const direction = nextStep > displayedStep ? "forward" : "backward";
-      const outgoing = models[displayedStep];
-      const incoming = models[nextStep];
-      const enterAtBottom = entryEdge === "bottom" || (entryEdge === "auto" && direction === "backward");
-      incoming.scrollPanel.scrollTop = enterAtBottom ? maxScroll(incoming) : 0;
-      incoming.element.classList.add("is-transitioning");
-      updateModelState(nextStep);
-
-      if (!reduceMotion) {
-        layers(outgoing).forEach(layer => layer.classList.add(`scroll-exit-${direction}`));
-        layers(incoming).forEach(layer => layer.classList.add(`scroll-enter-${direction}`));
-        await delay(440);
-      }
-
-      layers(outgoing).forEach(layer => layer.classList.remove("scroll-exit-forward", "scroll-exit-backward"));
-      layers(incoming).forEach(layer => layer.classList.remove("scroll-enter-forward", "scroll-enter-backward"));
-      applyStep(nextStep);
-      incoming.element.classList.remove("is-transitioning");
-      outgoing.element.classList.remove("is-transitioning");
-      transitioning = false;
-
-      const queued = pendingRequest;
-      pendingRequest = null;
-      if (queued && queued.step !== displayedStep) transitionTo(queued.step, queued.edge);
+      if (progressBar) progressBar.style.transform = `scaleX(${travel / totalTravel})`;
     }
 
-    function requestStep(stepIndex, entryEdge = "auto") {
-      const next = clamp(stepIndex, 0, totalSteps - 1);
-      thresholdStep = next;
-      if (transitioning) pendingRequest = { step: next, edge: entryEdge };
-      else transitionTo(next, entryEdge);
+    function requestRender() {
+      if (!renderFrame) renderFrame = window.requestAnimationFrame(render);
     }
 
-    function jumpToStep(stepIndex, entryEdge = "top") {
-      const next = clamp(stepIndex, 0, totalSteps - 1);
-      thresholdStep = next;
-      storyWheelArmed = true;
-      ignoreScrollUntil = performance.now() + 160;
-      const root = document.documentElement;
-      const previous = root.style.scrollBehavior;
-      root.style.scrollBehavior = "auto";
-      window.scrollTo(0, stepScrollTop(next));
-      root.style.scrollBehavior = previous;
-      requestStep(next, entryEdge);
-    }
-
-    function resetWheelAfterIdle() {
-      window.clearTimeout(wheelEndTimer);
-      wheelEndTimer = window.setTimeout(() => {
-        wheelActive = false;
-        lastWheelMagnitude = 0;
-        releasingStory = false;
-      }, 120);
-    }
-
-    function scrollDocumentBy(deltaY) {
-      const root = document.documentElement;
-      const previous = root.style.scrollBehavior;
-      root.style.scrollBehavior = "auto";
-      window.scrollBy(0, deltaY);
-      root.style.scrollBehavior = previous;
-    }
-
-    function scrollDocumentTo(top) {
-      const root = document.documentElement;
-      const previous = root.style.scrollBehavior;
-      root.style.scrollBehavior = "auto";
-      window.scrollTo(0, top);
-      root.style.scrollBehavior = previous;
-    }
-
-    function handleOuterBoundary(event) {
-      if ((dialog && dialog.open) || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-      const rect = story.getBoundingClientRect();
-      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
-      const deltaY = event.deltaY * unit;
-      const crossingFromTitle = deltaY > 0 && rect.top > 0 && deltaY >= rect.top;
-      const crossingFromCitation = deltaY < 0 && rect.bottom < window.innerHeight && -deltaY >= window.innerHeight - rect.bottom;
-      if (!crossingFromTitle && !crossingFromCitation) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      const boundary = crossingFromTitle
-        ? story.offsetTop
-        : story.offsetTop + story.offsetHeight - window.innerHeight;
-      ignoreScrollUntil = performance.now() + 180;
-      thresholdStep = crossingFromTitle ? 0 : totalSteps - 1;
-      storyWheelArmed = false;
-      wheelActive = true;
-      scrollDocumentTo(boundary);
-      lastDocumentY = boundary;
-    }
-
-    function handleWheel(event) {
-      const rect = story.getBoundingClientRect();
-      const pinned = rect.top <= 1 && rect.bottom >= window.innerHeight - 1;
-      if ((dialog && dialog.open) || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-      if (!pinned) {
-        event.preventDefault();
-        storyWheelArmed = false;
-        releasingStory = false;
-        scrollDocumentBy(event.deltaY);
-        return;
-      }
-
-      if (releasingStory) {
-        event.preventDefault();
-        scrollDocumentBy(event.deltaY);
-        resetWheelAfterIdle();
-        return;
-      }
-
-      const model = models[displayedStep];
-      const direction = event.deltaY > 0 ? 1 : -1;
-      const atTop = model.scrollPanel.scrollTop <= 0.5;
-      const atBottom = model.scrollPanel.scrollTop >= maxScroll(model) - 0.5;
-      const magnitude = Math.abs(event.deltaY);
-      const now = performance.now();
-      const freshImpulse = !wheelActive || now - lastWheelTime > 140;
-
-      lastWheelTime = now;
-      lastWheelMagnitude = magnitude;
-      resetWheelAfterIdle();
-
-      const leavingStory = (displayedStep === 0 && atTop && direction < 0) ||
-        (displayedStep === totalSteps - 1 && atBottom && direction > 0);
-      if (leavingStory) {
-        if (!freshImpulse) event.preventDefault();
-        else {
-          event.preventDefault();
-          storyWheelArmed = false;
-          releasingStory = true;
-          scrollDocumentBy(event.deltaY);
-        }
-        wheelActive = true;
-        return;
-      }
-
-      if (!storyWheelArmed) {
-        event.preventDefault();
-        window.clearTimeout(storyArmTimer);
-        storyArmTimer = window.setTimeout(() => {
-          storyWheelArmed = true;
-          wheelActive = false;
-        }, 130);
-        return;
-      }
-
-      const changingSection = (atBottom && direction > 0) || (atTop && direction < 0);
-      if (changingSection) {
-        event.preventDefault();
-        if (freshImpulse && !transitioning) {
-          wheelActive = true;
-          jumpToStep(displayedStep + direction, direction < 0 ? "bottom" : "top");
-        }
-        return;
-      }
-
-      event.preventDefault();
-      wheelActive = true;
-      model.scrollPanel.scrollTop += event.deltaY;
-      updateModelState();
+    function scrollToSection(sectionIndex) {
+      const next = clamp(sectionIndex, 0, models.length - 1);
+      window.scrollTo({
+        top: story.offsetTop + timeline[next].start,
+        behavior: reduceMotion ? "auto" : "smooth"
+      });
     }
 
     quickNav.addEventListener("click", event => {
-      const button = event.target.closest("[data-step-jump]");
-      if (button) {
-        const target = Number(button.dataset.stepJump);
-        if (target !== displayedStep) jumpToStep(target);
+      const sectionButton = event.target.closest("[data-step-jump]");
+      if (sectionButton) {
+        scrollToSection(Number(sectionButton.dataset.stepJump));
         return;
       }
       if (event.target.closest("[data-citation-jump]")) {
@@ -541,58 +417,21 @@
     document.querySelectorAll("[data-jump]").forEach(control => {
       control.addEventListener("click", event => {
         event.preventDefault();
-        jumpToStep(Number(control.dataset.jump));
+        scrollToSection(Number(control.dataset.jump));
       });
     });
 
-    function readScroll() {
-      const rect = story.getBoundingClientRect();
-      const range = Math.max(1, story.offsetHeight - window.innerHeight);
-      const currentY = window.scrollY;
-      const documentDirection = Math.sign(currentY - lastDocumentY);
-      lastDocumentY = currentY;
-
-      if (performance.now() >= ignoreScrollUntil && !storyWheelArmed) {
-        const enteredFromTitle = documentDirection > 0 && rect.top < 0 && displayedStep === 0;
-        const enteredFromCitation = documentDirection < 0 && rect.bottom > window.innerHeight && displayedStep === totalSteps - 1;
-        if (enteredFromTitle || enteredFromCitation) {
-          ignoreScrollUntil = performance.now() + 160;
-          const boundary = enteredFromTitle
-            ? story.offsetTop
-            : story.offsetTop + story.offsetHeight - window.innerHeight;
-          scrollDocumentTo(boundary);
-          thresholdStep = enteredFromTitle ? 0 : totalSteps - 1;
-          return;
-        }
-      }
-
-      const progress = clamp(-rect.top / range);
-      if (performance.now() < ignoreScrollUntil) return;
-      const next = clamp(Math.round(progress * Math.max(1, totalSteps - 1)), 0, totalSteps - 1);
-      if (next !== thresholdStep) requestStep(next, next < displayedStep ? "bottom" : "top");
-    }
-
-    models.forEach(model => {
-      layoutGrid(model);
-      model.scrollPanel.addEventListener("scroll", () => {
-        if (model === models[displayedStep]) updateModelState();
-      }, { passive: true });
-    });
-    applyStep(0);
-
-    const initialRect = story.getBoundingClientRect();
-    const initialRange = Math.max(1, story.offsetHeight - window.innerHeight);
-    thresholdStep = clamp(Math.round(clamp(-initialRect.top / initialRange) * Math.max(1, totalSteps - 1)), 0, totalSteps - 1);
-    if (thresholdStep) applyStep(thresholdStep);
-
-    window.addEventListener("scroll", readScroll, { passive: true });
-    window.addEventListener("wheel", handleOuterBoundary, { passive: false, capture: true });
+    buildTimeline();
+    render();
+    window.addEventListener("scroll", requestRender, { passive: true });
     window.addEventListener("resize", () => {
-      models.forEach(layoutGrid);
-      updateModelState();
-      readScroll();
-    });
-    story.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = 0;
+        buildTimeline();
+        render();
+      });
+    }, { passive: true });
   }
 
   function setupCitation() {

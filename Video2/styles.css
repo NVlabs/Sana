@@ -161,16 +161,17 @@ video {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
+  transform: translate3d(0, 110%, 0);
+  will-change: transform;
+}
+
+.scene.is-visible,
+.scene.is-active {
+  opacity: 1;
 }
 
 .scene.is-active {
-  opacity: 1;
   pointer-events: auto;
-}
-
-.scene.is-transitioning {
-  opacity: 1;
-  pointer-events: none;
 }
 
 .scene-shade {
@@ -433,7 +434,9 @@ video {
 }
 
 .demo-scene {
-  background: transparent;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(118, 185, 0, 0.08), transparent 27%),
+    var(--ink);
 }
 
 .scene-header {
@@ -488,15 +491,7 @@ video {
 .grid-scroll-panel {
   position: absolute;
   inset: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.grid-scroll-panel::-webkit-scrollbar {
-  display: none;
+  overflow: hidden;
 }
 
 .grid-section-panel {
@@ -515,6 +510,7 @@ video {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--grid-gap);
+  will-change: transform;
 }
 
 .demo-card {
@@ -593,52 +589,6 @@ video {
   font-weight: 800;
   letter-spacing: 0.11em;
   text-transform: uppercase;
-}
-
-.scroll-exit-forward {
-  animation: element-scroll-exit-forward 400ms cubic-bezier(.6, 0, .24, 1) both;
-}
-
-.scroll-exit-backward {
-  animation: element-scroll-exit-backward 400ms cubic-bezier(.6, 0, .24, 1) both;
-}
-
-.scroll-enter-forward {
-  animation: element-scroll-enter-forward 400ms cubic-bezier(.6, 0, .24, 1) both;
-}
-
-.scroll-enter-backward {
-  animation: element-scroll-enter-backward 400ms cubic-bezier(.6, 0, .24, 1) both;
-}
-
-@keyframes element-scroll-exit-forward {
-  to {
-    transform: translateY(calc(-100% - 16px));
-  }
-}
-
-@keyframes element-scroll-exit-backward {
-  to {
-    transform: translateY(calc(100% + 16px));
-  }
-}
-
-@keyframes element-scroll-enter-forward {
-  from {
-    transform: translateY(calc(100% + 16px));
-  }
-  to {
-    transform: none;
-  }
-}
-
-@keyframes element-scroll-enter-backward {
-  from {
-    transform: translateY(calc(-100% - 16px));
-  }
-  to {
-    transform: none;
-  }
 }
 
 .quick-nav {
@@ -720,7 +670,7 @@ video {
   background: var(--green-bright);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 360ms cubic-bezier(.2, .8, .2, 1);
+  transition: none;
 }
 
 .citation-page {
@@ -1057,13 +1007,6 @@ video {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  .scroll-exit-forward,
-  .scroll-exit-backward,
-  .scroll-enter-forward,
-  .scroll-enter-backward {
-    animation: none;
   }
 
   .intro-reel {

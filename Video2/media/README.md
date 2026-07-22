@@ -9,27 +9,23 @@ Recommended per video:
 - `hls`: a multibitrate HLS `master.m3u8` (preferred).
 - `mp4`: a fast-start MP4 fallback (`ffmpeg -movflags +faststart`).
 
-Each section may contain any number of videos. Its two-row viewport scrolls
-continuously with wheel or trackpad distance rather than snapping by row. Rows
-softly fade into the background at the top and bottom edges; the upper fade
-extends behind the section title while the two focused rows remain fully opaque.
-Wheel input is captured at the demo-stage
-boundary so scrolling feels identical whether the pointer is over the grid or
-the surrounding background. At the first and final demo boundaries, wheel
-distance is explicitly handed back to the document so the title and citation
-pages remain reachable. After the final row is reached, the next gesture changes
-section; trackpad inertia is filtered at that boundary.
+Each section may contain any number of videos. Its two-row viewport moves
+continuously rather than snapping by row. Rows softly fade into the background
+at the top and bottom edges; the upper fade extends behind the section title
+while the two focused rows remain fully opaque.
 
-Large wheel deltas are clamped before they cross the demo entry anchors. A
-section transition requires an actual idle gap between gestures, preventing a
-single high-speed trackpad flick from being mistaken for several section jumps.
+The entire experience uses one native document scroll. Wheel, trackpad, touch,
+keyboard, and scrollbar dragging all follow the same continuous timeline; no
+wheel events are captured and no scroll position is forced at section
+boundaries. The demo grid advances only after its sticky stage completely fills
+the viewport. Once a section reaches its final row, the current scene rolls out
+while the next scene rolls in. The last demo then releases naturally into the
+citation page, and the same path plays in reverse when scrolling upward.
 
-The title page and citation page remain normal document sections. Scrolling is
-captured only after the demo stage completely fills the viewport and is released
-again after its final row. The title-page media wall loops horizontally; until
-video sources are present, the same motion uses the lightweight posters. Hero
-cards are purely decorative: pointer interaction never zooms them, pauses the
-wall, or opens the fullscreen player.
+The title and citation remain normal document sections. The title-page media
+wall loops horizontally; until video sources are present, the same motion uses
+the lightweight posters. Hero cards are purely decorative: pointer interaction
+never zooms them, pauses the wall, or opens the fullscreen player.
 
 Headline metrics use a compact overlay rather than a full-width panel, keeping
 the moving media wall visually dominant.

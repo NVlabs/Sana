@@ -301,7 +301,7 @@
       let cursor = 0;
       timeline = models.map(model => {
         layoutGrid(model);
-        const edgeHold = Math.max(96, viewportHeight * (compact ? 0.14 : 0.18));
+        const edgeHold = Math.max(180, viewportHeight * (compact ? 0.28 : 0.36));
         const movementSpan = Math.max(
           viewportHeight * (compact ? 0.72 : 0.78),
           model.gridTravel * 1.65

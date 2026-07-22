@@ -301,14 +301,16 @@
       let cursor = 0;
       timeline = models.map(model => {
         layoutGrid(model);
-        const contentSpan = Math.max(
-          viewportHeight * (compact ? 0.82 : 0.92),
+        const edgeHold = Math.max(96, viewportHeight * (compact ? 0.14 : 0.18));
+        const movementSpan = Math.max(
+          viewportHeight * (compact ? 0.72 : 0.78),
           model.gridTravel * 1.65
         );
         const frame = {
           start: cursor,
-          end: cursor + contentSpan,
-          contentSpan
+          moveStart: cursor + edgeHold,
+          end: cursor + edgeHold + movementSpan + edgeHold,
+          movementSpan
         };
         cursor = frame.end;
         return frame;
@@ -421,7 +423,7 @@
       let sectionIndex = timeline.findIndex(frame => travel < frame.end - 0.5);
       if (sectionIndex < 0) sectionIndex = models.length - 1;
       const frame = timeline[sectionIndex];
-      const contentProgress = clamp((travel - frame.start) / Math.max(1, frame.contentSpan));
+      const contentProgress = clamp((travel - frame.moveStart) / Math.max(1, frame.movementSpan));
       const firstRow = updateGrid(sectionIndex, contentProgress);
 
       if (activeModelIndex < 0) showOnly(sectionIndex);

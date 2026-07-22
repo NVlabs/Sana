@@ -309,8 +309,10 @@
         const frame = {
           start: cursor,
           moveStart: cursor + edgeHold,
+          moveEnd: cursor + edgeHold + movementSpan,
           end: cursor + edgeHold + movementSpan + edgeHold,
-          movementSpan
+          movementSpan,
+          edgeHold
         };
         cursor = frame.end;
         return frame;
@@ -405,9 +407,13 @@
       if (queuedIndex !== null && queuedIndex !== activeModelIndex) transitionTo(queuedIndex);
     }
 
-    function updateGrid(modelIndex, progress) {
+    function updateGrid(modelIndex, requestedOffset) {
       const model = models[modelIndex];
-      const gridOffset = model.gridTravel * clamp(progress);
+      const gridOffset = clamp(
+        requestedOffset,
+        -model.rowDistance,
+        model.gridTravel + model.rowDistance
+      );
       model.grid.style.transform = `translate3d(0, ${-gridOffset}px, 0)`;
       const firstRow = clamp(Math.floor((gridOffset + 1) / Math.max(1, model.rowDistance)), 0, model.rowCount - 1);
       const lastRow = Math.min(model.rowCount, firstRow + 2);
@@ -417,14 +423,27 @@
       return firstRow;
     }
 
+    function gridOffsetForTravel(model, frame, travel) {
+      if (travel < frame.moveStart) {
+        const edgeProgress = clamp((travel - frame.start) / Math.max(1, frame.edgeHold));
+        return -model.rowDistance * (1 - edgeProgress);
+      }
+      if (travel <= frame.moveEnd) {
+        const movementProgress = clamp((travel - frame.moveStart) / Math.max(1, frame.movementSpan));
+        return model.gridTravel * movementProgress;
+      }
+      const edgeProgress = clamp((travel - frame.moveEnd) / Math.max(1, frame.edgeHold));
+      return model.gridTravel + model.rowDistance * edgeProgress;
+    }
+
     function render() {
       renderFrame = 0;
       const travel = clamp(window.scrollY - story.offsetTop, 0, totalTravel);
       let sectionIndex = timeline.findIndex(frame => travel < frame.end - 0.5);
       if (sectionIndex < 0) sectionIndex = models.length - 1;
       const frame = timeline[sectionIndex];
-      const contentProgress = clamp((travel - frame.moveStart) / Math.max(1, frame.movementSpan));
-      const firstRow = updateGrid(sectionIndex, contentProgress);
+      const gridOffset = gridOffsetForTravel(models[sectionIndex], frame, travel);
+      const firstRow = updateGrid(sectionIndex, gridOffset);
 
       if (activeModelIndex < 0) showOnly(sectionIndex);
       else if (transitionRunning) pendingModelIndex = sectionIndex;
@@ -441,7 +460,7 @@
     function scrollToSection(sectionIndex) {
       const next = clamp(sectionIndex, 0, models.length - 1);
       window.scrollTo({
-        top: story.offsetTop + timeline[next].start,
+        top: story.offsetTop + timeline[next].moveStart,
         behavior: reduceMotion ? "auto" : "smooth"
       });
     }

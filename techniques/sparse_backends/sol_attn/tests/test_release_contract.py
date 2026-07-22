@@ -7,12 +7,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 KERNEL = ROOT / (
-    "kernels/pisa2_sm100/"
+    "kernels/sol_attn_sm100/"
     "native_bf16_lean6_routeidx_g512_cursor_ballotscatter_"
     "fusedroute_n128_pair_tmemp_hybrid_massreuse_terminalo_fwd.py"
 )
 RUNNER = ROOT / (
-    "experiments/pisa2/"
+    "experiments/sol_attn/"
     "native_bf16_lean6_routeidx_g512_cursor_ballotscatter_"
     "fusedroute_n128_pair_tmemp_hybrid_massreuse_terminalo_runner.py"
 )
@@ -26,10 +26,10 @@ def _sha256(path: Path) -> str:
 
 def test_evidence_bound_kernel_and_runner_bytes() -> None:
     assert _sha256(KERNEL) == (
-        "75dccb78d282c7741eeb3833ea09af15543438cfe2d207ade9af72d07400feb5"
+        "9930d201104ed6bc035c670283bed08da3ea8114591ceea4c5873ede0caee106"
     )
     assert _sha256(RUNNER) == (
-        "840ccdee2c8852f580d835357f14e52896052528bf5049ec6f206aa0cbe6aeed"
+        "e70095b53757cea6934d9e6d87dc1db33da6f337623d426ab7b0c2a510c0c695"
     )
 
 
@@ -39,7 +39,7 @@ def test_full45_release_gate() -> None:
     assert summary["case_count"] == 45
     assert summary["overall"]["geomean"] < 1.0
     assert summary["overall"]["wins"] == 45
-    assert summary["worst_case"]["candidate_over_triton_pisa2"] <= 1.03
+    assert summary["worst_case"]["candidate_over_triton_sol_attn"] <= 1.03
     assert gate["passes"] is True
     assert gate["all_45_correct"] is True
     assert gate["all_T_geomeans_lt_1"] is True

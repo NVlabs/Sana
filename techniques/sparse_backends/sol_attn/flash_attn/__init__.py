@@ -1,1 +1,1 @@
-"""Local FlashAttention Cute shim for the PISA2 SM90 release."""
+"""Local FlashAttention Cute shim for the SOL Attention SM90 release."""

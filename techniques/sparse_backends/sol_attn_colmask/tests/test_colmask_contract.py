@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-KERNEL = ROOT / "kernels/pisa2_sm100/native_bf16_claude49_g256_colmask_fwd.py"
+KERNEL = ROOT / "kernels/sol_attn_sm100/native_bf16_claude49_g256_colmask_fwd.py"
 PROMOTION = ROOT / "evidence/promotion/v1-full-result.json"
 SUMMARY = ROOT / "evidence/full45/full45-summary.json"
 

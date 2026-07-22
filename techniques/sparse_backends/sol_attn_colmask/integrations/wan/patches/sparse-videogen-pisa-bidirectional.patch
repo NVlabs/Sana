@@ -8,9 +8,9 @@ index 103ded4..668254e 100755
      group_size=None,
      num_warps=None,
      num_stages=None,
-+    pisa2_impl="triton",
++    sol_attn_impl="triton",
  ):
-+    if backend == "pisa2" and pisa2_impl == "sm100-colmask":
++    if backend == "sol_attn" and sol_attn_impl == "sm100-colmask":
 +        from integrations.wan import run
 +
 +        return run(
@@ -26,14 +26,14 @@ index 103ded4..668254e 100755
          from kernels.piecewise_sparse_attn_0th import piecewise_attention
  
          return piecewise_attention(
-@@ -628,10 +640,23 @@ def _calibrate_pisa2_threshold_bhsd(q, k, target_density, block_size, group_size
+@@ -628,10 +640,23 @@ def _calibrate_sol_attn_threshold_bhsd(q, k, target_density, block_size, group_size
          kv_block_size=int(block_size),
          q_start_offset=0,
      )
  
  
 +@torch.compiler.disable
-+def _calibrate_pisa2_sm100_tau_bhsd(q, k, v, target_density, block_size):
++def _calibrate_sol_attn_sm100_tau_bhsd(q, k, v, target_density, block_size):
 +    from integrations.wan import calibrate_tau
 +
 +    return calibrate_tau(
@@ -51,32 +51,32 @@ index 103ded4..668254e 100755
      pisa_threshold = 1.7
      pisa_block_size = 64
 @@ -640,10 +665,11 @@ class WanAttn_PISAAttn_Processor(WanAttn_SVGAttn_Processor2_0):
-     pisa2_config_tuned = False
-     pisa2_group_size = None
-     pisa2_num_warps = None
-     pisa2_num_stages = None
-     pisa2_tune_result = None
-+    pisa2_impl = "triton"
+     sol_attn_config_tuned = False
+     sol_attn_group_size = None
+     sol_attn_num_warps = None
+     sol_attn_num_stages = None
+     sol_attn_tune_result = None
++    sol_attn_impl = "triton"
      pisa_reorder_order = "none"
      pisa_reorder_grid_h = 0
      pisa_reorder_grid_w = 0
      pisa_reorder_cache = {}
  
 @@ -706,17 +732,26 @@ class WanAttn_PISAAttn_Processor(WanAttn_SVGAttn_Processor2_0):
-             and os.getenv("PISA2_AUTO_CALIBRATE", "0") == "1"
-             and not cls.pisa2_calibrated
+             and os.getenv("SOL_ATTN_AUTO_CALIBRATE", "0") == "1"
+             and not cls.sol_attn_calibrated
          ):
              if torch.cuda.is_available():
                  torch.cuda.synchronize()
--            result = _calibrate_pisa2_threshold_bhsd(
+-            result = _calibrate_sol_attn_threshold_bhsd(
 -                query_in,
 -                key_in,
 -                target_density=self.pisa_density,
 -                block_size=self.pisa_block_size,
--                group_size=cls.pisa2_group_size,
+-                group_size=cls.sol_attn_group_size,
 -            )
-+            if cls.pisa2_impl == "sm100-colmask":
-+                result = _calibrate_pisa2_sm100_tau_bhsd(
++            if cls.sol_attn_impl == "sm100-colmask":
++                result = _calibrate_sol_attn_sm100_tau_bhsd(
 +                    query_in,
 +                    key_in,
 +                    value_in,
@@ -84,38 +84,38 @@ index 103ded4..668254e 100755
 +                    block_size=self.pisa_block_size,
 +                )
 +            else:
-+                result = _calibrate_pisa2_threshold_bhsd(
++                result = _calibrate_sol_attn_threshold_bhsd(
 +                    query_in,
 +                    key_in,
 +                    target_density=self.pisa_density,
 +                    block_size=self.pisa_block_size,
-+                    group_size=cls.pisa2_group_size,
++                    group_size=cls.sol_attn_group_size,
 +                )
              cls.pisa_threshold = float(result["threshold"])
-             cls.pisa2_calibration_result = result
-             cls.pisa2_calibrated = True
+             cls.sol_attn_calibration_result = result
+             cls.sol_attn_calibrated = True
              logger.info(
-                 "WAN PISA2 calibrated threshold={} density={} delta={} target={}",
+                 "WAN SOL Attention calibrated threshold={} density={} delta={} target={}",
 @@ -730,10 +765,12 @@ class WanAttn_PISAAttn_Processor(WanAttn_SVGAttn_Processor2_0):
          if (
-             self.pisa_backend == "pisa2"
-             and os.getenv("PISA2_AUTOTUNE_CONFIG", "0") == "1"
-             and not cls.pisa2_config_tuned
+             self.pisa_backend == "sol_attn"
+             and os.getenv("SOL_ATTN_AUTOTUNE_CONFIG", "0") == "1"
+             and not cls.sol_attn_config_tuned
          ):
-+            if cls.pisa2_impl == "sm100-colmask":
-+                raise RuntimeError("PISA2_AUTOTUNE_CONFIG is not valid for the fixed SM100 colmask release")
++            if cls.sol_attn_impl == "sm100-colmask":
++                raise RuntimeError("SOL_ATTN_AUTOTUNE_CONFIG is not valid for the fixed SM100 colmask release")
              if torch.cuda.is_available():
                  torch.cuda.synchronize()
-             result = _tune_pisa2_config_bhsd(
+             result = _tune_sol_attn_config_bhsd(
                  query_in,
                  key_in,
 @@ -757,10 +794,11 @@ class WanAttn_PISAAttn_Processor(WanAttn_SVGAttn_Processor2_0):
              threshold=self.pisa_threshold,
              block_size=self.pisa_block_size,
-             group_size=cls.pisa2_group_size,
-             num_warps=cls.pisa2_num_warps,
-             num_stages=cls.pisa2_num_stages,
-+            pisa2_impl=cls.pisa2_impl,
+             group_size=cls.sol_attn_group_size,
+             num_warps=cls.sol_attn_num_warps,
+             num_stages=cls.sol_attn_num_stages,
++            sol_attn_impl=cls.sol_attn_impl,
          )
          if inv_perm is not None:
              output = output[:, :, inv_perm, :].contiguous()
@@ -131,19 +131,19 @@ index d3f9b3d..c2b69cf 100755
      pisa_threshold=1.7,
      pisa_block_size=64,
      pisa_reorder_order="none",
-+    pisa2_impl="triton",
++    sol_attn_impl="triton",
  ):
  
      context_length = 0  # This seems to be 0 for I2V in SVG
      num_frame_patches = 1 + num_frames // (pipe.vae_scale_factor_temporal * pipe.transformer.config.patch_size[0])
      mod_value = pipe.vae_scale_factor_spatial * pipe.transformer.config.patch_size[1]
 @@ -197,19 +198,21 @@ def replace_wan_attention(
-         AttnModule.pisa2_config_tuned = False
-         AttnModule.pisa2_tune_result = None
-         AttnModule.pisa2_group_size = None
-         AttnModule.pisa2_num_warps = None
-         AttnModule.pisa2_num_stages = None
-+        AttnModule.pisa2_impl = pisa2_impl
+         AttnModule.sol_attn_config_tuned = False
+         AttnModule.sol_attn_tune_result = None
+         AttnModule.sol_attn_group_size = None
+         AttnModule.sol_attn_num_warps = None
+         AttnModule.sol_attn_num_stages = None
++        AttnModule.sol_attn_impl = sol_attn_impl
          AttnModule.pisa_reorder_order = pisa_reorder_order
          AttnModule.pisa_reorder_grid_h = frame_grid_h
          AttnModule.pisa_reorder_grid_w = frame_grid_w
@@ -154,7 +154,7 @@ index d3f9b3d..c2b69cf 100755
              f"threshold={pisa_threshold}, block_size={pisa_block_size}, "
 -            f"reorder={pisa_reorder_order}, grid={frame_grid_h}x{frame_grid_w}"
 +            f"reorder={pisa_reorder_order}, grid={frame_grid_h}x{frame_grid_w}, "
-+            f"pisa2_impl={pisa2_impl}"
++            f"sol_attn_impl={sol_attn_impl}"
          )
  
          for layer_idx, m in enumerate(pipe.transformer.blocks):
@@ -168,14 +168,14 @@ index 82e8ec7..687f52f 100644
      parser.add_argument("--kmeans_iter_init", type=int, default=0, help="Number of KMeans iterations for initialization in KMEANS_BLOCK.")
      parser.add_argument("--kmeans_iter_step", type=int, default=0, help="Number of KMeans iterations for other diffusion steps in KMEANS_BLOCK.")
      parser.add_argument("--pisa_density", type=float, default=0.15, help="PISA0 exact block density.")
-     parser.add_argument("--pisa_threshold", type=float, default=1.7, help="PISA2 routing threshold.")
+     parser.add_argument("--pisa_threshold", type=float, default=1.7, help="SOL Attention routing threshold.")
      parser.add_argument("--pisa_block_size", type=int, default=64, help="PISA routing block size.")
 +    parser.add_argument(
-+        "--pisa2_impl",
++        "--sol_attn_impl",
 +        type=str,
 +        default="triton",
 +        choices=["triton", "sm100-colmask"],
-+        help="PISA2 forward implementation; sm100-colmask requires Sol-Attn and B200.",
++        help="SOL Attention forward implementation; sm100-colmask requires Sol-Attn and B200.",
 +    )
      parser.add_argument(
          "--pisa_reorder_order",
@@ -188,7 +188,7 @@ index 82e8ec7..687f52f 100644
              pisa_threshold=args.pisa_threshold,
              pisa_block_size=args.pisa_block_size,
              pisa_reorder_order=args.pisa_reorder_order,
-+            pisa2_impl=args.pisa2_impl,
++            sol_attn_impl=args.sol_attn_impl,
          )
  
      # Print time logger

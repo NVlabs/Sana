@@ -1,4 +1,4 @@
-"""SOL Attention backend (PISA2 CuTe DSL for B200/SM100).
+"""SOL Attention backend (CuTe DSL for B200/SM100).
 
 Integrates the vendored ``sol_attn`` release kernel
 (``lean6_routeidx_g512_cursor_ballotscatter_fusedroute_n128``) as a first-class
@@ -35,7 +35,7 @@ DEFAULT_BLOCK_SIZE = 64
 DEFAULT_TARGET_DENSITY = 0.05
 _FIXED_SCALE = HEAD_DIM ** -0.5
 
-# Calibrated tau cache, keyed by (shape, block_size, density). PISA2 is a fixed
+# Calibrated tau cache, keyed by (shape, block_size, density). SOL Attention is a fixed
 # global-threshold scheme: the runtime knob is tau, and realized density floats per
 # input/layer. We derive tau ONCE (bisect to a target density) and then keep it
 # fixed, or take tau directly. Density is never re-forced per call.
@@ -83,7 +83,7 @@ def _morton3d_perm(grid, device):
 
     Block-sparse routing keeps whole 64-token blocks; on raster (frame,h,w) order a
     block is a horizontal strip (spatially incoherent). Morton order makes each block
-    a compact 3D neighbourhood, which is what makes PISA2 sparse attention preserve
+    a compact 3D neighbourhood, which is what lets SOL Attention preserve
     quality on video (the SVG/Sol-Attn reference reorders the same way).
     Returns (perm, inv_perm) int64 tensors of length F*H*W (perm[i] = raster index of
     the i-th Morton token).
@@ -181,18 +181,18 @@ def _load_backend() -> dict[str, Any]:
         sys.path.insert(0, root)
 
     # Public thin wrapper -> the evidence-bound CuTe DSL runner.
-    from sol_attn import make_pisa2_sm100  # type: ignore
+    from sol_attn import make_sol_attn_sm100  # type: ignore
     # Triton "aligned" prep: BF16 centroids + canonical global threshold + route mask.
     from kernels import (  # type: ignore
-        online_piecewise_sparse_attn_bf16_aligned as aligned,
+        sol_attention_bf16_aligned as aligned,
     )
 
     return {
-        "make_pisa2_sm100": make_pisa2_sm100,
+        "make_sol_attn_sm100": make_sol_attn_sm100,
         "aligned": aligned,
         "prepare_qkv": aligned.prepare_qkv,
         "materialize_route_mask": aligned.materialize_route_mask,
-        "canonical": aligned.canonical_pisa2,
+        "canonical": aligned.canonical_sol_attn,
         "legacy": aligned.legacy,
     }
 
@@ -240,7 +240,7 @@ def _calibrate_threshold(bk, q, kc, unit_scale, target_density, block_size):
     """
     import torch
 
-    os.environ.setdefault("PISA2_ALLOW_LOW_TAU", "1")  # intentional tau sweep
+    os.environ.setdefault("SOL_ATTN_ALLOW_LOW_TAU", "1")  # intentional tau sweep
     canonical = bk["canonical"]
     materialize = bk["materialize_route_mask"]
 
@@ -304,7 +304,7 @@ def sol_attn_attention(
 
     try:
         cm = _load_colmask()
-        os.environ.setdefault("PISA2_ALLOW_LOW_TAU", "1")
+        os.environ.setdefault("SOL_ATTN_ALLOW_LOW_TAU", "1")
         # Morton3D reorder: 64-token blocks become compact 3D neighbourhoods.
         q, k, v, inv = q0, k0, v0, None
         if grid is not None and int(grid[0]) * int(grid[1]) * int(grid[2]) == T:
@@ -379,7 +379,7 @@ def sol_attn_attention_hunyuan(q, k, v, *, video_len, key_valid, grid,
         return _dense_full()
     try:
         cm = _load_colmask()
-        os.environ.setdefault("PISA2_ALLOW_LOW_TAU", "1")
+        os.environ.setdefault("SOL_ATTN_ALLOW_LOW_TAU", "1")
         qv, kv, vv = q0[:, :, :video_len], k0[:, :, :video_len], v0[:, :, :video_len]
         # Morton reorder the video sub-range: 64-token blocks become 3D-compact.
         perm, inv = _morton3d_perm(grid, q0.device)

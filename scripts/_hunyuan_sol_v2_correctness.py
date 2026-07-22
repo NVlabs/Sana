@@ -24,7 +24,7 @@ import torch
 
 sys.path.insert(0, ".")
 os.environ["SOL_ATTN_STRICT"] = "1"
-os.environ.setdefault("PISA2_ALLOW_LOW_TAU", "1")
+os.environ.setdefault("SOL_ATTN_ALLOW_LOW_TAU", "1")
 
 from techniques.sparse_backends import sol_attn_backend as v1  # noqa: E402
 from techniques.sparse_backends import sol_attn_hunyuan_v2 as v2  # noqa: E402

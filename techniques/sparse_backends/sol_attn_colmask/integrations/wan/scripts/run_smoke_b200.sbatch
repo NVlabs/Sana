@@ -16,8 +16,8 @@ fi
 mkdir -p "$OUT_ROOT"
 cd "$SOL_REPO"
 export PYTHONPATH="$SOL_REPO${PYTHONPATH:+:$PYTHONPATH}"
-export PISA2_SM100_CORRECTNESS_GATE=1
-export PISA2_SM100_EVENT_LOG="$OUT_ROOT/sm100_events.jsonl"
+export SOL_ATTN_SM100_CORRECTNESS_GATE=1
+export SOL_ATTN_SM100_EVENT_LOG="$OUT_ROOT/sm100_events.jsonl"
 
 python -m integrations.wan.smoke \
   --tokens 8192 \

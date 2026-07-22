@@ -1,7 +1,7 @@
 id = "wan21_sol_g_d10"
 kind = "patch"
 purpose = "optimization"
-description = "Wan2.1-T2V-1.3B full optimization: lossless kernel stack + EasyCache 0.036 + SOL Attention (PISA2 CuTe DSL, target-density 0.10 + dense-guard(steps<6, layers 0-2,27-29)). Single-GPU."
+description = "Wan2.1-T2V-1.3B full optimization: lossless kernel stack + EasyCache 0.036 + SOL Attention (CuTe DSL, target-density 0.10 + dense-guard(steps<6, layers 0-2,27-29)). Single-GPU."
 model_profile = "wan21_t2v_1_3b"
 
 [runtime]
@@ -18,7 +18,7 @@ WAN22_SOL_ATTN = "1"
 WAN22_SOL_DENSITY = "0.10"
 WAN22_SOL_DENSE_STEPS = "6"
 WAN22_SOL_DENSE_LAYERS = "0-2,27-29"
-PISA2_ALLOW_LOW_TAU = "1"
+SOL_ATTN_ALLOW_LOW_TAU = "1"
 TORCHINDUCTOR_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/wan21_t2v_1_3b/torch_inductor"
 TRITON_CACHE_DIR = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/wan21_t2v_1_3b/triton"
 TORCH_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/wan21_t2v_1_3b/torch"

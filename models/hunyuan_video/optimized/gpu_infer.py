@@ -129,7 +129,7 @@ def main() -> int:
     pipe.to(device)
     placement_s = time.perf_counter() - t
 
-    # --- Optional SOL Attention (PISA2 CuTe DSL, SM100), gated on HUNYUAN_SOL_ATTN ---
+    # --- Optional SOL Attention (CuTe DSL, SM100), gated on HUNYUAN_SOL_ATTN ---
     # HunyuanVideoAttnProcessor2_0 routes through diffusers' dispatch_attention_fn,
     # so the sol_attn dispatch hook installs the same way as for Wan. Installed
     # before torch.compile so the compiled graph captures it; dense fallback for

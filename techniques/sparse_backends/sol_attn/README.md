@@ -1,18 +1,18 @@
-# Sol-Attn: CuTe DSL PISA2 for B200
+# SOL Attention: CuTe DSL backend for B200
 
-This branch is the compact release of the promoted BF16 PISA2 forward kernel
+This branch is the compact release of the promoted BF16 SOL Attention forward kernel
 for NVIDIA B200 / SM100. The complete optimization lineage is available on
-branch `history/sm100-pisa2-cutedsl-optimization`.
+branch `history/sm100-sol_attn-cutedsl-optimization`.
 
 ## Result
 
 The release backend is
 `lean6_routeidx_g512_cursor_ballotscatter_fusedroute_n128`.
 
-- Kernel SHA256: `75dccb78d282c7741eeb3833ea09af15543438cfe2d207ade9af72d07400feb5`
-- Runner SHA256: `840ccdee2c8852f580d835357f14e52896052528bf5049ec6f206aa0cbe6aeed`
+- Kernel SHA256: `9930d201104ed6bc035c670283bed08da3ea8114591ceea4c5873ede0caee106`
+- Runner SHA256: `e70095b53757cea6934d9e6d87dc1db33da6f337623d426ab7b0c2a510c0c695`
 - Correctness: 45/45
-- Unprofiled wins over Triton PISA2: 45/45
+- Unprofiled wins over Triton SOL Attention: 45/45
 - Overall candidate/Triton latency geometric mean: `0.8296319471`
 - Fixed `T16384-B1-H32-density5%`: `0.8460793318`
 - Worst point: `0.8864503171`
@@ -27,9 +27,9 @@ scatter. There is no shape- or density-specific fast path.
 ## Public API
 
 ```python
-from sol_attn import make_pisa2_sm100
+from sol_attn import make_sol_attn_sm100
 
-run = make_pisa2_sm100(
+run = make_sol_attn_sm100(
     T,
     q,
     k,
@@ -47,8 +47,8 @@ Inputs use contiguous BHTD BF16 layout with head dimension 128. `kc` and `vc`
 are block summaries, `global_threshold` is FP32, and the release is non-causal.
 
 The public wrapper is intentionally thin. The evidence-bound kernel and runner
-remain byte-for-byte unchanged under `kernels/pisa2_sm100/` and
-`experiments/pisa2/`.
+remain byte-for-byte unchanged under `kernels/sol_attn_sm100/` and
+`experiments/sol_attn/`.
 
 ## Environment
 
@@ -82,11 +82,11 @@ find . -type f -not -path './.git/*' -print0 \
   | sort -z \
   | xargs -0 shasum -a 256 > SOURCE_SHA256SUMS
 
-python -m experiments.pisa2.check_b200_lean6_routeidx_full45_correctness \
+python -m experiments.sol_attn.check_b200_lean6_routeidx_full45_correctness \
   --help
-python -m experiments.pisa2.benchmark_b200_lean6_routeidx_vs_triton_pisa2_full45 \
+python -m experiments.sol_attn.benchmark_b200_lean6_routeidx_vs_triton_sol_attn_full45 \
   --help
-python -m experiments.pisa2.summarize_b200_lean6_routeidx_vs_triton_pisa2_full45 \
+python -m experiments.sol_attn.summarize_b200_lean6_routeidx_vs_triton_sol_attn_full45 \
   --help
 ```
 

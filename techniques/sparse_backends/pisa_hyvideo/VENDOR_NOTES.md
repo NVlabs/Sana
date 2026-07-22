@@ -9,7 +9,7 @@ Files (under `pisa_hyvideo_kernels/`):
   attention (top-k routing + centroid contribution for non-selected blocks +
   exact text-suffix sink).
 - `piecewise_sparse_attn_0th.py` — `chunk_reduce_qkv` / `piecewise_attn_fwd`.
-- `piecewise_sparse_attn_v2.py` — GROUP_SIZE / int8 preprocess / global
+- `sol_attention.py` — GROUP_SIZE / int8 preprocess / global
   threshold (used by the online tau variant; the top-k path uses bf16 directly).
 - `utils.py` — density calibration helpers.
 

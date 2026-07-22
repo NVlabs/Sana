@@ -219,7 +219,7 @@ def main():
             f"block={os.environ.get('WAN22_PISA_BLOCK_SIZE')}"
         )
 
-    # --- Optional SOL Attention (PISA2 CuTe DSL, SM100), gated on WAN22_SOL_ATTN ---
+    # --- Optional SOL Attention (CuTe DSL, SM100), gated on WAN22_SOL_ATTN ---
     # Installs the sol_attn dispatch hook over diffusers' dispatch_attention_fn,
     # BEFORE regional_compile so the compiled block captures it. The CuteDSL kernel
     # graph-breaks out of the compiled region, so WAN22_COMPILE_FULLGRAPH must be 0.

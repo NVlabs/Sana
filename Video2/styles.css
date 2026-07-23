@@ -198,7 +198,7 @@ video {
 }
 
 .intro-byline {
-  max-width: 1040px;
+  max-width: none;
 }
 
 .authors {
@@ -206,6 +206,11 @@ video {
   color: rgba(255, 255, 255, 0.78);
   font-size: clamp(0.76rem, 1vw, 0.92rem);
   line-height: 1.75;
+  white-space: nowrap;
+}
+
+.authors span {
+  white-space: nowrap;
 }
 
 .affiliations {
@@ -817,6 +822,10 @@ video {
   .demo-section-header { grid-template-columns: 1fr; gap: 18px; }
 
   .demo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1280px) {
+  .authors { white-space: normal; }
 }
 
 @media (max-width: 600px) {

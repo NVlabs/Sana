@@ -31,8 +31,10 @@
               <div class="intro-content-swap">
                 <div class="intro-byline">
                   <p class="authors">
-                    Junsong Chen, Jincheng Yu, Yitong Li, Shuchen Xue, Haozhe Liu, Jingyu Xin,
-                    Yuyang Zhao, Zhangjie Wu, Zian Wang, Daquan Zhou, Ping Luo, Song Han, Enze Xie
+                    <span>Junsong Chen</span>, <span>Jincheng Yu</span>, <span>Yitong Li</span>,
+                    <span>Shuchen Xue</span>, <span>Haozhe Liu</span>, <span>Jingyu Xin</span>,
+                    <span>Yuyang Zhao</span>, <span>Tian Ye</span>, <span>Zhangjie Wu</span>, <span>Zian Wang</span>,
+                    <span>Daquan Zhou</span>, <span>Ping Luo</span>, <span>Song Han</span>, <span>Enze Xie</span>
                   </p>
                   <p class="affiliations"><span>NVIDIA</span></p>
                   <div class="intro-actions" aria-label="Project links">
@@ -48,7 +50,7 @@
               <span><b>84.30</b> VBench Total</span>
               <span><b>13.06s</b> 720p/5s · one H100</span>
               <span><b>3.2×</b> faster at 60 s</span>
-              <span><b>120×</b> faster than Wan 2.2</span>
+              <span><b>120×</b> faster than Wan 2.2 14B</span>
             </div>
             <div class="intro-benchmarks" aria-label="Efficiency benchmarks from Figure 1">
               <section class="benchmark-panel latency-panel" aria-labelledby="latency-title">
@@ -59,9 +61,9 @@
                   </div>
                   <b class="benchmark-badge">120×</b>
                 </header>
-                <div class="latency-chart" role="img" aria-label="On a logarithmic scale, Wan 2.2 takes 1556 seconds, HunyuanVideo 788, LTX-2.3 130, Ours 14B 69.3, and Ours 5B with Sol-Engine 13.06 seconds.">
+                <div class="latency-chart" role="img" aria-label="On a logarithmic scale, Wan 2.2 14B takes 1556 seconds, HunyuanVideo 788, LTX-2.3 130, Ours 14B 69.3, and Ours 5B with Sol-Engine 13.06 seconds.">
                   <div class="latency-axis" aria-hidden="true"><i></i><span>10</span><span>100</span><span>300</span><span>1000</span></div>
-                  <div class="latency-row" style="--bar: 100%"><span>Wan 2.2</span><i></i><b>1556</b></div>
+                  <div class="latency-row" style="--bar: 100%"><span>Wan 2.2 14B</span><i></i><b>1556</b></div>
                   <div class="latency-row optional-mark" style="--bar: 88%"><span>Hunyuan</span><i></i><b>788</b></div>
                   <div class="latency-row optional-mark" style="--bar: 58%"><span>LTX-2.3</span><i></i><b>130</b></div>
                   <div class="latency-row ours-mark" style="--bar: 47%"><span>Ours 14B</span><i></i><b>69.3</b></div>
@@ -82,7 +84,7 @@
             <p>Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
           </div>
           <p class="abstract-copy">
-            We introduce <strong>SANA-Video 2.0</strong>, a hybrid video diffusion transformer instantiated at 5B and 14B scales under one unified architecture. The design generates high-quality video up to 720p on a single GPU, matching strong full-softmax Video DiTs in quality while retaining the favorable long-sequence scaling of linear attention. <strong>Hybrid Linear–Softmax Attention</strong> combines gated linear attention with periodic gated-softmax anchors, while <strong>Block Attention Residuals</strong> propagate refreshed representations across depth. With 40-step sampling, SANA-Video 2.0 reaches VBench Total 84.30 in 13.2 seconds at 480p on one H100. Its compiled DiT forward is <strong>3.2× faster</strong> than matched full softmax at a 720p/60s shape. Full-stack Sol-Engine optimization further accelerates the backbone by <strong>3.58×</strong>, bringing the 5B pipeline to <strong>13.06s at 720p/5s</strong> and making it <strong>120× faster</strong> than Wan 2.2-A14B on one H100.
+            We introduce <strong>SANA-Video 2.0</strong>, a hybrid video diffusion transformer instantiated at 5B and 14B scales under one unified architecture. The design generates high-quality video up to 720p on a single GPU, matching strong full-softmax Video DiTs in quality while retaining the favorable long-sequence scaling of linear attention. <strong>Hybrid Linear–Softmax Attention</strong> combines gated linear attention with periodic gated-softmax anchors, while <strong>Block Attention Residuals</strong> propagate refreshed representations across depth. With 40-step sampling, SANA-Video 2.0 reaches VBench Total 84.30 in 13.2 seconds at 480p on one H100. Its compiled DiT forward is <strong>3.2× faster</strong> than matched full softmax at a 720p/60s shape. Full-stack Sol-Engine optimization further accelerates the backbone by <strong>3.58×</strong>, bringing the 5B pipeline to <strong>13.06s at 720p/5s</strong> and making it <strong>120× faster</strong> than Wan 2.2 14B on one H100.
           </p>
         </div>
       </section>
@@ -115,7 +117,7 @@
             </div>
             <pre><code data-citation>@misc{chen2026sanavideo2,
   title  = {SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
-  author = {Chen, Junsong and Yu, Jincheng and Li, Yitong and Xue, Shuchen and Liu, Haozhe and Xin, Jingyu and Zhao, Yuyang and Wu, Zhangjie and Wang, Zian and Zhou, Daquan and Luo, Ping and Han, Song and Xie, Enze},
+  author = {Chen, Junsong and Yu, Jincheng and Li, Yitong and Xue, Shuchen and Liu, Haozhe and Xin, Jingyu and Zhao, Yuyang and Ye, Tian and Wu, Zhangjie and Wang, Zian and Zhou, Daquan and Luo, Ping and Han, Song and Xie, Enze},
   year   = {2026}
 }</code></pre>
           </div>

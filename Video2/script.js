@@ -205,7 +205,6 @@
   function buildPage() {
     const introReel = document.querySelector("[data-intro-reel]");
     const demoHost = document.querySelector("[data-demo-scenes]");
-    const quickNav = document.querySelector("[data-quick-nav]");
     const introEntries = [];
     const demoEntries = [];
 
@@ -241,17 +240,7 @@
         grid.appendChild(entry.card);
       });
       demoHost.appendChild(element);
-
-      const link = document.createElement("a");
-      link.href = `#${section.id}`;
-      link.textContent = section.title;
-      quickNav.appendChild(link);
     });
-
-    const citationLink = document.createElement("a");
-    citationLink.href = "#citation";
-    citationLink.textContent = "BibTeX";
-    quickNav.appendChild(citationLink);
     return { introEntries, demoEntries };
   }
 

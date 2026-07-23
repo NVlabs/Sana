@@ -6,6 +6,10 @@
   const saveData = Boolean(navigator.connection && navigator.connection.saveData);
   const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+  const smoothRange = (value, start, end) => {
+    const progress = clamp((value - start) / Math.max(0.0001, end - start));
+    return progress * progress * (3 - 2 * progress);
+  };
   const delay = duration => new Promise(resolve => window.setTimeout(resolve, duration));
   let hlsLoader;
 
@@ -235,6 +239,168 @@
     });
 
     return models;
+  }
+
+  function setupHeroTimeline() {
+    const hero = document.querySelector("[data-hero-timeline]");
+    const headline = hero && hero.querySelector("[data-hero-headline]");
+    const paper = hero && hero.querySelector("[data-hero-paper]");
+    const byline = hero && hero.querySelector("[data-hero-byline]");
+    const abstract = hero && hero.querySelector("[data-hero-abstract]");
+    const results = hero ? Array.from(hero.querySelectorAll("[data-hero-results]")) : [];
+    if (!hero || !headline || !paper || !byline || !abstract) return;
+
+    let travel = 1;
+    let renderFrame = 0;
+    let resizeFrame = 0;
+
+    function layout() {
+      const compact = window.matchMedia("(max-width: 600px)").matches;
+      travel = Math.max(760, window.innerHeight * (compact ? 1.65 : 1.42));
+      hero.style.height = `${Math.ceil(window.innerHeight + travel)}px`;
+    }
+
+    function render() {
+      renderFrame = 0;
+      const progress = clamp((window.scrollY - hero.offsetTop) / travel);
+      const headlineExit = smoothRange(progress, 0.04, 0.34);
+      const bylineExit = smoothRange(progress, 0.18, 0.46);
+      const paperSettle = smoothRange(progress, 0.16, 0.68);
+      const abstractReveal = smoothRange(progress, 0.52, 0.84);
+      const resultsExit = smoothRange(progress, 0.41, 0.53);
+      const motion = reduceMotion ? 0 : 1;
+      const headlineShift = Math.min(180, window.innerHeight * 0.2) * headlineExit * motion;
+      const paperShift = Math.min(155, window.innerHeight * 0.18) * paperSettle * motion;
+      const resultsShift = Math.min(180, window.innerHeight * 0.2) * resultsExit * motion;
+
+      headline.style.transform = `translate3d(0, ${-headlineShift}px, 0)`;
+      headline.style.opacity = String(1 - headlineExit);
+      paper.style.transform = `translate3d(0, ${-paperShift}px, 0)`;
+      byline.style.transform = `translate3d(0, ${-26 * bylineExit * motion}px, 0)`;
+      byline.style.opacity = String(1 - bylineExit);
+      abstract.style.transform = `translate3d(0, ${(1 - abstractReveal) * 44 * motion}px, 0)`;
+      abstract.style.opacity = String(abstractReveal);
+      results.forEach(result => {
+        result.style.transform = `translate3d(0, ${-resultsShift}px, 0)`;
+        result.style.opacity = String(1 - resultsExit);
+      });
+    }
+
+    function requestRender() {
+      if (!renderFrame) renderFrame = window.requestAnimationFrame(render);
+    }
+
+    layout();
+    render();
+    window.addEventListener("scroll", requestRender, { passive: true });
+    window.addEventListener("resize", () => {
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = 0;
+        layout();
+        render();
+      });
+    }, { passive: true });
+  }
+
+  function setupHeroCarousels() {
+    const hero = document.querySelector("[data-hero-timeline]");
+    const metricSlides = hero ? Array.from(hero.querySelectorAll("[data-metric-slide]")) : [];
+    const metricDots = hero ? Array.from(hero.querySelectorAll("[data-metric-dot]")) : [];
+    const chartSlides = hero ? Array.from(hero.querySelectorAll("[data-chart-slide]")) : [];
+    const chartDots = hero ? Array.from(hero.querySelectorAll("[data-chart-dot]")) : [];
+    if (!hero || !metricSlides.length || !chartSlides.length) return;
+
+    let metricIndex = 0;
+    let chartIndex = 0;
+    let metricTimer = 0;
+    let chartTimer = 0;
+    let visible = false;
+    const switchDuration = reduceMotion ? 0 : 480;
+
+    function replayChart(index) {
+      const chart = chartSlides[index];
+      chart.classList.remove("is-drawing");
+      void chart.offsetWidth;
+      chart.classList.add("is-drawing");
+    }
+
+    function setDots(dots, activeIndex) {
+      dots.forEach((dot, index) => {
+        const active = index === activeIndex;
+        dot.classList.toggle("is-active", active);
+        dot.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
+    function activate(slides, dots, currentIndex, nextIndex, drawChart = false) {
+      const next = clamp(nextIndex, 0, slides.length - 1);
+      if (next === currentIndex) {
+        if (drawChart) replayChart(next);
+        return currentIndex;
+      }
+
+      const outgoing = slides[currentIndex];
+      const incoming = slides[next];
+      slides.forEach(slide => slide.classList.remove("is-entering", "is-leaving"));
+      outgoing.classList.remove("is-active", "is-drawing");
+      incoming.classList.add("is-active");
+      outgoing.setAttribute("aria-hidden", "true");
+      incoming.setAttribute("aria-hidden", "false");
+
+      if (switchDuration) {
+        void incoming.offsetWidth;
+        outgoing.classList.add("is-leaving");
+        incoming.classList.add("is-entering");
+      }
+      setDots(dots, next);
+      if (drawChart) replayChart(next);
+      return next;
+    }
+
+    function restartMetricTimer() {
+      window.clearInterval(metricTimer);
+      metricTimer = 0;
+      if (!visible || document.hidden || reduceMotion) return;
+      metricTimer = window.setInterval(() => {
+        metricIndex = activate(metricSlides, metricDots, metricIndex, (metricIndex + 1) % metricSlides.length);
+      }, 2600);
+    }
+
+    function restartChartTimer() {
+      window.clearInterval(chartTimer);
+      chartTimer = 0;
+      if (!visible || document.hidden || reduceMotion) return;
+      chartTimer = window.setInterval(() => {
+        chartIndex = activate(chartSlides, chartDots, chartIndex, (chartIndex + 1) % chartSlides.length, true);
+      }, 6800);
+    }
+
+    metricSlides.forEach((slide, index) => slide.setAttribute("aria-hidden", index ? "true" : "false"));
+    chartSlides.forEach((slide, index) => slide.setAttribute("aria-hidden", index ? "true" : "false"));
+    setDots(metricDots, metricIndex);
+    setDots(chartDots, chartIndex);
+    replayChart(chartIndex);
+
+    metricDots.forEach((dot, index) => dot.addEventListener("click", () => {
+      metricIndex = activate(metricSlides, metricDots, metricIndex, index);
+      restartMetricTimer();
+    }));
+    chartDots.forEach((dot, index) => dot.addEventListener("click", () => {
+      chartIndex = activate(chartSlides, chartDots, chartIndex, index, true);
+      restartChartTimer();
+    }));
+
+    const observer = new IntersectionObserver(entries => {
+      visible = Boolean(entries[0] && entries[0].isIntersecting);
+      restartMetricTimer();
+      restartChartTimer();
+    }, { threshold: 0.01 });
+    observer.observe(hero);
+    document.addEventListener("visibilitychange", () => {
+      restartMetricTimer();
+      restartChartTimer();
+    });
   }
 
   function setupStory(models) {
@@ -512,6 +678,8 @@
   }
 
   const models = buildScenes();
+  setupHeroTimeline();
+  setupHeroCarousels();
   setupStory(models);
   setupCitation();
 })();

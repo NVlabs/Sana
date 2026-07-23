@@ -27,26 +27,106 @@
     </nav>
 
     <main>
-      <section class="hero-page intro-scene" id="top" aria-label="SANA-Video 2.0 overview">
-        <div class="intro-reel scene-reel" data-intro-reel></div>
-        <div class="scene-shade" aria-hidden="true"></div>
-        <div class="intro-copy">
-          <p class="eyebrow">NVIDIA Research · Efficient AI Team &amp; Singapore Lab</p>
-          <h1>SANA-Video <span>2.0</span></h1>
-          <p class="paper-title">Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
-          <p class="authors">
-            Junsong Chen<sup>1,2</sup>, Jincheng Yu<sup>1,2</sup>, Yitong Li<sup>1,2</sup>,
-            Shuchen Xue<sup>1</sup>, Haozhe Liu<sup>1</sup>, Jingyu Xin<sup>1</sup>,
-            Yuyang Zhao<sup>1</sup>, Zhangjie Wu<sup>1</sup>, Zian Wang<sup>1</sup>,
-            Daquan Zhou<sup>1</sup>, Ping Luo<sup>2</sup>, Song Han<sup>1,3</sup>, Enze Xie<sup>1</sup>
-          </p>
-          <p class="affiliations"><span><sup>1</sup>NVIDIA</span><span><sup>2</sup>HKU</span><span><sup>3</sup>MIT</span></p>
-        </div>
-        <div class="intro-metrics" aria-label="Headline results">
-          <span><b>84.30</b> VBench Total</span>
-          <span><b>13.2s</b> one H100</span>
-          <span><b>3.2×</b> faster at 60 s</span>
-          <span><b>3.58×</b> end to end</span>
+      <section class="hero-page intro-scene" id="top" aria-label="SANA-Video 2.0 overview" data-hero-timeline>
+        <div class="hero-stage" data-hero-stage>
+          <div class="intro-reel scene-reel" data-intro-reel></div>
+          <div class="scene-shade" aria-hidden="true"></div>
+          <div class="intro-copy">
+            <div class="intro-headline" data-hero-headline>
+              <p class="eyebrow">NVIDIA Research · Efficient AI Team &amp; Singapore Lab</p>
+              <h1>SANA-Video <span>2.0</span></h1>
+            </div>
+            <div class="intro-paper" data-hero-paper>
+              <p class="paper-title">Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
+              <div class="intro-content-swap">
+                <div class="intro-byline" data-hero-byline>
+                  <p class="authors">
+                    Junsong Chen<sup>1,2</sup>, Jincheng Yu<sup>1,2</sup>, Yitong Li<sup>1,2</sup>,
+                    Shuchen Xue<sup>1</sup>, Haozhe Liu<sup>1</sup>, Jingyu Xin<sup>1</sup>,
+                    Yuyang Zhao<sup>1</sup>, Zhangjie Wu<sup>1</sup>, Zian Wang<sup>1</sup>,
+                    Daquan Zhou<sup>1</sup>, Ping Luo<sup>2</sup>, Song Han<sup>1,3</sup>, Enze Xie<sup>1</sup>
+                  </p>
+                  <p class="affiliations"><span><sup>1</sup>NVIDIA</span><span><sup>2</sup>HKU</span><span><sup>3</sup>MIT</span></p>
+                </div>
+                <article class="intro-abstract" data-hero-abstract aria-labelledby="intro-abstract-title">
+                  <p class="eyebrow" id="intro-abstract-title">Abstract</p>
+                  <p>
+                    We introduce <strong>SANA-Video 2.0</strong>, a mostly-linear video diffusion transformer instantiated at 5B and 14B scales under one shared architecture. The design generates high-quality video up to 720p on a single GPU, matching strong full-softmax Video DiTs in quality while retaining the favorable long-sequence scaling of linear attention. To avoid quadratic attention throughout, <strong>Hybrid Linear–Softmax Attention</strong> combines gated linear attention for O(N)-dominated mixing with periodic gated-softmax anchors at a regular 3:1 ratio (25% softmax), restoring the full-rank token interactions that pure linear attention cannot express. To propagate these refreshed representations across depth, <strong>Block Attention Residuals</strong> route completed block summaries into later linear layers, enabling anchor-feature reuse and increasing deep-layer effective rank by ~12%. Through from-scratch training, we learn the complete hybrid from random initialization, and reduced-resolution proxy studies identify 25% softmax as the quality–efficiency knee. With 40-step sampling, SANA-Video 2.0 reaches VBench Total 84.30 in 13.2 seconds at 480×832×81 on one H100. Its compiled DiT forward is <strong>3.2× faster</strong> than matched full softmax at a 720p/60s shape, an advantage that widens with duration. Sol-Engine further accelerates this hardware-friendly backbone by <strong>3.58× end to end</strong> on B200. Overall, the mostly-linear hybrid recovers softmax-level expressiveness at substantially lower cost and scales to long, high-resolution video.
+                  </p>
+                </article>
+              </div>
+            </div>
+          </div>
+          <div class="intro-data-dock" data-hero-results>
+          <div class="intro-benchmarks" aria-label="Efficiency benchmarks from Figure 1">
+          <section class="benchmark-panel benchmark-slide latency-panel is-active" data-chart-slide="latency" aria-labelledby="latency-title">
+            <header>
+              <div>
+                <h2 id="latency-title">One-H100 latency</h2>
+                <p>720p · 81 frames · selected models</p>
+              </div>
+              <b class="benchmark-badge">50.4×</b>
+            </header>
+            <div class="latency-chart" role="img" aria-label="On a logarithmic scale, Wan 2.2 takes 1556 seconds, HunyuanVideo 788, LTX-2.3 130, Ours 14B 69.3, and Ours 5B 30.9 seconds.">
+              <div class="latency-axis" aria-hidden="true"><i></i><span>30</span><span>100</span><span>300</span><span>1000</span></div>
+              <div class="latency-row" style="--bar: 100%"><span>Wan 2.2</span><i></i><b>1556</b></div>
+              <div class="latency-row optional-mark" style="--bar: 88%"><span>Hunyuan</span><i></i><b>788</b></div>
+              <div class="latency-row optional-mark" style="--bar: 58%"><span>LTX-2.3</span><i></i><b>130</b></div>
+              <div class="latency-row ours-mark" style="--bar: 47%"><span>Ours 14B</span><i></i><b>69.3</b></div>
+              <div class="latency-row ours-mark primary-mark" style="--bar: 35%"><span>Ours 5B</span><i></i><b>30.9</b></div>
+            </div>
+            <p class="chart-foot"><span>log scale</span><span>seconds ↓</span></p>
+          </section>
+
+          <section class="benchmark-panel benchmark-slide duration-panel" data-chart-slide="duration" aria-labelledby="duration-title">
+            <header>
+              <div>
+                <h2 id="duration-title">5B DiT-forward</h2>
+                <p>720p · latency in seconds</p>
+              </div>
+              <b class="benchmark-badge">3.2×</b>
+            </header>
+            <figure class="duration-chart">
+              <svg viewBox="0 0 280 112" role="img" aria-labelledby="duration-chart-title duration-chart-desc">
+                <title id="duration-chart-title">DiT-forward latency as video duration increases</title>
+                <desc id="duration-chart-desc">Full softmax rises from 0.47 to 32.26 seconds while Ours rises from 0.31 to 10.17 seconds, reaching a 3.17 times speedup at 60 seconds.</desc>
+                <g class="chart-grid">
+                  <path pathLength="1" d="M22 18H238M22 48H238M22 78H238" />
+                  <path pathLength="1" d="M22 88H238" />
+                </g>
+                <path class="chart-gap" d="M22 74 C45 64 59 50 78 43 S137 25 170 22 S213 14 230 13 L230 31 C208 33 190 35 170 38 S108 49 78 56 S42 72 22 80 Z" />
+                <path class="softmax-line" d="M22 74 C45 64 59 50 78 43 S137 25 170 22 S213 14 230 13" />
+                <path class="ours-line" d="M22 80 C47 72 60 62 78 56 S139 42 170 38 S210 33 230 31" />
+                <g class="chart-dots">
+                  <circle class="softmax-dot" cx="22" cy="74" r="2.4" /><circle class="softmax-dot" cx="78" cy="43" r="2.4" />
+                  <circle class="softmax-dot" cx="170" cy="22" r="2.4" /><circle class="softmax-dot" cx="230" cy="13" r="2.4" />
+                  <circle class="ours-dot" cx="22" cy="80" r="2.4" /><circle class="ours-dot" cx="78" cy="56" r="2.4" />
+                  <circle class="ours-dot" cx="170" cy="38" r="2.4" /><circle class="ours-dot" cx="230" cy="31" r="2.4" />
+                </g>
+                <g class="duration-ticks"><text x="22" y="103">5s</text><text x="78" y="103">20s</text><text x="170" y="103">45s</text><text x="230" y="103">60s</text></g>
+                <g class="duration-labels"><text class="softmax-label" x="238" y="16">32.26</text><text class="ours-label" x="238" y="34">10.17</text></g>
+              </svg>
+              <figcaption><span><i class="legend-softmax"></i>Full softmax</span><span><i class="legend-ours"></i>Ours</span></figcaption>
+            </figure>
+          </section>
+          <div class="carousel-dots chart-carousel-dots" aria-label="Choose benchmark chart">
+            <button type="button" class="is-active" data-chart-dot="0" aria-label="Show generation latency chart"></button>
+            <button type="button" data-chart-dot="1" aria-label="Show duration scaling chart"></button>
+          </div>
+          </div>
+          <div class="intro-metrics" aria-label="Headline results">
+            <span class="metric-slide is-active" data-metric-slide><b>84.30</b> VBench Total</span>
+            <span class="metric-slide" data-metric-slide><b>13.2s</b> 480p · one H100</span>
+            <span class="metric-slide" data-metric-slide><b>3.2×</b> faster at 60 s</span>
+            <span class="metric-slide" data-metric-slide><b>3.58×</b> end to end</span>
+            <div class="carousel-dots metric-carousel-dots" aria-label="Choose headline metric">
+              <button type="button" class="is-active" data-metric-dot="0" aria-label="Show VBench score"></button>
+              <button type="button" data-metric-dot="1" aria-label="Show H100 latency"></button>
+              <button type="button" data-metric-dot="2" aria-label="Show long-video speedup"></button>
+              <button type="button" data-metric-dot="3" aria-label="Show end-to-end speedup"></button>
+            </div>
+          </div>
+          </div>
         </div>
       </section>
 

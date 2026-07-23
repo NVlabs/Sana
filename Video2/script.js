@@ -27,7 +27,7 @@
     return hlsLoader;
   }
 
-  async function attachStream(video, media, host) {
+  async function attachStream(video, media, host, options = {}) {
     if (!video) return;
     if (video.dataset.attached === "true") {
       if (video._hls) video._hls.startLoad();
@@ -37,11 +37,15 @@
 
     const hls = media.hls || "";
     const mp4 = media.mp4 || "";
+    const preferMp4 = Boolean(options.preferMp4 && mp4);
+    const hlsBufferLength = options.hlsBufferLength || 12;
     if (!hls && !mp4) return;
     video.dataset.attached = "true";
 
     try {
-      if (hls && video.canPlayType("application/vnd.apple.mpegurl")) {
+      if (preferMp4) {
+        video.src = mp4;
+      } else if (hls && video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = hls;
       } else if (hls) {
         const Hls = await loadHlsLibrary();
@@ -49,7 +53,7 @@
         const player = new Hls({
           startLevel: 0,
           capLevelToPlayerSize: true,
-          maxBufferLength: 12,
+          maxBufferLength: hlsBufferLength,
           backBufferLength: 0
         });
         player.loadSource(hls);
@@ -62,6 +66,16 @@
       video.addEventListener("playing", () => host && host.classList.add("is-playing"), { once: true });
       await video.play();
     } catch (_) {
+      if (preferMp4 && hls) {
+        if (video._hls) {
+          video._hls.destroy();
+          video._hls = null;
+        }
+        video.removeAttribute("src");
+        video.dataset.attached = "false";
+        video.load();
+        return attachStream(video, { ...media, mp4: "" }, host, { hlsBufferLength });
+      }
       if (mp4 && !video.src.endsWith(mp4)) {
         video.src = mp4;
         video.play().catch(() => {});
@@ -81,6 +95,25 @@
   const dialogVideo = dialog && dialog.querySelector("[data-lightbox-video]");
   const dialogCaption = dialog && dialog.querySelector("[data-lightbox-caption]");
   const dialogPlaceholder = dialog && dialog.querySelector("[data-lightbox-placeholder]");
+  let lightboxSourceWidth = 1280;
+  let lightboxSourceHeight = 720;
+
+  function fitLightbox(width = lightboxSourceWidth, height = lightboxSourceHeight) {
+    if (!dialog || !width || !height) return;
+    lightboxSourceWidth = width;
+    lightboxSourceHeight = height;
+    const compact = window.matchMedia("(max-width: 600px)").matches;
+    const horizontalMargin = compact ? 24 : 48;
+    const verticalMargin = compact ? 40 : 72;
+    const captionHeight = dialogCaption && !dialogCaption.hidden ? 50 : 0;
+    const maxWidth = Math.max(1, window.innerWidth - horizontalMargin);
+    const maxHeight = Math.max(1, window.innerHeight - verticalMargin - captionHeight);
+    const scale = Math.min(1, maxWidth / width, maxHeight / height);
+    const fittedWidth = Math.max(1, Math.floor(width * scale));
+    const fittedHeight = Math.max(1, Math.floor(height * scale));
+    dialog.style.width = `${fittedWidth}px`;
+    dialog.style.setProperty("--media-height", `${fittedHeight}px`);
+  }
 
   function closeLightbox() {
     if (!dialog || !dialogVideo) return;
@@ -99,7 +132,9 @@
   function openLightbox(media) {
     if (!dialog || !dialogVideo) return;
     const hasMedia = Boolean(media.hls || media.mp4);
-    dialogCaption.textContent = media.prompt || media.title || "";
+    const caption = media.prompt || "";
+    dialogCaption.textContent = caption;
+    dialogCaption.hidden = !caption;
     dialogVideo.hidden = !hasMedia;
     if (dialogPlaceholder) {
       dialogPlaceholder.hidden = false;
@@ -108,8 +143,9 @@
         ? `linear-gradient(rgba(0,0,0,.14), rgba(0,0,0,.4)), url("${media.poster}")`
         : "";
     }
+    fitLightbox(media.width || 1280, media.height || 720);
     dialog.showModal();
-    if (hasMedia) attachStream(dialogVideo, media, dialog);
+    if (hasMedia) attachStream(dialogVideo, media, dialog, { preferMp4: true });
   }
 
   if (dialog) {
@@ -121,13 +157,24 @@
       event.preventDefault();
       closeLightbox();
     });
+    dialogVideo.addEventListener("loadedmetadata", () => {
+      if (dialogVideo.videoWidth && dialogVideo.videoHeight) {
+        fitLightbox(dialogVideo.videoWidth, dialogVideo.videoHeight);
+      }
+    });
+    window.addEventListener("resize", () => {
+      if (dialog.open) fitLightbox();
+    }, { passive: true });
   }
 
   function wireMediaInteraction(entry) {
     const preview = () => {
       if (!saveData && !reduceMotion) attachStream(entry.video, entry.media, entry.card);
     };
-    const open = () => openLightbox(entry.media);
+    const open = () => {
+      pauseStream(entry.video);
+      openLightbox(entry.media);
+    };
 
     if (!coarsePointer) {
       entry.card.addEventListener("pointerenter", preview);
@@ -154,6 +201,42 @@
     return { card, video: card.querySelector("video"), media };
   }
 
+  function setupIntroPlayback(entries) {
+    if (!entries.length || saveData || reduceMotion) return;
+    const visibleEntries = new Set();
+    const play = entry => attachStream(entry.video, entry.media, entry.card, { hlsBufferLength: 4 });
+    const pause = entry => pauseStream(entry.video);
+
+    if (!("IntersectionObserver" in window)) {
+      entries.slice(0, 6).forEach(play);
+      return;
+    }
+
+    const observer = new IntersectionObserver(changes => {
+      changes.forEach(change => {
+        const entry = change.target._introEntry;
+        if (!entry) return;
+        if (change.isIntersecting) {
+          visibleEntries.add(entry);
+          if (!document.hidden) play(entry);
+        } else {
+          visibleEntries.delete(entry);
+          pause(entry);
+        }
+      });
+    }, { rootMargin: "80px", threshold: 0.01 });
+
+    entries.forEach(entry => {
+      entry.card._introEntry = entry;
+      observer.observe(entry.card);
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) entries.forEach(pause);
+      else visibleEntries.forEach(play);
+    });
+  }
+
   function createDemoCard(media, index) {
     const card = document.createElement("article");
     const hasMedia = Boolean(media.hls || media.mp4);
@@ -161,11 +244,12 @@
     card.tabIndex = 0;
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `Open ${media.title || `video ${index + 1}`}`);
+    const prompt = media.prompt ? `<p>${media.prompt}</p>` : "";
     card.innerHTML = `
       <img src="${media.poster}" alt="" loading="lazy" decoding="async" />
       <video muted loop playsinline preload="none" aria-label="${media.title || `Video sample ${index + 1}`}"></video>
       <div class="demo-meta" aria-hidden="true"><span>${media.resolution || "720p"}</span><span>${media.duration || "8 s"}</span></div>
-      <div class="demo-copy"><h3>${media.title || `Sample ${index + 1}`}</h3><p>${media.prompt || ""}</p></div>`;
+      <div class="demo-copy"><h3>${media.title || `Sample ${index + 1}`}</h3>${prompt}</div>`;
     const entry = { card, video: card.querySelector("video"), media };
     wireMediaInteraction(entry);
     return entry;
@@ -175,6 +259,7 @@
     const introReel = document.querySelector("[data-intro-reel]");
     const demoHost = document.querySelector("[data-demo-scenes]");
     const models = [];
+    const introEntries = [];
 
     [0, 1].forEach(repeatIndex => {
       const set = document.createElement("div");
@@ -182,6 +267,7 @@
       (config.intro || []).forEach((media, mediaIndex) => {
         const index = repeatIndex * (config.intro || []).length + mediaIndex;
         const entry = createIntroCard(media, index);
+        introEntries.push(entry);
         set.appendChild(entry.card);
       });
       introReel.appendChild(set);
@@ -238,25 +324,28 @@
       });
     });
 
-    return models;
+    return { models, introEntries };
   }
 
   function setupHeroTimeline() {
     const hero = document.querySelector("[data-hero-timeline]");
     const headline = hero && hero.querySelector("[data-hero-headline]");
     const paper = hero && hero.querySelector("[data-hero-paper]");
+    const paperTitle = hero && hero.querySelector("[data-hero-paper-title]");
     const byline = hero && hero.querySelector("[data-hero-byline]");
     const abstract = hero && hero.querySelector("[data-hero-abstract]");
     const results = hero ? Array.from(hero.querySelectorAll("[data-hero-results]")) : [];
-    if (!hero || !headline || !paper || !byline || !abstract) return;
+    if (!hero || !headline || !paper || !paperTitle || !byline || !abstract) return;
 
     let travel = 1;
+    let paperTitleScaleGain = 0.16;
     let renderFrame = 0;
     let resizeFrame = 0;
 
     function layout() {
       const compact = window.matchMedia("(max-width: 600px)").matches;
       travel = Math.max(760, window.innerHeight * (compact ? 1.65 : 1.42));
+      paperTitleScaleGain = compact ? 0.08 : 0.16;
       hero.style.height = `${Math.ceil(window.innerHeight + travel)}px`;
     }
 
@@ -266,6 +355,7 @@
       const headlineExit = smoothRange(progress, 0.04, 0.34);
       const bylineExit = smoothRange(progress, 0.18, 0.46);
       const paperSettle = smoothRange(progress, 0.16, 0.68);
+      const paperTitleEmphasis = smoothRange(progress, 0.3, 0.78);
       const abstractReveal = smoothRange(progress, 0.52, 0.84);
       const resultsExit = smoothRange(progress, 0.41, 0.53);
       const motion = reduceMotion ? 0 : 1;
@@ -276,6 +366,7 @@
       headline.style.transform = `translate3d(0, ${-headlineShift}px, 0)`;
       headline.style.opacity = String(1 - headlineExit);
       paper.style.transform = `translate3d(0, ${-paperShift}px, 0)`;
+      paperTitle.style.transform = `scale(${1 + paperTitleScaleGain * paperTitleEmphasis * motion})`;
       byline.style.transform = `translate3d(0, ${-26 * bylineExit * motion}px, 0)`;
       byline.style.opacity = String(1 - bylineExit);
       abstract.style.transform = `translate3d(0, ${(1 - abstractReveal) * 44 * motion}px, 0)`;
@@ -677,7 +768,8 @@
     });
   }
 
-  const models = buildScenes();
+  const { models, introEntries } = buildScenes();
+  setupIntroPlayback(introEntries);
   setupHeroTimeline();
   setupHeroCarousels();
   setupStory(models);

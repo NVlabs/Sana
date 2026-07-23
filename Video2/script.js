@@ -4,7 +4,6 @@
   const config = window.SANA_VIDEO_MEDIA || { intro: [], sections: [] };
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const saveData = Boolean(navigator.connection && navigator.connection.saveData);
-  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
   const smoothRange = (value, start, end) => {
     const progress = clamp((value - start) / Math.max(0.0001, end - start));
@@ -29,6 +28,7 @@
 
   async function attachStream(video, media, host, options = {}) {
     if (!video) return;
+    video.dataset.shouldPlay = "true";
     if (video.dataset.attached === "true") {
       if (video._hls) video._hls.startLoad();
       video.play().catch(() => {});
@@ -50,6 +50,7 @@
       } else if (hls) {
         const Hls = await loadHlsLibrary();
         if (!Hls || !Hls.isSupported()) throw new Error("HLS unsupported");
+        if (video.dataset.shouldPlay !== "true") return;
         const player = new Hls({
           startLevel: 0,
           capLevelToPlayerSize: true,
@@ -63,9 +64,11 @@
         video.src = mp4;
       }
 
+      if (video.dataset.shouldPlay !== "true") return;
       video.addEventListener("playing", () => host && host.classList.add("is-playing"), { once: true });
       await video.play();
     } catch (_) {
+      if (video.dataset.shouldPlay !== "true") return;
       if (preferMp4 && hls) {
         if (video._hls) {
           video._hls.destroy();
@@ -86,7 +89,9 @@
   }
 
   function pauseStream(video) {
-    if (!video || video.dataset.attached !== "true") return;
+    if (!video) return;
+    video.dataset.shouldPlay = "false";
+    if (video.dataset.attached !== "true") return;
     video.pause();
     if (video._hls) video._hls.stopLoad();
   }
@@ -97,6 +102,8 @@
   const dialogPlaceholder = dialog && dialog.querySelector("[data-lightbox-placeholder]");
   let lightboxSourceWidth = 1280;
   let lightboxSourceHeight = 720;
+  let syncDemoPlayback = null;
+  let demoPlaybackSuspended = false;
 
   function fitLightbox(width = lightboxSourceWidth, height = lightboxSourceHeight) {
     if (!dialog || !width || !height) return;
@@ -125,8 +132,11 @@
     }
     dialogVideo.removeAttribute("src");
     dialogVideo.dataset.attached = "false";
+    dialogVideo.dataset.shouldPlay = "false";
     dialogVideo.load();
     if (dialog.open) dialog.close();
+    demoPlaybackSuspended = false;
+    if (syncDemoPlayback) syncDemoPlayback();
   }
 
   function openLightbox(media) {
@@ -144,6 +154,8 @@
         : "";
     }
     fitLightbox(media.width || 1280, media.height || 720);
+    demoPlaybackSuspended = true;
+    if (syncDemoPlayback) syncDemoPlayback();
     dialog.showModal();
     if (hasMedia) attachStream(dialogVideo, media, dialog, { preferMp4: true });
   }
@@ -168,20 +180,10 @@
   }
 
   function wireMediaInteraction(entry) {
-    const preview = () => {
-      if (!saveData && !reduceMotion) attachStream(entry.video, entry.media, entry.card);
-    };
     const open = () => {
-      pauseStream(entry.video);
       openLightbox(entry.media);
     };
 
-    if (!coarsePointer) {
-      entry.card.addEventListener("pointerenter", preview);
-      entry.card.addEventListener("pointerleave", () => pauseStream(entry.video));
-    }
-    entry.card.addEventListener("focus", preview);
-    entry.card.addEventListener("blur", () => pauseStream(entry.video));
     entry.card.addEventListener("click", open);
     entry.card.addEventListener("keydown", event => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -508,6 +510,8 @@
     let resizeFrame = 0;
     let activeModelIndex = -1;
     let lastMediaWindow = "";
+    let currentMediaModelIndex = 0;
+    let currentMediaFirstRow = 0;
     let transitionRunning = false;
     let pendingModelIndex = null;
     const transitionDuration = reduceMotion ? 0 : 420;
@@ -578,18 +582,32 @@
       story.style.height = `${Math.ceil(totalTravel + viewportHeight)}px`;
     }
 
-    function pauseOutsideViewport(modelIndex, firstRow) {
-      const mediaWindow = `${modelIndex}:${firstRow}`;
-      if (mediaWindow === lastMediaWindow) return;
+    function syncVisiblePlayback(modelIndex, firstRow, force = false) {
+      currentMediaModelIndex = modelIndex;
+      currentMediaFirstRow = firstRow;
+      const rawTravel = window.scrollY - story.offsetTop;
+      const storyActive = rawTravel >= -1 && rawTravel <= totalTravel + 1;
+      const canPlay = storyActive && !saveData && !reduceMotion && !document.hidden && !demoPlaybackSuspended;
+      const mediaWindow = `${modelIndex}:${firstRow}:${canPlay ? 1 : 0}`;
+      if (!force && mediaWindow === lastMediaWindow) return;
       lastMediaWindow = mediaWindow;
       models.forEach((model, currentModelIndex) => {
         model.entries.forEach((entry, entryIndex) => {
           const row = Math.floor(entryIndex / (model.columnCount || 3));
           const visible = currentModelIndex === modelIndex && row >= firstRow - 1 && row <= firstRow + 2;
-          if (!visible) pauseStream(entry.video);
+          if (canPlay && visible) {
+            attachStream(entry.video, entry.media, entry.card, { hlsBufferLength: 4 });
+          } else {
+            pauseStream(entry.video);
+          }
         });
       });
     }
+
+    syncDemoPlayback = () => {
+      lastMediaWindow = "";
+      syncVisiblePlayback(currentMediaModelIndex, currentMediaFirstRow, true);
+    };
 
     function setActiveModel(modelIndex) {
       if (modelIndex === activeModelIndex) return;
@@ -705,7 +723,7 @@
       if (activeModelIndex < 0) showOnly(sectionIndex);
       else if (transitionRunning) pendingModelIndex = sectionIndex;
       else if (sectionIndex !== activeModelIndex) transitionTo(sectionIndex);
-      pauseOutsideViewport(sectionIndex, firstRow);
+      syncVisiblePlayback(sectionIndex, firstRow);
 
       if (progressBar) progressBar.style.transform = `scaleX(${travel / totalTravel})`;
     }
@@ -743,6 +761,9 @@
     buildTimeline();
     render();
     window.addEventListener("scroll", requestRender, { passive: true });
+    document.addEventListener("visibilitychange", () => {
+      syncVisiblePlayback(currentMediaModelIndex, currentMediaFirstRow, true);
+    });
     window.addEventListener("resize", () => {
       if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
       resizeFrame = window.requestAnimationFrame(() => {

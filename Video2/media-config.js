@@ -2,7 +2,7 @@
 window.SANA_VIDEO_MEDIA = {
   intro: [
     { title: "Neon city glide", poster: "assets/posters/cinematic-01.webp", duration: "8 s", hls: "assets/hls/cinematic-01/index.m3u8", mp4: "" },
-    { title: "Quiet conversation", poster: "assets/posters/cinematic-02.webp", duration: "8 s", hls: "assets/hls/cinematic-02/index.m3u8", mp4: "" },
+    { title: "Traffic signal", poster: "assets/posters/cinematic-02.webp", duration: "8 s", hls: "assets/hls/cinematic-02/index.m3u8", mp4: "" },
     { title: "Castle approach", poster: "assets/posters/cinematic-03.webp", duration: "8 s", hls: "assets/hls/cinematic-03/index.m3u8", mp4: "" },
     { title: "Morning close-up", poster: "assets/posters/cinematic-04.webp", duration: "8 s", hls: "assets/hls/cinematic-04/index.m3u8", mp4: "" },
     { title: "Hawk in flight", poster: "assets/posters/cinematic-05.webp", duration: "8 s", hls: "assets/hls/cinematic-05/index.m3u8", mp4: "" },
@@ -23,7 +23,7 @@ window.SANA_VIDEO_MEDIA = {
       batches: [
         [
           { title: "Neon city glide", prompt: "The camera glides smoothly forward through a dense neon-lit city street at night, with reflections shimmering across the wet pavement.", poster: "assets/posters/cinematic-01.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-01/index.m3u8", mp4: "assets/mp4/cinematic-01.mp4" },
-          { title: "Quiet conversation", prompt: "A young adult brunette woman with shoulder-length hair speaks naturally to the camera in a softly lit room.", poster: "assets/posters/cinematic-02.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-02/index.m3u8", mp4: "assets/mp4/cinematic-02.mp4" },
+          { title: "Traffic signal", prompt: "A close-up shot frames a traffic light as its red, yellow, and green signals glow in sequence.", poster: "assets/posters/cinematic-02.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-02/index.m3u8", mp4: "assets/mp4/cinematic-02.mp4" },
           { title: "Castle approach", prompt: "A formidable medieval stone castle rises above a green river valley as the camera flies steadily toward its towers.", poster: "assets/posters/cinematic-03.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-03/index.m3u8", mp4: "assets/mp4/cinematic-03.mp4" }
         ],
         [

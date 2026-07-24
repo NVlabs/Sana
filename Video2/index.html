@@ -38,7 +38,7 @@
                   </p>
                   <p class="affiliations"><span>NVIDIA</span></p>
                   <div class="intro-actions" aria-label="Project links">
-                    <a class="is-featured" href="paper.pdf">Paper ↗</a>
+                    <a class="is-featured" href="https://arxiv.org/abs/2607.21553">Paper ↗</a>
                     <a href="https://github.com/NVlabs/Sana">Code ↗</a>
                   </div>
                 </div>
@@ -49,7 +49,7 @@
             <div class="intro-metrics" aria-label="Headline results">
               <span><b>84.30</b> VBench Total</span>
               <span><b>13.06s</b> 720p/5s · one H100</span>
-              <span><b>3.2×</b> faster at 60 s</span>
+              <span><b>3.2×</b> faster than softmax at 60 s</span>
               <span><b>120×</b> faster than Wan 2.2 14B</span>
             </div>
             <div class="intro-benchmarks" aria-label="Efficiency benchmarks from Figure 1">
@@ -84,7 +84,7 @@
             <p>Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
           </div>
           <p class="abstract-copy">
-            We introduce <strong>SANA-Video 2.0</strong>, a hybrid video diffusion transformer instantiated at 5B and 14B scales under one unified architecture. The design generates high-quality video up to 720p on a single GPU, matching strong full-softmax Video DiTs in quality while retaining the favorable long-sequence scaling of linear attention. <strong>Hybrid Linear–Softmax Attention</strong> combines gated linear attention with periodic gated-softmax anchors, while <strong>Block Attention Residuals</strong> propagate refreshed representations across depth. With 40-step sampling, SANA-Video 2.0 reaches VBench Total 84.30 in 13.2 seconds at 480p on one H100. Its compiled DiT forward is <strong>3.2× faster</strong> than matched full softmax at a 720p/60s shape. Full-stack Sol-Engine optimization further accelerates the backbone by <strong>3.58×</strong>, bringing the 5B pipeline to <strong>13.06s at 720p/5s</strong> and making it <strong>120× faster</strong> than Wan 2.2 14B on one H100.
+            We introduce <strong>SANA-Video 2.0</strong>, a hybrid video diffusion transformer instantiated at 5B and 14B scales under a unified architecture. Designed to generate high-quality video up to 720p on a single GPU, SANA-Video 2.0 matches full-softmax video DiTs in quality while retaining the favorable long-sequence scaling of linear attention. To avoid quadratic attention throughout, <strong>Hybrid Linear-Softmax Attention</strong> combines gated linear attention for O(N)-dominated mixing with periodic gated-softmax anchors at a 3:1 ratio, restoring the full-rank token interactions that pure linear attention lacks. To propagate these refreshed representations across depth, <strong>Block Attention Residuals (AttnRes)</strong> route completed block summaries into later linear layers, enabling anchor-feature reuse and boosting deep-layer effective rank by ~12%. Through from-scratch training, SANA-Video 2.0 learns the complete hybrid directly rather than linearizing pretrained models, with reduced-resolution proxy studies establishing 25% softmax as the optimal quality-efficiency trade-off. With 40-step sampling, SANA-Video 2.0 achieves a VBench score of 84.30 in 13.2s at 480p on a single H100, remaining competitive with far larger softmax video DiTs at a fraction of the latency. Its compiled DiT forward pass is <strong>3.2× faster than a matched full-softmax baseline</strong> at 720p/60s, a gap that expands with video duration. Furthermore, full-stack Sol-Engine optimization (kernel fusion, caching, and sparse attention) accelerates this hardware-friendly backbone by a further <strong>3.58×</strong>, bringing the 5B pipeline to <strong>13.06s at 720p/5s</strong> and making it <strong>120× faster than Wan 2.2-A14B</strong> on one H100. Overall, our hybrid design recovers softmax-level expressiveness at substantially reduced cost, unlocking scalable long, high resolution video generation.
           </p>
         </div>
       </section>
@@ -104,7 +104,7 @@
             <h2>SANA-Video 2.0</h2>
             <p>Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
             <div class="citation-actions">
-              <a href="paper.pdf">Paper ↗</a>
+              <a href="https://arxiv.org/abs/2607.21553">Paper ↗</a>
               <a href="https://github.com/NVlabs/Sana">GitHub ↗</a>
               <button type="button" data-jump="0">Back to showreel ↑</button>
             </div>
@@ -115,10 +115,15 @@
               <span>BibTeX</span>
               <button type="button" data-copy-citation>Copy</button>
             </div>
-            <pre><code data-citation>@misc{chen2026sanavideo2,
-  title  = {SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
-  author = {Chen, Junsong and Yu, Jincheng and Li, Yitong and Xue, Shuchen and Liu, Haozhe and Xin, Jingyu and Zhao, Yuyang and Ye, Tian and Wu, Zhangjie and Wang, Zian and Zhou, Daquan and Luo, Ping and Han, Song and Xie, Enze},
-  year   = {2026}
+            <pre><code data-citation>@misc{chen2026sanavideo20hybridlinear,
+  title         = {SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
+  author        = {Junsong Chen and Jincheng Yu and Yitong Li and Shuchen Xue and Haozhe Liu and Jingyu Xin and Yuyang Zhao and Tian Ye and Zhangjie Wu and Zian Wang and Daquan Zhou and Ping Luo and Song Han and Enze Xie},
+  year          = {2026},
+  eprint        = {2607.21553},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  doi           = {10.48550/arXiv.2607.21553},
+  url           = {https://arxiv.org/abs/2607.21553}
 }</code></pre>
           </div>
         </div>

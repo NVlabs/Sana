@@ -1,8 +1,8 @@
 /* Add HLS/MP4 URLs here when final media is ready. Posters remain visible until playback begins. */
 window.SANA_VIDEO_MEDIA = {
   intro: [
-    { title: "Neon city glide", poster: "assets/posters/cinematic-01.webp", duration: "8 s", hls: "assets/hls/cinematic-01/index.m3u8", mp4: "" },
-    { title: "Traffic signal", poster: "assets/posters/cinematic-02.webp", duration: "8 s", hls: "assets/hls/cinematic-02/index.m3u8", mp4: "" },
+    { title: "Village in a bottle", poster: "assets/posters/cinematic-01.webp", duration: "8 s", hls: "assets/hls/cinematic-01/index.m3u8", mp4: "" },
+    { title: "Snowbound cottage", poster: "assets/posters/cinematic-02.webp", duration: "8 s", hls: "assets/hls/cinematic-02/index.m3u8", mp4: "" },
     { title: "Castle approach", poster: "assets/posters/cinematic-03.webp", duration: "8 s", hls: "assets/hls/cinematic-03/index.m3u8", mp4: "" },
     { title: "Morning close-up", poster: "assets/posters/cinematic-04.webp", duration: "8 s", hls: "assets/hls/cinematic-04/index.m3u8", mp4: "" },
     { title: "Hawk in flight", poster: "assets/posters/cinematic-05.webp", duration: "8 s", hls: "assets/hls/cinematic-05/index.m3u8", mp4: "" },
@@ -22,8 +22,8 @@ window.SANA_VIDEO_MEDIA = {
       description: "Character, expression, lighting, and coherent visual storytelling at 720p.",
       batches: [
         [
-          { title: "Neon city glide", prompt: "The camera glides smoothly forward through a dense neon-lit city street at night, with reflections shimmering across the wet pavement.", poster: "assets/posters/cinematic-01.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-01/index.m3u8", mp4: "assets/mp4/cinematic-01.mp4" },
-          { title: "Traffic signal", prompt: "A close-up shot frames a traffic light as its red, yellow, and green signals glow in sequence.", poster: "assets/posters/cinematic-02.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-02/index.m3u8", mp4: "assets/mp4/cinematic-02.mp4" },
+          { title: "Village in a bottle", prompt: "A large glass bottle, sealed with a cork, drifts on a turbulent, dark sea. Inside is a serene, miniature Scandinavian village with red wooden houses, a church, green trees, and blue skies with white clouds. This tranquil scene contrasts sharply with the stormy sea outside, symbolizing a peaceful refuge. Dramatic aerial shot, close-up of the bottle then pull back to show the tumultuous sea.", poster: "assets/posters/cinematic-01.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-01/index.m3u8", mp4: "assets/mp4/cinematic-01.mp4" },
+          { title: "Snowbound cottage", prompt: "At sunset, a medium shot of a pineapple-shaped cottage with detailed leaf textures, covered in snow, and outlined by the edge light of the orange and purple sky. Behind it, a dark coniferous forest with mist diffusing through, creating layers and mystery. Fireworks bloom above, casting cool-toned reflections on the thick snow in front of the slightly ajar, colorful door. Warm light glows softly around the doorframe. Eye-level camera angle, center composition, with snow extending into the foreground to enhance depth.", poster: "assets/posters/cinematic-02.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-02/index.m3u8", mp4: "assets/mp4/cinematic-02.mp4" },
           { title: "Castle approach", prompt: "A formidable medieval stone castle rises above a green river valley as the camera flies steadily toward its towers.", poster: "assets/posters/cinematic-03.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-03/index.m3u8", mp4: "assets/mp4/cinematic-03.mp4" }
         ],
         [
@@ -58,14 +58,14 @@ window.SANA_VIDEO_MEDIA = {
       description: "Bimanual robot manipulation across everyday kitchen tasks.",
       batches: [
         [
-          { title: "Liquid transfer", poster: "assets/posters/physical-ai-01.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-01/index.m3u8", mp4: "assets/mp4/physical-ai-01.mp4" },
-          { title: "Container handling", poster: "assets/posters/physical-ai-02.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-02/index.m3u8", mp4: "assets/mp4/physical-ai-02.mp4" },
-          { title: "Food preparation", poster: "assets/posters/physical-ai-03.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-03/index.m3u8", mp4: "assets/mp4/physical-ai-03.mp4" }
+          { title: "Sugar container", prompt: "Grab the lid of the canned sugar on the table with the right arm.", poster: "assets/posters/physical-ai-01.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-01/index.m3u8", mp4: "assets/mp4/physical-ai-01.mp4" },
+          { title: "Medicine box", prompt: "Place the lifted medicine box cover onto the medicine box with the right arm.", poster: "assets/posters/physical-ai-02.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-02/index.m3u8", mp4: "assets/mp4/physical-ai-02.mp4" },
+          { title: "Dough cutting", prompt: "Cut the dough into small pieces with a knife using both hands.", poster: "assets/posters/physical-ai-03.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-03/index.m3u8", mp4: "assets/mp4/physical-ai-03.mp4" }
         ],
         [
-          { title: "Kitchen assistance", poster: "assets/posters/physical-ai-04.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-04/index.m3u8", mp4: "assets/mp4/physical-ai-04.mp4" },
-          { title: "Oven loading", poster: "assets/posters/physical-ai-05.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-05/index.m3u8", mp4: "assets/mp4/physical-ai-05.mp4" },
-          { title: "Rice serving", poster: "assets/posters/physical-ai-06.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-06/index.m3u8", mp4: "assets/mp4/physical-ai-06.mp4" }
+          { title: "Ketchup bottle", prompt: "Flip the picked-up ketchup bottle with the left arm.", poster: "assets/posters/physical-ai-04.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-04/index.m3u8", mp4: "assets/mp4/physical-ai-04.mp4" },
+          { title: "Pineapple bun", prompt: "Use the picked-up dessert spatula with the right arm to scoop up mini pineapple bun.", poster: "assets/posters/physical-ai-05.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-05/index.m3u8", mp4: "assets/mp4/physical-ai-05.mp4" },
+          { title: "Rice cooker", prompt: "Press the lid-opening button with the left arm to open the rice cooker lid.", poster: "assets/posters/physical-ai-06.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-06/index.m3u8", mp4: "assets/mp4/physical-ai-06.mp4" }
         ]
       ]
     }

@@ -219,11 +219,8 @@ def main():
             f"block={os.environ.get('WAN22_PISA_BLOCK_SIZE')}"
         )
 
-    # --- Optional SOL Attention (PISA2 CuTe DSL, SM100), gated on WAN22_SOL_ATTN ---
-    # Installs the sol_attn dispatch hook over diffusers' dispatch_attention_fn,
-    # BEFORE regional_compile so the compiled block captures it. The CuteDSL kernel
-    # graph-breaks out of the compiled region, so WAN22_COMPILE_FULLGRAPH must be 0.
-    # Dense fallback for non-128 / causal / cross-attn / non-SM100.
+    # Sol-Attn uses the same public BTHD API on SM90 and SM100. Install before
+    # regional_compile so the opaque custom op is captured by the block graph.
     if os.environ.get("WAN22_SOL_ATTN") == "1":
         import sys as _sys_sol
         _repo_sol = os.environ.get(
@@ -236,13 +233,12 @@ def main():
         )
         from diffusers.models.transformers import transformer_wan as _twan_sol
         _sol_kw = dict(
-            target_density=float(os.environ.get("WAN22_SOL_DENSITY", "0.05")),
+            tau=float(os.environ.get("WAN22_SOL_TAU", "1.0")),
+            thresh_type=os.environ.get("WAN22_SOL_THRESH_TYPE", "diag"),
+            kv_splits=os.environ.get("WAN22_SOL_KV_SPLITS", "auto"),
             dense_steps=int(os.environ.get("WAN22_SOL_DENSE_STEPS", "0")),
             dense_layers=os.environ.get("WAN22_SOL_DENSE_LAYERS", ""),
         )
-        _sol_tau = os.environ.get("WAN22_SOL_TAU")
-        if _sol_tau is not None:
-            _sol_kw["tau"] = float(_sol_tau)
         # GLOBAL Morton3D reorder: permute tokens + RoPE once at the block stack, not
         # per attention call (FFN/norm/residual are per-token, order-invariant).
         _grid = None
@@ -261,7 +257,8 @@ def main():
             _twan_sol.dispatch_attention_fn, **_sol_kw
         )
         pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_attn_begin_forward())
-        log(f"SOL Attention installed tau={_sol_tau} density_target={_sol_kw['target_density']} "
+        log(f"Sol-Attn installed tau={_sol_kw['tau']} "
+            f"thresh_type={_sol_kw['thresh_type']} kv_splits={_sol_kw['kv_splits']} "
             f"dense_steps={_sol_kw['dense_steps']} dense_layers='{_sol_kw['dense_layers']}' "
             f"global_reorder={_grid is not None}")
 
@@ -429,6 +426,12 @@ def main():
         warmup_samples.append(
             {"total_s": warm_total, "denoise_s": warm_den, "decode_s": warm_dec}
         )
+    if os.environ.get("WAN22_SOL_ATTN") == "1":
+        from techniques.sparse_backends.sol_attn_backend import (
+            reset_sol_attn_state,
+        )
+
+        reset_sol_attn_state()
 
     integrated_generation_pair = None
     if INTEGRATED_PAIR:

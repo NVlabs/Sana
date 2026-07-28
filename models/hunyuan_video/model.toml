@@ -8,7 +8,7 @@ contract_kind = "model_baseline_minimal_copy"
 manifest = "candidates/hunyuan_video_baseline.toml"
 runtime_root = "models/hunyuan_video/baseline"
 eval_profile = "evals/profiles/official_video_t2v_hunyuanvideo_13b.toml"
-description = "HunyuanVideo-13B t2v baseline (pristine diffusers HunyuanVideoPipeline: dense attention, no cache, no compile). Runnable code vendored in models/hunyuan_video/baseline; weights referenced read-only by absolute path via MODEL_REPO; diffusers/torch env is the sparse_attn_training .venv. Optimization target for cache (TeaCache) + kernel (torch.compile) + SOL Attention (sol_attn_hunyuan_v3: PISA hyvideo piecewise, dense-text/sparse-video, Morton reorder, dense first steps). Audited hot delivery point: candidates/hunyuan_video_full_v3.toml with HUNYUAN_SOLV3_DENSE_STEPS=3 -> 5.03x (856.1s -> 170.4s, hot-vs-hot, single GB200)."
+description = "HunyuanVideo-13B t2v baseline (pristine diffusers HunyuanVideoPipeline: dense attention, no cache, no compile). Runnable code is vendored in models/hunyuan_video/baseline; weights are referenced read-only through MODEL_REPO. The optimized candidate adds TeaCache, torch.compile, and the released Sol-Attn SM90/SM100 kernel with exact text KV sink and dense text queries."
 
 [baseline.copy]
 paths_are_repo_relative = true

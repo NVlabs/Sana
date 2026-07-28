@@ -14,12 +14,12 @@ are described, launched, compared, and summarized.
 
 ## News
 
-- **2026-07-21** — Merged [**SOL Attention**](techniques/sparse_backends/)
-  (block-sparse attention for video DiTs) and used it to optimize two models
-  end to end: [**HunyuanVideo-13B**](models/hunyuan_video/) reaches **5.03×**
-  (856.1 s → 170.4 s) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) reaches
-  **3.48×** (563.8 s → 161.8 s), each with compile + cache + SOL Attention
-  stacked.
+- **2026-07-21** — Integrated the released
+  [**Sol-Attn**](techniques/sparse_backends/) SM90/SM100 kernels into
+  [**HunyuanVideo-13B**](models/hunyuan_video/) and
+  [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/). The retired backend's historical
+  speed numbers do not transfer to the release API; both stacks need a fresh
+  end-to-end benchmark.
 
 ## Models & Speedups
 
@@ -27,8 +27,8 @@ Generation-time speedups (load excluded, warm steady state, single GB200 GPU).
 
 | Model | Full-OPT speedup | Optimization stack |
 | --- | --- | --- |
-| [**HunyuanVideo-13B**](models/hunyuan_video/) | **5.03×** (856.1 s → 170.4 s) | compile + TeaCache + [**SOL Attention**](techniques/sparse_backends/) |
-| [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) | **3.48×** (563.8 s → 161.8 s) | compile + EasyCache + [**SOL Attention**](techniques/sparse_backends/) |
+| [**HunyuanVideo-13B**](models/hunyuan_video/) | re-benchmark pending | compile + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) |
+| [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) | re-benchmark pending | compile + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) |
 
 ## SOL Attention
 

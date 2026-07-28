@@ -39,7 +39,7 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/07/21]** 🔥 **SOL Attention merged** — [**SOL Attention**](techniques/sparse_backends/) sparse video attention lands as a acceleration technique and powers two new models: [**HunyuanVideo-13B**](models/hunyuan_video/) **~5.03×** and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) **~3.48×** end-to-end. (paper of SOL Attention coming soon🚀)
+- **[2026/07/28]** 🔥 **Sol-Attn integrated** — [**Sol-Attn**](techniques/sparse_backends/) sparse video attention lands as an acceleration technique for [**HunyuanVideo-13B**](models/hunyuan_video/) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/). The released SM90/SM100 kernel is integrated; refreshed end-to-end speed measurements are pending.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.
 - **[2026/06]** 📖 **Docs release** — full documentation site live: [3 pipeline designs + 5 acceleration techniques](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
@@ -60,8 +60,8 @@ support a wider range of models.
 | **[Wan2.2 TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B)** | 5B | EasyCache + kernel fusion + compile | **~2.89×** |
 | **[Wan2.2-A14B](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers)** | 14B (MoE) | kernel fusion + EasyCache + PISA | **~2.17×** |
 | **[LingBot-Video](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b)** | 30B-A3B (MoE) | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
-| **[HunyuanVideo-13B](https://huggingface.co/hunyuanvideo-community/HunyuanVideo)** | 13B | kernel fusion + TeaCache  + [**SOL Attention**](techniques/sparse_backends/) | **~5.03×** |
-| **[Wan2.1-T2V-14B](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers)** | 14B | kernel fusion + EasyCache + [**SOL Attention**](techniques/sparse_backends/) | **~3.48×** |
+| **[HunyuanVideo-13B](https://huggingface.co/hunyuanvideo-community/HunyuanVideo)** | 13B | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | re-benchmark pending |
+| **[Wan2.1-T2V-14B](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers)** | 14B | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | re-benchmark pending |
 
 </div>
 
@@ -93,12 +93,13 @@ methods across these levels.
 
 ## 🌀 SOL Attention
 
-[**SOL Attention**](techniques/sparse_backends/) is our sparse attention
+[**Sol-Attn**](techniques/sparse_backends/) is our sparse attention
 technique for video DiTs: video-token self-attention runs through a sparse
 kernel that computes only the most relevant key blocks, while using light weight compensating operation to maintain visual quality. It plugs
 into a model runtime through env-gated hooks and powers the optimization stacks of
-[**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and
-[**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**). The full paper of **SOL Attention** is coming soon! 🚀
+[**HunyuanVideo-13B**](models/hunyuan_video/) and
+[**Wan2.1-T2V-14B**](models/wan21_t2v_14b/). The released-kernel stacks require
+fresh end-to-end performance measurements.
 
 ## 🚀 Quick start (agent-native)
 

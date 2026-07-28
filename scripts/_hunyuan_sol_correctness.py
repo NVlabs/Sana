@@ -1,59 +1,160 @@
-"""GPU correctness test for the HunyuanVideo SOL split-merge path.
+"""GPU correctness checks for the released Hunyuan Sol-Attn adapter.
 
-At density->1.0 the sparse video x video degenerates to FULL video x video, so
-sol_attn_attention_hunyuan must equal full dense attention over [video, text]
-(with the padding mask) up to bf16 error. A large error there means the LSE
-merge convention is wrong. At lower density the error is the sparse approximation.
-Run on an SM100 (GB200) node with the sparse_attn_training venv.
+Run on H100 or B200 with ``SOL_ATTN_STRICT=1``. The test verifies the public
+all-exact limit, dense text-query rows, padded-row handling, and finite output.
 """
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
 import sys
+from pathlib import Path
+
 import torch
 
 sys.path.insert(0, ".")
-from techniques.sparse_backends import sol_attn_backend as sb  # noqa: E402
 
-dev = "cuda"
-assert torch.cuda.is_available(), "needs SM100 GPU"
-print("device cap:", torch.cuda.get_device_capability())
-
-B, H, D = 1, 8, 128
-grid = (8, 16, 16)
-vl = grid[0] * grid[1] * grid[2]      # 2048 video tokens
-tl = 128                               # text (with padding)
-S = vl + tl
-torch.manual_seed(0)
-q = torch.randn(B, H, S, D, device=dev, dtype=torch.bfloat16)
-k = torch.randn(B, H, S, D, device=dev, dtype=torch.bfloat16)
-v = torch.randn(B, H, S, D, device=dev, dtype=torch.bfloat16)
-key_valid = torch.ones(B, S, dtype=torch.bool, device=dev)
-key_valid[:, vl + 80:] = False         # last 48 text tokens are padding
-
-am = torch.zeros(B, 1, 1, S, device=dev, dtype=torch.bfloat16).masked_fill(
-    ~key_valid[:, None, None, :], float("-inf"))
-ref = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=am)
+from techniques.sparse_backends import sol_attn_backend as backend  # noqa: E402
 
 
-def rel_l2(a, b):
-    return ((a - b).float().norm() / b.float().norm()).item()
+def rel_l2(actual, expected) -> float:
+    return float(
+        (actual.float() - expected.float()).norm()
+        / expected.float().norm().clamp_min(1.0e-12)
+    )
 
 
-print(f"shape B={B} H={H} video={vl} text={tl} (pad {int((~key_valid).sum().item())})")
-for dens in [1.0, 0.99, 0.5, 0.15]:
-    sb._TAU_CACHE.clear()
-    try:
-        out = sb.sol_attn_attention_hunyuan(
-            q, k, v, video_len=vl, key_valid=key_valid, grid=grid,
-            target_density=dens, block_size=64)
-        print(f"density={dens:<4}: rel_l2_vs_dense={rel_l2(out, ref):.4f}  "
-              f"max_abs={(out - ref).abs().max().item():.4f}  shape={tuple(out.shape)}")
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
-        print(f"density={dens}: FAILED {type(exc).__name__}: {exc}")
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output")
+    args = parser.parse_args()
 
-# Isolate the merge: compare against a manual full[video+text] using the same
-# dense path for BOTH parts (density irrelevant) — this checks the SDPA text
-# tail + concat plumbing exactly.
-print("[plumbing] full-dense via hunyuan fallback vs SDPA:",
-      f"{rel_l2(sb.sol_attn_attention_hunyuan(q, k, v, video_len=vl, key_valid=key_valid, grid=grid, target_density=1.0, block_size=64), ref):.4f}")
-print("DONE")
+    os.environ["SOL_ATTN_STRICT"] = "1"
+    assert torch.cuda.is_available(), "requires H100 or B200"
+    assert torch.cuda.get_device_capability() in {(9, 0), (10, 0)}
+
+    batch, heads, dim = 1, 2, 128
+    video_tokens = 192
+    valid_text_tokens = 65
+    padded_text_tokens = 31
+    tokens = video_tokens + valid_text_tokens + padded_text_tokens
+
+    torch.manual_seed(20260728)
+    q = torch.randn(
+        batch,
+        heads,
+        tokens,
+        dim,
+        device="cuda",
+        dtype=torch.bfloat16,
+    )
+    k = torch.randn_like(q)
+    v = torch.randn_like(q)
+    key_valid = torch.ones(batch, tokens, dtype=torch.bool, device="cuda")
+    key_valid[:, video_tokens + valid_text_tokens :] = False
+
+    effective_tokens = video_tokens + valid_text_tokens
+    q_joint = q[:, :, :effective_tokens].transpose(1, 2).contiguous()
+    k_joint = k[:, :, :effective_tokens].transpose(1, 2).contiguous()
+    v_joint = v[:, :, :effective_tokens].transpose(1, 2).contiguous()
+    dense_joint = torch.nn.functional.scaled_dot_product_attention(
+        q[:, :, :effective_tokens],
+        k[:, :, :effective_tokens],
+        v[:, :, :effective_tokens],
+    ).transpose(1, 2)
+    all_exact = backend.sol_attn_attention(
+        q_joint,
+        k_joint,
+        v_joint,
+        tau=1.0,
+        thresh_type="diag",
+        kv_splits="auto",
+        sink_start=0,
+        sink_tokens=effective_tokens,
+    )
+
+    dense_text = torch.nn.functional.scaled_dot_product_attention(
+        q[:, :, video_tokens:effective_tokens],
+        k[:, :, :effective_tokens],
+        v[:, :, :effective_tokens],
+    )
+    actual = backend.sol_attn_hunyuan(
+        q,
+        k,
+        v,
+        video_len=video_tokens,
+        key_valid=key_valid,
+        tau=1.0,
+        thresh_type="diag",
+        kv_splits="auto",
+    )
+
+    def unexpected_dense_dispatch(*_args, **_kwargs):
+        raise AssertionError("eligible Hunyuan dispatch unexpectedly fell back")
+
+    dispatch = backend.make_hunyuan_sol_attn_dispatch(
+        unexpected_dense_dispatch,
+        video_len=video_tokens,
+        tau=1.0,
+        thresh_type="diag",
+        kv_splits="auto",
+    )
+    dispatch_mask = torch.zeros(
+        batch,
+        1,
+        1,
+        tokens,
+        dtype=q.dtype,
+        device=q.device,
+    )
+    dispatch_mask[..., effective_tokens:] = float("-inf")
+    backend.reset_sol_attn_state()
+    backend.sol_attn_begin_forward()
+    dispatched = dispatch(
+        q.transpose(1, 2),
+        k.transpose(1, 2),
+        v.transpose(1, 2),
+        attn_mask=dispatch_mask,
+    ).transpose(1, 2)
+
+    all_exact_error = rel_l2(all_exact, dense_joint)
+    text_error = rel_l2(
+        actual[:, :, video_tokens:effective_tokens],
+        dense_text,
+    )
+    padded_abs = float(actual[:, :, effective_tokens:].abs().max())
+    dispatch_error = rel_l2(dispatched, actual)
+    stats = backend.get_sol_attn_stats()
+    result = {
+        "device": torch.cuda.get_device_name(),
+        "capability": torch.cuda.get_device_capability(),
+        "vendor_module": str(sys.modules["sol_attn"].__file__),
+        "all_exact_dense_rel_l2": all_exact_error,
+        "text_query_dense_rel_l2": text_error,
+        "padded_query_max_abs": padded_abs,
+        "dispatch_direct_rel_l2": dispatch_error,
+        "stats": stats,
+        "finite": bool(torch.isfinite(actual).all()),
+    }
+    print(result)
+    assert all_exact_error < 0.01
+    assert text_error == 0.0
+    assert padded_abs == 0.0
+    assert dispatch_error == 0.0
+    assert stats == {
+        "dispatch_calls": 1,
+        "kernel_calls": 1,
+        "hunyuan_calls": 1,
+        "dense_guard_calls": 0,
+    }
+    assert torch.isfinite(actual).all()
+    if args.output:
+        Path(args.output).write_text(json.dumps(result, indent=2) + "\n")
+    print("HUNYUAN_SOL_ATTN_CORRECTNESS_PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

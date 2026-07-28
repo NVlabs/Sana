@@ -129,147 +129,60 @@ def main() -> int:
     pipe.to(device)
     placement_s = time.perf_counter() - t
 
-    # --- Optional SOL Attention (PISA2 CuTe DSL, SM100), gated on HUNYUAN_SOL_ATTN ---
-    # HunyuanVideoAttnProcessor2_0 routes through diffusers' dispatch_attention_fn,
-    # so the sol_attn dispatch hook installs the same way as for Wan. Installed
-    # before torch.compile so the compiled graph captures it; dense fallback for
-    # non-128 / causal / cross-attn / non-SM100.
+    # Hunyuan MMDiT keeps valid text K/V exact and text-query rows dense. The
+    # released Sol-Attn kernel handles video-query rows on both SM90 and SM100.
     if os.environ.get("HUNYUAN_SOL_ATTN") == "1":
         import sys as _sys_sol
+
         _repo_sol = os.environ.get(
             "AUTOVIDEO_REPO_ROOT", str(Path(__file__).resolve().parents[3])
         )
         if _repo_sol not in _sys_sol.path:
             _sys_sol.path.insert(0, _repo_sol)
         from techniques.sparse_backends.sol_attn_backend import (
-            make_sol_attn_dispatch, sol_attn_begin_forward,
+            make_hunyuan_sol_attn_dispatch,
+            sol_attn_begin_forward,
         )
         from diffusers.models.transformers import transformer_hunyuan_video as _thv
-        # HunyuanVideo self-attention is a JOINT [video, text] sequence with a
-        # text-padding mask, so SOL runs the masked split-merge path: it needs
-        # the video grid (F,H,W) and the video token count so the reorder +
-        # sparse routing apply to the video sub-range only (text stays dense).
+
         _cfg = pipe.transformer.config
         _pt = int(getattr(_cfg, "patch_size", 2))
         _ptt = int(getattr(_cfg, "patch_size_t", 1))
         _vs = int(getattr(pipe, "vae_scale_factor_spatial", 8))
         _vt = int(getattr(pipe, "vae_scale_factor_temporal", 4))
-        _Flat = (num_frames - 1) // _vt + 1
-        _grid = (_Flat // _ptt, (height // _vs) // _pt, (width // _vs) // _pt)
+        _flat = (num_frames - 1) // _vt + 1
+        _grid = (
+            _flat // _ptt,
+            (height // _vs) // _pt,
+            (width // _vs) // _pt,
+        )
         _video_len = _grid[0] * _grid[1] * _grid[2]
         _sol_kw = dict(
-            target_density=float(os.environ.get("HUNYUAN_SOL_DENSITY", "0.05")),
+            tau=float(os.environ.get("HUNYUAN_SOL_TAU", "1.0")),
+            thresh_type=os.environ.get("HUNYUAN_SOL_THRESH_TYPE", "diag"),
+            kv_splits=os.environ.get("HUNYUAN_SOL_KV_SPLITS", "auto"),
             dense_steps=int(os.environ.get("HUNYUAN_SOL_DENSE_STEPS", "0")),
             dense_layers=os.environ.get("HUNYUAN_SOL_DENSE_LAYERS", ""),
             grid=_grid,
             video_len=_video_len,
+            morton=os.environ.get("HUNYUAN_SOL_MORTON", "0") == "1",
         )
-        _sol_tau = os.environ.get("HUNYUAN_SOL_TAU")
-        if _sol_tau is not None:
-            _sol_kw["tau"] = float(_sol_tau)
-        _thv.dispatch_attention_fn = make_sol_attn_dispatch(
+        _thv.dispatch_attention_fn = make_hunyuan_sol_attn_dispatch(
             _thv.dispatch_attention_fn, **_sol_kw
         )
-        pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_attn_begin_forward())
-        print(f"[opt] SOL Attention (Hunyuan joint video+text) installed "
-              f"grid={_grid} video_len={_video_len} tau={_sol_tau} "
-              f"density_target={_sol_kw['target_density']} "
-              f"dense_steps={_sol_kw['dense_steps']} dense_layers='{_sol_kw['dense_layers']}'", flush=True)
-
-    # --- Optional SOL Attention v2 (independent dense-text / sparse-video path),
-    # gated on HUNYUAN_SOL_V2. Same install seam as v1 but a separate module +
-    # custom op (techniques/sparse_backends/sol_attn_hunyuan_v2.py); mutually
-    # exclusive with HUNYUAN_SOL_ATTN (v1 wins if both are set).
-    if (os.environ.get("HUNYUAN_SOL_V2") == "1"
-            and os.environ.get("HUNYUAN_SOL_ATTN") != "1"):
-        import sys as _sys_sol2
-        _repo_sol2 = os.environ.get(
-            "AUTOVIDEO_REPO_ROOT", str(Path(__file__).resolve().parents[3])
+        pipe.transformer.register_forward_pre_hook(
+            lambda _module, _args: sol_attn_begin_forward()
         )
-        if _repo_sol2 not in _sys_sol2.path:
-            _sys_sol2.path.insert(0, _repo_sol2)
-        from techniques.sparse_backends.sol_attn_hunyuan_v2 import (
-            make_sol_v2_dispatch, sol_v2_begin_forward,
+        print(
+            "[opt] Sol-Attn installed "
+            f"grid={_grid} video_len={_video_len} "
+            f"tau={_sol_kw['tau']} thresh_type={_sol_kw['thresh_type']} "
+            f"kv_splits={_sol_kw['kv_splits']} morton={_sol_kw['morton']} "
+            f"dense_steps={_sol_kw['dense_steps']} "
+            f"dense_layers='{_sol_kw['dense_layers']}' "
+            "text_kv=exact text_queries=dense",
+            flush=True,
         )
-        from diffusers.models.transformers import transformer_hunyuan_video as _thv2
-        _cfg2 = pipe.transformer.config
-        _pt2 = int(getattr(_cfg2, "patch_size", 2))
-        _ptt2 = int(getattr(_cfg2, "patch_size_t", 1))
-        _vs2 = int(getattr(pipe, "vae_scale_factor_spatial", 8))
-        _vt2 = int(getattr(pipe, "vae_scale_factor_temporal", 4))
-        _Flat2 = (num_frames - 1) // _vt2 + 1
-        _grid2 = (_Flat2 // _ptt2, (height // _vs2) // _pt2, (width // _vs2) // _pt2)
-        _video_len2 = _grid2[0] * _grid2[1] * _grid2[2]
-        _v2_kw = dict(
-            target_density=float(
-                os.environ.get("HUNYUAN_SOLV2_DENSITY",
-                               os.environ.get("HUNYUAN_SOL_DENSITY", "0.15"))),
-            dense_steps=int(os.environ.get("HUNYUAN_SOLV2_DENSE_STEPS", "0")),
-            dense_layers=os.environ.get("HUNYUAN_SOLV2_DENSE_LAYERS", ""),
-            q_chunk=int(os.environ.get("HUNYUAN_SOLV2_QCHUNK", "32768")),
-            grid=_grid2,
-            video_len=_video_len2,
-        )
-        _v2_tau = os.environ.get("HUNYUAN_SOLV2_TAU")
-        if _v2_tau is not None:
-            _v2_kw["tau"] = float(_v2_tau)
-        _thv2.dispatch_attention_fn = make_sol_v2_dispatch(
-            _thv2.dispatch_attention_fn, **_v2_kw
-        )
-        pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_v2_begin_forward())
-        print(f"[opt] SOL Attention v2 (dense-text/sparse-video) installed "
-              f"grid={_grid2} video_len={_video_len2} tau={_v2_tau} "
-              f"density_target={_v2_kw['target_density']} "
-              f"q_chunk={_v2_kw['q_chunk']} "
-              f"dense_steps={_v2_kw['dense_steps']} "
-              f"dense_layers='{_v2_kw['dense_layers']}'", flush=True)
-
-    # --- Optional SOL Attention v3 (PISA hyvideo piecewise, aligned with
-    # Sparse-VideoGen pisa-bidirectional), gated on HUNYUAN_SOL_V3. Top-k
-    # routing + centroid fallback for non-selected blocks + exact text sink,
-    # one fused kernel over the joint sequence (text padding cropped outside).
-    # Mutually exclusive with the v1/v2 gates (they win if set).
-    if (os.environ.get("HUNYUAN_SOL_V3") == "1"
-            and os.environ.get("HUNYUAN_SOL_ATTN") != "1"
-            and os.environ.get("HUNYUAN_SOL_V2") != "1"):
-        import sys as _sys_sol3
-        _repo_sol3 = os.environ.get(
-            "AUTOVIDEO_REPO_ROOT", str(Path(__file__).resolve().parents[3])
-        )
-        if _repo_sol3 not in _sys_sol3.path:
-            _sys_sol3.path.insert(0, _repo_sol3)
-        from techniques.sparse_backends.sol_attn_hunyuan_v3 import (
-            make_sol_v3_dispatch, sol_v3_begin_forward,
-        )
-        from diffusers.models.transformers import transformer_hunyuan_video as _thv3
-        _cfg3 = pipe.transformer.config
-        _pt3 = int(getattr(_cfg3, "patch_size", 2))
-        _ptt3 = int(getattr(_cfg3, "patch_size_t", 1))
-        _vs3 = int(getattr(pipe, "vae_scale_factor_spatial", 8))
-        _vt3 = int(getattr(pipe, "vae_scale_factor_temporal", 4))
-        _Flat3 = (num_frames - 1) // _vt3 + 1
-        _grid3 = (_Flat3 // _ptt3, (height // _vs3) // _pt3, (width // _vs3) // _pt3)
-        _video_len3 = _grid3[0] * _grid3[1] * _grid3[2]
-        _v3_kw = dict(
-            target_density=float(
-                os.environ.get("HUNYUAN_SOLV3_DENSITY",
-                               os.environ.get("HUNYUAN_SOL_DENSITY", "0.15"))),
-            dense_steps=int(os.environ.get("HUNYUAN_SOLV3_DENSE_STEPS", "0")),
-            dense_layers=os.environ.get("HUNYUAN_SOLV3_DENSE_LAYERS", ""),
-            video_len=_video_len3,
-            grid=_grid3,
-            morton=os.environ.get("HUNYUAN_SOLV3_MORTON", "0") == "1",
-        )
-        _thv3.dispatch_attention_fn = make_sol_v3_dispatch(
-            _thv3.dispatch_attention_fn, **_v3_kw
-        )
-        pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_v3_begin_forward())
-        print(f"[opt] SOL Attention v3 (PISA hyvideo piecewise, upstream-aligned) "
-              f"installed grid={_grid3} video_len={_video_len3} "
-              f"density_target={_v3_kw['target_density']} "
-              f"morton={_v3_kw['morton']} "
-              f"dense_steps={_v3_kw['dense_steps']} "
-              f"dense_layers='{_v3_kw['dense_layers']}'", flush=True)
 
     # --- Optional kernel: torch.compile the transformer, gated on HUNYUAN_COMPILE ---
     if os.environ.get("HUNYUAN_COMPILE") == "1":
@@ -306,19 +219,13 @@ def main() -> int:
         )
         torch.cuda.synchronize()
 
-    # Reset the SOL step clocks after warmup: the transformer forward pre-hooks
-    # advance the (step, layer) clock, so a full warmup pass exhausts
-    # *_DENSE_STEPS before the timed pass even starts. Direct ctx reset — no
-    # module edits, covers v1/v2/v3 alike.
-    import sys as _sys_solreset
-    for _mod, _ctx in (("sol_attn_backend", "_SOL_CTX"),
-                       ("sol_attn_hunyuan_v2", "_V2_CTX"),
-                       ("sol_attn_hunyuan_v3", "_V3_CTX")):
-        _m = _sys_solreset.modules.get("techniques.sparse_backends." + _mod)
-        _c = getattr(_m, _ctx, None) if _m is not None else None
-        if _c is not None:
-            _c.step = -1
-            _c.layer = 0
+    # A full warmup must not consume the measured run's dense-step schedule.
+    if os.environ.get("HUNYUAN_SOL_ATTN") == "1":
+        from techniques.sparse_backends.sol_attn_backend import (
+            reset_sol_attn_state,
+        )
+
+        reset_sol_attn_state()
     # Same for the TeaCache controller: without a reset the timed pass inherits
     # the warmup pass's schedule state (start_step guard already consumed,
     # signal history warm), reusing 32/50 steps where a fresh generation
@@ -347,6 +254,14 @@ def main() -> int:
     max_alloc_gib = torch.cuda.max_memory_allocated() / (1024 ** 3)
     max_resv_gib = torch.cuda.max_memory_reserved() / (1024 ** 3)
     video = result.frames[0]
+    sol_attn_stats = None
+    if os.environ.get("HUNYUAN_SOL_ATTN") == "1":
+        from techniques.sparse_backends.sol_attn_backend import (
+            get_sol_attn_stats,
+        )
+
+        sol_attn_stats = get_sol_attn_stats()
+        print(f"[opt] Sol-Attn stats: {sol_attn_stats}", flush=True)
 
     t = time.perf_counter()
     export_to_video(video, str(out_dir / "out.mp4"), fps=fps)
@@ -393,6 +308,13 @@ def main() -> int:
             ("technique", "variant", "threshold", "start_step", "max_continuous_hits", "signal", "stats", "trace")
         }
         print(f"[seam] TeaCache stats: {seam_diag['stats']}", flush=True)
+    if sol_attn_stats is not None:
+        benchmark["sol_attn"] = sol_attn_stats
+        stats_path = os.environ.get("SOL_ATTN_STATS_PATH")
+        if stats_path:
+            Path(stats_path).write_text(
+                json.dumps(sol_attn_stats, indent=2) + "\n"
+            )
     (out_dir / "benchmark.json").write_text(json.dumps(benchmark, indent=2) + "\n")
     (out_dir / "run_config.json").write_text(json.dumps({
         "model_path": model, "num_frames": num_frames, "height": height, "width": width,

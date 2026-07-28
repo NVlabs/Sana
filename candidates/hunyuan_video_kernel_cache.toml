@@ -1,7 +1,7 @@
 id = "hunyuan_video_kernel_cache"
 kind = "patch"
 purpose = "optimization"
-description = "HunyuanVideo-13B optimized: TeaCache (step reuse) + torch.compile kernel. Single-GPU; 1 warmup pass amortizes compile before timing. (SOL Attention deferred: vendored CuteDSL kernel's stream API is incompatible with torch 2.11 and its per-call route calibration is too slow; backend is integrated but not enabled here.)"
+description = "HunyuanVideo-13B TeaCache plus torch.compile control with Sol-Attn disabled; one warmup pass excludes compile time."
 model_profile = "hunyuan_video"
 
 [runtime]

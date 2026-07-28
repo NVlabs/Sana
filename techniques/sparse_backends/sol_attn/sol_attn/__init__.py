@@ -1,5 +1,5 @@
-"""Public entry points for the Sol-Attn release."""
+"""Sol-Attn."""
 
-from .pisa2_sm100 import make_pisa2_sm100
+from .interface import sol_attn
 
-__all__ = ["make_pisa2_sm100"]
+__all__ = ["sol_attn"]

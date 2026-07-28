@@ -30,10 +30,10 @@ adapter is proven and worth preserving.
 
 ## SOL Attention Models
 
-Two models are onboarded with **SOL Attention** (`techniques/sparse_backends/`)
+Two models are onboarded with **Sol-Attn** (`techniques/sparse_backends/`)
 in their full-optimization stacks:
 
-- [**HunyuanVideo-13B**](../models/hunyuan_video/) — 5.03x
-  (`candidates/hunyuan_video_full_v3.toml`).
-- [**Wan2.1-T2V-14B**](../models/wan21_t2v_14b/) — 3.48x
+- [**HunyuanVideo-13B**](../models/hunyuan_video/) — release benchmark pending
+  (`candidates/hunyuan_video_full.toml`).
+- [**Wan2.1-T2V-14B**](../models/wan21_t2v_14b/) — release benchmark pending
   (`candidates/wan21_14b_fullstack.toml`).

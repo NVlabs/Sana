@@ -35,7 +35,7 @@ def test_release_api_and_integration_defaults() -> None:
         {0, 2, 3, 4, 7}
     )
 
-    interface = BACKENDS / "sol_attn" / "sol_attn" / "interface.py"
+    interface = BACKENDS / "sol_attn" / "interface.py"
     tree = ast.parse(interface.read_text())
     function = next(
         node
@@ -60,11 +60,15 @@ def test_only_one_sol_attn_backend_tree_remains() -> None:
         "sol_attn_hunyuan_v3.py",
     )
     assert all(not (BACKENDS / name).exists() for name in legacy)
-    assert (BACKENDS / "sol_attn" / "sol_attn" / "sm90").is_dir()
-    assert (BACKENDS / "sol_attn" / "sol_attn" / "sm100").is_dir()
+    assert (BACKENDS / "pyproject.toml").is_file()
+    assert not (BACKENDS / "sol_attn" / "sol_attn").exists()
+    assert (BACKENDS / "sol_attn" / "sm90").is_dir()
+    assert (BACKENDS / "sol_attn" / "sm100").is_dir()
     readme = (BACKENDS / "README.md").read_text()
     assert "sink_start" in readme
-    assert "text Q is dense" in " ".join(readme.split())
+    assert "text query rows with dense attention" in " ".join(
+        readme.lower().split()
+    )
 
 
 def test_model_callers_use_the_release_configuration() -> None:

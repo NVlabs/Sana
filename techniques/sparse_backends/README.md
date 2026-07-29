@@ -36,7 +36,7 @@ tensors in BTHD layout with head dimension 128.
 From the repository root:
 
 ```bash
-python -m pip install -e techniques/sparse_backends/sol_attn
+python -m pip install -e techniques/sparse_backends
 ```
 
 CuTe DSL is imported lazily, so kernel compilation happens on the first

@@ -1,6 +1,6 @@
-"""Model adapters for the vendored Sol-Attn release.
+"""Model adapters for Sol-Attn.
 
-The kernel-facing API stays identical to ``hp-l33/Sol-Attn``: contiguous BF16
+The kernel-facing API accepts contiguous BF16
 ``[batch, tokens, heads, 128]`` Q/K/V, ``tau``, ``thresh_type``,
 ``kv_splits``, and an optional exact KV sink range.
 
@@ -29,35 +29,32 @@ HEAD_DIM = 128
 DEFAULT_TAU = 1.0
 DEFAULT_THRESH_TYPE = "diag"
 _DEFAULT_SCALE = HEAD_DIM**-0.5
-_VENDOR_ROOT = Path(__file__).resolve().parent / "sol_attn"
+_PACKAGE_ROOT = Path(__file__).resolve().parent / "sol_attn"
+_IMPORT_ROOT = _PACKAGE_ROOT.parent
 
 
 @functools.lru_cache(maxsize=1)
 def _load_sol_attn() -> Callable:
-    """Load the vendored package and reject a conflicting preloaded copy.
+    """Load the integrated package and reject a conflicting preloaded copy."""
 
-    Upstream intentionally uses absolute ``sol_attn.*`` imports inside kernel
-    modules, so the package must retain its public top-level name.
-    """
-
-    vendor_root = str(_VENDOR_ROOT)
+    import_root = str(_IMPORT_ROOT)
     loaded = sys.modules.get("sol_attn")
     if loaded is not None:
         loaded_file = Path(getattr(loaded, "__file__", "")).resolve()
-        if not loaded_file.is_relative_to(_VENDOR_ROOT.resolve()):
+        if not loaded_file.is_relative_to(_PACKAGE_ROOT.resolve()):
             raise RuntimeError(
-                "a non-vendored sol_attn package is already loaded from "
+                "a different sol_attn package is already loaded from "
                 f"{loaded_file}; import the Sana backend before other copies"
             )
         return loaded.sol_attn
 
-    if vendor_root not in sys.path:
-        sys.path.insert(0, vendor_root)
+    if import_root not in sys.path:
+        sys.path.insert(0, import_root)
     module = importlib.import_module("sol_attn")
     loaded_file = Path(module.__file__).resolve()
-    if not loaded_file.is_relative_to(_VENDOR_ROOT.resolve()):
+    if not loaded_file.is_relative_to(_PACKAGE_ROOT.resolve()):
         raise RuntimeError(
-            f"expected vendored Sol-Attn under {_VENDOR_ROOT}, got {loaded_file}"
+            f"expected Sol-Attn under {_PACKAGE_ROOT}, got {loaded_file}"
         )
     return module.sol_attn
 

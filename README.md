@@ -39,7 +39,7 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/07/28]** 🔥 **Sol-Attn integrated** — [**Sol-Attn**](techniques/sparse_backends/) sparse video attention lands as an acceleration technique for [**HunyuanVideo-13B**](models/hunyuan_video/) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/). The released SM90/SM100 kernel is integrated; refreshed end-to-end speed measurements are pending.
+- **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands as an acceleration technique for [**HunyuanVideo-13B**](models/hunyuan_video/) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/). The released SM90/SM100 kernel is integrated; refreshed end-to-end speed measurements are pending.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.
 - **[2026/06]** 📖 **Docs release** — full documentation site live: [3 pipeline designs + 5 acceleration techniques](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
@@ -91,7 +91,7 @@ methods across these levels.
 
 </div>
 
-## 🌀 SOL Attention
+## 🌀 Sol-Attention
 
 [**Sol-Attn**](techniques/sparse_backends/) is our sparse attention
 technique for video DiTs: video-token self-attention runs through a sparse

@@ -12,31 +12,31 @@
         <meta name="author" content="Sol-Engine Team">
       
       
-        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/techniques/token_prune/">
+        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/agent-workflow/">
       
       
-        <link rel="prev" href="../cache/cache_dit/">
+        <link rel="prev" href="../installation/">
       
       
-        <link rel="next" href="feature_norm/">
+        <link rel="next" href="../pipelines/cosmos3/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/sol-engine-logo.png">
+      <link rel="icon" href="../assets/sol-engine-logo.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Overview - Sol-Engine Documentation</title>
+        <title>Agent workflow - Sol-Engine Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,9 +55,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#token-pruning" class="md-skip">
+        <a href="#agent-workflow" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +98,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Sol-Engine Documentation" class="md-header__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
+    <a href=".." title="Sol-Engine Documentation" class="md-header__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
       
-  <img src="../../assets/sol-engine-logo.png" alt="logo">
+  <img src="../assets/sol-engine-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Agent workflow
             
           </span>
         </div>
@@ -235,9 +235,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Sol-Engine Documentation" class="md-nav__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
+    <a href=".." title="Sol-Engine Documentation" class="md-nav__button md-logo" aria-label="Sol-Engine Documentation" data-md-component="logo">
       
-  <img src="../../assets/sol-engine-logo.png" alt="logo">
+  <img src="../assets/sol-engine-logo.png" alt="logo">
 
     </a>
     Sol-Engine Documentation
@@ -264,7 +264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -291,7 +291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -315,10 +315,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../agent-workflow/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent workflow
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -334,6 +361,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#orchestration-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orchestration modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#candidate-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Candidate contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quality-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -415,7 +506,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/cosmos3/" class="md-nav__link">
+      <a href="../pipelines/cosmos3/" class="md-nav__link">
         
   
   
@@ -443,7 +534,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/ltx/" class="md-nav__link">
+      <a href="../pipelines/ltx/" class="md-nav__link">
         
   
   
@@ -471,7 +562,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/sana/" class="md-nav__link">
+      <a href="../pipelines/sana/" class="md-nav__link">
         
   
   
@@ -499,7 +590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/wan14b/" class="md-nav__link">
+      <a href="../pipelines/wan14b/" class="md-nav__link">
         
   
   
@@ -527,7 +618,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/wan5b/" class="md-nav__link">
+      <a href="../pipelines/wan5b/" class="md-nav__link">
         
   
   
@@ -555,7 +646,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/lingbot/" class="md-nav__link">
+      <a href="../pipelines/lingbot/" class="md-nav__link">
         
   
   
@@ -583,7 +674,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/hunyuan/" class="md-nav__link">
+      <a href="../pipelines/hunyuan/" class="md-nav__link">
         
   
   
@@ -611,7 +702,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../pipelines/wan21_14b/" class="md-nav__link">
+      <a href="../pipelines/wan21_14b/" class="md-nav__link">
         
   
   
@@ -643,10 +734,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -669,11 +758,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -694,7 +783,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -775,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cache/" class="md-nav__link">
+      <a href="../techniques/cache/" class="md-nav__link">
         
   
   
@@ -803,7 +892,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cache/teacache/" class="md-nav__link">
+      <a href="../techniques/cache/teacache/" class="md-nav__link">
         
   
   
@@ -831,7 +920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cache/easycache/" class="md-nav__link">
+      <a href="../techniques/cache/easycache/" class="md-nav__link">
         
   
   
@@ -859,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cache/taylorseer/" class="md-nav__link">
+      <a href="../techniques/cache/taylorseer/" class="md-nav__link">
         
   
   
@@ -887,7 +976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cache/fixed_step/" class="md-nav__link">
+      <a href="../techniques/cache/fixed_step/" class="md-nav__link">
         
   
   
@@ -915,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cache/cache_dit/" class="md-nav__link">
+      <a href="../techniques/cache/cache_dit/" class="md-nav__link">
         
   
   
@@ -948,10 +1037,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -967,11 +1054,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
         
           
           <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
@@ -992,7 +1079,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1007,37 +1094,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../techniques/token_prune/" class="md-nav__link">
         
   
   
@@ -1053,59 +1113,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#in-sol-engine" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        In Sol-Engine
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#methods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#practical-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Practical notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1118,7 +1125,7 @@
   
   
     <li class="md-nav__item">
-      <a href="feature_norm/" class="md-nav__link">
+      <a href="../techniques/token_prune/feature_norm/" class="md-nav__link">
         
   
   
@@ -1146,7 +1153,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tome_sd/" class="md-nav__link">
+      <a href="../techniques/token_prune/tome_sd/" class="md-nav__link">
         
   
   
@@ -1245,7 +1252,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sparse/" class="md-nav__link">
+      <a href="../techniques/sparse/" class="md-nav__link">
         
   
   
@@ -1273,7 +1280,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sparse/sol_attn/" class="md-nav__link">
+      <a href="../techniques/sparse/sol_attn/" class="md-nav__link">
         
   
   
@@ -1301,7 +1308,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sparse/pisa/" class="md-nav__link">
+      <a href="../techniques/sparse/pisa/" class="md-nav__link">
         
   
   
@@ -1329,7 +1336,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sparse/spargeattention/" class="md-nav__link">
+      <a href="../techniques/sparse/spargeattention/" class="md-nav__link">
         
   
   
@@ -1357,7 +1364,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sparse/sparse_videogen/" class="md-nav__link">
+      <a href="../techniques/sparse/sparse_videogen/" class="md-nav__link">
         
   
   
@@ -1385,7 +1392,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sparse/sparse_videogen2/" class="md-nav__link">
+      <a href="../techniques/sparse/sparse_videogen2/" class="md-nav__link">
         
   
   
@@ -1484,7 +1491,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quant/" class="md-nav__link">
+      <a href="../techniques/quant/" class="md-nav__link">
         
   
   
@@ -1512,7 +1519,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quant/nvfp4/" class="md-nav__link">
+      <a href="../techniques/quant/nvfp4/" class="md-nav__link">
         
   
   
@@ -1540,7 +1547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quant/diffusion_ptq/" class="md-nav__link">
+      <a href="../techniques/quant/diffusion_ptq/" class="md-nav__link">
         
   
   
@@ -1568,7 +1575,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quant/svdquant/" class="md-nav__link">
+      <a href="../techniques/quant/svdquant/" class="md-nav__link">
         
   
   
@@ -1596,7 +1603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quant/sageattention/" class="md-nav__link">
+      <a href="../techniques/quant/sageattention/" class="md-nav__link">
         
   
   
@@ -1624,7 +1631,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quant/modelopt_fp8/" class="md-nav__link">
+      <a href="../techniques/quant/modelopt_fp8/" class="md-nav__link">
         
   
   
@@ -1727,7 +1734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/" class="md-nav__link">
+      <a href="../techniques/kernel/" class="md-nav__link">
         
   
   
@@ -1755,7 +1762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/adaln_residual_gate/" class="md-nav__link">
+      <a href="../techniques/kernel/adaln_residual_gate/" class="md-nav__link">
         
   
   
@@ -1783,7 +1790,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/gemm_epilogues/" class="md-nav__link">
+      <a href="../techniques/kernel/gemm_epilogues/" class="md-nav__link">
         
   
   
@@ -1811,7 +1818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/qknorm_rope/" class="md-nav__link">
+      <a href="../techniques/kernel/qknorm_rope/" class="md-nav__link">
         
   
   
@@ -1839,7 +1846,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/attention_output_gate/" class="md-nav__link">
+      <a href="../techniques/kernel/attention_output_gate/" class="md-nav__link">
         
   
   
@@ -1867,7 +1874,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/residual_modulation/" class="md-nav__link">
+      <a href="../techniques/kernel/residual_modulation/" class="md-nav__link">
         
   
   
@@ -1895,7 +1902,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/qkv_merge/" class="md-nav__link">
+      <a href="../techniques/kernel/qkv_merge/" class="md-nav__link">
         
   
   
@@ -1923,7 +1930,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernel/torch_compile/" class="md-nav__link">
+      <a href="../techniques/kernel/torch_compile/" class="md-nav__link">
         
   
   
@@ -1986,10 +1993,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#in-sol-engine" class="md-nav__link">
+  <a href="#orchestration-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        In Sol-Engine
+        Orchestration modes
       
     </span>
   </a>
@@ -1997,10 +2004,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#methods" class="md-nav__link">
+  <a href="#candidate-contract" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Methods
+        Candidate contract
       
     </span>
   </a>
@@ -2008,10 +2015,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#practical-notes" class="md-nav__link">
+  <a href="#quality-gates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Practical notes
+        Quality gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
       
     </span>
   </a>
@@ -2038,48 +2056,25 @@
   
 
 
-<h1 id="token-pruning">Token pruning<a class="headerlink" href="#token-pruning" title="Permanent link">&para;</a></h1>
-<p>Token pruning removes low-salience video tokens in selected steps. It targets model-level redundancy in long spatiotemporal sequences.</p>
-<p>The paper treats token pruning as a sequence-reduction family: the token-pruning agent tunes the pruning criterion, pruning ratio, layer schedule, timestep schedule, and reconstruction rule, then validates temporal coherence and late-step fidelity.</p>
-<h2 id="in-sol-engine">In Sol-Engine<a class="headerlink" href="#in-sol-engine" title="Permanent link">&para;</a></h2>
-<p>LTX-2.3 uses token pruning in the full optimization stack together with kernel fusion, cache, PISA sparse attention, and NVFP4.</p>
-<p>Implemented entries:</p>
+<h1 id="agent-workflow">Agent workflow<a class="headerlink" href="#agent-workflow" title="Permanent link">&para;</a></h1>
+<p>Sol-Engine is <em>agent-native</em>: a coding agent (Claude Code / OpenAI Codex) drives model onboarding and optimization, not just fixed scripts. This page documents the orchestration behind the "hand an agent a goal" quick start.</p>
+<h2 id="orchestration-modes">Orchestration modes<a class="headerlink" href="#orchestration-modes" title="Permanent link">&para;</a></h2>
+<p><strong>Lightweight (master + executors).</strong> A single master orchestrator supervises up to three executor sub-agents, one per acceleration technique (<code>kernel</code>, <code>cache</code>, <code>sparse</code>/PISA). Each executor explores its technique's search space (detached, watchdog-guarded), returns validated candidates, and the master gates, dedupes, and integrates them. Preferred for a fast, bounded optimization sweep on a new model.</p>
+<p><strong>Full framework.</strong> Per-technique executor nodes with richer fan-out for deep multi-round searches.</p>
+<h2 id="candidate-contract">Candidate contract<a class="headerlink" href="#candidate-contract" title="Permanent link">&para;</a></h2>
+<p>Every optimization is a candidate manifest: an id, kind (baseline / patch / control), the runtime it uses, the environment flags that turn the technique on, and its eval profile. A single launcher renders a reproducible run bundle and submits it. Baselines and same-topology controls are first-class, so every speedup has an explicit, stated denominator (single-GPU / same-topology / vs-naive).</p>
+<h2 id="quality-gates">Quality gates<a class="headerlink" href="#quality-gates" title="Permanent link">&para;</a></h2>
+<p>No speedup is accepted on wall-clock alone:</p>
 <ul>
-<li><code>python/sglang/multimodal_gen/runtime/efficiency/techniques/token_prune.py</code></li>
-<li><code>python/sglang/multimodal_gen/runtime/pipelines_core/stages/ltx_2_denoising.py</code></li>
-<li><code>python/sglang/multimodal_gen/runtime/efficiency/models/ltx2_spec.py</code></li>
-<li><code>python/sglang/multimodal_gen/runtime/efficiency/spec.py</code></li>
+<li><strong>LPIPS</strong> against frozen baseline frames.</li>
+<li><strong>Multimodal visual gate</strong> — a hosted VLM reviews baseline-vs-candidate side-by-side against a rubric (snow/speckle, blur, mosaic / patch-boundary, banding, ghosting, melting, temporal flicker, coherence &amp; motion regressions).</li>
+<li><strong>Authenticity check</strong> — confirms the technique actually engaged (PISA wrote its stats, cache actually reused steps) so a run cannot report a "fake" speedup from a no-op optimization.</li>
 </ul>
-<h2 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Open-source status</th>
-<th>Integration</th>
-<th>Role in the design space</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="feature_norm/">Feature-norm pruning</a></td>
-<td>open-source local</td>
-<td>local LTX runtime</td>
-<td>Sol-Engine LTX-2.3 midpoint token pruning implementation</td>
-</tr>
-<tr>
-<td><a href="tome_sd/">ToMe-SD</a></td>
-<td>open-source</td>
-<td>external adapter</td>
-<td>diffusion token merging baseline family</td>
-</tr>
-</tbody>
-</table>
-<h2 id="practical-notes">Practical notes<a class="headerlink" href="#practical-notes" title="Permanent link">&para;</a></h2>
+<h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Prune only in steps where visual sensitivity is acceptable.</li>
-<li>Keep prompt, seed, scheduler, and resolution fixed when comparing variants.</li>
-<li>Inspect videos side by side; scalar metrics are not enough for final acceptance.</li>
+<li>Report speedups against a stated baseline; never mix denominators silently.</li>
+<li>Timing excludes model load; medians over official validation prompts; same seed.</li>
+<li>Optimizations that change floating-point reduction or attention sparsity are marked non–bit-exact.</li>
 </ul>
 
 
@@ -2153,12 +2148,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="../../stylesheets/extra.js"></script>
+        <script src="../stylesheets/extra.js"></script>
       
     
   </body>

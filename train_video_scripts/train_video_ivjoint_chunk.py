@@ -886,7 +886,9 @@ def main(cfg: SanaVideoConfig) -> None:
     # 1.Initialize training mode
     if config.train.use_fsdp:
         set_fsdp_env()
-        if config.task == "v2v":
+        if config.model.model.startswith("SanaVideo2_"):
+            os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaVideo2Block"
+        elif config.task == "v2v":
             os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = "SanaV2VVideoMSBlock"
         init_train = "FSDP"
     else:

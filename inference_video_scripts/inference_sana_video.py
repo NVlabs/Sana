@@ -436,6 +436,8 @@ if __name__ == "__main__":
         )
     if args.motion_score > 0:
         motion_prompt = f" motion score: {int(args.motion_score)}."
+    elif args.motion_score < 0:
+        motion_prompt = ""
     else:
         motion_prompt = " high motion" if args.high_motion else " low motion"
     if config.negative_prompt is None or config.negative_prompt == "None":
@@ -471,6 +473,10 @@ if __name__ == "__main__":
     logger.info(f"motion_prompt: {motion_prompt}")
 
     vae_dtype = get_weight_dtype(config.vae.weight_dtype)
+    if config.vae.vae_type == "LTX2VAE_diffusers":
+        # Inference needs the decoder even when the training recipe selects
+        # the memory-efficient causal encoder-only path.
+        config.vae.use_causal_encode = False
     vae = get_vae(config.vae.vae_type, config.vae.vae_pretrained, device=device, dtype=vae_dtype, config=config.vae)
     tokenizer, text_encoder = get_tokenizer_and_text_encoder(name=config.text_encoder.text_encoder_name, device=device)
     if "Qwen" in config.text_encoder.text_encoder_name:

@@ -1,8 +1,14 @@
-# Sana-Video 2.0
+# SANA-Video 2.0
 
-This release contains the text-to-video training, inference, and model architecture for the final Sana-Video 2.0 5B and 14B variants. It exposes the production architecture and a fixed 480p reference recipe.
+SANA-Video 2.0 provides efficient text-to-video models built with hybrid
+linear/softmax attention and Attention Residuals. This release includes the
+model architecture, training code, inference code, and fixed 480p reference
+configs for the 5B and 14B variants.
 
-## Released architectures
+> **Release status:** Code and configs are available. The 5B and 14B
+> checkpoints are coming soon.
+
+## Architecture
 
 | Model | Layers | Hidden size | Linear attention | Softmax anchors | Parameters |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -11,63 +17,92 @@ This release contains the text-to-video training, inference, and model architect
 
 Both variants use:
 
-- 75% gated bidirectional linear-attention layers and 25% dense softmax anchor layers;
+- 75% gated bidirectional linear-attention layers and 25% dense softmax anchor
+  layers;
 - SwiGLU feed-forward networks with a 4× expansion ratio;
 - Wan 3D rotary position embeddings;
-- shared, timestep-independent Attention Residual aggregation in blocks of eight layers;
+- shared, timestep-independent Attention Residual aggregation in blocks of
+  eight layers;
 - `(1, 1, 1)` latent patches; and
-- the LTX 2.3 VAE contract: 128 latent channels with `(8, 32, 32)` temporal/spatial strides.
+- the LTX 2.3 VAE contract: 128 latent channels with `(8, 32, 32)`
+  temporal/spatial strides.
 
-## Files
+## Model zoo
+
+| Model | Resolution | Checkpoint | Precision |
+| --- | --- | --- | --- |
+| SANA-Video 2.0 5B | 480p | Coming soon | BF16 |
+| SANA-Video 2.0 14B | 480p | Coming soon | BF16 |
+
+## Code layout
 
 - Model: `diffusion/model/nets/sana_video2.py`
 - Transformer blocks: `diffusion/model/nets/sana_video2_blocks.py`
-- Training: `train_video_scripts/train_sana_video2.py`
-- Inference: `inference_video_scripts/inference_sana_video2.py`
+- Training: `train_video_scripts/train_video_ivjoint_chunk.py`
+- Inference: `inference_video_scripts/inference_sana_video.py`
 - Configs: `configs/sana_video2/`
 
-## Prerequisites
+SANA-Video 2.0 reuses the repository's existing video training and inference
+entry points. No separate version-specific runner is required.
 
-Install the repository environment, then place the Diffusers-format LTX 2.3 VAE under:
+## Setup
+
+Install the repository environment:
+
+```bash
+bash environment_setup.sh sana
+conda activate sana
+```
+
+Place the Diffusers-format LTX 2.3 VAE under:
 
 ```text
 output/pretrained_models/LTX-2.3-Diffusers/
 ```
 
-Alternatively, change `vae.vae_pretrained` in the selected YAML. Set `model.load_from` to a checkpoint when fine-tuning; leave it as `null` to initialize a new model.
-
-The example configs use `data/video_toy_data`. Replace `data.data_dir` with a `SanaZipDataset`-compatible public or local dataset. Paths are resolved relative to the repository.
+Alternatively, update `vae.vae_pretrained` in the selected YAML. The example
+configs use `data/video_toy_data`; replace `data.data_dir` with a
+`SanaZipDataset`-compatible dataset for training.
 
 ## Inference
 
-Generate one 480×832, 81-frame video:
+Until the public checkpoints are released, provide a local compatible
+checkpoint through `--model_path`. The prompt file contains one prompt per
+line.
 
 ```bash
-python inference_video_scripts/inference_sana_video2.py \
-  --config configs/sana_video2/SanaVideo2_5B_480p.yaml \
-  --model-path /path/to/sana_video2_5b.pth \
-  --prompt "A red panda runs through a misty bamboo forest." \
-  --output-dir output/sana_video2_samples
+accelerate launch --num_processes=1 \
+  inference_video_scripts/inference_sana_video.py \
+  --config=configs/sana_video2/SanaVideo2_5B_480p.yaml \
+  --model_path=/path/to/sana_video2_5b.pth \
+  --txt_file=asset/samples/video_prompts_samples.txt \
+  --work_dir=output/sana_video2_samples \
+  --dataset=sana_video2 \
+  --motion_score=-1
 ```
 
-Use `--prompt-file prompts.txt` for one prompt per line. Select the 14B YAML for a 14B checkpoint. The checkpoint loader accepts regular `.pth`, `.safetensors`, sharded Safetensors index files, and `hf://` paths supported by the repository downloader.
-
-Height and width must be divisible by 32. Frame counts must satisfy `(num_frames - 1) % 8 == 0`.
+Select the 14B YAML for a 14B checkpoint. Height and width must be divisible by
+32, and frame counts must satisfy `(num_frames - 1) % 8 == 0`.
 
 ## Training
 
-The public trainer is video-only and fixed-resolution. It uses FSDP, gradient checkpointing, Gemma 2 caption embeddings, causal LTX 2.3 encoding, flow matching, and strict checkpoint compatibility checks.
+The reference configs run video-only FSDP training with gradient checkpointing,
+online Gemma 2 caption encoding, causal LTX 2.3 VAE encoding, and flow matching.
 
 ```bash
-torchrun --nproc_per_node=8 train_video_scripts/train_sana_video2.py \
-  --config configs/sana_video2/SanaVideo2_5B_480p.yaml
+torchrun --nproc_per_node=8 --master_port=29500 \
+  train_video_scripts/train_video_ivjoint_chunk.py \
+  --config_path configs/sana_video2/SanaVideo2_5B_480p.yaml
 ```
 
 For 14B:
 
 ```bash
-torchrun --nproc_per_node=8 train_video_scripts/train_sana_video2.py \
-  --config configs/sana_video2/SanaVideo2_14B_480p.yaml
+torchrun --nproc_per_node=8 --master_port=29500 \
+  train_video_scripts/train_video_ivjoint_chunk.py \
+  --config_path configs/sana_video2/SanaVideo2_14B_480p.yaml
 ```
 
-To resume an FSDP run, pass `--resume-from` with a checkpoint directory such as `output/sana_video2_5b/checkpoints/epoch_1_step_1000`. Use the merged sibling `.pth` file for inference.
+To resume, pass `--resume_from=<checkpoint>`. Set `model.load_from` when
+initializing from a compatible model checkpoint; leave it as `null` to train
+from scratch.

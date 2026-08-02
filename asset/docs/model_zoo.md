@@ -48,6 +48,13 @@ ______________________________________________________________________
 | LongSANA-Video-2B-ODE-Init | 480p | [LongSANA_2B_480p_ode](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_ode) | --- | bf16 | LongSANA first step model initialized from ODE trajectories |
 | LongSANA-Video-2B-Self-Forcing | 480p | [LongSANA_2B_480p_self_forcing](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_self_forcing) | --- | bf16 | LongSANA second step model trained by Self-Forcing |
 
+### [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/)
+
+| Model | Reso | pth link | diffusers | Precision | Description |
+| --- | --- | --- | --- | --- | --- |
+| SANA-Video 2.0 5B | 480p | Coming soon | Coming soon | bf16 | 32-layer hybrid-attention model |
+| SANA-Video 2.0 14B | 480p | Coming soon | Coming soon | bf16 | 40-layer hybrid-attention model |
+
 ______________________________________________________________________
 
 ## ❗ 2. Make sure to use correct precision(fp16/bf16/fp32) for training and inference.

@@ -158,6 +158,7 @@ class SanaVideo2(nn.Module):
         softmax_ratio: float = 0.25,
         attn_res_block_size: int = 8,
         timestep_norm_scale_factor: float = 1.0,
+        null_embed_path: Optional[str] = None,
     ) -> None:
         super().__init__()
         if ffn_type != "SwiGLU":
@@ -215,6 +216,16 @@ class SanaVideo2(nn.Module):
             act_layer=lambda: nn.GELU(approximate="tanh"),
             token_num=model_max_length,
         )
+        if null_embed_path is not None:
+            null_embed = torch.load(null_embed_path, map_location="cpu", weights_only=True)
+            null_caption = null_embed["uncond_prompt_embeds"][0]
+            if null_caption.shape != self.y_embedder.y_embedding.shape:
+                raise ValueError(
+                    f"Null caption shape {tuple(null_caption.shape)} does not match "
+                    f"{tuple(self.y_embedder.y_embedding.shape)}."
+                )
+            with torch.no_grad():
+                self.y_embedder.y_embedding.copy_(null_caption)
         if y_norm:
             self.attention_y_norm = RMSNorm(hidden_size, scale_factor=y_norm_scale_factor, eps=norm_eps)
 

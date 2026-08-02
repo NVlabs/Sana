@@ -29,7 +29,7 @@ from diffusion.model.nets.sana_video2 import (
     SanaVideo2_14B,
 )
 from diffusion.model.nets.sana_video2_blocks import SanaVideo2Block
-from diffusion.utils.config import SanaVideoConfig, validate_sana_video2_config
+from diffusion.utils.config import SanaVideoConfig
 
 
 def test_causal_encoder_reuses_the_diffusers_encoder_weights():
@@ -148,7 +148,30 @@ def test_checkpoint_parameter_names_are_preserved():
     assert "attn_res.final_proj.weight" in keys
 
 
-def test_public_configs_select_only_released_models():
+def test_null_caption_embedding_can_be_loaded(tmp_path):
+    null_caption = torch.randn(4, 32)
+    null_embed_path = tmp_path / "null_embed.pth"
+    torch.save({"uncond_prompt_embeds": null_caption.unsqueeze(0)}, null_embed_path)
+
+    model = SanaVideo2(
+        input_size=2,
+        in_channels=4,
+        hidden_size=64,
+        depth=2,
+        num_heads=4,
+        caption_channels=32,
+        model_max_length=4,
+        class_dropout_prob=0.0,
+        linear_head_dim=16,
+        softmax_head_dim=32,
+        softmax_ratio=0.5,
+        null_embed_path=str(null_embed_path),
+    )
+
+    torch.testing.assert_close(model.y_embedder.y_embedding, null_caption)
+
+
+def test_public_configs_select_released_models_and_video_only_training():
     repo_root = Path(__file__).resolve().parents[1]
     expected = {
         "SanaVideo2_5B_480p.yaml": "SanaVideo2_5B",
@@ -158,6 +181,7 @@ def test_public_configs_select_only_released_models():
         with open(repo_root / "configs" / "sana_video2" / filename, encoding="utf-8") as stream:
             config = pyrallis.load(SanaVideoConfig, stream)
         assert config.model.model == model_name
+        assert config.model.softmax_ratio == 0.25
         assert config.model.attn_res_block_size == 8
         assert config.vae.use_causal_encode
-        validate_sana_video2_config(config)
+        assert config.train.joint_training_interval == 0

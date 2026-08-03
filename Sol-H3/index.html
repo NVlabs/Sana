@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deploy MiniMax-H3 with Sol Engine: 3.46× Acceleration in 4.5 Hours | NVIDIA</title>
+<title>Deploy MiniMax-H3 with Sol Engine: 3.95× Acceleration in 4.5 Hours | NVIDIA</title>
 <style>
   :root{
     --green:#76b900;
@@ -249,9 +249,9 @@ footer p{margin:12px 0}
 <div class="hero">
   <div class="prose">
     <span class="pill">Day One Optimization</span>
-    <h1><span class="h1a">Deploy MiniMax-H3 with Sol Engine</span><span class="h1b">achieving <em>3.46× acceleration</em> in <em>4.5 hours of optimization</em></span></h1>
+    <h1><span class="h1a">Deploy MiniMax-H3 with Sol Engine</span><span class="h1b">achieving <em>3.95× acceleration</em> in <em>4.5 hours of optimization</em></span></h1>
     <p class="dek">
-      The Sol Video Inference Engine delivers a <b>3.46× end-to-end speedup on 8× NVIDIA GB200</b> at
+      The Sol Video Inference Engine delivers a <b>3.95× end-to-end speedup on 8× NVIDIA GB200</b> at
       near-lossless quality. It gets there without distillation, without LoRA or fine-tuning, and
       without an offline calibration pass.
     </p>
@@ -319,13 +319,13 @@ footer p{margin:12px 0}
   <div class="prose">
     <div class="shead">
       <span class="num">02 — Sol Engine</span>
-      <h2>3.46× end-to-end optimization</h2>
+      <h2>3.95× end-to-end optimization</h2>
       <p>Measured on 8× NVIDIA GB200 · 1344×768 · 24 fps · 124 frames.</p>
     </div>
 
     <p class="lede">
       The Sol Video Inference Engine converged on a recipe that generates the same clip
-      <strong>3.46× faster</strong> with no perceptible change in picture or sound. It gets there
+      <strong>3.95× faster</strong> with no perceptible change in picture or sound. It gets there
       without any of the machinery that usually buys speed at this scale: no distilled student, no
       LoRA, no fine-tune, and no offline calibration pass over a dataset. Everything below is
       inference-time only and runs against the stock checkpoint.
@@ -347,45 +347,44 @@ footer p{margin:12px 0}
       <div class="bars">
 
         <div class="brow">
-          <div class="blab">Diffusers naive baseline<span class="bs">reference implementation</span></div>
-          <div class="btrack"><div class="bfill" style="width:100%;background:#3d5c08" title="Diffusers naive baseline — 27.340 s"></div></div>
-          <div class="bval"><b>27.340<span class="us">s</span></b><span class="bt">1.000×</span></div>
+          <div class="blab">Diffusers baseline<span class="bs">reference implementation, 8 GPUs</span></div>
+          <div class="btrack"><div class="bfill" style="width:100%;background:#3d5c08" title="Diffusers baseline — 27.205 s"></div></div>
+          <div class="bval"><b>27.205<span class="us">s</span></b><span class="bt">1.00×</span></div>
         </div>
 
         <div class="brow">
-          <div class="blab">Kernel lossless<span class="bs">fusion, graph capture</span></div>
-          <div class="btrack"><div class="bfill" style="width:74.92%;background:#57840a" title="Kernel lossless — 20.484 s, 1.335× cumulative"></div></div>
-          <div class="bval"><b>20.484<span class="us">s</span></b><span class="bt">1.335× · cum. 1.335×</span></div>
+          <div class="blab">+ Kernel lossless<span class="bs">fusion and graph capture, incl. VAE</span></div>
+          <div class="btrack"><div class="bfill" style="width:71.73%;background:#57840a" title="+ Kernel lossless — 19.514 s, 1.394×"></div></div>
+          <div class="bval"><b>19.514<span class="us">s</span></b><span class="bt">1.394×</span></div>
         </div>
 
         <div class="brow">
-          <div class="blab">+ Sol-Attn<span class="bs">sparse attention</span></div>
-          <div class="btrack"><div class="bfill" style="width:68.48%;background:#6aa30d" title="+ Sol-Attn — 18.723 s, 1.460× cumulative"></div></div>
-          <div class="bval"><b>18.723<span class="us">s</span></b><span class="bt">1.094× · cum. 1.460×</span></div>
+          <div class="blab">+ Sparse attention<span class="bs">Sol-Attn</span></div>
+          <div class="btrack"><div class="bfill" style="width:65.22%;background:#6aa30d" title="+ Sol-Attn — 17.744 s, 1.534×"></div></div>
+          <div class="bval"><b>17.744<span class="us">s</span></b><span class="bt">1.534×</span></div>
         </div>
 
         <div class="brow fin">
           <div class="blab">+ Cross-step cache<span class="bs">residual reuse</span></div>
-          <div class="btrack"><div class="bfill" style="width:28.94%;background:#76b900" title="+ Cross-step cache — 7.912 s, 3.456× cumulative"></div></div>
-          <div class="bval"><b>7.912<span class="us">s</span></b><span class="bt">2.366× · cum. 3.456×</span></div>
+          <div class="btrack"><div class="bfill" style="width:25.30%;background:#76b900" title="+ Cross-step cache — 6.883 s, 3.95×"></div></div>
+          <div class="bval"><b>6.883<span class="us">s</span></b><span class="bt">3.95×</span></div>
         </div>
 
         <div class="brow sep">
           <div class="blab">SGLang baseline<span class="bs">second reference point</span></div>
-          <div class="btrack"><div class="bfill" style="width:70.59%;background:#3d5c08" title="SGLang baseline — 19.300 s"></div></div>
-          <div class="bval"><b>19.300<span class="us">s</span></b><span class="bt">1.417× vs. Diffusers</span></div>
+          <div class="btrack"><div class="bfill" style="width:70.94%;background:#3d5c08" title="SGLang baseline — 19.300 s"></div></div>
+          <div class="bval"><b>19.300<span class="us">s</span></b><span class="bt">1.410×</span></div>
         </div>
 
       </div>
 
       <div class="baxis">
-        <span class="brange"><span>0</span><span>wall time, warm</span><span>27.3 s</span></span>
+        <span class="brange"><span>0</span><span>wall time, warm</span><span>27.2 s</span></span>
       </div>
       <div class="fcap">
-        Bar length is measured wall time. The optimization chain runs from the Diffusers naive baseline:
-        stage speedups are stated against the previous row, cumulative against Diffusers. Below the
-        dashed rule sits SGLang as a second reference point — our final configuration is 2.44× faster
-        than it.
+        Bar length is measured wall time on the hot path; the label at each tip is the cumulative
+        speedup against the Diffusers baseline. Below the dashed rule sits SGLang as a second reference
+        point — our final configuration is 2.80× faster than it.
       </div>
     </div>
   </div>
@@ -394,7 +393,7 @@ footer p{margin:12px 0}
     <div class="cmp cons">
       <div class="cmp-hd">
         <span class="ct">Quality preset — FirstBlockCache, threshold 0.05</span>
-        <span class="cn">≈2.10× end-to-end · LPIPS 0.141</span>
+        <span class="cn">≈2.40× end-to-end · LPIPS 0.141</span>
       </div>
       <p class="cmp-sub">
         The conservative threshold, tuned to hold picture and sound. Every clip is its own file with
@@ -404,19 +403,19 @@ footer p{margin:12px 0}
       <div class="cmp-row">
         <span class="cmp-lbl">Prompt 3</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p3_base.jpg" src="blog-assets/ours/cons_p3_base.mp4"></video><div class="meta"><span class="t">Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p3_cache.jpg" src="blog-assets/ours/cons_p3_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.05</span><span class="r">≈2.10×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p3_cache.jpg" src="blog-assets/ours/cons_p3_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.05</span><span class="r">≈2.40×</span></div></div>
       </div>
 
       <div class="cmp-row">
         <span class="cmp-lbl">Prompt 4 — the official reproducible T2VA prompt</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p4_base.jpg" src="blog-assets/ours/cons_p4_base.mp4"></video><div class="meta"><span class="t">Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p4_cache.jpg" src="blog-assets/ours/cons_p4_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.05</span><span class="r">≈2.10×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p4_cache.jpg" src="blog-assets/ours/cons_p4_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.05</span><span class="r">≈2.40×</span></div></div>
       </div>
 
       <div class="cmp-row">
         <span class="cmp-lbl">Prompt 5</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p5_base.jpg" src="blog-assets/ours/cons_p5_base.mp4"></video><div class="meta"><span class="t">Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p5_cache.jpg" src="blog-assets/ours/cons_p5_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.05</span><span class="r">≈2.10×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/cons_p5_cache.jpg" src="blog-assets/ours/cons_p5_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.05</span><span class="r">≈2.40×</span></div></div>
       </div>
     </div>
   </div>
@@ -424,7 +423,7 @@ footer p{margin:12px 0}
   <div class="prose">
     <p class="shead" style="margin:0">
       Measured at 1344×768, 124 frames, 50 steps on 8× NVIDIA GB200, warm, median over six text-only
-      T2VA prompts, compared per-prompt at matched seeds. The quality preset's 2.10× is projected from
+      T2VA prompts, compared per-prompt at matched seeds. The quality preset's 2.40× is projected from
       the measured threshold ratio rather than timed directly. Judge these on LPIPS and on the clips
       themselves, not on PSNR — once a diffusion trajectory shifts to a neighbouring valid sample, pixel
       metrics call it a catastrophe while the video is fine.
@@ -469,7 +468,7 @@ footer p{margin:12px 0}
       similar through the middle of the schedule: the model is refining, not deciding. Cross-step caching
       reuses a previous step's residual instead of running the full denoiser, gated by a cheap change
       detector so that the steps which <em>do</em> matter — early structure, late detail — are never
-      skipped. On H3 this is by far the single largest contributor, at <strong>2.366×</strong> on its own.
+      skipped. On H3 this is by far the single largest contributor, at <strong>2.578×</strong> on its own.
     </p>
     <p>
       It is also where the quality risk concentrates, and it is the parameter most likely to be set wrong
@@ -484,7 +483,7 @@ footer p{margin:12px 0}
     <div class="cmp aggr">
       <div class="cmp-hd">
         <span class="ct">Efficient preset — FirstBlockCache, threshold 0.08</span>
-        <span class="cn">3.46× end-to-end · LPIPS 0.349</span>
+        <span class="cn">3.95× end-to-end · LPIPS 0.349</span>
       </div>
       <p class="cmp-sub">
         The same recipe with the cache threshold opened up to 0.08. It buys another 1.65× of speed over
@@ -495,19 +494,19 @@ footer p{margin:12px 0}
       <div class="cmp-row">
         <span class="cmp-lbl">Prompt 0</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p0_base.jpg" src="blog-assets/ours/agg_p0_base.mp4"></video><div class="meta"><span class="t">Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p0_cache.jpg" src="blog-assets/ours/agg_p0_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.08</span><span class="r">3.46×</span></div></div>
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p0_cache.jpg" src="blog-assets/ours/agg_p0_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.08</span><span class="r">3.95×</span></div></div>
       </div>
 
       <div class="cmp-row">
         <span class="cmp-lbl">Prompt 4 — the official reproducible T2VA prompt (537 tokens, two shots + soundscape)</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p4_base.jpg" src="blog-assets/ours/agg_p4_base.mp4"></video><div class="meta"><span class="t">Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p4_cache.jpg" src="blog-assets/ours/agg_p4_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.08</span><span class="r">3.46×</span></div></div>
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p4_cache.jpg" src="blog-assets/ours/agg_p4_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.08</span><span class="r">3.95×</span></div></div>
       </div>
 
       <div class="cmp-row">
         <span class="cmp-lbl">Prompt 5</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p5_base.jpg" src="blog-assets/ours/agg_p5_base.mp4"></video><div class="meta"><span class="t">Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p5_cache.jpg" src="blog-assets/ours/agg_p5_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.08</span><span class="r">3.46×</span></div></div>
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours/agg_p5_cache.jpg" src="blog-assets/ours/agg_p5_cache.mp4"></video><div class="meta"><span class="t">Cached · 0.08</span><span class="r">3.95×</span></div></div>
       </div>
     </div>
   </div>
@@ -551,7 +550,7 @@ footer p{margin:12px 0}
       For reference, published Sol-Attn results land at 2.02× on Wan2.1-14B (720p, 81 frames), 2.12× on
       HunyuanVideo-13B (720p, 129 frames), 2.4× on LTX-2.3's 1080p stage-2, and a kernel-level
       <strong>5.41×</strong> at 128K tokens and 90% sparsity. On H3 we take a more conservative
-      <strong>1.094×</strong>, because we run it ahead of the cache and keep a conservative density —
+      <strong>1.100×</strong>, because we run it ahead of the cache and keep a conservative density —
       the attention that survives is the attention that matters most, so we spend the sparsity budget
       carefully.
     </p>
@@ -605,7 +604,7 @@ footer p{margin:12px 0}
         <div class="pout">
           <div class="pbox"><div class="pt">Integrator</div><div class="pd">Global search over compositions, not knobs</div></div>
           <div class="pdown">↓</div>
-          <div class="pbox fin"><div class="pt">Deployed recipe</div><div class="pd">3.46× · near-lossless · 4.5 hours</div></div>
+          <div class="pbox fin"><div class="pt">Deployed recipe</div><div class="pd">3.95× · near-lossless · 4.5 hours</div></div>
         </div>
       </div>
       <div class="fcap">

@@ -393,7 +393,6 @@ footer p{margin:12px 0}
   </div>
 
   <div class="wide">
-  <div class="wide">
     <div class="cmp cons">
       <div class="cmp-hd">
         <span class="ct">Reference · Quality preserving · Super efficient</span>
@@ -403,15 +402,9 @@ footer p{margin:12px 0}
         The recipe ships in two configurations. <strong>Quality preserving</strong> runs the cross-step
         cache with sparse attention off; <strong>super efficient</strong> turns Sol-Attn on as well,
         buying a further 1.25× at a measurably larger perceptual distance. Every clip is its own file
-        with its own audio track — play across a row to compare sound as well as picture.
+        with its own audio track — play across a row to compare sound as well as picture. Measured at
+        1344×768, 124 frames, 50 steps on 8× NVIDIA GB200.
       </p>
-
-      <div class="cmp3-row">
-        <span class="cmp-lbl">Prompt 0</span>
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p0_ref.jpg" src="blog-assets/ours3/p0_ref.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p0_quality.jpg" src="blog-assets/ours3/p0_quality.mp4"></video><div class="meta"><span class="t">Quality preserving</span><span class="r">3.16×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p0_efficient.jpg" src="blog-assets/ours3/p0_efficient.mp4"></video><div class="meta"><span class="t">Super efficient</span><span class="r">3.95×</span></div></div>
-      </div>
 
       <div class="cmp3-row">
         <span class="cmp-lbl">Prompt 1</span>
@@ -421,14 +414,14 @@ footer p{margin:12px 0}
       </div>
 
       <div class="cmp3-row">
-        <span class="cmp-lbl">Prompt 3</span>
+        <span class="cmp-lbl">Prompt 2</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p3_ref.jpg" src="blog-assets/ours3/p3_ref.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
         <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p3_quality.jpg" src="blog-assets/ours3/p3_quality.mp4"></video><div class="meta"><span class="t">Quality preserving</span><span class="r">3.16×</span></div></div>
         <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p3_efficient.jpg" src="blog-assets/ours3/p3_efficient.mp4"></video><div class="meta"><span class="t">Super efficient</span><span class="r">3.95×</span></div></div>
       </div>
 
       <div class="cmp3-row">
-        <span class="cmp-lbl">Prompt 4 — the official reproducible T2VA prompt</span>
+        <span class="cmp-lbl">Prompt 3 — the official reproducible T2VA prompt</span>
         <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p4_ref.jpg" src="blog-assets/ours3/p4_ref.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
         <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p4_quality.jpg" src="blog-assets/ours3/p4_quality.mp4"></video><div class="meta"><span class="t">Quality preserving</span><span class="r">3.16×</span></div></div>
         <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/ours3/p4_efficient.jpg" src="blog-assets/ours3/p4_efficient.mp4"></video><div class="meta"><span class="t">Super efficient</span><span class="r">3.95×</span></div></div>
@@ -436,26 +429,16 @@ footer p{margin:12px 0}
     </div>
   </div>
   <div class="prose">
-    <p class="shead" style="margin:0">
-      Measured at 1344×768, 124 frames, 50 steps on 8× NVIDIA GB200, warm, median over six text-only
-      T2VA prompts, compared per-prompt at matched seeds. The quality preset's 2.40× is projected from
-      the measured threshold ratio rather than timed directly. Judge these on LPIPS and on the clips
-      themselves, not on PSNR — once a diffusion trajectory shifts to a neighbouring valid sample, pixel
-      metrics call it a catastrophe while the video is fine.
-    </p>
-  </div>
-
-  <div class="prose">
     <h3>Pillar 1 — Lossless kernel optimization</h3>
     <p>
       Before approximating anything, take the free money. A reference implementation written against
       PyTorch eager spends a startling share of its wall clock on HBM round-trips between small
-      elementwise kernels and on launch overhead — and H3, with 13B of AdaLN parameters evaluated on
-      every step, is unusually exposed to exactly that pattern.
+      elementwise kernels and on launch overhead.
     </p>
     <p>
-      Every fusion below was verified numerically against the eager reference. Nothing here is an
-      approximation; every fusion below is pure engineering.
+      Fusing those operations is what removes it: each merged kernel is one launch instead of several
+      and keeps its intermediates in registers and shared memory rather than writing them out to HBM and
+      reading them straight back.
     </p>
   </div>
 
@@ -483,7 +466,14 @@ footer p{margin:12px 0}
       similar through the middle of the schedule: the model is refining, not deciding. Cross-step caching
       reuses a previous step's residual instead of running the full denoiser, gated by a cheap change
       detector so that the steps which <em>do</em> matter — early structure, late detail — are never
-      skipped. On H3 this is by far the single largest contributor, at <strong>2.578×</strong> on its own.
+      skipped.
+    </p>
+    <p>
+      We use <strong>First Block Cache</strong> for that gate. It watches the residual produced by the
+      first transformer block and treats it as a proxy for the whole stack: if that residual has barely
+      moved since the last step, the remaining blocks are skipped and the previous step's output is
+      reused. One scalar — the residual-difference threshold — sets how similar counts as similar
+      enough, which is the knob the two presets differ on.
     </p>
     <p>
       It is also where the quality risk concentrates, and it is the parameter most likely to be set wrong
@@ -494,6 +484,7 @@ footer p{margin:12px 0}
     </p>
   </div>
 
+  <div class="prose">
     <h3>Pillar 3 — <a href="https://arxiv.org/abs/2607.24027">Sol-Attn</a>, training-free sparse attention</h3>
     <p>
       At 2K and fifteen seconds, with audio tokens interleaved into the same attention, sequence length
@@ -666,5 +657,37 @@ url = {https://arxiv.org/abs/2607.24027},
   </div>
 </section>
 
+<script>
+// Keep the clips in each comparison row in phase: they are separate files
+// (so each keeps its own audio track), but they should show the same instant.
+document.querySelectorAll('.cmp3-row').forEach(function (row) {
+  var vids = Array.prototype.slice.call(row.querySelectorAll('video'));
+  if (vids.length < 2) return;
+  var lead = vids[0], syncing = false;
+
+  function align() {
+    if (syncing) return;
+    syncing = true;
+    vids.forEach(function (v) {
+      if (v !== lead && Math.abs(v.currentTime - lead.currentTime) > 0.06) {
+        v.currentTime = lead.currentTime;
+      }
+    });
+    syncing = false;
+  }
+
+  vids.forEach(function (v) {
+    v.addEventListener('play', function () { vids.forEach(function (o) { if (o !== v) o.play(); }); align(); });
+    v.addEventListener('pause', function () { vids.forEach(function (o) { if (o !== v) o.pause(); }); });
+    v.addEventListener('seeked', function () {
+      if (v !== lead) return;
+      align();
+    });
+  });
+  lead.addEventListener('timeupdate', align);
+  // realign every loop so drift cannot accumulate
+  lead.addEventListener('ended', align);
+});
+</script>
 </body>
 </html>

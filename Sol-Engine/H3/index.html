@@ -83,6 +83,7 @@ p{margin:20px 0}
 ul,ol{padding-left:24px;margin:20px 0}
 li{margin:11px 0}
 strong{color:#fff;font-weight:650}
+a strong{color:inherit}
 .lede{font-size:19px;line-height:1.62;color:var(--text-2)}
 /* ── placeholders ────────────────────────────────── */
   .ph{
@@ -469,29 +470,21 @@ footer p{margin:12px 0}
       skipped.
     </p>
     <p>
-      We use <strong>First Block Cache</strong> for that gate. It watches the residual produced by the
+      We use <a href="https://github.com/chengzeyi/ParaAttention"><strong>First Block Cache</strong></a> for that gate. It watches the residual produced by the
       first transformer block and treats it as a proxy for the whole stack: if that residual has barely
       moved since the last step, the remaining blocks are skipped and the previous step's output is
       reused. One scalar — the residual-difference threshold — sets how similar counts as similar
       enough, which is the knob the two presets differ on.
-    </p>
-    <p>
-      It is also where the quality risk concentrates, and it is the parameter most likely to be set wrong
-      by someone porting a config from another model. Push it too far and you get temporal smearing,
-      lost micro-motion, and — new with H3 — audio-video desynchronization, because a skipped step in a
-      joint transformer skips both modalities at once. Lip-sync drift is a failure mode that simply did
-      not exist on video-only generators.
     </p>
   </div>
 
   <div class="prose">
     <h3>Pillar 3 — <a href="https://arxiv.org/abs/2607.24027">Sol-Attn</a>, training-free sparse attention</h3>
     <p>
-      At 2K and fifteen seconds, with audio tokens interleaved into the same attention, sequence length
-      dominates the cost. Attention maps in video diffusion are also extremely sparse: most query blocks
-      attend meaningfully to a small fraction of key blocks. Everyone knows this. The hard part is
-      deciding <em>which</em> blocks, cheaply, without a per-model calibration run — precisely the thing
-      you do not have on day one.
+      At high resolution and long duration, with audio tokens interleaved into the same attention,
+      sequence length dominates the cost. Attention maps in video diffusion are also extremely sparse:
+      most query blocks attend meaningfully to a small fraction of key blocks, which calls for an
+      efficient sparse attention that exploits that structure without a catastrophic loss in quality.
     </p>
     <p>
       <a href="https://arxiv.org/abs/2607.24027">Sol-Attn</a> is training-free <em>and</em>
@@ -519,14 +512,6 @@ footer p{margin:12px 0}
         methods fall off a cliff.
       </li>
     </ul>
-    <p>
-      For reference, published Sol-Attn results land at 2.02× on Wan2.1-14B (720p, 81 frames), 2.12× on
-      HunyuanVideo-13B (720p, 129 frames), 2.4× on LTX-2.3's 1080p stage-2, and a kernel-level
-      <strong>5.41×</strong> at 128K tokens and 90% sparsity. On H3 we take a more conservative
-      <strong>1.100×</strong>, because we run it ahead of the cache and keep a conservative density —
-      the attention that survives is the attention that matters most, so we spend the sparsity budget
-      carefully.
-    </p>
   </div>
 
 </section>
@@ -543,13 +528,13 @@ footer p{margin:12px 0}
     </div>
 
     <p class="lede">
-      None of the three pillars above is new. The community already has the toolbox — sparse attention,
-      diffusion caching, kernel fusion — and every method ships with convincing numbers. It also ships
-      with knobs, and those knobs were set for someone else's <strong>model</strong>, someone else's
-      <strong>hardware</strong>, and someone else's <strong>configuration</strong> of duration, frame
-      rate, and resolution. Change any of the three and the published setting is no longer the right
-      one. That is why recipes do not port, and why accelerating a new model has historically taken
-      weeks of hand-tuning rather than an afternoon.
+      The community already has the toolbox — sparse attention, diffusion caching, kernel fusion — and
+      every method comes with convincing numbers. It also comes with knobs. Any real deployment fixes
+      three things at once: a <strong>specific model</strong>, <strong>specific hardware</strong>, and a
+      <strong>specific configuration</strong> of duration, frame rate, and resolution. A setting tuned
+      under one combination rarely holds under another, so recipes do not transfer directly and each
+      deployment has to be tuned case by case — which is why accelerating a new model has historically
+      taken weeks of hand-tuning rather than an afternoon.
     </p>
 
     <p>

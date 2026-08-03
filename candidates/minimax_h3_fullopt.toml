@@ -1,0 +1,34 @@
+id = "minimax_h3_fullopt"
+kind = "patch"
+purpose = "optimization"
+description = "MiniMax-H3 1344x768/124f, 8xGB200 Ulysses8 full stack: kernel line + Sol-Attn + FirstBlockCache 0.08 + compiled batched VAE decode."
+model_profile = "minimax_h3"
+
+[runtime]
+root = "models/minimax_h3/optimized"
+entry = "gpu_infer.py"
+
+[env]
+H3_ULYSSES_DEGREE = "8"
+H3_KERNEL = "1"
+H3_SOL_ATTN = "1"
+H3_SOL_TAU = "1.0"
+H3_SOL_THRESH_TYPE = "diag"
+H3_SOL_DENSE_STEPS = "10"
+H3_SOL_DENSE_LAYERS = "2"
+H3_SOL_SINK_MODE = "prefix"
+H3_CACHE_THRESHOLD = "0.08"
+H3_SHARD_VAE = "1"
+H3_VAE_BATCHED = "1"
+H3_VAE_COMPILE = "default"
+TORCHINDUCTOR_CACHE_DIR = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/torch_inductor"
+TRITON_CACHE_DIR = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/triton"
+TORCH_HOME = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/torch"
+XDG_CACHE_HOME = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/xdg"
+TMPDIR = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/tmp"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"

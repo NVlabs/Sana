@@ -1,0 +1,67 @@
+schema_version = 1
+id = "minimax_h3"
+display_name = "MiniMax-H3 33B omni audio+video DiT, GB200 resident baseline"
+legacy_profile = "models/minimax_h3.toml"
+contract_kind = "model_baseline_minimal_copy"
+
+[baseline]
+manifest = "candidates/minimax_h3_baseline.toml"
+runtime_root = "models/minimax_h3/baseline"
+eval_profile = "evals/profiles/official_video_t2va_minimax_h3.toml"
+description = "Pristine upstream Modular Diffusers inference: eager DiT, released BF16/FP32 precision, default attention backend, no cache, no sparsity, no compile, no quantization, no offload."
+
+[baseline.copy]
+paths_are_repo_relative = true
+include = [
+  "models/minimax_h3.toml",
+  "models/minimax_h3/**",
+  "models/minimax_h3/baseline/**",
+  "candidates/minimax_h3_baseline.toml",
+  "candidates/schema.md",
+  "evals/profiles/official_video_t2va_minimax_h3.toml",
+  "evals/rubrics/gemini_visual_artifact_gate.md",
+  "evals/tiers.toml",
+  "scripts/launch_candidate.py",
+  "scripts/collect_run.py",
+  "search/plan_eval.py",
+  "tools/vision/README.md",
+  "tools/vision/lpips_judge.py",
+  "tools/vision/nvidia_gemini_judge.py",
+  "efficiency/candidate_manifest.py",
+]
+exclude = [
+  ".git/**",
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "**/.pytest_cache/**",
+  "runs/**",
+  "output/**",
+  "workflow/**",
+]
+
+[[baseline.reference_only]]
+name = "minimax_h3_weights_original"
+path = "/home/yitongl/code/models/MiniMax-H3"
+repo = "MiniMaxAI/MiniMax-H3"
+repo_type = "model"
+reason = "269 GiB released repository, both FL2VA and Ref2VA partitions in the original layout; shared read-only and never copied into an experiment."
+
+[[baseline.reference_only]]
+name = "minimax_h3_weights_diffusers"
+path = "/home/yitongl/code/models/MiniMax-H3-diffusers"
+repo_type = "model"
+reason = "FL2VA half converted to the diffusers layout by diffusers_src/scripts/convert_minimax_h3_to_diffusers.py; text_encoder/tokenizer/processor are symlinks into the original so the 62 GiB conditioner is stored once."
+
+[[baseline.reference_only]]
+name = "lingbot_fa2_environment"
+path = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2"
+repo_type = "python_environment"
+reason = "GB200 aarch64 Python/CUDA environment with torch 2.10.0+cu130 and transformers 5.8.1; shared read-only and never mutated — the MiniMax-H3 diffusers branch is vendored under baseline/diffusers_src and shadows it via sys.path."
+
+[experiment_defaults]
+worktree_mode = "model_baseline_minimal_copy"
+experiments_root = "output/experiments"
+state_dir = "state"
+runs_dir = "runs"
+logs_dir = "logs"
+caches = ["tmp", "triton", "torch_extensions"]

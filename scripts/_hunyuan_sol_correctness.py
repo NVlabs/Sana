@@ -64,7 +64,7 @@ def main() -> int:
         k[:, :, :effective_tokens],
         v[:, :, :effective_tokens],
     ).transpose(1, 2)
-    all_exact = backend.sol_attn_attention(
+    all_exact = backend._run_sol_attn_bthd(
         q_joint,
         k_joint,
         v_joint,
@@ -80,7 +80,7 @@ def main() -> int:
         k[:, :, :effective_tokens],
         v[:, :, :effective_tokens],
     )
-    actual = backend.sol_attn_hunyuan(
+    actual = backend._run_mmdit_sol_attn_bthd(
         q,
         k,
         v,
@@ -94,7 +94,7 @@ def main() -> int:
     def unexpected_dense_dispatch(*_args, **_kwargs):
         raise AssertionError("eligible Hunyuan dispatch unexpectedly fell back")
 
-    dispatch = backend.make_hunyuan_sol_attn_dispatch(
+    dispatch = backend.make_mmdit_sol_attn_dispatch(
         unexpected_dense_dispatch,
         video_len=video_tokens,
         tau=1.0,

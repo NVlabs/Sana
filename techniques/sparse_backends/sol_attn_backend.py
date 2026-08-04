@@ -60,7 +60,7 @@ def _load_sol_attn() -> Callable:
 
 
 def sol_attn_supported(q) -> bool:
-    """Whether ``q`` satisfies the public Sol-Attn tensor/device contract."""
+    """Whether ``q`` can use a CuTe or portable Triton Sol-Attn backend."""
 
     try:
         import torch
@@ -71,13 +71,22 @@ def sol_attn_supported(q) -> bool:
     if q.ndim != 4 or q.shape[-1] != HEAD_DIM or q.dtype != torch.bfloat16:
         return False
     try:
-        return tuple(torch.cuda.get_device_capability(q.device)) in {
-            (9, 0),
-            (10, 0),
-            (12, 0),
-        }
+        arch = tuple(torch.cuda.get_device_capability(q.device))
+        return arch[0] >= 8
     except Exception:
         return False
+
+
+@functools.lru_cache(maxsize=1)
+def _cute_runtime_available() -> bool:
+    """Whether model dispatch can use one of the optional CuTe kernels."""
+
+    try:
+        import cuda.bindings.driver  # noqa: F401
+        import cutlass.cute  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def _resolve_kv_splits(q, kv_splits: int | str | None) -> int:
@@ -88,7 +97,11 @@ def _resolve_kv_splits(q, kv_splits: int | str | None) -> int:
     if kv_splits not in (None, "auto"):
         return int(kv_splits)
     arch = tuple(torch.cuda.get_device_capability(q.device))
-    if arch == (9, 0) and q.shape[1] >= 65536:
+    if (
+        arch == (9, 0)
+        and q.shape[1] >= 65536
+        and _cute_runtime_available()
+    ):
         return 4
     return 1
 
@@ -103,7 +116,7 @@ def _dense_bthd(q, k, v):
     ).transpose(1, 2)
 
 
-def sol_attn_attention(
+def _run_sol_attn_bthd(
     q,
     k,
     v,
@@ -308,7 +321,7 @@ def _ensure_self_op() -> None:
     def self_attention(q, k, v):
         if _use_dense_layer():
             return _dense_bthd(q, k, v)
-        return sol_attn_attention(
+        return _run_sol_attn_bthd(
             q,
             k,
             v,
@@ -416,7 +429,7 @@ def _dense_hunyuan(q, k, v, key_valid):
     )
 
 
-def sol_attn_hunyuan(
+def _run_mmdit_sol_attn_bthd(
     q,
     k,
     v,
@@ -429,7 +442,7 @@ def sol_attn_hunyuan(
     grid=None,
     morton: bool = False,
 ):
-    """Run Hunyuan MMDiT attention with exact text K/V and dense text Q.
+    """Run joint MMDiT attention with exact text K/V and dense text Q.
 
     Inputs use BHSD and the model's native ``[video, padded-text]`` order.
     Padding is cropped before the kernel. Sol-Attn computes the valid joint
@@ -501,7 +514,7 @@ def sol_attn_hunyuan(
             .transpose(1, 2)
             .contiguous()
         )
-        out_joint = sol_attn_attention(
+        out_joint = _run_sol_attn_bthd(
             q_joint,
             k_joint,
             v_joint,
@@ -559,7 +572,7 @@ def _ensure_hunyuan_op() -> None:
     def hunyuan_attention(q, k, v, key_valid):
         if _use_dense_layer():
             return _dense_hunyuan(q, k, v, key_valid.bool())
-        return sol_attn_hunyuan(
+        return _run_mmdit_sol_attn_bthd(
             q,
             k,
             v,
@@ -579,7 +592,7 @@ def _ensure_hunyuan_op() -> None:
     _HUNYUAN_OP_REGISTERED = True
 
 
-def make_hunyuan_sol_attn_dispatch(
+def make_mmdit_sol_attn_dispatch(
     original_dispatch,
     *,
     video_len: int,
@@ -591,7 +604,7 @@ def make_hunyuan_sol_attn_dispatch(
     grid=None,
     morton: bool = False,
 ):
-    """Wrap Hunyuan's joint masked attention with the exact-text adapter."""
+    """Wrap joint MMDiT attention with exact text K/V and dense text Q."""
 
     _SOL_CTX.video_len = int(video_len)
     _SOL_CTX.tau = float(tau)
@@ -679,13 +692,6 @@ def make_hunyuan_sol_attn_dispatch(
 
 
 __all__ = [
-    "get_sol_attn_stats",
-    "install_wan_morton_forward",
-    "make_hunyuan_sol_attn_dispatch",
+    "make_mmdit_sol_attn_dispatch",
     "make_sol_attn_dispatch",
-    "reset_sol_attn_state",
-    "sol_attn_attention",
-    "sol_attn_begin_forward",
-    "sol_attn_hunyuan",
-    "sol_attn_supported",
 ]

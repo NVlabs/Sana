@@ -8,6 +8,7 @@ import sys
 import tomllib
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +37,15 @@ def test_release_api_and_integration_defaults() -> None:
     assert backend._parse_layer_ranges("0,2-4,7") == frozenset(
         {0, 2, 3, 4, 7}
     )
+    assert set(backend.__all__) == {
+        "make_sol_attn_dispatch",
+        "make_mmdit_sol_attn_dispatch",
+    }
+    assert hasattr(backend, "_run_sol_attn_bthd")
+    assert hasattr(backend, "_run_mmdit_sol_attn_bthd")
+    assert not hasattr(backend, "sol_attn_attention")
+    assert not hasattr(backend, "sol_attn_hunyuan")
+    assert not hasattr(backend, "make_hunyuan_sol_attn_dispatch")
 
     interface = BACKENDS / "sol_attn" / "interface.py"
     tree = ast.parse(interface.read_text())
@@ -54,6 +64,91 @@ def test_release_api_and_integration_defaults() -> None:
     } <= keyword_names
 
 
+def test_sol_attn_backend_dispatch_contract() -> None:
+    interface = BACKENDS / "sol_attn" / "interface.py"
+    source = interface.read_text()
+    tree = ast.parse(source)
+
+    top_level_imports = {
+        alias.name
+        for node in tree.body
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    assert "cutlass.cute" not in top_level_imports
+    assert "cuda.bindings.driver" not in top_level_imports
+
+    dispatch = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_backend_for_arch"
+    )
+    namespace = {
+        "_CUTE_BACKENDS": {
+            (9, 0): "cute_sm90",
+            (10, 0): "cute_sm100",
+            (12, 0): "cute_sm120",
+        },
+        "_cute_runtime_available": lambda: True,
+    }
+    dispatch_module = ast.fix_missing_locations(
+        ast.Module(body=[dispatch], type_ignores=[])
+    )
+    exec(compile(dispatch_module, str(interface), "exec"), namespace)
+    backend_for_arch = namespace["_backend_for_arch"]
+    assert backend_for_arch((9, 0), cute_available=True) == "cute_sm90"
+    assert backend_for_arch((10, 0), cute_available=True) == "cute_sm100"
+    assert backend_for_arch((12, 0), cute_available=True) == "cute_sm120"
+    assert backend_for_arch((8, 0), cute_available=True) == "triton"
+    assert backend_for_arch((8, 9), cute_available=True) == "triton"
+    assert backend_for_arch((9, 0), cute_available=False) == "triton"
+    assert backend_for_arch((10, 0), cute_available=False) == "triton"
+    assert backend_for_arch((12, 0), cute_available=False) == "triton"
+
+    triton_forward = (
+        BACKENDS / "sol_attn" / "triton_ref" / "fwd.py"
+    ).read_text()
+    triton_preprocess = (
+        BACKENDS / "sol_attn" / "triton_ref" / "preprocess.py"
+    ).read_text()
+    assert "_forward_tma" in triton_forward
+    assert "_forward_ptr" in triton_forward
+    assert "TensorDescriptor" in triton_forward
+    assert "TensorDescriptor" not in triton_preprocess
+    assert "from ..preprocess import prepare as prepare_tma" in triton_forward
+    assert "from .preprocess import prepare as prepare_ptr" in triton_forward
+    assert "HAS_SINK: tl.constexpr" in triton_forward
+    assert "if HAS_SINK:" in triton_forward
+    assert "_pad_to_block" not in triton_forward
+    assert "tokens % BLOCK == 0" not in triton_forward
+
+    backend_source = (BACKENDS / "sol_attn_backend.py").read_text()
+    assert "arch[0] >= 8" in backend_source
+
+    bf16 = object()
+    fake_torch = SimpleNamespace(
+        bfloat16=bf16,
+        cuda=SimpleNamespace(
+            get_device_capability=lambda _device: (8, 9),
+        ),
+    )
+    fake_q = SimpleNamespace(
+        is_cuda=True,
+        ndim=4,
+        shape=(1, 256, 2, 128),
+        dtype=bf16,
+        device="cuda:0",
+    )
+    backend = load_backend()
+    with patch.dict(sys.modules, {"torch": fake_torch}):
+        assert backend.sol_attn_supported(fake_q)
+        fake_torch.cuda.get_device_capability = lambda _device: (12, 0)
+        assert backend.sol_attn_supported(fake_q)
+        fake_torch.cuda.get_device_capability = lambda _device: (7, 5)
+        assert not backend.sol_attn_supported(fake_q)
+
+
 def test_only_one_sol_attn_backend_tree_remains() -> None:
     legacy = (
         "pisa_hyvideo",
@@ -69,9 +164,19 @@ def test_only_one_sol_attn_backend_tree_remains() -> None:
     assert (BACKENDS / "sol_attn" / "sm120").is_dir()
     readme = (BACKENDS / "README.md").read_text()
     assert "sink_start" in readme
-    assert "text query rows with dense attention" in " ".join(
-        readme.lower().split()
-    )
+    assert "RTX 4090" in readme and "SM89" in readme
+    assert "RTX 5090" in readme and "SM120" in readme
+    assert "A100" in readme and "SM80" in readme
+    assert "Triton research implementation" in readme
+    normalized_readme = " ".join(readme.lower().split())
+    assert "text-query rows" in normalized_readme
+    assert "dense" in normalized_readme
+
+    root_readme = (ROOT / "README.md").read_text()
+    root_readme = " ".join(root_readme.split())
+    assert "A100 (SM80)" in root_readme
+    assert "RTX 4090 (SM89)" in root_readme
+    assert "RTX 5090 (SM120)" in root_readme
 
 
 def test_sm120_is_eligible_and_keeps_single_kv_split(monkeypatch) -> None:
@@ -93,6 +198,12 @@ def test_sm120_is_eligible_and_keeps_single_kv_split(monkeypatch) -> None:
     assert backend.sol_attn_supported(q)
     assert backend._resolve_kv_splits(q, "auto") == 1
 
+    fake_torch.cuda.get_device_capability = lambda _device: (9, 0)
+    monkeypatch.setattr(backend, "_cute_runtime_available", lambda: True)
+    assert backend._resolve_kv_splits(q, "auto") == 4
+    monkeypatch.setattr(backend, "_cute_runtime_available", lambda: False)
+    assert backend._resolve_kv_splits(q, "auto") == 1
+
 
 def test_core_interface_defines_sm120_compile_dispatch() -> None:
     tree = ast.parse((BACKENDS / "sol_attn" / "interface.py").read_text())
@@ -103,8 +214,10 @@ def test_core_interface_defines_sm120_compile_dispatch() -> None:
     }
 
     assert "_compile_sm120" in functions
-    assert "(12, 0)" in ast.unparse(functions["_validate"])
-    assert "_compile_sm120" in ast.unparse(functions["sol_attn"])
+    assert "cute_sm120" in (
+        BACKENDS / "sol_attn" / "interface.py"
+    ).read_text()
+    assert "_compile_sm120" in ast.unparse(functions["_sol_attn_cute"])
 
 
 def test_model_callers_use_the_release_configuration() -> None:
@@ -123,7 +236,7 @@ def test_model_callers_use_the_release_configuration() -> None:
     )
     combined = "\n".join(path.read_text() for path in paths)
     assert all(token not in combined for token in forbidden)
-    assert "make_hunyuan_sol_attn_dispatch" in paths[0].read_text()
+    assert "make_mmdit_sol_attn_dispatch" in paths[0].read_text()
 
     sol_candidates = []
     for path in sorted((ROOT / "candidates").glob("*.toml")):

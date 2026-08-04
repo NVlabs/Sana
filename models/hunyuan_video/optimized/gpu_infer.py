@@ -140,7 +140,7 @@ def main() -> int:
         if _repo_sol not in _sys_sol.path:
             _sys_sol.path.insert(0, _repo_sol)
         from techniques.sparse_backends.sol_attn_backend import (
-            make_hunyuan_sol_attn_dispatch,
+            make_mmdit_sol_attn_dispatch,
             sol_attn_begin_forward,
         )
         from diffusers.models.transformers import transformer_hunyuan_video as _thv
@@ -167,7 +167,7 @@ def main() -> int:
             video_len=_video_len,
             morton=os.environ.get("HUNYUAN_SOL_MORTON", "0") == "1",
         )
-        _thv.dispatch_attention_fn = make_hunyuan_sol_attn_dispatch(
+        _thv.dispatch_attention_fn = make_mmdit_sol_attn_dispatch(
             _thv.dispatch_attention_fn, **_sol_kw
         )
         pipe.transformer.register_forward_pre_hook(

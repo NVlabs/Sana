@@ -40,7 +40,7 @@ support a wider range of models.
 ## 📰 News
 
 - **[2026/08/03]** 🔥 **MiniMax-H3** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3)] — 33B audio-video Omni-DiT joins the line at **~3.97×** end-to-end on 8×GB200, composing context parallelism, a lossless kernel line, [**Sol-Attn**](techniques/sparse_backends/) and FirstBlockCache. See [models/minimax_h3](models/minimax_h3/).
-- **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands as an acceleration technique for [**HunyuanVideo-13B**](models/hunyuan_video/) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/). The released SM90/SM100/SM120 kernels are integrated; refreshed end-to-end speed measurements are pending.
+- **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.
 - **[2026/06]** 📖 **Docs release** — full documentation site live: [3 pipeline designs + 5 acceleration techniques](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
@@ -61,8 +61,8 @@ support a wider range of models.
 | **[Wan2.2 TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B)** | 5B | EasyCache + kernel fusion + compile | **~2.89×** |
 | **[Wan2.2-A14B](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers)** | 14B (MoE) | kernel fusion + EasyCache + PISA | **~2.17×** |
 | **[LingBot-Video](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b)** | 30B-A3B (MoE) | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
-| **[HunyuanVideo-13B](https://huggingface.co/hunyuanvideo-community/HunyuanVideo)** | 13B | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | re-benchmark pending |
-| **[Wan2.1-T2V-14B](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers)** | 14B | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | re-benchmark pending |
+| **[HunyuanVideo-13B](https://huggingface.co/hunyuanvideo-community/HunyuanVideo)** | 13B | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
+| **[Wan2.1-T2V-14B](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers)** | 14B | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
 | **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)** | 33B (audio+video) | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.97×** |
 
 </div>
@@ -101,8 +101,16 @@ kernel that computes only the most relevant key blocks, while using light weight
 into a model runtime through env-gated hooks and powers the optimization stacks of
 [**HunyuanVideo-13B**](models/hunyuan_video/),
 [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) and
-[**MiniMax-H3**](models/minimax_h3/). The released-kernel stacks require
-fresh end-to-end performance measurements.
+[**MiniMax-H3**](models/minimax_h3/). The HunyuanVideo and Wan2.1 stacks reach
+**~5.03×** and **~3.48×** end-to-end speedup, respectively.
+
+Backend selection is automatic: H100 (SM90), B200 (SM100), and RTX 5090
+(SM120) use their optimized CuTe DSL kernels when CuTe is installed. Older
+supported GPUs such as A100 (SM80) and RTX 4090 (SM89), or installations
+without CuTe DSL, use the portable Triton implementation. Model call sites do
+not need architecture-specific changes. See the
+[Sol-Attn usage guide](techniques/sparse_backends/) for requirements and API
+details.
 
 ## 🚀 Quick start (agent-native)
 

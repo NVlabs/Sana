@@ -27,20 +27,7 @@ support SM90, SM100, and SM120; SM80 and SM89 use Triton kernels.
 - PyTorch ≥ 2.10
 - CUDA ≥ 12.8
 - Triton ≥ 3.6
-
-The optimized CuTe paths additionally require:
-
-- NVIDIA CuTe DSL / CUTLASS Python ≥ 4.5
-- `cuda-python`
-
-The released kernels are forward-only and require contiguous BF16 Q/K/V
-tensors in BTHD layout with head dimension 128.
-
-| GPU | Compute capability | CuTe backend | `kv_splits` |
-|---|---:|---|---|
-| H100 | SM90 | warp-group MMA/TMA | 1, 2, or 4 |
-| B200 | SM100 | tcgen05/TMEM | 1 |
-| RTX 5090 | SM120 | warp MMA/TMA | 1 |
+- NVIDIA CuTe DSL / CUTLASS Python ≥ 4.5 and `cuda-python` for CuTe DSL backends
 
 ## Installation
 
@@ -57,13 +44,12 @@ the first eligible call for a given configuration.
 
 The public `sol_attn(...)` API selects the implementation from `q.device`:
 
-| GPU architecture | Example GPU | Preferred backend | Fallback |
-|---|---|---|---|
-| SM90 | NVIDIA H100 | CuTe DSL SM90 kernel | Triton |
-| SM100 | NVIDIA B200 | CuTe DSL SM100 kernel | Triton |
-| SM120 | RTX 5090 | CuTe DSL SM120 kernel | Triton |
-| SM80 / SM89 | A100 / RTX 4090 | Triton | — |
-| Other NVIDIA CC ≥ 8.0 | Architecture dependent | Triton | — |
+| GPU architecture | Example GPU | Preferred backend |
+|---|---|---|
+| SM90 | H100 | CuTe DSL |
+| SM100 | GB200 | CuTe DSL |
+| SM120 | RTX 5090 | CuTe DSL |
+| SM80 / SM89 | A100 / RTX 4090 | Triton |
 
 CuTe DSL and `cuda-python` are optional at runtime. When either cannot be
 imported, the same public API falls back to Triton.
@@ -73,6 +59,9 @@ imported, the same public API falls back to Triton.
 For kernel and library integrations, `sol_attn(...)` is the public API. It
 validates the tensor contract and automatically selects the CuTe or Triton
 backend for the input device.
+
+The released kernels are forward-only and require contiguous BF16 Q/K/V
+tensors in BTHD layout with head dimension 128.
 
 ### Core API
 

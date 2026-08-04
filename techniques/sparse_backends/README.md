@@ -17,7 +17,8 @@ Sol-Attn is a training-free sparse attention method for accelerating image
 and video generation. It performs dynamic block routing during online softmax
 and reuses proxy scores to approximate unselected blocks, avoiding a
 materialized routing map while preserving visual quality. This release
-includes CuTe DSL implementations for NVIDIA Hopper and Blackwell GPUs.
+includes CuTe DSL implementations for NVIDIA Hopper, datacenter Blackwell,
+and GeForce Blackwell GPUs.
 
 ## Requirements
 
@@ -30,6 +31,12 @@ includes CuTe DSL implementations for NVIDIA Hopper and Blackwell GPUs.
 
 The released kernels are forward-only and require contiguous BF16 Q/K/V
 tensors in BTHD layout with head dimension 128.
+
+| GPU | Compute capability | CuTe backend | `kv_splits` |
+|---|---:|---|---|
+| H100 | SM90 | warp-group MMA/TMA | 1, 2, or 4 |
+| B200 | SM100 | tcgen05/TMEM | 1 |
+| RTX 5090 | SM120 | warp MMA/TMA | 1 |
 
 ## Installation
 
@@ -90,9 +97,9 @@ Exactness is applied at 64-token KV-block granularity. The sink does not
 change query routing: an MMDiT integration should still compute valid text
 query rows with dense attention and use Sol-Attn for image/video query rows.
 
-### Split KV on H100
+### Split KV by architecture
 
-H100 supports `kv_splits=1`, `2`, and `4`; B200 currently uses
+H100 supports `kv_splits=1`, `2`, and `4`; B200 and RTX 5090 currently use
 `kv_splits=1`.
 
 ```python

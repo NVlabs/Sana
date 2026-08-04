@@ -49,9 +49,11 @@ def _validate(
             raise ValueError("sink_start + sink_tokens must be <= T")
 
     arch = torch.cuda.get_device_capability(q.device)
-    if arch not in ((9, 0), (10, 0)):
-        raise RuntimeError("Sol-Attn supports H100 (SM90) and B200 (SM100)")
-    if arch == (10, 0) and kv_splits != 1:
+    if arch not in ((9, 0), (10, 0), (12, 0)):
+        raise RuntimeError(
+            "Sol-Attn supports H100 (SM90), B200 (SM100), and RTX 5090 (SM120)"
+        )
+    if arch != (9, 0) and kv_splits != 1:
         raise ValueError("kv_splits=2/4 is currently available on SM90 only")
     route_groups = ((q.shape[1] + 63) // 64 + 63) // 64
     if kv_splits > route_groups:
@@ -112,6 +114,31 @@ def _compile_sm100(
     args = [to_cute_tensor(x) for x in tensors]
     compiled = cute.compile(
         forward,
+        *args,
+        scale,
+        sink_start_block,
+        sink_end_block,
+        stream=stream,
+        options="--enable-tvm-ffi",
+    )
+    _compiled[key] = compiled
+    return compiled, args
+
+
+def _compile_sm120(
+    key,
+    tensors,
+    scale,
+    sink_start_block,
+    sink_end_block,
+    stream,
+):
+    from .sm120 import make_kernel
+
+    operator = make_kernel()
+    args = [to_cute_tensor(x) for x in tensors]
+    compiled = cute.compile(
+        operator,
         *args,
         scale,
         sink_start_block,
@@ -218,7 +245,7 @@ def sol_attn(
                 sink_range,
                 stream=stream,
             )
-        else:
+        elif arch == (10, 0):
             sink_start_block, sink_end_block = _sink_block_range(
                 tokens,
                 sink_start,
@@ -228,6 +255,32 @@ def sol_attn(
             compiled = _compiled.get(key)
             if compiled is None:
                 compiled, args = _compile_sm100(
+                    key,
+                    tensors,
+                    scale,
+                    sink_start_block,
+                    sink_end_block,
+                    stream,
+                )
+            else:
+                args = [to_cute_tensor(x) for x in tensors]
+            compiled(
+                *args,
+                scale,
+                sink_start_block,
+                sink_end_block,
+                stream=stream,
+            )
+        else:
+            sink_start_block, sink_end_block = _sink_block_range(
+                tokens,
+                sink_start,
+                sink_tokens,
+            )
+            tensors = [q, k, v, output, kc, vc, threshold, lse]
+            compiled = _compiled.get(key)
+            if compiled is None:
+                compiled, args = _compile_sm120(
                     key,
                     tensors,
                     scale,

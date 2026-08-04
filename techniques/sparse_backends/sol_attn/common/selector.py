@@ -1,4 +1,4 @@
-"""CTA-local routing-mask helpers shared by SM90 and SM100."""
+"""CTA-local routing-mask helpers shared by the CuTe architecture backends."""
 
 import cutlass
 import cutlass.cute as cute

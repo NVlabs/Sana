@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import sys
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,11 +66,45 @@ def test_only_one_sol_attn_backend_tree_remains() -> None:
     assert not (BACKENDS / "sol_attn" / "sol_attn").exists()
     assert (BACKENDS / "sol_attn" / "sm90").is_dir()
     assert (BACKENDS / "sol_attn" / "sm100").is_dir()
+    assert (BACKENDS / "sol_attn" / "sm120").is_dir()
     readme = (BACKENDS / "README.md").read_text()
     assert "sink_start" in readme
     assert "text query rows with dense attention" in " ".join(
         readme.lower().split()
     )
+
+
+def test_sm120_is_eligible_and_keeps_single_kv_split(monkeypatch) -> None:
+    backend = load_backend()
+    bf16 = object()
+    fake_torch = SimpleNamespace(
+        bfloat16=bf16,
+        cuda=SimpleNamespace(get_device_capability=lambda _device: (12, 0)),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    q = SimpleNamespace(
+        is_cuda=True,
+        ndim=4,
+        shape=(1, 65536, 32, 128),
+        dtype=bf16,
+        device="cuda:0",
+    )
+
+    assert backend.sol_attn_supported(q)
+    assert backend._resolve_kv_splits(q, "auto") == 1
+
+
+def test_core_interface_defines_sm120_compile_dispatch() -> None:
+    tree = ast.parse((BACKENDS / "sol_attn" / "interface.py").read_text())
+    functions = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+    }
+
+    assert "_compile_sm120" in functions
+    assert "(12, 0)" in ast.unparse(functions["_validate"])
+    assert "_compile_sm120" in ast.unparse(functions["sol_attn"])
 
 
 def test_model_callers_use_the_release_configuration() -> None:

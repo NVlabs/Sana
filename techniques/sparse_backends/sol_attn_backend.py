@@ -74,6 +74,7 @@ def sol_attn_supported(q) -> bool:
         return tuple(torch.cuda.get_device_capability(q.device)) in {
             (9, 0),
             (10, 0),
+            (12, 0),
         }
     except Exception:
         return False

@@ -2,22 +2,23 @@
 
 from __future__ import annotations
 
-import cuda.bindings.driver as cuda
-import cutlass.cute as cute
+import functools
+
 import torch
 
-from .common import to_cute_tensor
-from .preprocess import BLOCK_SIZE, prepare
-
-
+BLOCK_SIZE = 64
+_CUTE_BACKENDS = {
+    (9, 0): "cute_sm90",
+    (10, 0): "cute_sm100",
+    (12, 0): "cute_sm120",
+}
 _compiled = {}
 
 
-def _validate(
+def _validate_inputs(
     q,
     k,
     v,
-    kv_splits,
     thresh_type,
     sink_tokens=0,
     sink_start=None,
@@ -32,8 +33,6 @@ def _validate(
         raise ValueError("q, k, and v must be on the same CUDA device")
     if not (q.is_contiguous() and k.is_contiguous() and v.is_contiguous()):
         raise ValueError("q, k, and v must be contiguous BTHD tensors")
-    if kv_splits not in (1, 2, 4):
-        raise ValueError("kv_splits must be 1, 2, or 4")
     if thresh_type not in ("diag", "exact"):
         raise ValueError("thresh_type must be 'diag' or 'exact'")
     if not isinstance(sink_tokens, int):
@@ -48,21 +47,63 @@ def _validate(
         if sink_start + sink_tokens > q.shape[1]:
             raise ValueError("sink_start + sink_tokens must be <= T")
 
-    arch = torch.cuda.get_device_capability(q.device)
-    if arch not in ((9, 0), (10, 0), (12, 0)):
+    return tuple(torch.cuda.get_device_capability(q.device))
+
+
+@functools.lru_cache(maxsize=1)
+def _cute_runtime_available() -> bool:
+    """Whether the optional CuTe DSL runtime can be imported."""
+
+    try:
+        import cuda.bindings.driver  # noqa: F401
+        import cutlass.cute  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _backend_for_arch(
+    arch: tuple[int, int],
+    *,
+    cute_available: bool | None = None,
+) -> str:
+    """Select CuTe when specialized and available, otherwise Triton."""
+
+    if arch[0] < 8:
         raise RuntimeError(
-            "Sol-Attn supports H100 (SM90), B200 (SM100), and RTX 5090 (SM120)"
+            "Sol-Attn requires an NVIDIA GPU with compute capability >= 8.0; "
+            f"got SM{arch[0]}{arch[1]}"
         )
+    cute_backend = _CUTE_BACKENDS.get(arch)
+    if cute_backend is not None:
+        available = (
+            _cute_runtime_available()
+            if cute_available is None
+            else cute_available
+        )
+        if available:
+            return cute_backend
+    return "triton"
+
+
+def _validate_cute(arch, tokens, kv_splits):
     if arch != (9, 0) and kv_splits != 1:
         raise ValueError("kv_splits=2/4 is currently available on SM90 only")
-    route_groups = ((q.shape[1] + 63) // 64 + 63) // 64
+    route_groups = ((tokens + 63) // 64 + 63) // 64
     if kv_splits > route_groups:
         raise ValueError("each KV split must contain at least one N64 route group")
-    return arch
 
 
 def _stream(device):
+    import cuda.bindings.driver as cuda
+
     return cuda.CUstream(torch.cuda.current_stream(device).cuda_stream)
+
+
+def _to_cute_tensors(tensors):
+    from .common import to_cute_tensor
+
+    return [to_cute_tensor(x) for x in tensors]
 
 
 def _sink_block_range(tokens, sink_start, sink_tokens):
@@ -85,10 +126,12 @@ def _compile_sm90(
     sink_range,
     stream,
 ):
+    import cutlass.cute as cute
+
     from .sm90 import make_kernel
 
     operator = make_kernel(tokens, kv_splits)
-    args = [to_cute_tensor(x) for x in tensors]
+    args = _to_cute_tensors(tensors)
     compiled = cute.compile(
         operator,
         *args,
@@ -109,9 +152,11 @@ def _compile_sm100(
     sink_end_block,
     stream,
 ):
+    import cutlass.cute as cute
+
     from .sm100 import forward
 
-    args = [to_cute_tensor(x) for x in tensors]
+    args = _to_cute_tensors(tensors)
     compiled = cute.compile(
         forward,
         *args,
@@ -133,10 +178,12 @@ def _compile_sm120(
     sink_end_block,
     stream,
 ):
+    import cutlass.cute as cute
+
     from .sm120 import make_kernel
 
     operator = make_kernel()
-    args = [to_cute_tensor(x) for x in tensors]
+    args = _to_cute_tensors(tensors)
     compiled = cute.compile(
         operator,
         *args,
@@ -150,36 +197,21 @@ def _compile_sm120(
     return compiled, args
 
 
-def sol_attn(
-    q: torch.Tensor,
-    k: torch.Tensor,
-    v: torch.Tensor,
+def _sol_attn_cute(
+    q,
+    k,
+    v,
     *,
-    scale: float | None = None,
-    tau: float = 1.0,
-    thresh_type: str = "diag",
-    kv_splits: int = 1,
-    sink_tokens: int = 0,
-    sink_start: int | None = None,
-) -> torch.Tensor:
-    """Compute noncausal Sol-Attn for contiguous BF16 BTHD tensors.
+    arch,
+    scale,
+    tau,
+    thresh_type,
+    kv_splits,
+    sink_tokens,
+    sink_start,
+):
+    from .preprocess import prepare
 
-    ``sink_start`` and ``sink_tokens`` keep every KV block overlapping the
-    corresponding contiguous token range exact for all queries. Omitting
-    ``sink_start`` places the range at the token suffix.
-    """
-
-    arch = _validate(
-        q,
-        k,
-        v,
-        kv_splits,
-        thresh_type,
-        sink_tokens,
-        sink_start,
-    )
-    scale = q.shape[-1] ** -0.5 if scale is None else float(scale)
-    tau = float(tau)
     batch, tokens, heads, _ = q.shape
 
     with torch.cuda.device(q.device):
@@ -238,7 +270,7 @@ def sol_attn(
                     stream,
                 )
             else:
-                args = [to_cute_tensor(x) for x in tensors]
+                args = _to_cute_tensors(tensors)
             compiled(
                 *args,
                 scale,
@@ -263,7 +295,7 @@ def sol_attn(
                     stream,
                 )
             else:
-                args = [to_cute_tensor(x) for x in tensors]
+                args = _to_cute_tensors(tensors)
             compiled(
                 *args,
                 scale,
@@ -289,7 +321,7 @@ def sol_attn(
                     stream,
                 )
             else:
-                args = [to_cute_tensor(x) for x in tensors]
+                args = _to_cute_tensors(tensors)
             compiled(
                 *args,
                 scale,
@@ -298,6 +330,70 @@ def sol_attn(
                 stream=stream,
             )
     return output
+
+
+def sol_attn(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    *,
+    scale: float | None = None,
+    tau: float = 1.0,
+    thresh_type: str = "diag",
+    kv_splits: int = 1,
+    sink_tokens: int = 0,
+    sink_start: int | None = None,
+) -> torch.Tensor:
+    """Compute noncausal Sol-Attn for contiguous BF16 BTHD tensors.
+
+    ``sink_start`` and ``sink_tokens`` keep every KV block overlapping the
+    corresponding contiguous token range exact for all queries. Omitting
+    ``sink_start`` places the range at the token suffix.
+    """
+
+    arch = _validate_inputs(
+        q,
+        k,
+        v,
+        thresh_type,
+        sink_tokens,
+        sink_start,
+    )
+    if kv_splits not in (1, 2, 4):
+        raise ValueError("kv_splits must be 1, 2, or 4")
+    backend = _backend_for_arch(arch)
+    scale = q.shape[-1] ** -0.5 if scale is None else float(scale)
+    tau = float(tau)
+
+    if backend == "triton":
+        if kv_splits != 1:
+            raise ValueError("kv_splits=2/4 is currently available on SM90 only")
+        from .triton_ref import sol_attn as triton_sol_attn
+
+        return triton_sol_attn(
+            q,
+            k,
+            v,
+            scale=scale,
+            tau=tau,
+            thresh_type=thresh_type,
+            sink_tokens=sink_tokens,
+            sink_start=sink_start,
+        )
+
+    _validate_cute(arch, q.shape[1], kv_splits)
+    return _sol_attn_cute(
+        q,
+        k,
+        v,
+        arch=arch,
+        scale=scale,
+        tau=tau,
+        thresh_type=thresh_type,
+        kv_splits=kv_splits,
+        sink_tokens=sink_tokens,
+        sink_start=sink_start,
+    )
 
 
 __all__ = ["sol_attn"]

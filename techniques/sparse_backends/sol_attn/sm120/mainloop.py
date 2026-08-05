@@ -38,7 +38,13 @@ STAGES = 1
 class SolAttnForwardSm120:
     """M64/N64 warp-MMA Sol-Attn kernel for BF16 D128 inputs."""
 
-    def __init__(self, *, debug_route_trace: bool = False):
+    def __init__(
+        self,
+        *,
+        debug_route_trace: bool = False,
+        prefetch_first_exact_k: bool = True,
+        prefetch_next_route_k: bool = True,
+    ):
         self.dtype = cutlass.BFloat16
         self.acc_dtype = cutlass.Float32
         self.tile_shape_qk = (M, N, D)
@@ -47,6 +53,8 @@ class SolAttnForwardSm120:
         self.q_stage = 1
         self.kv_stage = STAGES
         self.debug_route_trace = debug_route_trace
+        self.prefetch_first_exact_k = prefetch_first_exact_k
+        self.prefetch_next_route_k = prefetch_next_route_k
 
     @cute.kernel
     def kernel(
@@ -332,15 +340,50 @@ class SolAttnForwardSm120:
                 valid_blocks = cutlass.Int32(N)
 
             if warp == 0:
-                K_pipeline.producer_acquire(K_producer)
-                cute.copy(
-                    tma_atom_KC,
-                    tKCgKC[None, route_group],
-                    tKCsK[None, K_producer.index],
-                    tma_bar_ptr=K_pipeline.producer_get_barrier(K_producer),
-                )
-                K_pipeline.producer_commit(K_producer)
-                K_producer.advance()
+                if cutlass.const_expr(self.prefetch_next_route_k):
+                    # P19-style terminal handoff: when the previous route
+                    # group had an exact block, its final exact QK already
+                    # refilled this K stage with the current group's KC.
+                    if route_group == 0:
+                        K_pipeline.producer_acquire(K_producer)
+                        cute.copy(
+                            tma_atom_KC,
+                            tKCgKC[None, route_group],
+                            tKCsK[None, K_producer.index],
+                            tma_bar_ptr=K_pipeline.producer_get_barrier(
+                                K_producer
+                            ),
+                        )
+                        K_pipeline.producer_commit(K_producer)
+                        K_producer.advance()
+                    else:
+                        previous_group_exact_count = cutlass.Int32(
+                            route_meta[0]
+                        )
+                        if previous_group_exact_count == 0:
+                            K_pipeline.producer_acquire(K_producer)
+                            cute.copy(
+                                tma_atom_KC,
+                                tKCgKC[None, route_group],
+                                tKCsK[None, K_producer.index],
+                                tma_bar_ptr=K_pipeline.producer_get_barrier(
+                                    K_producer
+                                ),
+                            )
+                            K_pipeline.producer_commit(K_producer)
+                            K_producer.advance()
+                else:
+                    K_pipeline.producer_acquire(K_producer)
+                    cute.copy(
+                        tma_atom_KC,
+                        tKCgKC[None, route_group],
+                        tKCsK[None, K_producer.index],
+                        tma_bar_ptr=K_pipeline.producer_get_barrier(
+                            K_producer
+                        ),
+                    )
+                    K_pipeline.producer_commit(K_producer)
+                    K_producer.advance()
                 V_pipeline.producer_acquire(V_producer)
                 cute.copy(
                     tma_atom_VC,
@@ -439,6 +482,23 @@ class SolAttnForwardSm120:
 
             exact_count = cutlass.Int32(route_meta[0])
             has_approx = exact_count < valid_blocks
+            if cutlass.const_expr(self.prefetch_first_exact_k):
+                # Once routing identifies the first exact block, the route KC
+                # stage is free.  Refill it before the approximate softmax/PV
+                # so the first exact K transfer overlaps that work.
+                if warp == 0 and exact_count > 0:
+                    first_exact = cutlass.Int32(route_indices[0])
+                    K_pipeline.producer_acquire(K_producer)
+                    cute.copy(
+                        tma_atom_K,
+                        tKgK[None, first_exact],
+                        tKsK[None, K_producer.index],
+                        tma_bar_ptr=K_pipeline.producer_get_barrier(
+                            K_producer
+                        ),
+                    )
+                    K_pipeline.producer_commit(K_producer)
+                    K_producer.advance()
             v_wait = V_pipeline.consumer_try_wait(V_consumer)
             V_pipeline.consumer_wait(V_consumer, v_wait)
             if has_approx:
@@ -471,15 +531,18 @@ class SolAttnForwardSm120:
 
             if warp == 0 and exact_count > 0:
                 first_exact = cutlass.Int32(route_indices[0])
-                K_pipeline.producer_acquire(K_producer)
-                cute.copy(
-                    tma_atom_K,
-                    tKgK[None, first_exact],
-                    tKsK[None, K_producer.index],
-                    tma_bar_ptr=K_pipeline.producer_get_barrier(K_producer),
-                )
-                K_pipeline.producer_commit(K_producer)
-                K_producer.advance()
+                if cutlass.const_expr(not self.prefetch_first_exact_k):
+                    K_pipeline.producer_acquire(K_producer)
+                    cute.copy(
+                        tma_atom_K,
+                        tKgK[None, first_exact],
+                        tKsK[None, K_producer.index],
+                        tma_bar_ptr=K_pipeline.producer_get_barrier(
+                            K_producer
+                        ),
+                    )
+                    K_pipeline.producer_commit(K_producer)
+                    K_producer.advance()
                 V_pipeline.producer_acquire(V_producer)
                 cute.copy(
                     tma_atom_V,
@@ -505,19 +568,44 @@ class SolAttnForwardSm120:
                 K_pipeline.consumer_release(K_consumer)
                 K_consumer.advance()
                 next_ordinal = ordinal + cutlass.Int32(1)
-                if warp == 0 and next_ordinal < exact_count:
-                    next_exact = cutlass.Int32(route_indices[next_ordinal])
-                    K_pipeline.producer_acquire(K_producer)
-                    cute.copy(
-                        tma_atom_K,
-                        tKgK[None, next_exact],
-                        tKsK[None, K_producer.index],
-                        tma_bar_ptr=K_pipeline.producer_get_barrier(
-                            K_producer
-                        ),
-                    )
-                    K_pipeline.producer_commit(K_producer)
-                    K_producer.advance()
+                if warp == 0:
+                    if next_ordinal < exact_count:
+                        next_exact = cutlass.Int32(
+                            route_indices[next_ordinal]
+                        )
+                        K_pipeline.producer_acquire(K_producer)
+                        cute.copy(
+                            tma_atom_K,
+                            tKgK[None, next_exact],
+                            tKsK[None, K_producer.index],
+                            tma_bar_ptr=K_pipeline.producer_get_barrier(
+                                K_producer
+                            ),
+                        )
+                        K_pipeline.producer_commit(K_producer)
+                        K_producer.advance()
+                    else:
+                        if cutlass.const_expr(
+                            self.prefetch_next_route_k
+                        ):
+                            next_route_group = route_group + cutlass.Int32(1)
+                            if next_route_group < num_route_groups:
+                                # Reuse the K stage released by the final
+                                # exact QK.  The next outer prologue supplies
+                                # VC, matching the SM90 P19 partial handoff.
+                                K_pipeline.producer_acquire(K_producer)
+                                cute.copy(
+                                    tma_atom_KC,
+                                    tKCgKC[None, next_route_group],
+                                    tKCsK[None, K_producer.index],
+                                    tma_bar_ptr=(
+                                        K_pipeline.producer_get_barrier(
+                                            K_producer
+                                        )
+                                    ),
+                                )
+                                K_pipeline.producer_commit(K_producer)
+                                K_producer.advance()
                 block_len = token_count - exact_block * cutlass.Int32(N)
                 if block_len > N:
                     block_len = cutlass.Int32(N)

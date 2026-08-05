@@ -220,6 +220,58 @@ def test_core_interface_defines_sm120_compile_dispatch() -> None:
     assert "_compile_sm120" in ast.unparse(functions["_sol_attn_cute"])
 
 
+def test_sm120_p19_lookahead_is_the_release_default() -> None:
+    sm120 = BACKENDS / "sol_attn" / "sm120"
+    mainloop_path = sm120 / "mainloop.py"
+    kernel_path = sm120 / "kernel.py"
+
+    mainloop_tree = ast.parse(mainloop_path.read_text())
+    kernel_tree = ast.parse(kernel_path.read_text())
+    mainloop_class = next(
+        node
+        for node in mainloop_tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "SolAttnForwardSm120"
+    )
+    constructor = next(
+        node
+        for node in mainloop_class.body
+        if isinstance(node, ast.FunctionDef) and node.name == "__init__"
+    )
+    make_kernel = next(
+        node
+        for node in kernel_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "make_kernel"
+    )
+
+    for function in (constructor, make_kernel):
+        defaults = {
+            arg.arg: default
+            for arg, default in zip(
+                function.args.kwonlyargs,
+                function.args.kw_defaults,
+            )
+        }
+        for flag in (
+            "prefetch_first_exact_k",
+            "prefetch_next_route_k",
+        ):
+            assert isinstance(defaults[flag], ast.Constant)
+            assert defaults[flag].value is True
+
+    source = mainloop_path.read_text()
+    first_exact_prefetch = source.index(
+        "if cutlass.const_expr(self.prefetch_first_exact_k):"
+    )
+    approximate_v_wait = source.index(
+        "v_wait = V_pipeline.consumer_try_wait(V_consumer)",
+        first_exact_prefetch,
+    )
+    assert first_exact_prefetch < approximate_v_wait
+    assert "previous_group_exact_count" in source
+    assert "tKCgKC[None, next_route_group]" in source
+
+
 def test_model_callers_use_the_release_configuration() -> None:
     forbidden = (
         "HUNYUAN_SOL_V2",

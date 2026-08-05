@@ -379,7 +379,8 @@ footer p{margin:12px 0}
     <p class="lede">
       The Sol Video Inference Engine converged on a recipe that generates the same clip
       <strong>4.52× faster</strong> with no perceptible change in picture or sound. It gets there
-      without any of the machinery that usually buys speed at this scale: no distilled student, no
+      without any of the machinery usually reached for when a model this size has to fit on one card:
+      no distilled student, no
       LoRA, no fine-tune, and no offline calibration pass over a dataset. Everything below is
       inference-time only and runs against the stock checkpoint.
     </p>
@@ -706,9 +707,9 @@ footer p{margin:12px 0}
       The expensive part of accelerating a new model was never knowing which techniques exist — it was
       the serial grind of trying them one at a time. Running the axes in parallel and resolving their
       interactions in one integration step is what turns that grind into an afternoon. Nothing in the
-      pipeline is specific to MiniMax-H3: published Sol Engine results already span a 64B Cosmos3-Super,
-      a 22B LTX-2.3, and a 2B SANA-Video at 2.27×, 2.38×, and 2.77× on B200. H3 became the fourth on the
-      day its weights appeared.
+      pipeline is specific to MiniMax-H3, or to one class of hardware: published Sol Engine results
+      already span a 64B Cosmos3-Super, a 22B LTX-2.3, and a 2B SANA-Video. Pointing the same procedure
+      at a desktop GPU changes what the search finds, not how it works.
     </p>
   </div>
 </section>

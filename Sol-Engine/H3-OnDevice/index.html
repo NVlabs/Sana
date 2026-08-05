@@ -666,8 +666,7 @@ footer p{margin:12px 0}
     <p>
       Sol Engine closes that gap by search instead of by hand. It runs one optimization search per
       technique family, concurrently — kernel, sparse attention, cache — each sweeping its own knobs
-      against the real checkpoint on the real GPUs, so what comes back is measured latency and measured
-      frames rather than an estimate. The results cannot simply be concatenated, because the techniques
+      against the real checkpoint on the real GPUs. The results cannot simply be concatenated, because the techniques
       interact: caching changes which steps sparse attention has to serve. So the surviving candidates
       go to an <strong>integrator</strong> that searches over combinations rather than over knobs, with
       a human validator signing off on the output video.

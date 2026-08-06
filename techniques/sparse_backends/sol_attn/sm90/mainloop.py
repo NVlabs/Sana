@@ -21,27 +21,27 @@ from ._compat import copy_utils
 from ._compat import layout_utils
 from ._compat import sm90_utils
 
-from sol_attn._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
-from sol_attn._vendor.flash_attn.cute import utils
-from sol_attn._vendor.flash_attn.cute.mask import AttentionMask
-from sol_attn._vendor.flash_attn.cute.softmax import Softmax, apply_score_mod_inner
-from sol_attn._vendor.flash_attn.cute.seqlen_info import SeqlenInfoQK
-from sol_attn._vendor.flash_attn.cute.block_info import BlockInfo
-from sol_attn._vendor.flash_attn.cute.block_sparsity import BlockSparseTensors
-from sol_attn._vendor.flash_attn.cute import pipeline as pipeline_custom
-from sol_attn._vendor.flash_attn.cute.pack_gqa import PackGQA, pack_gqa_layout, make_packgqa_tiled_tma_atom
-from sol_attn._vendor.flash_attn.cute.named_barrier import NamedBarrierFwd
+from .._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
+from .._vendor.flash_attn.cute import utils
+from .._vendor.flash_attn.cute.mask import AttentionMask
+from .._vendor.flash_attn.cute.softmax import Softmax, apply_score_mod_inner
+from .._vendor.flash_attn.cute.seqlen_info import SeqlenInfoQK
+from .._vendor.flash_attn.cute.block_info import BlockInfo
+from .._vendor.flash_attn.cute.block_sparsity import BlockSparseTensors
+from .._vendor.flash_attn.cute import pipeline as pipeline_custom
+from .._vendor.flash_attn.cute.pack_gqa import PackGQA, pack_gqa_layout, make_packgqa_tiled_tma_atom
+from .._vendor.flash_attn.cute.named_barrier import NamedBarrierFwd
 from ._compat.cute_dsl_utils import ParamsBase
-from sol_attn._vendor.flash_attn.cute.tile_scheduler import (
+from .._vendor.flash_attn.cute.tile_scheduler import (
     TileSchedulerArguments,
     SingleTileScheduler,
     SingleTileLPTScheduler,
     SingleTileVarlenScheduler,
 )
-from sol_attn._vendor.flash_attn.cute.flash_fwd import FlashAttentionForwardBase
+from .._vendor.flash_attn.cute.flash_fwd import FlashAttentionForwardBase
 from . import atoms as sol_attn_atoms
 from . import exact as exact_stream
-from sol_attn.common import selector as sol_attn_selector
+from ..common import selector as sol_attn_selector
 
 
 SOL_ATTN_ROUTE_MASK_BARRIER_ID = 7

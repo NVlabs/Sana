@@ -17,10 +17,10 @@ from cutlass import Int32, const_expr
 from cutlass.cute import FastDivmodDivisor
 from cutlass.utils import ClcDynamicPersistentTileScheduler, ClcDynamicPersistentTileSchedulerParams
 
-from sol_attn.sm90._compat.cute_dsl_utils import ParamsBase
+from ....sm90._compat.cute_dsl_utils import ParamsBase
 
-import sol_attn._vendor.flash_attn.cute.utils as utils
-from sol_attn._vendor.flash_attn.cute.fast_math import clz
+from . import utils
+from .fast_math import clz
 
 
 class SchedulingMode(IntEnum):

@@ -6,7 +6,7 @@ import cutlass
 import cutlass.cute as cute
 from cutlass import Int32, const_expr
 
-from sol_attn._vendor.flash_attn.cute.seqlen_info import SeqlenInfoQK, SeqlenInfoQKNewK
+from .seqlen_info import SeqlenInfoQK, SeqlenInfoQKNewK
 
 
 @dataclass(frozen=True)

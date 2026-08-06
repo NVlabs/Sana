@@ -8,8 +8,8 @@ import cutlass.cute as cute
 from cutlass.cute.nvgpu import cpasync
 
 
-from sol_attn.sm90._compat import layout_utils
-import sol_attn._vendor.flash_attn.cute.utils as utils
+from ....sm90._compat import layout_utils
+from . import utils
 
 
 def pack_gqa_layout(T, qhead_per_kvhead, nheads_kv, head_idx):

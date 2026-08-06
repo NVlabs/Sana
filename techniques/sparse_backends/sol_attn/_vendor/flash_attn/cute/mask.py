@@ -7,9 +7,9 @@ import cutlass
 import cutlass.cute as cute
 from cutlass import Float32, Int32, Uint32, const_expr
 
-from sol_attn.sm90._compat import layout_utils
-import sol_attn._vendor.flash_attn.cute.utils as utils
-from sol_attn._vendor.flash_attn.cute.seqlen_info import SeqlenInfoQK
+from ....sm90._compat import layout_utils
+from . import utils
+from .seqlen_info import SeqlenInfoQK
 
 MaskGenFn: TypeAlias = Callable[[int], Uint32]
 MASK_R2P_CHUNK_SIZE: int = 32

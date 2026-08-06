@@ -9,10 +9,10 @@ import cutlass
 import cutlass.cute as cute
 from cutlass import Float32
 
-from sol_attn.sm90._compat import layout_utils
-import sol_attn._vendor.flash_attn.cute.utils as utils
-from sol_attn.sm90._compat.cute_dsl_utils import ParamsBase
-from sol_attn._vendor.flash_attn.cute.seqlen_info import SeqlenInfoQK
+from ....sm90._compat import layout_utils
+from . import utils
+from ....sm90._compat.cute_dsl_utils import ParamsBase
+from .seqlen_info import SeqlenInfoQK
 
 
 @dataclass

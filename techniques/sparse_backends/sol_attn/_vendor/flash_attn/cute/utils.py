@@ -16,7 +16,7 @@ from cutlass._mlir.dialects import nvvm, llvm
 from cutlass.cute.runtime import from_dlpack
 
 
-from sol_attn.sm90._compat import activation
+from ....sm90._compat import activation
 
 _MIXER_ATTRS = ("__vec_size__",)
 

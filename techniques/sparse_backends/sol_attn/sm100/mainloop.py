@@ -12,13 +12,13 @@ import cutlass.cute as cute
 import cutlass.pipeline as pipeline
 import cutlass.utils as utils
 import cutlass.utils.blackwell_helpers as sm100_utils
-import sol_attn._vendor.flash_attn.cute.pipeline as fa_pipeline
-import sol_attn._vendor.flash_attn.cute.utils as fa_utils
+from .._vendor.flash_attn.cute import pipeline as fa_pipeline
+from .._vendor.flash_attn.cute import utils as fa_utils
 from cutlass import BFloat16, Float32, Int32
 from cutlass._mlir.dialects import llvm
 from cutlass.cute.nvgpu import cpasync, tcgen05
 from cutlass.cutlass_dsl import T, dsl_user_op
-from sol_attn._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
+from .._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
 
 from .softmax import (
     _load_m64_n128_score as _load_pair_score,
@@ -27,8 +27,8 @@ from .softmax import (
 )
 from . import math as mma_utils
 
-from sol_attn.common import layout_utils
-from sol_attn.common.selector import (
+from ..common import layout_utils
+from ..common.selector import (
     sol_attn_popc_b32,
     sol_attn_route_is_exact,
 )

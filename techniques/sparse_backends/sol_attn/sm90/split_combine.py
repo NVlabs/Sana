@@ -14,9 +14,9 @@ import cutlass.cute as cute
 from cutlass.cute.nvgpu import cpasync
 from cutlass import Float32, Int32, Boolean, const_expr
 
-from sol_attn._vendor.flash_attn.cute import utils
-from sol_attn._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
-from sol_attn._vendor.flash_attn.cute.seqlen_info import SeqlenInfo
+from .._vendor.flash_attn.cute import utils
+from .._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
+from .._vendor.flash_attn.cute.seqlen_info import SeqlenInfo
 from cutlass.cute import FastDivmodDivisor
 
 

@@ -1,0 +1,19 @@
+[general]
+name = "sol-attn"
+version = 1
+edition = 5
+license = "Apache-2.0"
+backends = ["cuda"]
+upstream = "https://github.com/NVlabs/Sana.git"
+
+[general.cuda]
+minver = "12.8"
+python-depends = ["nvidia-cutlass-dsl"]
+
+[general.hub]
+repo-id = "Efficient-Large-Model/sol-attn"
+
+[torch-noarch]
+cuda-capabilities = ["8.0", "8.9", "9.0", "10.0", "12.0"]
+
+[kernel]

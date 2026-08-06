@@ -20,20 +20,20 @@ import cutlass.utils as utils_basic
 from cutlass.base_dsl.arch import Arch
 from cutlass.cutlass_dsl import BaseDSL
 
-from sol_attn.sm90._compat import copy_utils
-from sol_attn.sm90._compat import layout_utils
+from ....sm90._compat import copy_utils
+from ....sm90._compat import layout_utils
 
-from sol_attn._vendor.flash_attn.cute import ampere_helpers as sm80_utils
-from sol_attn._vendor.flash_attn.cute.cute_dsl_utils import assume_tensor_aligned
-from sol_attn._vendor.flash_attn.cute import utils
-from sol_attn._vendor.flash_attn.cute.mask import AttentionMask
-from sol_attn._vendor.flash_attn.cute.softmax import Softmax
-from sol_attn._vendor.flash_attn.cute.seqlen_info import SeqlenInfoQK
-from sol_attn._vendor.flash_attn.cute.block_info import BlockInfo
-from sol_attn._vendor.flash_attn.cute.pack_gqa import PackGQA
-from sol_attn._vendor.flash_attn.cute.named_barrier import NamedBarrierFwd
-from sol_attn._vendor.flash_attn.cute.block_sparsity import BlockSparseTensors
-from sol_attn._vendor.flash_attn.cute.tile_scheduler import (
+from . import ampere_helpers as sm80_utils
+from .cute_dsl_utils import assume_tensor_aligned
+from . import utils
+from .mask import AttentionMask
+from .softmax import Softmax
+from .seqlen_info import SeqlenInfoQK
+from .block_info import BlockInfo
+from .pack_gqa import PackGQA
+from .named_barrier import NamedBarrierFwd
+from .block_sparsity import BlockSparseTensors
+from .tile_scheduler import (
     SingleTileScheduler,
     SingleTileVarlenScheduler,
     TileSchedulerArguments,

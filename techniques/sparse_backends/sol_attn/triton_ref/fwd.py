@@ -9,7 +9,7 @@ try:
 except ImportError:  # Pointer path remains usable without descriptors.
     TensorDescriptor = None
 
-from sol_attn.interface import (
+from ..interface import (
     _sink_block_range,
     _validate_inputs,
 )

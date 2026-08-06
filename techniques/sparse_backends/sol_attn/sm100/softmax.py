@@ -7,7 +7,7 @@ import cutlass.cute as cute
 from cutlass import Float32, Int32
 from cutlass.cute.nvgpu import tcgen05
 
-from sol_attn._vendor.flash_attn.cute import utils as fa_utils
+from .._vendor.flash_attn.cute import utils as fa_utils
 
 from .tmem import (
     _add_physical_tmem_base,

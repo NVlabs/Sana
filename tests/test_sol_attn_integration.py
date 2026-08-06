@@ -179,6 +179,45 @@ def test_only_one_sol_attn_backend_tree_remains() -> None:
     assert "RTX 5090 (SM120)" in root_readme
 
 
+def test_sol_attn_package_uses_relative_self_imports() -> None:
+    package = BACKENDS / "sol_attn"
+    offenders = []
+    for path in package.rglob("*.py"):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                names = [node.module or ""]
+            else:
+                continue
+            if any(name == "sol_attn" or name.startswith("sol_attn.") for name in names):
+                offenders.append(str(path.relative_to(package)))
+    assert offenders == []
+
+
+def test_hf_kernel_packaging_contract() -> None:
+    package = ROOT / "kernels" / "sol-attn"
+    build = tomllib.loads((package / "build.toml").read_text())
+    assert build["general"]["hub"]["repo-id"] == (
+        "Efficient-Large-Model/sol-attn"
+    )
+    assert build["general"]["cuda"]["python-depends"] == [
+        "nvidia-cutlass-dsl"
+    ]
+    assert build["torch-noarch"]["cuda-capabilities"] == [
+        "8.0",
+        "8.9",
+        "9.0",
+        "10.0",
+        "12.0",
+    ]
+    assert (package / "CARD.md").is_file()
+    assert (package / "flake.lock").is_file()
+    assert (package / "flake.nix").is_file()
+    assert (package / "prepare.py").is_file()
+
+
 def test_sm120_is_eligible_and_keeps_single_kv_split(monkeypatch) -> None:
     backend = load_backend()
     bf16 = object()

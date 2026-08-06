@@ -19,9 +19,9 @@ import cutlass.pipeline as pipeline
 import cutlass.utils as utils
 import cutlass.utils.hopper_helpers as sm90_utils
 
-from sol_attn._vendor.flash_attn.cute import utils as kernel_utils
-from sol_attn.common import layout_utils
-from sol_attn.common.selector import (
+from .._vendor.flash_attn.cute import utils as kernel_utils
+from ..common import layout_utils
+from ..common.selector import (
     sol_attn_popc_b32,
     sol_attn_route_is_exact,
 )

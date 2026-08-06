@@ -1,0 +1,80 @@
+name: Publish Sol-Attn kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_gpu_tests:
+        description: Test the uploaded kernel on the available GPU architectures
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-sol-attn-kernel
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and upload with HF Jobs
+        uses: huggingface/kernel-builder-job@main
+        with:
+          token: ${{ secrets.HF_TOKEN }}
+          namespace: ${{ vars.SOL_ATTN_HF_JOBS_NAMESPACE || 'Efficient-Large-Model' }}
+          flavor: cpu-xl
+          timeout: "21600"
+          script: |
+            set +x
+            export HF_TOKEN="${{ secrets.HF_TOKEN }}"
+            export GIT_LFS_SKIP_SMUDGE=1
+
+            git clone "${{ github.server_url }}/${{ github.repository }}" Sana
+            cd Sana
+            git checkout "${{ github.sha }}"
+
+            python kernels/sol-attn/prepare.py \
+              --output /tmp/sol-attn-kernel \
+              --source-commit "${{ github.sha }}"
+
+            git -C /tmp/sol-attn-kernel init
+            git -C /tmp/sol-attn-kernel config user.name "Sol-Attn Builder"
+            git -C /tmp/sol-attn-kernel config user.email "sol-attn-builder@noreply.github.com"
+            git -C /tmp/sol-attn-kernel add .
+            git -C /tmp/sol-attn-kernel commit -m "Package Sol-Attn from ${{ github.sha }}"
+
+            kernel-builder check-config /tmp/sol-attn-kernel
+            kernel-builder build-and-upload \
+              --max-jobs 4 \
+              --cores 8 \
+              --repo-id Efficient-Large-Model/sol-attn \
+              /tmp/sol-attn-kernel
+
+  test:
+    if: ${{ inputs.run_gpu_tests }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [a100-large, h200, rtx-pro-6000]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test uploaded kernel on ${{ matrix.flavor }}
+        uses: huggingface/hf-jobs-action@main
+        with:
+          token: ${{ secrets.HF_TOKEN }}
+          namespace: ${{ vars.SOL_ATTN_HF_JOBS_NAMESPACE || 'Efficient-Large-Model' }}
+          flavor: ${{ matrix.flavor }}
+          image: ghcr.io/astral-sh/uv:python3.12-bookworm
+          timeout: "3600"
+          files: kernels/sol-attn/scripts/test_hub.py
+          script: |
+            set +x
+            export HF_TOKEN="${{ secrets.HF_TOKEN }}"
+            export SOL_ATTN_HF_REPO="Efficient-Large-Model/sol-attn"
+            uv run /tmp/files/test_hub.py

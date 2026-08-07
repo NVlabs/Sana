@@ -36,6 +36,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
+- 🔥 [2026/08/03] ⚡ **Sol Engine: Day-One MiniMax-H3 Acceleration** is available! The 33B omni-modal audio+video DiT runs **3.95×** faster on GB200, reached in 4.5 hours of optimization, and up to **4.52×** on hardware that sits on a desk — 3.92× on DGX Spark, 4.52× on GeForce RTX 5090 — with no distillation, no LoRA, and no calibration pass. See [GB200 Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/) | [On-Device Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/).
 - 🔥 [2026/07] 🌍 **SANA-Streaming** training is released! Includes bidirectional and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/).
 - 🔥 [2026/07] 🌍 **SANA-WM** Stage-1 training is released! Includes bidirectional, chunk-causal, and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/).
 - 🔥 [2026/06] 🎬 **SANA-Streaming: 2B Model for Real-time Streaming Editing** is released! Supports 720p, 1-min video editing. A pioneer work for streaming editing. See [Project](https://nvlabs.github.io/Sana/Streaming/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/) | [Paper](https://huggingface.co/papers/2605.30409) | [Reactor Demo](https://sana-streaming.reactor.inc).

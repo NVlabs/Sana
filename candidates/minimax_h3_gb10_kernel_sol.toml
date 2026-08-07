@@ -1,0 +1,32 @@
+id = "minimax_h3_gb10_kernel_sol"
+kind = "optimized"
+purpose = "sparse_attention"
+description = "Adds Sol-Attn at tau=1 over the lossless tier, through the released sol_attn entry point with sink_tokens=951. 8,157 ms against the lossless 9,790, so 1.20x on top of the kernels and 1.66x cumulative. Approximate by construction: cos 0.9865 on video and 0.9918 on audio against the dense forward."
+model_profile = "minimax_h3"
+
+[runtime]
+root = "models/minimax_h3/gb10_fp8"
+
+[env]
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+H3_HEIGHT = "480"
+H3_WIDTH = "832"
+H3_NUM_FRAMES = "124"
+H3_STEPS = "50"
+H3_SEED = "0"
+H3_WARMUP = "1"
+H3_MEASURE = "1"
+H3_KERNEL_FUSIONS = "1"
+H3_SOL_ATTN_TAU = "1.0"
+H3_SOL_ATTN_DENSE_BLOCKS = "2"
+H3_SOL_ATTN_DENSE_FIRST_STEPS = "10"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+quality = "quality.json"
+
+[notes]
+summary = "Nothing is bypassed and nothing is forked. `_backend_for_arch` has no CuTe kernel for SM121 and returns \"triton\", and the 951-row exact KV sink the released policy calls for is the `sink_tokens` parameter. Both became true only after the sol-engine head moved; the port previously carried a copy of the Triton reference with the sink hardcoded, and `fusion_install.load_sol_attn` records the measurement that retired it."

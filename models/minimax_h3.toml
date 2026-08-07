@@ -131,3 +131,87 @@ upstream_branch = "minimax-h3"
 upstream_pull_request = "https://github.com/huggingface/diffusers/pull/14355"
 upstream_commit = "abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc"
 source_snapshot = "models/minimax_h3/baseline/diffusers_src"
+
+# ============================================================================================
+# Append to models/minimax_h3.toml. A second measured runtime, not a replacement for [baseline]:
+# different hardware, different checkpoint, and a tenth of the canvas, so the two tables are not
+# comparable row for row. What is comparable is the shape — same timing scope, same fields.
+# ============================================================================================
+
+[gb10_fp8]
+variant = "diffusers_modular_pruned_fp8_scaled_single_gb10"
+status = "measured_single_gpu_resident_fp8"
+runtime_root = "models/minimax_h3/gb10_fp8"
+run_script = "models/minimax_h3/gb10_fp8/scripts/run_minimax_h3_gpu.sh"
+candidates = [
+  "candidates/minimax_h3_gb10_baseline.toml",
+  "candidates/minimax_h3_gb10_kernel.toml",
+  "candidates/minimax_h3_gb10_kernel_sol.toml",
+  "candidates/minimax_h3_gb10_cache.toml",
+  "candidates/minimax_h3_gb10_fullopt.toml",
+]
+hardware = "1x NVIDIA GB10, 121 GiB unified LPDDR5X shared with the host, SM121"
+cell = "832x480, 124 frames, 50 steps"
+timing_scope = "dit_forward_on_a_recorded_step, cuda_event_timed, round_robin_interleaved"
+note_cell = """The published 1344x768 cell is 38,247 packed rows and runs at 40.1 s/step here, so
+the optimisation work was done at 832x480 (15,381 rows). Every ratio below is that cell. The
+official cell was captured and is reproducible; it was not swept, because a sweep at 40 s/step
+buys the same ratios for thirty times the wall time."""
+note_denominator = """The baseline row is this port with no acceleration, not the released BF16
+model — but they were measured against each other and agree: 13,428 ms against 13,417 ms, a
+0.08% difference, three alternating processes each, spread under 1%. So the ratios below are
+also ratios against the released model."""
+
+# --- DiT forward, 832x480 step 24, round-robin interleaved, min of 3 rounds -----------------
+[gb10_fp8.dit_forward_ms]
+bf16_released = 13417
+baseline = 13576
+kernel_fused_qkv = 12875
+kernel_triton_quant = 11524
+kernel_fused_adaln = 10709
+kernel_fused_rope = 9913
+kernel_all_lossless = 9790
+sol_tau1 = 8157
+sol_tau2 = 7088
+note = """Every kernel row is EXACT against `dit_reference/` — verified, not asserted, by
+`bench/bench_dit.py` on every run. The sol_* rows are DIFFERS by construction: at tau=1 the
+step's output holds cos 0.9865 on video and 0.9918 on audio against the dense forward, at
+tau=2 cos 0.9642 and 0.9787. tau=2 is measured but not shipped — the quality comparison was
+run at tau=1 only.
+
+Both sol_* rows are the released `sol_attn` entry point with `sink_tokens=951`. An earlier
+local kernel measured 8577 at tau=1; the difference is one policy that kernel carried and
+this one does not, which cost 7.8% of the attention time for +0.0005 of cosine."""
+
+# --- The fixed remainder, same cell ---------------------------------------------------------
+[gb10_fp8.fixed_cost_s]
+text_encode = 2.03
+video_vae_decode = 29.41
+audio_vae_decode = 0.33
+total = 31.77
+video_vae_decode_tile_batched = 19.95
+note = """The video decode is 92.6% of everything outside the denoising loop. It is 36
+transformer layers at dim 2048 run 84 times (12 spatial tiles x 7 temporal clips) on 1796
+tokens each — 627 TFLOPs at 21.3 TFLOPS against a measured fp16 ceiling of 96, so 22% of the
+part. Batching the tiles is 1.47x at PSNR 71.2 dB, max|d| 1/255. Retiling is faster still and
+was rejected: an untiled height reaches 2.29x at PSNR 23.1 dB, with 60% of pixels visibly
+different."""
+
+# --- The hardware, measured rather than quoted ----------------------------------------------
+[gb10_fp8.roofline]
+bf16_gemm_tflops = 100.0
+fp16_gemm_tflops = 96.0
+fp8_e4m3_gemm_tflops = 188.3
+nvfp4_gemm_tflops = 101.3
+flash_attention_tflops = 92.5
+note_attention = """Flash attention runs at 93-96% of the 16-bit GEMM ceiling, so there is no
+lossless headroom left in attention — which is why the attention work here is sparsity, not
+kernels."""
+note_fp8 = """FP8 quantisation on its own buys nothing: 13,428 ms against BF16's 13,417. The
+1.40x the fused path reaches is close to its ceiling — attention is 36% of the DiT's FLOPs and
+FP8 does not touch it, so 1/(0.36 + 0.64/1.88) = 1.43x bounds it."""
+note_nvfp4 = """NVFP4 works on this part through F.scaled_mm with BlockWise1x16 scaling and
+SWIZZLE_32_4_4, with the scale rows padded to a multiple of 128. It was not implemented: the
+same ceiling argument gives 1/(0.36 + 0.64/2.2) = 1.54x against BF16, only 1.10x over FP8, and
+about 4% end to end once the cache has deleted 60% of the steps. MXFP4 is unavailable — PyTorch
+restricts it to B200/B300."""

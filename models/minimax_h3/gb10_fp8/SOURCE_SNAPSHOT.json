@@ -1,0 +1,36 @@
+{
+  "variant": "gb10_fp8",
+  "diffusers": {
+    "repo": "https://github.com/huggingface/diffusers.git",
+    "pull_request": "https://github.com/huggingface/diffusers/pull/14355",
+    "commit": "abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc",
+    "reason": "MiniMax-H3 is in no diffusers release. Same commit baseline/SOURCE_SNAPSHOT.json pins."
+  },
+  "checkpoints": {
+    "transformer": {
+      "repo": "Comfy-Org/MiniMax-H3",
+      "file": "diffusion_models/minimax_h3_fl2va_pruned_fp8_scaled.safetensors",
+      "size_gib": 19.5,
+      "note": "FP8 E4M3 with per-layer comfy_quant scheme and a rank-8 adaln_t_table."
+    },
+    "text_encoder": {
+      "repo": "Qwen/Qwen3-VL-32B-Instruct-FP8",
+      "size_gib": 33,
+      "note": "H3's text_encoder/config.json is stock Qwen3-VL-32B-Instruct, so this is the same model at half the bytes."
+    },
+    "vae_and_configs": {"repo": "MiniMaxAI/MiniMax-H3", "size_gib": 11},
+    "transformer_bf16_reference": {
+      "repo": "MiniMaxAI/MiniMax-H3",
+      "subfolder": "transformer",
+      "size_gib": 61.7,
+      "note": "Needed only to measure the FP8 port against the released model. Not on the run path."
+    }
+  },
+  "environment": {
+    "torch": "2.11.0+cu130",
+    "triton": "3.6.0",
+    "transformers": "4.57",
+    "note": "The versions are load-bearing: installing torchvision separately once pulled torch to 2.13.0 and Triton to 3.7, which would have silently invalidated every bit-exactness result in checks/ without failing anything."
+  },
+  "hardware": {"device": "NVIDIA GB10", "sm": "121", "memory_gib": 121, "memory_kind": "unified LPDDR5X shared with the host"}
+}

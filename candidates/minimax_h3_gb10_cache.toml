@@ -1,0 +1,30 @@
+id = "minimax_h3_gb10_cache"
+kind = "optimized"
+purpose = "cache"
+description = "FirstBlockCache at 0.08 over the lossless tier, without Sol-Attn. Skips 57-71% of block-stack calls depending on the prompt; 2.7x on the DiT."
+model_profile = "minimax_h3"
+
+[runtime]
+root = "models/minimax_h3/gb10_fp8"
+
+[env]
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+H3_HEIGHT = "480"
+H3_WIDTH = "832"
+H3_NUM_FRAMES = "124"
+H3_STEPS = "50"
+H3_SEED = "0"
+H3_WARMUP = "1"
+H3_MEASURE = "1"
+H3_KERNEL_FUSIONS = "1"
+H3_CACHE_THRESHOLD = "0.08"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+quality = "quality.json"
+
+[notes]
+summary = "Worth running separately, not only as a component of fullopt. On a low-motion, strongly-semantic prompt the cache alone stays on the reference's scene while cache+Sol-Attn lands on a different one — see the README's quality section."

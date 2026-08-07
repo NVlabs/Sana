@@ -1,0 +1,34 @@
+id = "minimax_h3_gb10_fullopt"
+kind = "optimized"
+purpose = "stacked"
+description = "Everything: lossless kernels, Sol-Attn tau=1, FirstBlockCache 0.08, and the VAE tile batching. 4.27x on the DiT forward against the unaccelerated row, 3.9x end-to-end."
+model_profile = "minimax_h3"
+
+[runtime]
+root = "models/minimax_h3/gb10_fp8"
+
+[env]
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+H3_HEIGHT = "480"
+H3_WIDTH = "832"
+H3_NUM_FRAMES = "124"
+H3_STEPS = "50"
+H3_SEED = "0"
+H3_WARMUP = "1"
+H3_MEASURE = "1"
+H3_KERNEL_FUSIONS = "1"
+H3_SOL_ATTN_TAU = "1.0"
+H3_SOL_ATTN_DENSE_BLOCKS = "2"
+H3_SOL_ATTN_DENSE_FIRST_STEPS = "10"
+H3_CACHE_THRESHOLD = "0.08"
+H3_VAE_TILE_BATCH = "4"
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"
+quality = "quality.json"
+
+[notes]
+summary = "How Sol-Attn and the cache compose is not cleanly measured, and the 4.27x is a derivation rather than a reading: it comes from applying the cache's standalone 2.7x to the 8,577 ms Sol-Attn row. The two full requests that were run end to end point the other way — with the cache on, Sol-Attn was worth 1.09x on one prompt and 0.96x on the other, both inside the noise of a wall-clock number. That is what the mechanism predicts: the cache deletes 60% of the block-stack calls Sol-Attn would have accelerated. Running this candidate against minimax_h3_gb10_cache on the recorded step is what would settle it, and neither has been run through the harness yet."

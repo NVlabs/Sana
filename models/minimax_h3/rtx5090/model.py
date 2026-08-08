@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-"""MiniMax H3 packed-token DiT.
+"""MiniMax-H3 DiT registered by the single-RTX-5090 runtime.
 
-Native SGLang implementation of the MiniMax H3 audio-video DiT. The forward
-contract accepts packed inference keyword arguments and returns packed logits.
+This is the pinned SGLang model implementation with the Sol-Attn dispatch and
+TeaCache block-stack policy integrated at their natural model boundaries.  It
+is loaded through SGLang's model registry; no installed SGLang file is edited
+or shadowed at runtime.
 """
 
 from __future__ import annotations
@@ -464,6 +466,7 @@ class MiniMaxH3TimeEmbedder(nn.Module):
         return out
 
 
+@torch.compiler.disable
 def _minimax_h3_attention_core_impl(
     attention: MiniMaxH3Attention,
     q: torch.Tensor,

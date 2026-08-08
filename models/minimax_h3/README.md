@@ -18,8 +18,9 @@ measured on:
 - `gb200/`: the original resident baseline and the multi-GPU optimized line.
   The nested `optimized/` name is historical; it is the GB200 implementation.
 - `gb10/`: the single-GB10 constrained-memory port.
-- `rtx5090/`: the single-RTX-5090 BF16 SGLang port with layerwise offload,
-  SM120 Sol-Attn, TeaCache, regional compile, and post-denoise VAE residency.
+- `rtx5090/`: the single-RTX-5090 BF16 runtime. It registers its local model
+  and memory-stage extensions with pinned SGLang and runs through the offline
+  generator; the SGLang installation remains untouched.
 
 Do not mix runtime files across these directories. Candidate manifests select
 the matching hardware directory explicitly.

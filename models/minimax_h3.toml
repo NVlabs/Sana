@@ -133,8 +133,8 @@ upstream_commit = "abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc"
 source_snapshot = "models/minimax_h3/gb200/baseline/diffusers_src"
 
 [rtx5090]
-variant = "sglang_released_bf16_single_rtx5090"
-status = "measured_single_gpu_layerwise_offload"
+variant = "sglang_registered_bf16_single_rtx5090"
+status = "single_gpu_layerwise_offload"
 runtime_root = "models/minimax_h3/rtx5090"
 run_script = "models/minimax_h3/rtx5090/scripts/run_minimax_h3_gpu.sh"
 candidates = [
@@ -144,10 +144,10 @@ candidates = [
 ]
 hardware = "1x NVIDIA RTX 5090, 32 GiB GDDR7, SM120; 188 GiB host RAM"
 cell = "1344x768, 124 frames, 5 seconds, 50 steps, released BF16 FL2VA"
-timing_scope = "SGLang video API final_status.inference_time_s after profile-specific warmup"
-memory_scope = "SGLang video API final_status.peak_memory_mb"
+timing_scope = "benchmark.json measured.inference_time_s after profile-specific warmup"
+memory_scope = "benchmark.json measured.peak_memory_mb"
 source_snapshot = "models/minimax_h3/rtx5090/SOURCE_SNAPSHOT.json"
-note = "All components use layerwise CPU offload. Sol and fullopt receive one complete same-shape warmup request for SM120 compilation and autotuning before measurement."
+note = "The runtime uses SGLang's offline DiffGenerator and process-local model/pipeline registration; it does not patch an installed SGLang checkout."
 
 [rtx5090.policy]
 tau = 1.0
@@ -160,15 +160,6 @@ text_query_rows = "dense"
 teacache_threshold = 0.10
 teacache_retain_steps = 5
 teacache_cooldown_steps = 1
-
-[rtx5090.results]
-dense_single_case_e2e_s = 1045.409
-sol_single_case_e2e_s = 781.783
-sol_single_case_speedup = 1.3372
-dense_three_prompt_mean_e2e_s = 1055.1008
-fullopt_three_prompt_mean_e2e_s = 250.8820
-fullopt_three_prompt_speedup = 4.2056
-raw = "models/minimax_h3/rtx5090/results/bf16_5090_20260805.json"
 
 # ============================================================================================
 # Append to models/minimax_h3.toml. A second measured runtime, not a replacement for [baseline]:

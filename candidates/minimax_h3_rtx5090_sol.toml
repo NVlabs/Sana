@@ -1,6 +1,6 @@
 id = "minimax_h3_rtx5090_sol"
-kind = "patch"
-purpose = "evidence"
+kind = "optimized"
+purpose = "attention"
 description = "Single-card RTX 5090 BF16 baseline plus SM120 Sol-Attn, with exact text KV sink and dense text-query rows."
 model_profile = "minimax_h3"
 submodule = "models/minimax_h3/rtx5090"
@@ -16,22 +16,19 @@ width = 1344
 height = 768
 duration_s = 5
 steps = 50
-seed = 1101
+seed = 0
 num_gpus = 1
 transformer_dtype = "bf16"
 vae_dtype = "bf16"
 
 [env]
-H3_ROOT = "/home/xieenze/codex/minimax_h3_5090_20260805"
-H3_SGLANG_ROOT = "/home/xieenze/codex/minimax_h3_5090_20260805/sglang"
-H3_MODEL_PATH = "/home/xieenze/codex/minimax_h3_5090_20260805/model/FL2VA"
-PYTHON_BIN = "/home/xieenze/codex/minimax_h3_5090_20260805/.venv/bin/python"
 H3_RTX5090_PROFILE = "sol"
 H3_CUDA_VISIBLE_DEVICES = "0"
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
 H3_WARMUP_NUM_STEPS = "50"
 H3_MEASURED_NUM_STEPS = "50"
 H3_DURATION_SECONDS = "5"
-H3_SEED = "1101"
+H3_SEED = "0"
 SOL_ATTN_TAU = "1.0"
 SOL_ATTN_THRESH_TYPE = "diag"
 SOL_ATTN_FIRST_DENSE_STEPS = "10"
@@ -40,6 +37,6 @@ SOL_ATTN_CORRECTNESS_GATE = "1"
 
 [artifacts]
 output_dir = "outputs"
-video = "measured/minimax_h3_t2va_1344x768_5s_50step_seed1101.mp4"
-log = "server.log"
-benchmark = "summary.json"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"

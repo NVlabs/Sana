@@ -1,49 +1,38 @@
 {
   "schema_version": 1,
-  "captured_at_utc": "2026-08-08T00:00:00Z",
+  "variant": "rtx5090",
   "source_root": ".",
   "core_sha256": {
-    "adapter.py": "7faccb4ea59a1543561e62998fee44dc65cdc9b249dde9838bd097d4fb01a745",
+    "adapter.py": "fcee9faa07f2daa083c8dfe77e46de448a6c591cbb4aa863dc0c0feae38b8b1d",
     "teacache.py": "878bb72a38677fbf39cb4b041588f38990579d3eb9f49cdf7c6e31e71853bf99",
-    "patches/minimax_h3.py": "7f5553b963252969fcbcc752a5c44bf9b91d683276b7a10de66c0e075059f1ed",
-    "patches/denoising.py": "284a17202841a6efef3219cbc5771fc33ef8815d1637fa06fa4d524a86482f9a",
-    "patches/minimax_h3_decoding.py": "923d8e50255b1d5f2c143fc083ffa86b2cfd4990d4834717306fcfe317bd8eb2"
+    "model.py": "97634713f90812faa801ca51ad32f7469f8f3e676ab0e6e5456e62ff14c30873",
+    "pipeline.py": "8384745382be42afc12828411981c45e8c51be465f60f0777314797343dd35dd",
+    "registration.py": "08c11af6b80506b5274f972e4d6f63752ff91615c1a6f3ed0e513a197b106333",
+    "gpu_infer.py": "9d9834cab7b6e553ec2b294a566fd0356085dc87c4d04b3c0bad8f2dcec27152",
+    "scripts/run_minimax_h3_gpu.sh": "7a1feed5b6db003fafc2ffb8379cfdfc9df24a35162ab57ae50dbbd9ae02ddfb"
   },
-  "hardware": {
-    "gpu": "NVIDIA GeForce RTX 5090",
-    "gpu_count": 1,
-    "cuda_capability": "12.0",
-    "gpu_memory_gib": 32,
-    "host_memory_gib": 188
+  "sglang": {
+    "repo": "https://github.com/sgl-project/sglang.git",
+    "commit": "6fa3f9df11c8bdbc0e3b4ddc87a3d873343aca72",
+    "source_sha256": {
+      "runtime/models/dits/minimax_h3.py": "5f87319969c446685ee93d422fc34a7c040defb238eff2274d664f2f8310e997",
+      "pipelines_core/stages/denoising.py": "2325b039c055d2db8c320a00f65e2880816888fd5fa107b72cfd6a85be104399",
+      "minimax_h3/stages/decoding.py": "5e2cf87da11e0c744d6c7703d8151abd7da7937e1ad67d576fdbf6c678380954"
+    }
   },
-  "runtime": {
-    "python_environment": "/home/xieenze/codex/minimax_h3_5090_20260805/.venv",
-    "torch": "2.11.0+cu130",
-    "triton": "3.6.0",
-    "sglang_repo": "https://github.com/sgl-project/sglang.git",
-    "sglang_commit": "6fa3f9df11c8bdbc0e3b4ddc87a3d873343aca72"
-  },
-  "model": {
+  "weights": {
     "repo": "MiniMaxAI/MiniMax-H3",
     "partition": "FL2VA",
-    "dtype": "bfloat16",
-    "local_layout": "/home/xieenze/codex/minimax_h3_5090_20260805/model/FL2VA"
+    "dtype": "bfloat16"
   },
-  "sana": {
-    "repo": "https://github.com/NVlabs/Sana.git",
-    "branch": "sol-engine",
-    "base_commit": "57196971c857ab4c593c4c632acdcb39f00fb885"
+  "environment": {
+    "torch": "2.11.0+cu130",
+    "triton": "3.6.0"
   },
-  "upstream_source_sha256": {
-    "minimax_h3.py": "5f87319969c446685ee93d422fc34a7c040defb238eff2274d664f2f8310e997",
-    "denoising.py": "2325b039c055d2db8c320a00f65e2880816888fd5fa107b72cfd6a85be104399",
-    "minimax_h3_decoding.py": "5e2cf87da11e0c744d6c7703d8151abd7da7937e1ad67d576fdbf6c678380954"
-  },
-  "rtx5090_source_sha256": {
-    "adapter.py": "7faccb4ea59a1543561e62998fee44dc65cdc9b249dde9838bd097d4fb01a745",
-    "teacache.py": "878bb72a38677fbf39cb4b041588f38990579d3eb9f49cdf7c6e31e71853bf99",
-    "patches/minimax_h3.py": "7f5553b963252969fcbcc752a5c44bf9b91d683276b7a10de66c0e075059f1ed",
-    "patches/denoising.py": "284a17202841a6efef3219cbc5771fc33ef8815d1637fa06fa4d524a86482f9a",
-    "patches/minimax_h3_decoding.py": "923d8e50255b1d5f2c143fc083ffa86b2cfd4990d4834717306fcfe317bd8eb2"
+  "hardware": {
+    "device": "NVIDIA GeForce RTX 5090",
+    "sm": "120",
+    "memory_gib": 32,
+    "host_memory_gib": 188
   }
 }

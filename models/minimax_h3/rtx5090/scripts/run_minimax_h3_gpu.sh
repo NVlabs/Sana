@@ -1,113 +1,84 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNTIME_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-PROFILE="${H3_RTX5090_PROFILE:-dense}"
-H3_ROOT="${H3_ROOT:-${HOME}/minimax_h3_5090}"
-VENV_ROOT="${H3_VENV_ROOT:-${H3_ROOT}/.venv}"
-PYTHON_BIN="${PYTHON_BIN:-${VENV_ROOT}/bin/python}"
-PORT="${H3_PORT:-30010}"
-GPU="${H3_CUDA_VISIBLE_DEVICES:-0}"
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-OUT_DIR="${OUT_DIR:-${RUNTIME_ROOT}/outputs/${PROFILE}-${STAMP}}"
-MEASURED_STEPS="${H3_MEASURED_NUM_STEPS:-50}"
+: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
+: "${H3_MODEL_PATH:?H3_MODEL_PATH must point to the MiniMax-H3 FL2VA directory}"
 
-if [[ "${PROFILE}" == "dense" ]]; then
-  WARMUP_STEPS="${H3_WARMUP_NUM_STEPS:-5}"
-else
-  WARMUP_STEPS="${H3_WARMUP_NUM_STEPS:-50}"
-fi
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+H3_ROOT="${H3_ROOT:-${HOME}/minimax_h3_5090}"
+PYTHON_BIN="${PYTHON_BIN:-${H3_ROOT}/.venv/bin/python}"
+FFMPEG_BIN_DIR="${H3_FFMPEG_BIN_DIR:-${H3_ROOT}/tools/ffmpeg-static}"
+
 if [[ ! -x "${PYTHON_BIN}" ]]; then
   echo "Python executable is not available: ${PYTHON_BIN}" >&2
   exit 2
 fi
 
-mkdir -p "${OUT_DIR}/warmup" "${OUT_DIR}/measured"
-server_pid=""
-monitor_pid=""
+mkdir -p "${OUT_DIR}" "${H3_ROOT}/cache/huggingface"
+mkdir -p "${H3_ROOT}/cache/triton" "${H3_ROOT}/cache/torchinductor-sm120"
 
-stop_scoped_processes() {
-  if [[ -n "${monitor_pid}" ]] && kill -0 "${monitor_pid}" 2>/dev/null; then
-    kill -TERM "${monitor_pid}" 2>/dev/null || true
-    wait "${monitor_pid}" 2>/dev/null || true
-  fi
-  if [[ -n "${server_pid}" ]] && kill -0 "${server_pid}" 2>/dev/null; then
-    kill -TERM -- "-${server_pid}" 2>/dev/null || true
-    for _ in $(seq 1 60); do
-      if ! kill -0 "${server_pid}" 2>/dev/null; then
-        break
-      fi
-      sleep 1
-    done
-    if kill -0 "${server_pid}" 2>/dev/null; then
-      kill -KILL -- "-${server_pid}" 2>/dev/null || true
-    fi
-    wait "${server_pid}" 2>/dev/null || true
-  fi
-}
-trap stop_scoped_processes EXIT TERM INT
-
-export CUDA_VISIBLE_DEVICES="${GPU}"
-export H3_PORT="${PORT}"
-export SOL_ATTN_EVENT_LOG="${OUT_DIR}/sol_events_rank0.jsonl"
-export SOL_ATTN_REQUEST_EPOCH_FILE="${OUT_DIR}/request_epoch.txt"
-
-setsid bash "${SCRIPT_DIR}/launch_server.sh" >"${OUT_DIR}/server.log" 2>&1 &
-server_pid=$!
-printf '%s\n' "${server_pid}" >"${OUT_DIR}/server.pid"
-
-(
-  while kill -0 "${server_pid}" 2>/dev/null; do
-    printf '%s,' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    nvidia-smi -i "${GPU}" \
-      --query-gpu=memory.used,memory.total,utilization.gpu,power.draw \
-      --format=csv,noheader,nounits
-    sleep 1
-  done
-) >"${OUT_DIR}/resources.csv" 2>&1 &
-monitor_pid=$!
-
-healthy=0
-for _ in $(seq 1 1440); do
-  if curl -fsS "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
-    healthy=1
-    break
-  fi
-  if ! kill -0 "${server_pid}" 2>/dev/null; then
-    echo "${PROFILE} server exited during startup" >&2
-    tail -200 "${OUT_DIR}/server.log" >&2 || true
-    exit 1
-  fi
-  sleep 5
-done
-if [[ "${healthy}" != "1" ]]; then
-  echo "${PROFILE} server did not become healthy" >&2
-  exit 1
+export CUDA_VISIBLE_DEVICES="${H3_CUDA_VISIBLE_DEVICES:-0}"
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+export PATH="$(dirname "${PYTHON_BIN}"):${PATH}"
+if [[ -d "${FFMPEG_BIN_DIR}" ]]; then
+  export PATH="${FFMPEG_BIN_DIR}:${PATH}"
 fi
+export PYTHONPATH="${HERE}:${HERE}/../../../techniques/sparse_backends${PYTHONPATH:+:${PYTHONPATH}}"
+export HF_HOME="${HF_HOME:-${H3_ROOT}/cache/huggingface}"
+export TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-${H3_ROOT}/cache/triton}"
+export TORCHINDUCTOR_CACHE_DIR="${TORCHINDUCTOR_CACHE_DIR:-${H3_ROOT}/cache/torchinductor-sm120}"
+export SGLANG_USE_RUNAI_MODEL_STREAMER=false
 
-printf 'warmup-%s\n' "${STAMP}" >"${SOL_ATTN_REQUEST_EPOCH_FILE}"
-H3_SERVER_URL="http://127.0.0.1:${PORT}" \
-H3_ROOT="${H3_ROOT}" \
-H3_NUM_STEPS="${WARMUP_STEPS}" \
-H3_DURATION_SECONDS="${H3_DURATION_SECONDS:-5}" \
-H3_SEED="${H3_WARMUP_SEED:-1100}" \
-H3_OUTPUT_DIR="${OUT_DIR}/warmup" \
-  "${PYTHON_BIN}" "${RUNTIME_ROOT}/request.py" \
-  >"${OUT_DIR}/warmup_request.log" 2>&1
+for media_tool in ffmpeg ffprobe; do
+  if ! command -v "${media_tool}" >/dev/null 2>&1; then
+    echo "${media_tool} is required in ${FFMPEG_BIN_DIR}, $(dirname "${PYTHON_BIN}"), or PATH" >&2
+    exit 2
+  fi
+done
 
-printf 'measured-%s\n' "${STAMP}" >"${SOL_ATTN_REQUEST_EPOCH_FILE}"
-H3_SERVER_URL="http://127.0.0.1:${PORT}" \
-H3_ROOT="${H3_ROOT}" \
-H3_NUM_STEPS="${MEASURED_STEPS}" \
-H3_DURATION_SECONDS="${H3_DURATION_SECONDS:-5}" \
-H3_SEED="${H3_SEED:-1101}" \
-H3_OUTPUT_DIR="${OUT_DIR}/measured" \
-  "${PYTHON_BIN}" "${RUNTIME_ROOT}/request.py" \
-  >"${OUT_DIR}/measured_request.log" 2>&1
+export SOL_ATTN_STRICT=1
+export SOL_ATTN_TAU="${SOL_ATTN_TAU:-1.0}"
+export SOL_ATTN_THRESH_TYPE="${SOL_ATTN_THRESH_TYPE:-diag}"
+export SOL_ATTN_FIRST_DENSE_STEPS="${SOL_ATTN_FIRST_DENSE_STEPS:-10}"
+export SOL_ATTN_FIRST_DENSE_LAYER_RATIO="${SOL_ATTN_FIRST_DENSE_LAYER_RATIO:-0.03}"
+export SOL_ATTN_FIRST_DENSE_LAYERS="${SOL_ATTN_FIRST_DENSE_LAYERS:-2}"
+export SOL_ATTN_CORRECTNESS_GATE="${SOL_ATTN_CORRECTNESS_GATE:-1}"
+if [[ -z "${SOL_ATTN_EVENT_LOG:-}" ]]; then
+  export SOL_ATTN_EVENT_LOG="${OUT_DIR}/sol_events_rank{rank}.jsonl"
+fi
+export SOL_ATTN_REQUEST_EPOCH_FILE="${SOL_ATTN_REQUEST_EPOCH_FILE:-${OUT_DIR}/request_epoch.txt}"
 
-stop_scoped_processes
-trap - EXIT TERM INT
-"${PYTHON_BIN}" "${RUNTIME_ROOT}/summarize.py" "${OUT_DIR}" \
-  >"${OUT_DIR}/summary.json"
-printf '%s\n' "${OUT_DIR}"
+export H3_TEACACHE_THRESHOLD="${H3_TEACACHE_THRESHOLD:-0.10}"
+export H3_TEACACHE_RETAIN_STEPS="${H3_TEACACHE_RETAIN_STEPS:-5}"
+export H3_TEACACHE_COOLDOWN_STEPS="${H3_TEACACHE_COOLDOWN_STEPS:-1}"
+export H3_TEACACHE_NUM_FORWARDS="${H3_TEACACHE_NUM_FORWARDS:-49}"
+export H3_TEACACHE_COEFFICIENTS="${H3_TEACACHE_COEFFICIENTS:-1.0,0.0}"
+export H3_FULL_VAE_DTYPE="${H3_FULL_VAE_DTYPE:-bfloat16}"
+export H3_FULL_VAE_TILE_BATCH_SIZE="${H3_FULL_VAE_TILE_BATCH_SIZE:-0}"
+
+case "${H3_RTX5090_PROFILE:-dense}" in
+  dense)
+    export H3_TEACACHE_ENABLED=0
+    export H3_FULL_VAE_AFTER_DENOISE=0
+    ;;
+  sol)
+    export H3_TEACACHE_ENABLED=0
+    export H3_FULL_VAE_AFTER_DENOISE=0
+    ;;
+  fullopt)
+    export H3_TEACACHE_ENABLED="${H3_TEACACHE_ENABLED:-1}"
+    export H3_FULL_VAE_AFTER_DENOISE="${H3_FULL_VAE_AFTER_DENOISE:-1}"
+    export H3_FULL_VAE_TORCH_COMPILE="${H3_FULL_VAE_TORCH_COMPILE:-0}"
+    ;;
+  *)
+    echo "H3_RTX5090_PROFILE must be dense, sol, or fullopt" >&2
+    exit 2
+    ;;
+esac
+
+exec "${PYTHON_BIN}" "${HERE}/gpu_infer.py"

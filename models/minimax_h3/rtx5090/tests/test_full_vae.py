@@ -7,7 +7,7 @@ from unittest import mock
 RUNTIME_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME_ROOT))
 
-from patches import minimax_h3_decoding as decoding  # noqa: E402
+import pipeline as decoding  # noqa: E402
 
 
 class _FakeDevice:

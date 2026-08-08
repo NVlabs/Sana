@@ -340,6 +340,10 @@ def _real_qkv_gate(
     q_gate = q[:, :, :gate_heads].contiguous()
     k_gate = k[:, :, :gate_heads].contiguous()
     v_gate = v[:, :, :gate_heads].contiguous()
+    # This one-shot validation follows component loading and dense warmup.
+    # Release inactive allocator blocks before Triton's first autotune sweep.
+    torch.cuda.synchronize(q.device)
+    torch.cuda.empty_cache()
     candidate = sol_attn(
         q_gate,
         k_gate,

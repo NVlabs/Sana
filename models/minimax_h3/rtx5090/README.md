@@ -1,129 +1,107 @@
 # MiniMax-H3 on one RTX 5090
 
-This directory is the RTX 5090 hardware port of MiniMax-H3. It is a sibling of
-`../gb200/` and `../gb10/`; the early `gb200/optimized/` name predates the
-hardware split and should not be copied as a new top-level model variant.
+Single-card BF16 inference for the released MiniMax-H3 FL2VA checkpoint. The
+33B DiT, Qwen3-VL conditioner, and VAEs do not fit together in 32 GiB, so this
+runtime uses SGLang's layerwise component offload and keeps one component on
+the GPU at a time.
 
-The port runs the released FL2VA model in BF16 on one 32 GiB RTX 5090. It does
-not replace model weights or modify the driver, system Python, or the checked-out
-SGLang source. Source changes are installed in a SHA-guarded Python overlay.
+## What runs
+
+`gpu_infer.py` calls SGLang's local `DiffGenerator`; there is no HTTP server or
+client in the benchmark path. The dense profile uses the pinned SGLang
+MiniMax-H3 implementation unchanged. Sparse profiles register the local
+`model.py` through `ModelRegistry`, and full-opt registers the local pipeline
+stage subclass in `pipeline.py`.
+
+No installed SGLang file is edited, copied, or shadowed. `registration.py`
+checks the upstream source hashes before installing process-local registry
+entries, so changing the pinned SGLang checkout fails before model loading.
+
+## Placement
+
+All profiles use one RTX 5090 and the released BF16 FL2VA weights. The DiT,
+text encoder, and VAEs use layerwise CPU offload. The DiT prefetches one layer
+and keeps no layer permanently resident. This is layer/component offload, not
+expert offload.
 
 ## Profiles
 
 | Profile | Attention | Cache | Compile | Video VAE |
-| --- | --- | --- | --- | --- |
-| `dense` | SGLang dense backend | off | off | layerwise offload |
+|---|---|---|---|---|
+| `dense` | pinned SGLang dense backend | off | off | layerwise offload |
 | `sol` | SM120 Sol-Attn | off | off | layerwise offload |
-| `fullopt` | SM120 Sol-Attn | TeaCache 0.10 | regional | full BF16 residency after denoise |
+| `fullopt` | SM120 Sol-Attn | TeaCache 0.10 | regional | resident for decode |
 
-All three profiles use SGLang's fast fused QK-norm/RoPE path when its runtime
-capability check passes. All three also use the same single-rank placement:
-DiT, text encoder, and VAE are layerwise-offloaded, with one prefetched DiT
-layer and zero resident DiT layers. This is component/layer offload, not expert
-offload.
+Sol-Attn uses `tau=1.0`, diagonal thresholding, no token reorder, the first 10
+denoising steps and first two DiT blocks dense, exact text K/V sinks, and dense
+text-query rows. The dynamic attention backend runs outside Dynamo; projections,
+QK-norm/RoPE, residuals, and MLPs remain eligible for regional compile. Dense
+and Sol profiles use SGLang's native fused QK-norm/RoPE path when its capability
+check passes. Full-opt uses the upstream compile-compatible QK-norm/RoPE branch
+inside the regional graph.
 
-The Sol-Attn policy is fixed across `sol` and `fullopt`:
+Full-opt keeps the same attention policy, adds TeaCache, and materializes the
+complete BF16 video VAE only after denoising. The VAE returns to layerwise
+offload after decode.
 
-- `tau=1.0`, `diag` threshold, no token reorder;
-- first 10 denoise forwards and first 2 DiT blocks dense;
-- valid text K/V rows form an exact sink;
-- valid text query rows are recomputed densely;
-- the real-QKV correctness gate is enabled;
-- one complete 50-step, same-shape request warms compilation and autotuning;
-  only the following request is measured.
+## Workload
 
-## Source contract
+The registered candidates run one warmup followed by one measured request:
 
-The patches target SGLang commit
-`6fa3f9df11c8bdbc0e3b4ddc87a3d873343aca72`. The launcher verifies the three
-upstream source hashes before constructing an overlay, so a changed SGLang
-checkout fails closed instead of silently applying stale model glue.
+| | |
+|---|---|
+| task | `t2va` |
+| resolution | 1344x768 |
+| duration | 5 seconds at 24 fps |
+| denoising steps | 50 |
+| flow shift (video / audio) | 12.0 / 3.0 |
+| prompt | `../prompts/t2va_example_1.json` |
+| weights | released FL2VA BF16 |
 
-The measured environment was:
-
-- one RTX 5090, SM120, 32 GiB;
-- Python virtual environment with PyTorch `2.11.0+cu130` and Triton `3.6.0`;
-- NVIDIA CuTe DSL / CUTLASS Python and `cuda-python` for the SM120 kernel;
-- 188 GiB host RAM;
-- released `MiniMaxAI/MiniMax-H3` FL2VA layout at `model/FL2VA`.
-
-Install this repository's Sol-Attn package into the same environment:
-
-```bash
-uv pip install --python "$H3_ROOT/.venv/bin/python" \
-  -e techniques/sparse_backends
-```
-
-The SGLang console command must come from the pinned checkout's environment.
-Do not update the GPU driver as part of this setup.
-
-## Run
-
-The checked-in candidates record the original host paths. On another machine,
-override `H3_ROOT`, `H3_SGLANG_ROOT`, `H3_MODEL_PATH`, and `PYTHON_BIN`.
-
-```bash
-python scripts/launch_candidate.py \
-  candidates/minimax_h3_rtx5090_dense.toml \
-  --mode local
-
-python scripts/launch_candidate.py \
-  candidates/minimax_h3_rtx5090_sol.toml \
-  --mode local
-
-python scripts/launch_candidate.py \
-  candidates/minimax_h3_rtx5090_fullopt.toml \
-  --mode local
-```
-
-The runtime can also be called directly:
-
-```bash
-H3_ROOT=/path/to/h3-runtime \
-H3_SGLANG_ROOT=/path/to/sglang \
-H3_MODEL_PATH=/path/to/FL2VA \
-H3_RTX5090_PROFILE=fullopt \
-OUT_DIR=/path/to/output \
-bash models/minimax_h3/rtx5090/scripts/run_minimax_h3_gpu.sh
-```
-
-Each output contains the warmup and measured videos, API metadata,
-`server.log`, one-second `resources.csv`, Sol-Attn/TeaCache events, and
-`summary.json`. Quote `final_status.inference_time_s` and
-`final_status.peak_memory_mb` from SGLang's API metadata; client wall time and
-the `nvidia-smi` process sample are retained as separate diagnostics.
-
-## Measured BF16 results
-
-Official 1344x768, 5-second, 50-step T2VA requests were run through one
-persistent server per profile. The three-prompt suite used aligned prompts and
-seeds for dense and full-opt.
-
-| Prompt | Dense E2E | Full-opt E2E | Speedup | Dense peak | Full-opt peak |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Flamenco dancer | 1047.791 s | 271.129 s | 3.864x | 16,584 MB | 22,388 MB |
-| Garage mechanics | 1051.134 s | 237.622 s | 4.424x | 16,568 MB | 22,380 MB |
-| Official starship | 1066.377 s | 243.895 s | 4.372x | 17,132 MB | 22,390 MB |
-| Mean | 1055.101 s | 250.882 s | **4.206x** | 16,761 MB | 22,386 MB |
-
-On the seed-1101 single case, dense was 1045.409 seconds and Sol-Attn-only was
-781.783 seconds, a 1.337x E2E speedup. The complete raw values and provenance
-are in `results/bf16_5090_20260805.json`.
+Sparse profiles use a complete same-shape warmup so Sol-Attn autotuning and
+regional compilation are excluded from the measured request. The authoritative
+latency and peak allocation are written to `benchmark.json` from SGLang's
+request metrics.
 
 ## Files
 
-- `adapter.py`: packed H3 self-attention routing, text sink, dense text queries,
-  request/step tracking, density logging, and correctness gate.
-- `teacache.py`: residual reuse controller used only by `fullopt`.
-- `patches/minimax_h3.py`: minimal DiT hooks for the adapter and TeaCache.
-- `patches/denoising.py`: preserves user-requested DiT offload across compile
-  warmup.
-- `patches/minimax_h3_decoding.py`: makes the complete BF16 video VAE resident
-  only after denoising, then restores layerwise offload.
-- `scripts/launch_server.sh`: validates sources, builds the overlay, and starts
-  the single-rank server.
-- `scripts/run_minimax_h3_gpu.sh`: scoped server lifecycle, warmup, measurement,
-  resource sampling, and summary generation.
+| File | Role |
+|---|---|
+| `gpu_infer.py` | Offline entrypoint, warmup, measured request, and benchmark JSON. |
+| `model.py` | MiniMax-H3 DiT with Sol-Attn routing and TeaCache block reuse. |
+| `adapter.py` | Packed attention policy, text sink, and route-density logging. |
+| `teacache.py` | Request-local TeaCache controller. |
+| `pipeline.py` | Compile/offload fix and post-denoise full-VAE residency. |
+| `registration.py` | Source verification and process-local SGLang registration. |
+| `scripts/run_minimax_h3_gpu.sh` | Environment and registered runtime launcher. |
 
-The runtime intentionally contains no alternative checkpoint loader. Its
-contract is the released BF16 FL2VA model only.
+## Running
+
+Install this repository's sparse backend in the same environment as the pinned
+SGLang checkout, then provide the checkpoint and Python paths:
+
+```bash
+export H3_MODEL_PATH=/path/to/MiniMax-H3/FL2VA
+export PYTHON_BIN=/path/to/venv/bin/python
+
+python scripts/launch_candidate.py candidates/minimax_h3_rtx5090_dense.toml \
+  --mode local --env H3_MODEL_PATH="$H3_MODEL_PATH" --env PYTHON_BIN="$PYTHON_BIN"
+python scripts/launch_candidate.py candidates/minimax_h3_rtx5090_sol.toml \
+  --mode local --env H3_MODEL_PATH="$H3_MODEL_PATH" --env PYTHON_BIN="$PYTHON_BIN"
+python scripts/launch_candidate.py candidates/minimax_h3_rtx5090_fullopt.toml \
+  --mode local --env H3_MODEL_PATH="$H3_MODEL_PATH" --env PYTHON_BIN="$PYTHON_BIN"
+```
+
+Each run writes `out.mp4`, `benchmark.json`, and the launcher log under its
+output directory. Set `H3_PROMPT` or `H3_PROMPT_FILE` to change the prompt
+without changing the candidate policy.
+
+## Environment
+
+The measured runtime uses PyTorch `2.11.0+cu130`, Triton `3.6.0`, and SGLang
+commit `6fa3f9df11c8bdbc0e3b4ddc87a3d873343aca72`. The SM120 Sol-Attn extension
+also requires the matching CUDA/CuTe dependencies. The selected environment's
+`bin` directory or `${H3_ROOT}/tools/ffmpeg-static` must provide `ffmpeg` and
+`ffprobe`; use `H3_FFMPEG_BIN_DIR` for another location. The launcher adds the
+selected directory to `PATH` and checks both tools before loading weights. Do
+not change the GPU driver as part of environment setup.

@@ -8,7 +8,7 @@ the things that legitimately live elsewhere.
 The layout this assumes is the repository's own:
 
     models/minimax_h3/prompts/t2va_example_1.json   the official cell's prompt
-    models/minimax_h3/baseline/diffusers_src        the pinned diffusers (PR #14355)
+    models/minimax_h3/gb200/baseline/diffusers_src  the pinned diffusers (PR #14355)
     techniques/sparse_backends                      Sol-Attn's released kernel
 
 `scripts/run_minimax_h3_gpu.sh` exports the same variables before launching, matching the
@@ -50,11 +50,11 @@ def _diffusers_src() -> Path:
     override = os.environ.get("H3_DIFFUSERS_SRC")
     if override:
         return Path(override)
-    for candidate in (MODEL_DIR / "baseline" / "diffusers_src" / "src",
+    for candidate in (MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src",
                       ROOT / "diffusers_src" / "src"):
         if candidate.is_dir():
             return candidate
-    return MODEL_DIR / "baseline" / "diffusers_src" / "src"
+    return MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src"
 
 
 DIFFUSERS_SRC = _diffusers_src()

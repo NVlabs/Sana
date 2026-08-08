@@ -173,8 +173,8 @@ kernel_fused_rope = 9913
 kernel_all_lossless = 9790
 sol_tau1 = 8157
 sol_tau2 = 7088
-note = """Every kernel row is EXACT against `dit_reference/` — verified, not asserted, by
-`bench/bench_dit.py` on every run. The sol_* rows are DIFFERS by construction: at tau=1 the
+note = """Every kernel row is EXACT — bit-identical to the eager path, checked by recomputing
+a recorded step rather than asserted. The sol_* rows are DIFFERS by construction: at tau=1 the
 step's output holds cos 0.9865 on video and 0.9918 on audio against the dense forward, at
 tau=2 cos 0.9642 and 0.9787. tau=2 is measured but not shipped — the quality comparison was
 run at tau=1 only.

@@ -13,7 +13,7 @@ The layout this assumes is the repository's own:
 
 `scripts/run_minimax_h3_gpu.sh` exports the same variables before launching, matching the
 8xGB200 entrypoint next door, so a candidate run never depends on these fallbacks. They exist
-so a benchmark under `bench/` can be run by hand without a candidate manifest.
+so the entrypoint can also be run by hand, without a candidate manifest.
 """
 
 from __future__ import annotations
@@ -104,15 +104,9 @@ def dit_checkpoint() -> str:
 
 
 def setup(need_sol_engine: bool = False) -> None:
-    """Put the pinned diffusers ahead of any installed one, and this variant on the path.
-
-    `bench/` is on it too, and not for convenience: several checks import a benchmark to reuse
-    its input loader or its model builder — `checks/check_determinism.py` needs `bench_dit`,
-    `checks/check_sol_policy.py` needs `bench_sparse_attn`. Those imports resolved for free
-    while everything sat in one flat directory and stopped resolving when it was split.
-    """
+    """Put the pinned diffusers ahead of any installed one, and this variant on the path."""
     os.environ.setdefault("HF_HOME", str(HF_CACHE))
-    for entry in (DIFFUSERS_SRC, ROOT, ROOT / "bench"):
+    for entry in (DIFFUSERS_SRC, ROOT):
         if str(entry) not in sys.path:
             sys.path.insert(0, str(entry))
     if need_sol_engine:

@@ -38,8 +38,9 @@ DiT forward on a recorded step, 832×480, round-robin interleaved inside one pro
 | + fused SwiGLU | 9,790 | **1.39×** | EXACT |
 | + Sol-Attn τ=1 | 8,157 | 1.66× | cos 0.9865 |
 
-`EXACT` is verified against `dit_reference/`, not asserted — `bench/bench_dit.py` recomputes and
-compares every run. That is the whole reason the lossless tier needs no quality argument.
+`EXACT` means bit-identical to the eager path, checked by recomputing a recorded step and
+comparing, not asserted. That is the whole reason the lossless tier needs no quality argument:
+its speedup can be taken without one.
 
 The fixed remainder is 31.8 s, of which the video decode is 29.4 s (92.6%). Batching its tiles
 is 1.47× at PSNR 71.2 dB. Retiling is faster and was rejected: an untiled height reaches 2.29×
@@ -86,14 +87,13 @@ adaln.py             the rank-8 AdaLN factorisation and the re-point onto it
 build.py             assemble MiniMaxH3Transformer3DModel from the pruned checkpoint
 cache_line.py        FirstBlockCache, minus the collective-decision fix one card cannot need
 vae_shard.py         batched tile decode
-bench/               every number in this file, reproducible
-checks/              one question each; kept as the evidence, not as tests
 ```
 
-`h3_fp8.py` is a compatibility re-export. The port was one 923-line module before this merge;
-`bench/` and `checks/` import it by that name, and they are the evidence for every claim here,
-so rewriting twenty-odd import lines would have meant re-verifying all of them to prove the
-rewrite changed nothing. Nothing new should import from it.
+The benchmarks and the bit-exactness checks the numbers above came from are not carried here,
+matching how the other model directories are laid out — the runtime is what ships, and the
+measurements live in the profile and in `runs/`. What those scripts established is kept where
+it is load-bearing: the `div_rn` correction in `fusions.py`, the QKV layout question in
+`relayout.py`, and the rank-8 error in `adaln.py` all carry their own numbers.
 
 ## Running
 
@@ -110,20 +110,11 @@ export HF_HOME=/path/to/checkpoints H3_DIFFUSERS_SRC=/path/to/diffusers/src
 python gpu_infer.py --height 480 --width 832 --steps 50
 ```
 
-The recorded DiT inputs under `dit_inputs/` are not carried. Regenerating them is exact — fixed
-seed, fixed prompt, deterministic — and about 15 minutes:
-
-```bash
-python bench/capture_dit_inputs.py --width 832 --height 480 --steps-to-capture 24
-python bench/bench_dit.py --cell 832x480 --step 24 --fuse-qkv --quantizer triton \
-    --fuse-adaln --fuse-rope --fuse-swiglu --save-reference
-```
-
 ## Things that will bite
 
 **The pinned versions are not advisory.** Installing torchvision separately once pulled torch
-2.11.0 → 2.13.0 and Triton 3.6 → 3.7. Nothing failed; every bit-exactness result in `checks/`
-would simply have stopped meaning anything.
+2.11.0 → 2.13.0 and Triton 3.6 → 3.7. Nothing failed; every bit-exactness claim above would
+simply have stopped meaning anything.
 
 **Memory is one pool.** 85 GiB of weights on this part does not OOM — it pages, and the machine
 stopped answering ssh for an hour. `earlyoom` is installed and did not fire, because it watches
@@ -133,4 +124,4 @@ keep one model resident at a time.
 **Freeing a model does not return its memory to the kernel.** Measuring a second model in the
 same process after freeing the first gave 20,746 ms for a configuration that takes 9,553 ms
 from a clean start — a plausible-looking number produced entirely by the previous model.
-`bench/bench_precision.py` takes one model per process for this reason.
+Measure one model per process.

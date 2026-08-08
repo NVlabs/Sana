@@ -8,8 +8,8 @@ narrows every AdaLN projection to `Linear(8 -> 96768)`.
 That is a rank-8 factorisation of the timestep -> modulation map, and it is exact enough to
 treat as free: every AdaLN consumes the *same* `silu(temb)`, and a scalar `t` only traces a
 one-dimensional curve through it, so a small shared basis reproduces the whole trajectory.
-`checks/validate_adaln.py` measures 1.98e-4 mean relative error against the released BF16
-weights — finer than BF16's own spacing.
+Measured at 1.98e-4 mean relative error against the released BF16 weights — finer than
+BF16's own spacing.
 """
 
 from __future__ import annotations

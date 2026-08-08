@@ -46,7 +46,7 @@ PYTHON_BIN="${PYTHON_BIN:-python}"
 
 # The pinned versions are not advisory. Installing torchvision separately once pulled torch
 # 2.11.0 -> 2.13.0 and Triton 3.6 -> 3.7, which would have silently invalidated every
-# bit-exactness result in `checks/` without failing anything.
+# bit-exactness claim in the README without failing anything.
 "$PYTHON_BIN" - <<'PY'
 import torch
 expected = ("2.11.0", "3.6")

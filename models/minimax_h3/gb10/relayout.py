@@ -8,8 +8,8 @@ on the mapping.
 
 One correction against that script is load-bearing. It de-interleaves per-head QKV because the
 *raw MiniMax shards* need it; the ComfyUI file has already been converted, so applying it again
-scrambles attention. `checks/validate_layout.py` settles it against the released block 0:
-contiguous thirds score 0.999649, de-interleaved 0.034. `reorder_interleaved_qkv` is kept
+scrambles attention. Scored against the released block 0, contiguous thirds reach cosine
+0.999649 and de-interleaved 0.034. `reorder_interleaved_qkv` is kept
 because it is the authority for the raw layout, and is deliberately not called on this file.
 The SwiGLU swap *is* needed — 0.9996 against 0.0002.
 """

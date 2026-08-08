@@ -21,6 +21,9 @@ measured on:
 - `rtx5090/`: the single-RTX-5090 BF16 runtime. It registers its local model
   and memory-stage extensions with pinned SGLang and runs through the offline
   generator; the SGLang installation remains untouched.
+- `h100_a100/`: the shared four-GPU BF16 SGLang runtime for H100-80GB and
+  A100-80GB. It provides dense plus four locked Sol-Attn/cache profiles through
+  process-local model registration, with hardware-specific Sol-Attn backends.
 
 Do not mix runtime files across these directories. Candidate manifests select
 the matching hardware directory explicitly.

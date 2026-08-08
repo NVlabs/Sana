@@ -86,6 +86,14 @@ def _backend_for_arch(
     return "triton"
 
 
+def get_sol_attn_backend(device: torch.device | str | int | None = None) -> str:
+    """Return the backend selected for ``device`` without compiling it."""
+
+    if device is None:
+        device = torch.cuda.current_device()
+    return _backend_for_arch(tuple(torch.cuda.get_device_capability(device)))
+
+
 def _validate_cute(arch, tokens, kv_splits):
     if arch != (9, 0) and kv_splits != 1:
         raise ValueError("kv_splits=2/4 is currently available on SM90 only")
@@ -396,4 +404,4 @@ def sol_attn(
     )
 
 
-__all__ = ["sol_attn"]
+__all__ = ["get_sol_attn_backend", "sol_attn"]

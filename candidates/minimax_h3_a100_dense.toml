@@ -1,0 +1,47 @@
+id = "minimax_h3_a100_dense"
+kind = "baseline"
+purpose = "control"
+description = "Official SGLang MiniMax-H3 BF16 dense control on 4x A100 with FSDP and Ulysses-4."
+model_profile = "minimax_h3"
+inherit_profile_env = false
+submodule = "models/minimax_h3/h100_a100"
+run_script = "scripts/run_minimax_h3_gpu.sh"
+
+[runtime]
+root = "models/minimax_h3/h100_a100"
+python = "python3"
+
+[official_config]
+revision = "bfc8ed0353f5a9733be73e6b2c98ec0948195b86"
+num_gpus = 4
+context_parallel_degree = 4
+
+[env]
+H3_HARDWARE = "a100"
+H3_SOL_PROFILE = "dense"
+H3_CONTAINER_RUNTIME = "pyxis"
+H3_CONTAINER_IMAGE = "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86"
+H3_MODEL_PATH = "MiniMaxAI/MiniMax-H3"
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+H3_WARMUP_NUM_STEPS = "50"
+H3_MEASURED_NUM_STEPS = "50"
+H3_DURATION_SECONDS = "5.166667"
+H3_SEED = "0"
+HF_HUB_OFFLINE = "0"
+
+[slurm]
+account = ""
+partition = ""
+nodes = 1
+gpus_per_node = 4
+cpus_per_task = 48
+mem = "500G"
+time = "04:00:00"
+job_name = "h3-a100-dense"
+exclusive = false
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "benchmark.json"

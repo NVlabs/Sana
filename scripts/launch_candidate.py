@@ -135,10 +135,18 @@ def merge_model_profile(data: dict[str, Any]) -> dict[str, Any]:
         return data
 
     merged = dict(data)
-    for key in ("submodule", "base_commit", "run_script", "eval_profile", "official_config"):
+    for key in ("submodule", "base_commit", "run_script", "eval_profile"):
         if key not in merged and key in profile:
             merged[key] = profile[key]
-    merged["env"] = {**profile.get("env", {}), **data.get("env", {})}
+    if profile.get("official_config") or data.get("official_config"):
+        merged["official_config"] = {
+            **profile.get("official_config", {}),
+            **data.get("official_config", {}),
+        }
+    profile_env = (
+        profile.get("env", {}) if data.get("inherit_profile_env", True) else {}
+    )
+    merged["env"] = {**profile_env, **data.get("env", {})}
     merged["slurm"] = {
         **default_slurm(merged, profile),
         **profile.get("slurm", {}),

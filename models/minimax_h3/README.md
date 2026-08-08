@@ -10,6 +10,20 @@ That shape decides the whole acceleration line. There is no CFG branch to elide 
 attention to cache, so the only parallel axis is the sequence itself, and attention is 70% of the
 hot path.
 
+## Hardware runtimes
+
+MiniMax-H3 implementations are grouped by the hardware they were adapted and
+measured on:
+
+- `gb200/`: the original resident baseline and the multi-GPU optimized line.
+  The nested `optimized/` name is historical; it is the GB200 implementation.
+- `gb10/`: the single-GB10 constrained-memory port.
+- `rtx5090/`: the single-RTX-5090 BF16 SGLang port with layerwise offload,
+  SM120 Sol-Attn, TeaCache, regional compile, and post-denoise VAE residency.
+
+Do not mix runtime files across these directories. Candidate manifests select
+the matching hardware directory explicitly.
+
 ## Acceleration line
 
 8xGB200 (two nodes in one NVL72 rack), 1344x768, 124 frames, 50 steps. Times are the **hot path** —

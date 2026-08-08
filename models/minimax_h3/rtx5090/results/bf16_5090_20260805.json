@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "workload": {
+    "task": "t2va",
+    "width": 1344,
+    "height": 768,
+    "frames": 124,
+    "fps": 24,
+    "duration_seconds": 5,
+    "steps": 50,
+    "dtype": "bfloat16",
+    "gpu_count": 1
+  },
+  "single_case": {
+    "seed": 1101,
+    "dense": {
+      "inference_time_s": 1045.409,
+      "denoise_time_s": 951.472,
+      "decode_time_s": 91.423,
+      "client_wall_s": 1050.356,
+      "peak_memory_mb": 16558
+    },
+    "sol": {
+      "inference_time_s": 781.783,
+      "denoise_time_s": 688.167,
+      "decode_time_s": 91.281,
+      "client_wall_s": 785.280,
+      "peak_memory_mb": 16574
+    },
+    "sol_speedup_e2e": 1.3372
+  },
+  "aligned_three_prompt_suite": [
+    {
+      "case": "flamenco_dancer",
+      "seed": 1301,
+      "dense_inference_time_s": 1047.7912,
+      "dense_peak_memory_mb": 16584,
+      "fullopt_inference_time_s": 271.1285,
+      "fullopt_peak_memory_mb": 22388
+    },
+    {
+      "case": "garage_mechanics",
+      "seed": 1302,
+      "dense_inference_time_s": 1051.1344,
+      "dense_peak_memory_mb": 16568,
+      "fullopt_inference_time_s": 237.6223,
+      "fullopt_peak_memory_mb": 22380
+    },
+    {
+      "case": "official_starship",
+      "seed": 0,
+      "dense_inference_time_s": 1066.3769,
+      "dense_peak_memory_mb": 17132,
+      "fullopt_inference_time_s": 243.8952,
+      "fullopt_peak_memory_mb": 22390
+    }
+  ],
+  "suite_mean": {
+    "dense_inference_time_s": 1055.1008,
+    "dense_peak_memory_mb": 16761.3,
+    "fullopt_inference_time_s": 250.8820,
+    "fullopt_peak_memory_mb": 22386.0,
+    "fullopt_speedup_e2e": 4.2056
+  },
+  "timing_source": "SGLang video API final_status.inference_time_s",
+  "memory_source": "SGLang video API final_status.peak_memory_mb"
+}

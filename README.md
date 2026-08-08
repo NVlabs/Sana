@@ -54,17 +54,17 @@ support a wider range of models.
 
 <div align="center">
 
-| Model | Params | Acceleration line | Speedup |
-|---|---|---|---|
-| [[weight](https://huggingface.co/nvidia/Cosmos3-Super) \| [code](models/cosmos3.toml)] **Cosmos3-Super** | 64B | TeaCache + step-selective NVFP4 | **~2.27×** |
-| [[weight](https://huggingface.co/Lightricks/LTX-2.3) \| [code](site_docs/pipelines/ltx.md)] **LTX-2.3** | 22B | kernel fusion + cache + PISA + NVFP4 + token-prune | **~2.38×** |
-| [[weight](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_diffusers) \| [code](models/sana_video/baseline/scripts/run_sana_video_gpu.sh)] **SANA-Video** | 2B | EasyCache + kernel fusion + compile | **~2.77×** |
-| [[weight](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) \| [code](models/wan22_ti2v_5b/optimized/scripts/run_wan22_ti2v_5b_gpu.sh)] **Wan2.2 TI2V-5B** | 5B | EasyCache + kernel fusion + compile | **~2.89×** |
-| [[weight](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) \| [code](models/wan22_t2v_a14b/optimized/scripts/run_wan22_t2v_a14b_gpu.sh)] **Wan2.2-A14B** | 14B (MoE) | kernel fusion + EasyCache + PISA | **~2.17×** |
-| [[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) \| [code](models/lingbot_video/optimized/scripts/run_lingbot_video_gpu.sh)] **LingBot-Video** | 30B-A3B (MoE) | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
-| [[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) \| [code](models/hunyuan_video/optimized/scripts/run_hunyuan_diffusers_gpu.sh)] **HunyuanVideo-13B** | 13B | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
-| [[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) \| [code](models/wan21_t2v_14b/optimized/scripts/run_wan22_ti2v_5b_gpu.sh)] **Wan2.1-T2V-14B** | 14B | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
-| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/gb200/optimized/scripts/run_minimax_h3_gpu.sh)] **MiniMax-H3** | 33B (audio+video) | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.97×** |
+| Model | Acceleration line | Speedup |
+|---|---|---|
+| [[weight](https://huggingface.co/nvidia/Cosmos3-Super) \| [code](models/cosmos3.toml)] **Cosmos3-Super** | TeaCache + step-selective NVFP4 | **~2.27×** |
+| [[weight](https://huggingface.co/Lightricks/LTX-2.3) \| [code](site_docs/pipelines/ltx.md)] **LTX-2.3** | kernel fusion + cache + PISA + NVFP4 + token-prune | **~2.38×** |
+| [[weight](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_diffusers) \| [code](models/sana_video/baseline/scripts/run_sana_video_gpu.sh)] **SANA-Video** | EasyCache + kernel fusion + compile | **~2.77×** |
+| [[weight](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) \| [code](models/wan22_ti2v_5b/optimized/scripts/run_wan22_ti2v_5b_gpu.sh)] **Wan2.2 TI2V-5B** | EasyCache + kernel fusion + compile | **~2.89×** |
+| [[weight](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) \| [code](models/wan22_t2v_a14b/optimized/scripts/run_wan22_t2v_a14b_gpu.sh)] **Wan2.2-A14B** | kernel fusion + EasyCache + PISA | **~2.17×** |
+| [[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) \| [code](models/lingbot_video/optimized/scripts/run_lingbot_video_gpu.sh)] **LingBot-Video** | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
+| [[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) \| [code](models/hunyuan_video/optimized/scripts/run_hunyuan_diffusers_gpu.sh)] **HunyuanVideo-13B** | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
+| [[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) \| [code](models/wan21_t2v_14b/optimized/scripts/run_wan22_ti2v_5b_gpu.sh)] **Wan2.1-T2V-14B** | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
+| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/gb200/optimized/scripts/run_minimax_h3_gpu.sh)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.97×** |
 
 </div>
 

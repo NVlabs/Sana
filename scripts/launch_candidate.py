@@ -301,7 +301,13 @@ def vendored_snapshot_identity(path: Path) -> str | None:
     core_hashes = snapshot.get("core_sha256", {})
     if not isinstance(core_hashes, dict) or not core_hashes:
         raise SystemExit(f"Vendored source snapshot has no core_sha256 entries: {snapshot_path}")
-    source_root = path / "lingbot_src"
+    source_root = (path / str(snapshot.get("source_root", "lingbot_src"))).resolve()
+    try:
+        source_root.relative_to(path.resolve())
+    except ValueError as exc:
+        raise SystemExit(
+            f"Vendored source_root escapes runtime root: {source_root}"
+        ) from exc
     for relative, expected in core_hashes.items():
         source_path = source_root / str(relative)
         if not source_path.is_file():

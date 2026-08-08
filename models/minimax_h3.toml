@@ -138,11 +138,11 @@ source_snapshot = "models/minimax_h3/gb200/baseline/diffusers_src"
 # comparable row for row. What is comparable is the shape — same timing scope, same fields.
 # ============================================================================================
 
-[gb10_fp8]
+[gb10]
 variant = "diffusers_modular_pruned_fp8_scaled_single_gb10"
 status = "measured_single_gpu_resident_fp8"
-runtime_root = "models/minimax_h3/gb10_fp8"
-run_script = "models/minimax_h3/gb10_fp8/scripts/run_minimax_h3_gpu.sh"
+runtime_root = "models/minimax_h3/gb10"
+run_script = "models/minimax_h3/gb10/scripts/run_minimax_h3_gpu.sh"
 candidates = [
   "candidates/minimax_h3_gb10_baseline.toml",
   "candidates/minimax_h3_gb10_kernel.toml",
@@ -163,7 +163,7 @@ model — but they were measured against each other and agree: 13,428 ms against
 also ratios against the released model."""
 
 # --- DiT forward, 832x480 step 24, round-robin interleaved, min of 3 rounds -----------------
-[gb10_fp8.dit_forward_ms]
+[gb10.dit_forward_ms]
 bf16_released = 13417
 baseline = 13576
 kernel_fused_qkv = 12875
@@ -184,7 +184,7 @@ local kernel measured 8577 at tau=1; the difference is one policy that kernel ca
 this one does not, which cost 7.8% of the attention time for +0.0005 of cosine."""
 
 # --- The fixed remainder, same cell ---------------------------------------------------------
-[gb10_fp8.fixed_cost_s]
+[gb10.fixed_cost_s]
 text_encode = 2.03
 video_vae_decode = 29.41
 audio_vae_decode = 0.33
@@ -198,7 +198,7 @@ was rejected: an untiled height reaches 2.29x at PSNR 23.1 dB, with 60% of pixel
 different."""
 
 # --- The hardware, measured rather than quoted ----------------------------------------------
-[gb10_fp8.roofline]
+[gb10.roofline]
 bf16_gemm_tflops = 100.0
 fp16_gemm_tflops = 96.0
 fp8_e4m3_gemm_tflops = 188.3

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Registered MiniMax-H3 *gb10_fp8* runtime entrypoint.
+# Registered MiniMax-H3 *gb10* runtime entrypoint.
 #
 # Same contract as the baseline and optimized entrypoints: the candidate manifest sets OUT_DIR
 # and the H3_* switches, this resolves the vendored deps and launches the driver. The
-# acceleration line is entirely env-gated (see `gb10_fp8/gpu_infer.py`), so this script is
+# acceleration line is entirely env-gated (see `gb10/gpu_infer.py`), so this script is
 # identical for every candidate in `candidates/minimax_h3_gb10_*.toml`.
 #
 # No torchrun. One GB10 is one process; there is no context parallelism to launch into.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Registered MiniMax-H3 *gb10_fp8* runtime entrypoint — one GB10, FP8, no context parallelism.
+"""Registered MiniMax-H3 *gb10* runtime entrypoint — one GB10, FP8, no context parallelism.
 
 Same contract as the baseline and optimized entrypoints: the candidate manifest sets OUT_DIR
 and the H3_* switches, this builds the pipeline and writes `benchmark.json` and `out.mp4` into
@@ -311,7 +311,7 @@ def main() -> int:
     parser.add_argument("--prompt", default=None)
     parser.add_argument("--prompt-file", default=os.environ.get("H3_PROMPT_FILE", str(paths.PROMPT_FILE)))
     parser.add_argument("--output-dir", default=os.environ.get("H3_OUTPUT_DIR", "outputs"))
-    parser.add_argument("--tag", default=os.environ.get("H3_TAG", "gb10_fp8"))
+    parser.add_argument("--tag", default=os.environ.get("H3_TAG", "gb10"))
     parser.add_argument("--attention-backend", default=os.environ.get("H3_ATTENTION_BACKEND") or None)
     parser.add_argument("--no-export", action="store_true")
     args = parser.parse_args()

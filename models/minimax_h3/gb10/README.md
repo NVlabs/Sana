@@ -5,7 +5,7 @@ A third measured runtime beside `baseline/` (one GB200, BF16, pristine) and `opt
 shard 33B across a rack, but what survives when there is one card and the released weights do
 not fit on it.
 
-The rows in `models/minimax_h3.toml [gb10_fp8]` are not comparable to `[baseline]` row for
+The rows in `models/minimax_h3.toml [gb10]` are not comparable to `[baseline]` row for
 row — different hardware, different checkpoint, a tenth of the canvas. What is comparable is
 the shape: same timing scope, same fields, same recorded prompt.
 

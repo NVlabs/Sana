@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run one model arm from a single flat config file.
 
-    python3 scripts/run.py models/minimax_h3/gb200/baseline.toml
+    python3 scripts/run.py models/minimax_h3/gb200_sglang/dense.toml
 
 That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,
@@ -16,10 +16,10 @@ WHERE CONFIGS LIVE
 Beside the code they launch, one directory per hardware target:
 
     models/minimax_h3/            the model
-      gb200/                        the GB200 implementation
-        baseline.toml                 launch config  ->  runs gb200/baseline/
-        optimized.toml                launch config  ->  runs gb200/optimized/
-        baseline/  optimized/         the code
+      gb200_sglang/                 the GB200 SGLang implementation
+        dense.toml                    launch config  ->  the dense control
+        aggressive.toml               launch config  ->  the full stack
+        <driver + modules>            the code
       h100/  a100/  gb10/  rtx5090/  other targets, same shape
 
 There is no top-level configs/ directory. A config is part of the hardware
@@ -38,7 +38,7 @@ this file carries a 12-line fallback parser so it does not even need tomllib.
 PATHS -- two bases, one rule each:
 
     runtime, entry   resolve against THIS CONFIG'S directory. A config sitting
-                     in gb200/ says runtime = "baseline", not the long repo path.
+                     beside its code says runtime = ".", not the long repo path.
     UPPERCASE values are handed to a process whose cwd is the repo root, so a
                      path in them reads from there (H3_PROMPT_FILE =
                      "models/minimax_h3/prompts/t2va_example_1.json").
@@ -145,8 +145,8 @@ def main() -> int:
         raise SystemExit(f"{config_path}: 'runtime' and 'entry' are required")
 
     # Resolved against the config's own directory, with no repo-root fallback.
-    # A single base keeps it predictable: a config that sits next to its arm
-    # says runtime = "baseline", and moving the pair moves both.
+    # A single base keeps it predictable: a config that sits with its code
+    # says runtime = ".", and moving the pair moves both.
     runtime = (config_path.parent / str(runtime_rel)).resolve()
     entry = (runtime / str(entry_rel)).resolve()
 

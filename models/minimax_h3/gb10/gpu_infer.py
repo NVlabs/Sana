@@ -10,7 +10,7 @@ What this variant is
 --------------------
 MiniMax-H3 t2va on one GB10, from the pruned FP8 checkpoint.
 
-Sol-Engine's own baseline (`models/minimax_h3/gb200/baseline/gpu_infer.py`) puts the 33B DiT, the
+Sol-Engine's own baseline (`models/minimax_h3/gb200/gpu_infer.py`) puts the 33B DiT, the
 Qwen3-VL-32B conditioner and both VAEs resident on one 186 GB GB200 and calls that the
 denominator. None of that fits here: GB10 has 128 GB of *unified* memory shared with the
 host, and the released BF16 weights alone are 134 GB. Two substitutions close the gap and

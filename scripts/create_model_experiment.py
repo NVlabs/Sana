@@ -21,8 +21,17 @@ from typing import Any
 
 try:
     import tomllib
-except ModuleNotFoundError as exc:  # pragma: no cover - Python < 3.11
-    raise SystemExit("Python 3.11+ is required for tomllib TOML support") from exc
+except ModuleNotFoundError:  # python < 3.11
+    # draco and cs ship python 3.9. Refusing outright made this script unusable
+    # on the two clusters where the A100 work happens; the tomli backport reads
+    # the same dialect, so try it before giving up.
+    try:
+        import tomli as tomllib
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        raise SystemExit(
+            "Reading TOML needs python 3.11+ (tomllib) or the tomli backport; "
+            "this interpreter has neither"
+        ) from exc
 
 
 WORKFLOW_UID_RE = re.compile(r"^([a-z][a-z0-9]*(?:_[a-z][a-z0-9]*)*)_([A-Za-z]{2})$")

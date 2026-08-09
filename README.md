@@ -39,9 +39,9 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/08/09]** 🔥 **MiniMax-H3 on H100 and A100** [[Code](models/minimax_h3/)] — reaches **3.56×** end-to-end on **4×H100** and **3.55×** on **4×A100**.
-- **[2026/08/06]** 🔥 **MiniMax-H3 on GB10 and RTX 5090** [[Code](models/minimax_h3/)] — reaches **3.92×** end-to-end on **DGX Spark (GB10)** and **4.52×** on **GeForce RTX 5090**.
-- **[2026/08/03]** 🔥 **MiniMax-H3 on GB200** [[Code](models/minimax_h3/)] — reaches **~3.97×** end-to-end on **8×GB200**.
+- **[2026/08/09]** 🔥 **MiniMax-H3 on H100 and A100** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Code](models/minimax_h3/)] — reaches **3.56×** end-to-end on **4×H100** and **3.55×** on **4×A100**.
+- **[2026/08/06]** 🔥 **MiniMax-H3 on GB10 and RTX 5090** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — reaches **3.92×** end-to-end on **DGX Spark (GB10)** and **4.52×** on **GeForce RTX 5090**.
+- **[2026/08/03]** 🔥 **MiniMax-H3 on GB200** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] — reaches **~3.97×** end-to-end on **8×GB200**.
 - **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.

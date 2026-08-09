@@ -39,6 +39,7 @@ support a wider range of models.
 
 ## 📰 News
 
+- **[2026/08/09] NEW: MiniMax-H3 on H100 and A100**. Validated BF16 release profiles now support **4×H100-80GB (SM90)** with the CuTe SM90 Sol-Attn backend and **4×A100-80GB (SM80)** with the portable Triton backend. Both run 1344×768, 124-frame generation with Ulysses-4, no offload, and hardware-specific runtimes. See [H100](models/minimax_h3/h100/) and [A100](models/minimax_h3/a100/).
 - **[2026/08/06]** 🔥 **MiniMax-H3 on-device** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — the same 33B Omni-DiT on on-device GPUs at **3.92×** end-to-end on DGX Spark and **4.52×** on GeForce RTX 5090, from an FP8 checkpoint that fits the model on one card. See [models/minimax_h3/gb10](models/minimax_h3/gb10/).
 - **[2026/08/03]** 🔥 **MiniMax-H3** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] — 33B audio-video Omni-DiT joins the line at **~3.97×** end-to-end on 8×GB200, composing context parallelism, a lossless kernel line, [**Sol-Attn**](techniques/sparse_backends/) and FirstBlockCache. See [models/minimax_h3/gb200](models/minimax_h3/gb200/).
 - **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Registered MiniMax-H3 DiT with the H100/A100 Sol-Engine hooks.
+"""Registered MiniMax-H3 DiT with the A100 Sol-Engine hooks.
 
 The implementation is pinned to the SGLang source verified by registration.py;
 the installed SGLang package is never copied, patched, or modified at runtime.

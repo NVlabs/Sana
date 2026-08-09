@@ -161,31 +161,53 @@ teacache_threshold = 0.10
 teacache_retain_steps = 5
 teacache_cooldown_steps = 1
 
-[h100_a100]
-variant = "sglang_registered_bf16_4gpu"
-status = "measured_h100_a100"
-runtime_root = "models/minimax_h3/h100_a100"
-run_script = "models/minimax_h3/h100_a100/scripts/run_minimax_h3_gpu.sh"
+[h100]
+variant = "sglang_registered_bf16_4gpu_h100"
+status = "measured_h100"
+runtime_root = "models/minimax_h3/h100"
+run_script = "models/minimax_h3/h100/scripts/run_minimax_h3_gpu.sh"
 candidates = [
   "candidates/minimax_h3_h100_dense.toml",
   "candidates/minimax_h3_h100_quality.toml",
   "candidates/minimax_h3_h100_balanced.toml",
   "candidates/minimax_h3_h100_aggressive.toml",
   "candidates/minimax_h3_h100_fullopt_exact.toml",
+]
+hardware = "4x H100-80GB (SM90)"
+cell = "1344x768, 124 frames, 5.166667 seconds, 50 steps, BF16 FL2VA"
+timing_scope = "SGLang GenerationResult.metrics.total_duration_s after one full warmup"
+memory_scope = "SGLang GenerationResult.peak_memory_mb"
+source_snapshot = "models/minimax_h3/h100/SOURCE_SNAPSHOT.json"
+note = "Self-contained SM90 runtime with a locked CuTe Sol-Attn backend and H100-specific capability contract."
+
+[h100.policy]
+sink = "full multimodal prefix"
+prefix_query_rows = "dense"
+first_dense_layers = 2
+reorder = false
+offload = false
+torch_compile = false
+
+[a100]
+variant = "sglang_registered_bf16_4gpu_a100"
+status = "measured_a100"
+runtime_root = "models/minimax_h3/a100"
+run_script = "models/minimax_h3/a100/scripts/run_minimax_h3_gpu.sh"
+candidates = [
   "candidates/minimax_h3_a100_dense.toml",
   "candidates/minimax_h3_a100_quality.toml",
   "candidates/minimax_h3_a100_balanced.toml",
   "candidates/minimax_h3_a100_aggressive.toml",
   "candidates/minimax_h3_a100_fullopt_exact.toml",
 ]
-hardware = "4x H100-80GB (SM90) or 4x A100-80GB (SM80)"
+hardware = "4x A100-80GB (SM80)"
 cell = "1344x768, 124 frames, 5.166667 seconds, 50 steps, BF16 FL2VA"
 timing_scope = "SGLang GenerationResult.metrics.total_duration_s after one full warmup"
 memory_scope = "SGLang GenerationResult.peak_memory_mb"
-source_snapshot = "models/minimax_h3/h100_a100/SOURCE_SNAPSHOT.json"
-note = "The two hardware targets share one registered model and locked algorithm profiles; only the Sol-Attn backend and capability contract differ."
+source_snapshot = "models/minimax_h3/a100/SOURCE_SNAPSHOT.json"
+note = "Self-contained SM80 runtime with a locked Triton Sol-Attn backend and A100-specific capability contract."
 
-[h100_a100.policy]
+[a100.policy]
 sink = "full multimodal prefix"
 prefix_query_rows = "dense"
 first_dense_layers = 2

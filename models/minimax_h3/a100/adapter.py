@@ -509,7 +509,7 @@ def _validate_sparse_policy(tau: float, thresh_type: str) -> str:
     name = os.getenv("H3_POLICY_NAME", "fullopt_exact")
     expected = _SPARSE_POLICIES.get(name)
     if expected is None:
-        raise RuntimeError(f"unknown H100/A100 MiniMax-H3 policy {name!r}")
+        raise RuntimeError(f"unknown A100 MiniMax-H3 policy {name!r}")
     actual = (
         tau,
         thresh_type,
@@ -518,7 +518,7 @@ def _validate_sparse_policy(tau: float, thresh_type: str) -> str:
     )
     if actual != expected:
         raise RuntimeError(
-            f"H100/A100 MiniMax-H3 policy {name!r} requires {expected}, got {actual}"
+            f"A100 MiniMax-H3 policy {name!r} requires {expected}, got {actual}"
         )
     return name
 
@@ -550,7 +550,7 @@ def _sparse_varlen(
     thresh_type = os.getenv("H3_SOL_THRESH_TYPE", "exact")
     policy_name = _validate_sparse_policy(tau, thresh_type)
     if os.getenv("H3_SOL_SINK_MODE", "prefix") != "prefix":
-        raise RuntimeError("H100/A100 MiniMax-H3 requires the full prefix sink")
+        raise RuntimeError("A100 MiniMax-H3 requires the full prefix sink")
 
     output = torch.zeros_like(q)
     for raw_start, raw_end in zip(boundaries, boundaries[1:]):
@@ -559,7 +559,7 @@ def _sparse_varlen(
         if end <= start:
             continue
         if start != 0:
-            raise RuntimeError("MiniMax-H3 H100/A100 path expects one live packed document")
+            raise RuntimeError("MiniMax-H3 A100 path expects one live packed document")
         qb = q[start:end].unsqueeze(0).contiguous()
         kb = k[start:end].unsqueeze(0).contiguous()
         vb = v[start:end].unsqueeze(0).contiguous()

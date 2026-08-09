@@ -114,7 +114,7 @@ export TMPDIR=/tmp
 
 case "${requested_runtime}" in
   pyxis)
-    container_env=OUT_DIR,PYTHONPATH,H3_CONTAINER_RUNTIME,H3_STORAGE_ROOT,H3_CACHE_ROOT,H3_SGLANG_PYTHON_ROOT,H3_PYTHON_BIN,H3_MODEL_PATH,H3_MODEL_REVISION,H3_MODEL_SUBFOLDER,H3_PROMPT_FILE,H3_WARMUP_NUM_STEPS,H3_MEASURED_NUM_STEPS,H3_DURATION_SECONDS,H3_SEED,H3_WARMUP_SEED,H3_MASTER_PORT,H3_HARDWARE,H3_SOL_PROFILE,H3_EXPECTED_TORCH,H3_EXPECTED_TRITON,HF_HOME,HUGGINGFACE_HUB_CACHE,HF_HUB_DISABLE_XET,HF_HUB_DOWNLOAD_TIMEOUT,HF_HUB_OFFLINE,TRITON_CACHE_DIR,TORCH_HOME,XDG_CACHE_HOME,TMPDIR,OMP_NUM_THREADS,OPENBLAS_NUM_THREADS,MKL_NUM_THREADS,NUMEXPR_NUM_THREADS,TOKENIZERS_PARALLELISM,PYTHONUNBUFFERED
+    container_env=OUT_DIR,PYTHONPATH,H3_CONTAINER_RUNTIME,H3_STORAGE_ROOT,H3_CACHE_ROOT,H3_SGLANG_PYTHON_ROOT,H3_PYTHON_BIN,H3_MODEL_PATH,H3_MODEL_REVISION,H3_MODEL_SUBFOLDER,H3_PROMPT_FILE,H3_WARMUP_NUM_STEPS,H3_MEASURED_NUM_STEPS,H3_DURATION_SECONDS,H3_SEED,H3_WARMUP_SEED,H3_MASTER_PORT,H3_SOL_PROFILE,H3_EXPECTED_TORCH,H3_EXPECTED_TRITON,HF_HOME,HUGGINGFACE_HUB_CACHE,HF_HUB_DISABLE_XET,HF_HUB_DOWNLOAD_TIMEOUT,HF_HUB_OFFLINE,TRITON_CACHE_DIR,TORCH_HOME,XDG_CACHE_HOME,TMPDIR,OMP_NUM_THREADS,OPENBLAS_NUM_THREADS,MKL_NUM_THREADS,NUMEXPR_NUM_THREADS,TOKENIZERS_PARALLELISM,PYTHONUNBUFFERED
     exec srun \
       --ntasks=1 \
       --nodes=1 \
@@ -124,7 +124,7 @@ case "${requested_runtime}" in
       --no-container-mount-home \
       --container-workdir="${inside_output}" \
       --no-container-entrypoint \
-      bash "${inside_repo}/models/minimax_h3/h100_a100/scripts/run_minimax_h3_gpu.sh"
+      bash "${inside_repo}/models/minimax_h3/h100/scripts/run_minimax_h3_gpu.sh"
     ;;
   apptainer|singularity)
     if ! command -v "${requested_runtime}" >/dev/null 2>&1; then
@@ -141,7 +141,7 @@ case "${requested_runtime}" in
       --nv \
       --bind "${host_storage_root}:/h3" \
       "${H3_CONTAINER_IMAGE}" \
-      bash "${inside_repo}/models/minimax_h3/h100_a100/scripts/run_minimax_h3_gpu.sh"
+      bash "${inside_repo}/models/minimax_h3/h100/scripts/run_minimax_h3_gpu.sh"
     ;;
   *)
     echo "H3_CONTAINER_RUNTIME must be none, pyxis, apptainer, or singularity" >&2

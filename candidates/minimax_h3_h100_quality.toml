@@ -4,11 +4,11 @@ purpose = "delivery"
 description = "Quality-first 4x H100 profile: conservative EasyCache plus CuTe-SM90 Sol-Attn."
 model_profile = "minimax_h3"
 inherit_profile_env = false
-submodule = "models/minimax_h3/h100_a100"
+submodule = "models/minimax_h3/h100"
 run_script = "scripts/run_minimax_h3_gpu.sh"
 
 [runtime]
-root = "models/minimax_h3/h100_a100"
+root = "models/minimax_h3/h100"
 python = "python3"
 
 [official_config]
@@ -17,7 +17,6 @@ num_gpus = 4
 context_parallel_degree = 4
 
 [env]
-H3_HARDWARE = "h100"
 H3_SOL_PROFILE = "quality"
 H3_CONTAINER_RUNTIME = "pyxis"
 H3_CONTAINER_IMAGE = "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86"

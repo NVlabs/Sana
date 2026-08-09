@@ -22,8 +22,20 @@ from typing import Any
 
 try:
     import tomllib
-except ModuleNotFoundError as exc:  # pragma: no cover - Python < 3.11
-    raise SystemExit("Python 3.11+ is required for tomllib TOML support") from exc
+except ModuleNotFoundError:  # python < 3.11
+    # draco and cs ship python 3.9. run.py carries a flat-config fallback parser
+    # for exactly this reason, but a manifest has nested tables that a
+    # line-splitter cannot read, so fall back to the tomli backport rather than
+    # refusing to start. Without this the merged launcher cannot begin a run at
+    # all on those two clusters, which is where the A100 work happens -- the
+    # A100 verification failed here in 7 seconds.
+    try:
+        import tomli as tomllib
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        raise SystemExit(
+            "Reading TOML needs python 3.11+ (tomllib) or the tomli backport; "
+            "this interpreter has neither"
+        ) from exc
 
 REPO_FOR_IMPORT = Path(__file__).resolve().parents[1]
 if str(REPO_FOR_IMPORT) not in sys.path:

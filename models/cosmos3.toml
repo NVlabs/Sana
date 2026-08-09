@@ -8,19 +8,27 @@ id = "cosmos3"
 spec = "Cosmos3"                 # descriptive target label in generated metadata
 display_name = "nvidia/Cosmos3-Super"
 family = "video_t2v"
-submodule = "Sol-LTX-Infer"
-# Re-pinned 2026-08-08. The previous pin, 29d0d9e464000a2472345dcad51054b15aacca8d
-# ("run_cosmos3_sglang.sh: make env paths overridable", 2026-06-13), sits on no
-# branch in Efficient-Large-Model/Sol-LTX-Infer — `git branch -r --contains` is
-# empty for it, so a plain `git fetch` never brings it down and every checkout
-# reported it as a bad object. It is still retrievable, but only by explicit SHA
-# (`git fetch <remote> 29d0d9e4...`). elm/v1_formal carries scripts/ltx/ and
-# scripts/cosmos/ in the layout the site docs reference, so both models pin here.
-base_commit = "b0b7eb4d0a7f1f46118a356485f4523cf52e96dd"
-run_script = "models/cosmos3/baseline/scripts/run_cosmos3_gpu.sh"
-optimized_run_script = "models/cosmos3/optimized/scripts/run_cosmos3_gpu.sh"
+# submodule is the vendored runtime dir, and run_script is resolved relative to
+# the candidate's [runtime].root -- NOT repo-relative. Both arms name their shim
+# identically, so the same run_script value selects baseline or optimized purely
+# by which [runtime].root the candidate points at. There is no separate
+# "optimized_run_script" key; nothing reads one.
+submodule = "models/cosmos3/baseline"
+run_script = "scripts/run_cosmos3_gpu.sh"
 eval_profile = "evals/profiles/official_video_t2v_cosmos3.toml"
 model_contract = "models/cosmos3/model.toml"
+# No base_commit: launch_candidate.py compares it against the *submodule's* git
+# commit, and the submodule is this repo's vendored arm. The Sol-LTX-Infer pin
+# lives in models/cosmos3/model.toml as [[baseline.reference_only]].commit.
+#
+# That pin was moved off 29d0d9e464000a2472345dcad51054b15aacca8d
+# ("run_cosmos3_sglang.sh: make env paths overridable", 2026-06-13), which sits
+# on no branch in Efficient-Large-Model/Sol-LTX-Infer — `git branch -r --contains`
+# is empty for it, so a plain `git fetch` never brings it down and every checkout
+# on the fleet reported it as a bad object. It is still retrievable by explicit
+# SHA (`git fetch <remote> 29d0d9e4...`); it just should not be what a profile
+# points at. elm/v1_formal (b0b7eb4d0) carries scripts/ltx/ and scripts/cosmos/
+# in the layout the site docs reference.
 
 [official_config]
 model = "nvidia/Cosmos3-Super"

@@ -9,12 +9,19 @@ id = "ltx23"
 spec = "LTX2"                    # descriptive target label in generated metadata
 display_name = "Lightricks/LTX-2.3"
 family = "video_t2v"
-submodule = "Sol-LTX-Infer"
-base_commit = "b0b7eb4d0a7f1f46118a356485f4523cf52e96dd"
-run_script = "models/ltx23/baseline/scripts/run_ltx23_gpu.sh"
-optimized_run_script = "models/ltx23/optimized/scripts/run_ltx23_gpu.sh"
+# submodule is the vendored runtime dir, and run_script is resolved relative to
+# the candidate's [runtime].root -- NOT repo-relative. Both arms name their shim
+# identically, so the same run_script value selects baseline or optimized purely
+# by which [runtime].root the candidate points at. There is no separate
+# "optimized_run_script" key; nothing reads one.
+submodule = "models/ltx23/baseline"
+run_script = "scripts/run_ltx23_gpu.sh"
 eval_profile = "evals/profiles/official_video_t2v_ltx23.toml"
 model_contract = "models/ltx23/model.toml"
+# No base_commit: launch_candidate.py compares it against the *submodule's* git
+# commit, and the submodule is this repo's vendored arm. The Sol-LTX-Infer pin
+# that actually matters lives in models/ltx23/model.toml as
+# [[baseline.reference_only]].commit, where it is declarative.
 
 [official_config]
 model = "Lightricks/LTX-2.3"

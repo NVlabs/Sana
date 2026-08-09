@@ -1,6 +1,6 @@
 family = "video_t2va"
 submodule = "models/minimax_h3/gb200/baseline"
-run_script = "models/minimax_h3/gb200/baseline/scripts/run_minimax_h3_gpu.sh"
+run_script = "models/minimax_h3/gb200/baseline/run_minimax_h3_gpu.sh"
 eval_profile = "evals/profiles/official_video_t2va_minimax_h3.toml"
 
 # MiniMax-H3 is a joint audio+video generator: one 33B dense single-stream transformer denoises a
@@ -136,7 +136,7 @@ source_snapshot = "models/minimax_h3/gb200/baseline/diffusers_src"
 variant = "sglang_registered_bf16_single_rtx5090"
 status = "single_gpu_layerwise_offload"
 runtime_root = "models/minimax_h3/rtx5090"
-run_script = "models/minimax_h3/rtx5090/scripts/run_minimax_h3_gpu.sh"
+run_script = "models/minimax_h3/rtx5090/run_minimax_h3_gpu.sh"
 candidates = [
   "candidates/minimax_h3_rtx5090_dense.toml",
   "candidates/minimax_h3_rtx5090_sol.toml",
@@ -165,7 +165,7 @@ teacache_cooldown_steps = 1
 variant = "sglang_registered_bf16_4gpu_h100"
 status = "measured_h100"
 runtime_root = "models/minimax_h3/h100"
-run_script = "models/minimax_h3/h100/scripts/run_minimax_h3_gpu.sh"
+run_script = "models/minimax_h3/h100/run_minimax_h3_gpu.sh"
 candidates = [
   "candidates/minimax_h3_h100_dense.toml",
   "candidates/minimax_h3_h100_quality.toml",
@@ -192,7 +192,7 @@ torch_compile = false
 variant = "sglang_registered_bf16_4gpu_a100"
 status = "measured_a100"
 runtime_root = "models/minimax_h3/a100"
-run_script = "models/minimax_h3/a100/scripts/run_minimax_h3_gpu.sh"
+run_script = "models/minimax_h3/a100/run_minimax_h3_gpu.sh"
 candidates = [
   "candidates/minimax_h3_a100_dense.toml",
   "candidates/minimax_h3_a100_quality.toml",
@@ -225,7 +225,7 @@ torch_compile = false
 variant = "diffusers_modular_pruned_fp8_scaled_single_gb10"
 status = "measured_single_gpu_resident_fp8"
 runtime_root = "models/minimax_h3/gb10"
-run_script = "models/minimax_h3/gb10/scripts/run_minimax_h3_gpu.sh"
+run_script = "models/minimax_h3/gb10/run_minimax_h3_gpu.sh"
 candidates = [
   "candidates/minimax_h3_gb10_baseline.toml",
   "candidates/minimax_h3_gb10_kernel.toml",

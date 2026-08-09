@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MiniMax-H3 optimized driver. Env-driven, one technique per switch.
 
-Called by `scripts/run_minimax_h3_gpu.sh`, which tees stdout to `run.log`. Runs a warmup request
+Called by `run_minimax_h3_gpu.sh`, which tees stdout to `run.log`. Runs a warmup request
 and then a measured request over the prompt file, and writes the standard artifacts into
 `$H3_OUTPUT_DIR`: `out.mp4`, `benchmark.json`, `run_config.json`.
 

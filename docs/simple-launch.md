@@ -31,7 +31,7 @@ has to learn about it — no registry, no central list.
 ```toml
 name    = "minimax_h3_gb200_baseline"   # lowercase -> the launcher
 runtime = "baseline"                    # the sibling dir this config launches
-entry   = "scripts/run_minimax_h3_gpu.sh"
+entry   = "run_minimax_h3_gpu.sh"
 gpus    = 1
 
 H3_MODEL_PATH = "/path/to/MiniMax-H3-diffusers"   # UPPERCASE -> exported as env

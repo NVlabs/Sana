@@ -138,7 +138,7 @@ def test_candidates_do_not_inherit_the_legacy_diffusers_environment() -> None:
 def test_each_runtime_registers_locally_and_never_patches_sglang() -> None:
     for hardware, runtime in RUNTIMES.items():
         registration = (runtime / "registration.py").read_text(encoding="utf-8")
-        runner = (runtime / "scripts/run_minimax_h3_gpu.sh").read_text(
+        runner = (runtime / "run_minimax_h3_gpu.sh").read_text(
             encoding="utf-8"
         )
         assert "ModelRegistry.register_model" in registration
@@ -147,7 +147,7 @@ def test_each_runtime_registers_locally_and_never_patches_sglang() -> None:
         assert "git apply" not in runner
         assert "cp -a" not in runner
         assert not list(runtime.rglob("*.patch"))
-        assert f"models/minimax_h3/{hardware}/scripts/run_minimax_h3_gpu.sh" in runner
+        assert f"models/minimax_h3/{hardware}/run_minimax_h3_gpu.sh" in runner
 
 
 def test_each_source_snapshot_matches_its_runtime() -> None:

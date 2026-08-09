@@ -3,7 +3,7 @@
 
 Same contract as the baseline and optimized entrypoints: the candidate manifest sets OUT_DIR
 and the H3_* switches, this builds the pipeline and writes `benchmark.json` and `out.mp4` into
-it. Every acceleration is env-gated, so `scripts/run_minimax_h3_gpu.sh` is identical for every
+it. Every acceleration is env-gated, so `run_minimax_h3_gpu.sh` is identical for every
 candidate in `candidates/minimax_h3_gb10_*.toml`.
 
 What this variant is

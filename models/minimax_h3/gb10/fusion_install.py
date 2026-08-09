@@ -31,7 +31,7 @@ FP8_MAX = 448.0
 def _ensure_sol_attn_on_path() -> None:
     """Put `techniques/sparse_backends` on `sys.path`, as the entrypoint script intends.
 
-    `H3_SOL_ATTN_ROOT` is set by `scripts/run_minimax_h3_gpu.sh`, the same variable the
+    `H3_SOL_ATTN_ROOT` is set by `run_minimax_h3_gpu.sh`, the same variable the
     8xGB200 entrypoint uses; the fallback walks up to the repo root so the module is still
     importable when a benchmark is run by hand.
     """

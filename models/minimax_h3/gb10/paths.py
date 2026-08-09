@@ -11,7 +11,7 @@ The layout this assumes is the repository's own:
     models/minimax_h3/gb200/baseline/diffusers_src  the pinned diffusers (PR #14355)
     techniques/sparse_backends                      Sol-Attn's released kernel
 
-`scripts/run_minimax_h3_gpu.sh` exports the same variables before launching, matching the
+`run_minimax_h3_gpu.sh` exports the same variables before launching, matching the
 8xGB200 entrypoint next door, so a candidate run never depends on these fallbacks. They exist
 so the entrypoint can also be run by hand, without a candidate manifest.
 """
@@ -113,7 +113,7 @@ def setup(need_sol_engine: bool = False) -> None:
         if not SPARSE_BACKENDS.is_dir():
             raise SystemExit(
                 f"Sol-Attn's kernel is not at {SPARSE_BACKENDS}.\n"
-                f"Set H3_SOL_ATTN_ROOT, or run through scripts/run_minimax_h3_gpu.sh."
+                f"Set H3_SOL_ATTN_ROOT, or run through run_minimax_h3_gpu.sh."
             )
         if str(SPARSE_BACKENDS) not in sys.path:
             sys.path.insert(0, str(SPARSE_BACKENDS))

@@ -5,7 +5,7 @@ set -euo pipefail
 : "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
 : "${H3_MODEL_PATH:?H3_MODEL_PATH must point to the converted diffusers checkpoint}"
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$OUT_DIR"
 export H3_OUTPUT_DIR="$OUT_DIR"
 

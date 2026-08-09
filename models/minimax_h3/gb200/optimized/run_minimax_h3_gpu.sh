@@ -10,7 +10,7 @@ set -euo pipefail
 : "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
 : "${H3_MODEL_PATH:?H3_MODEL_PATH must point to the converted diffusers checkpoint}"
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASELINE="$(cd "${HERE}/../baseline" && pwd)"
 mkdir -p "$OUT_DIR"
 export H3_OUTPUT_DIR="$OUT_DIR"
@@ -23,7 +23,7 @@ export H3_OUTPUT_DIR="$OUT_DIR"
 #   sol_attn — the released kernel package. It vendors its CuTe dependencies under
 #     `sol_attn._vendor.flash_attn`, a private namespace, so no separate flash-attn shim is needed.
 #   the vendored diffusers (PR #14355) plus the huggingface_hub >= 1.23 it needs.
-SOL_ATTN_ROOT="${H3_SOL_ATTN_ROOT:-$(cd "${HERE}/../../../techniques/sparse_backends" && pwd)}"
+SOL_ATTN_ROOT="${H3_SOL_ATTN_ROOT:-$(cd "${HERE}/../../../../techniques/sparse_backends" && pwd)}"
 export H3_SOL_ATTN_ROOT="${SOL_ATTN_ROOT}"
 export PYTHONPATH="${H3_CUTLASS_DSL:+${H3_CUTLASS_DSL}:}${SOL_ATTN_ROOT}:${BASELINE}/vendor_site:${BASELINE}/diffusers_src/src:${PYTHONPATH:-}"
 
@@ -45,9 +45,14 @@ fi
 PYBIN="${PYTHON_BIN:-python}"
 NPROC="${H3_ULYSSES_DEGREE:-8}"
 
-# Under Slurm the launcher is srun and RANK/LOCAL_RANK/WORLD_SIZE come from SLURM_*; standalone,
-# torchrun supplies them. `gpu_infer.py` reads the same three variables either way.
-if [[ -n "${SLURM_PROCID:-}" ]]; then
+# Two ways the ranks can arrive, and the test has to be for all three variables, not one of them.
+# Under `srun` the step exports SLURM_PROCID, SLURM_LOCALID and SLURM_NTASKS together, and
+# `gpu_infer.py` reads RANK/LOCAL_RANK/WORLD_SIZE from them. Under a plain `sbatch` batch step
+# there is no srun, yet SLURM_PROCID is still set while SLURM_NTASKS is not -- testing only
+# SLURM_PROCID took that branch and then died on `unbound variable` under `set -u`, which is how a
+# `sbatch` wrapper calling `scripts/run.py` failed while the same command outside Slurm worked.
+# Anything short of the full set means we are not inside an srun step: fall through to torchrun.
+if [[ -n "${SLURM_PROCID:-}" && -n "${SLURM_LOCALID:-}" && -n "${SLURM_NTASKS:-}" ]]; then
   export RANK="${SLURM_PROCID}" LOCAL_RANK="${SLURM_LOCALID}" WORLD_SIZE="${SLURM_NTASKS}"
   exec "$PYBIN" "$HERE/gpu_infer.py"
 fi

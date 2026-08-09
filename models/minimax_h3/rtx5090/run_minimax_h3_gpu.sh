@@ -4,7 +4,7 @@ set -euo pipefail
 : "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
 : "${H3_MODEL_PATH:?H3_MODEL_PATH must point to the MiniMax-H3 FL2VA directory}"
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 H3_ROOT="${H3_ROOT:-${HOME}/minimax_h3_5090}"
 PYTHON_BIN="${PYTHON_BIN:-${H3_ROOT}/.venv/bin/python}"
 FFMPEG_BIN_DIR="${H3_FFMPEG_BIN_DIR:-${H3_ROOT}/tools/ffmpeg-static}"

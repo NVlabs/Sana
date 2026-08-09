@@ -88,7 +88,7 @@ The released repository is *not* in the diffusers layout, so it is converted onc
 | File | Role |
 |---|---|
 | `gpu_infer.py` | The baseline itself: placement, request loop, CUDA-event timing, JSON result. |
-| `scripts/run_minimax_h3_gpu.sh` | Registered runtime entrypoint, env-driven, `OUT_DIR` injected by the launcher. |
+| `run_minimax_h3_gpu.sh` | Registered runtime entrypoint, env-driven, `OUT_DIR` injected by the launcher. |
 | `diffusers_src/` | Vendored diffusers @ `minimax-h3`, pinned in `SOURCE_SNAPSHOT.json`. |
 
 Job scripts are not tracked here: their account, partition and QoS are

@@ -39,9 +39,9 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/08/09]** 🔥 **MiniMax-H3 expands to H100 and A100** — **3.56×** end-to-end on [**4×H100-80GB (SM90)**](models/minimax_h3/h100/) and **3.55×** on [**4×A100-80GB (SM80)**](models/minimax_h3/a100/).
-- **[2026/08/06]** 🔥 **MiniMax-H3 on GB10 and RTX 5090** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — the same 33B Omni-DiT on on-device GPUs at **3.92×** end-to-end on DGX Spark and **4.52×** on GeForce RTX 5090, from an FP8 checkpoint that fits the model on one card. See [GB10](models/minimax_h3/gb10/) and [RTX 5090](models/minimax_h3/rtx5090/).
-- **[2026/08/03]** 🔥 **MiniMax-H3** [[Model](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] — 33B audio-video Omni-DiT joins the line at **~3.97×** end-to-end on 8×GB200, composing context parallelism, a lossless kernel line, [**Sol-Attn**](techniques/sparse_backends/) and FirstBlockCache. See [models/minimax_h3/gb200](models/minimax_h3/gb200/).
+- **[2026/08/09]** 🔥 **MiniMax-H3 on H100 and A100** [[Code](models/minimax_h3/)] — reaches **3.56×** end-to-end on **4×H100** and **3.55×** on **4×A100**.
+- **[2026/08/06]** 🔥 **MiniMax-H3 on GB10 and RTX 5090** [[Code](models/minimax_h3/)] — reaches **3.92×** end-to-end on **DGX Spark (GB10)** and **4.52×** on **GeForce RTX 5090**.
+- **[2026/08/03]** 🔥 **MiniMax-H3 on GB200** [[Code](models/minimax_h3/)] — reaches **~3.97×** end-to-end on **8×GB200**.
 - **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.

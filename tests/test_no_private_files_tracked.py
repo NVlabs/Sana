@@ -21,10 +21,14 @@ pushed, rather than trusting the rules to still describe it.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# The one cluster account this repository used to carry in plain text.
+ACCOUNT = "nvr_elm_llm"
 
 
 def _git(*args: str) -> list[str]:
@@ -55,15 +59,67 @@ def test_no_tracked_file_is_gitignored() -> None:
 def test_no_slurm_job_scripts_tracked() -> None:
     """Named separately from the rule above so the failure says what leaked.
 
-    `*.sbatch` is the concentrated case: every one of these files carries
-    `--account`, and most carry an absolute path through a personal home or
-    Lustre directory. `docs/simple-launch.md` documents the four-line wrapper
-    instead, with the account as a placeholder.
+    Job scripts are the concentrated case: they carry `--account`, and most
+    carry an absolute path through a personal home or Lustre directory.
+    `docs/simple-launch.md` documents the four-line wrapper instead, with the
+    account as a placeholder.
+
+    Detected by content, not by extension. `*.sbatch` in `.gitignore` covers
+    the name; it did not cover
+    `scripts/slurm_bench_sana_pisa_attention_backend.sh`, a job script with an
+    account and two personal paths that was published for as long as it existed
+    because it was spelled `.sh`. A `#SBATCH` directive at the start of a line
+    is what actually makes a file a job script. Markdown is excluded: the docs
+    quote a wrapper on purpose, and `test_no_cluster_account_tracked` is what
+    holds them to a placeholder.
     """
-    tracked = [f for f in _git("ls-files") if f.endswith(".sbatch")]
+    tracked = []
+    for name in _git("ls-files"):
+        if name.endswith(".md"):
+            continue
+        path = ROOT / name
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if name.endswith(".sbatch") or re.search(r"^#SBATCH\b", text, re.M):
+            tracked.append(name)
     assert not tracked, (
         "Slurm job scripts are tracked; they carry a cluster account:\n  "
         + "\n  ".join(tracked)
+    )
+
+
+def test_no_cluster_account_tracked() -> None:
+    """The account name itself, wherever it is spelled.
+
+    Not secret -- just a specific cluster's account, meaningless off it, and
+    noise in a public repository. It lives in $SLURM_ACCOUNT now. Paths that
+    contain it as a directory component are load-bearing and excluded; this
+    catches it being written as an account again, which is the thing that was
+    repeated across eleven config files and two defaults.
+    """
+    offenders = []
+    this_file = Path(__file__).resolve().relative_to(ROOT).as_posix()
+    for name in _git("ls-files"):
+        # This file has to spell the account out to search for it.
+        if name == this_file:
+            continue
+        path = ROOT / name
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if ACCOUNT not in line:
+                continue
+            # A path component, e.g. /lustre/.../nvr_elm_llm/users/... .
+            if f"/{ACCOUNT}/" in line:
+                continue
+            offenders.append(f"{name}:{number}: {line.strip()[:90]}")
+    assert not offenders, (
+        "the cluster account is written out in tracked files; read it from "
+        "$SLURM_ACCOUNT instead:\n  " + "\n  ".join(offenders)
     )
 
 

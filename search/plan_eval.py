@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -273,7 +274,7 @@ def render_config(profile: dict, technique: str, cfg: dict, kind: str = "build_t
         "artifacts": {"output_dir": "outputs", "video": "out.mp4", "log": "run.log",
                       "benchmark": "benchmark.json", "quality": "quality.json",
                       "frames_dir": "frames", "patch_summary": "patch_summary.md"},
-        "slurm": {"account": "nvr_elm_llm", "partition": "batch", "nodes": 1,
+        "slurm": {"account": os.environ.get("SLURM_ACCOUNT", ""), "partition": "batch", "nodes": 1,
                   "gpus_per_node": profile["official_config"].get("num_gpus", 4),
                   "cpus_per_task": 64, "mem": "0", "time": "04:00:00",
                   "job_name": f"autovideo-{cid}", "exclusive": True},

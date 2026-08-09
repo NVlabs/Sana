@@ -70,7 +70,7 @@ makes all three of these the same command:
 python3 scripts/run.py models/minimax_h3/GB200/dense.toml
 
 # inside an interactive allocation
-srun -A nvr_elm_llm -p batch --qos=interactive -N1 --gpus-per-node=4 -t 02:00:00 --pty bash
+srun -A <your-account> -p batch --qos=interactive -N1 --gpus-per-node=4 -t 02:00:00 --pty bash
 python3 scripts/run.py models/minimax_h3/GB200/dense.toml
 
 # as a batch job -- your own wrapper, whatever your scheduler is

@@ -26,7 +26,7 @@ is pinned by [`minimax_h3_gb10_fullopt.toml`](../../../candidates/minimax_h3_gb1
 ## Usage
 
 The command below reproduces the
-[`t2va_example_1`](../prompts/t2va_example_1.json) benchmark with seed `0`, 50 denoising steps, and
+[`demo_prompt`](../demo_prompt.json) benchmark with seed `0`, 50 denoising steps, and
 the 5-second workload shown above. Run it from the repository root:
 
 ```bash

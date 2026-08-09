@@ -35,7 +35,7 @@ export H3_CONDA_ROOT=/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3
 export H3_CONDA_ENV=lingbot-fa2
 
 export H3_MODEL_PATH=/home/yitongl/code/models/MiniMax-H3-diffusers
-export H3_PROMPT_FILE="${ROOT}/prompts/t2va_example_1.json"
+export H3_PROMPT_FILE="${ROOT}/demo_prompt.json"
 export OUT_DIR="${ROOT}/runs/baseline_${RUN_ID}"
 
 export H3_HEIGHT=768

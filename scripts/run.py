@@ -41,7 +41,7 @@ PATHS -- two bases, one rule each:
                      beside its code says runtime = ".", not the long repo path.
     UPPERCASE values are handed to a process whose cwd is the repo root, so a
                      path in them reads from there (H3_PROMPT_FILE =
-                     "models/minimax_h3/prompts/t2va_example_1.json").
+                     "models/minimax_h3/demo_prompt.json").
 """
 
 from __future__ import annotations

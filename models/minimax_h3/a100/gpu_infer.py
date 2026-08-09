@@ -32,7 +32,7 @@ from sglang.multimodal_gen.runtime.entrypoints.diffusion_generator import (  # n
 )
 
 
-DEFAULT_PROMPT_FILE = REPO_ROOT / "models/minimax_h3/prompts/t2va_example_1.json"
+DEFAULT_PROMPT_FILE = REPO_ROOT / "models/minimax_h3/demo_prompt.json"
 
 
 def _load_prompt() -> tuple[str, str]:

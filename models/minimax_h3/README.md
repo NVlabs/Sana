@@ -37,7 +37,7 @@ without `--confirm-submit`, it only prepares the job bundle. The candidate selec
 hardware runtime and enables its complete optimization stack.
 
 For example, the following H100 command reproduces the released
-[`t2va_example_1`](prompts/t2va_example_1.json) benchmark at 1344x768 for 5 seconds, using seed `0`
+[`demo_prompt`](demo_prompt.json) benchmark at 1344x768 for 5 seconds, using seed `0`
 and 50 denoising steps:
 
 ```bash

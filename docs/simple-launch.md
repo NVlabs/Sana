@@ -54,7 +54,7 @@ on `=`. `scripts/run.py` carries a 12-line fallback parser and therefore needs n
 | keys | resolved against | why |
 | --- | --- | --- |
 | `runtime`, `entry` | **this config's directory** | a config beside its arm says `runtime = "."`; move the pair and both still point at each other |
-| UPPERCASE values | **the repo root** | they are handed to a process whose cwd is the repo root, so `H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"` reads the way it looks |
+| UPPERCASE values | **the repo root** | they are handed to a process whose cwd is the repo root, so `H3_PROMPT_FILE = "models/minimax_h3/demo_prompt.json"` reads the way it looks |
 
 Entry scripts locate themselves through `BASH_SOURCE` and ignore cwd, which is
 what leaves cwd free to carry that second meaning.

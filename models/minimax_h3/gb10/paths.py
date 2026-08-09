@@ -7,7 +7,7 @@ the things that legitimately live elsewhere.
 
 The layout this assumes is the repository's own:
 
-    models/minimax_h3/prompts/t2va_example_1.json   the official cell's prompt
+    models/minimax_h3/demo_prompt.json   the official cell's prompt
     models/minimax_h3/gb200/diffusers_src  the pinned diffusers (PR #14355)
     techniques/sparse_backends                      Sol-Attn's released kernel
 
@@ -27,7 +27,7 @@ MODEL_DIR = ROOT.parent
 REPO_ROOT = MODEL_DIR.parent.parent
 
 PROMPT_FILE = Path(os.environ.get("H3_PROMPT_FILE",
-                                  MODEL_DIR / "prompts" / "t2va_example_1.json"))
+                                  MODEL_DIR / "prompts" / "demo_prompt.json"))
 SPARSE_BACKENDS = Path(os.environ.get("H3_SOL_ATTN_ROOT",
                                       REPO_ROOT / "techniques" / "sparse_backends"))
 

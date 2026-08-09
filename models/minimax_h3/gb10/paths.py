@@ -27,7 +27,7 @@ MODEL_DIR = ROOT.parent
 REPO_ROOT = MODEL_DIR.parent.parent
 
 PROMPT_FILE = Path(os.environ.get("H3_PROMPT_FILE",
-                                  MODEL_DIR / "prompts" / "demo_prompt.json"))
+                                  MODEL_DIR / "demo_prompt.json"))
 SPARSE_BACKENDS = Path(os.environ.get("H3_SOL_ATTN_ROOT",
                                       REPO_ROOT / "techniques" / "sparse_backends"))
 

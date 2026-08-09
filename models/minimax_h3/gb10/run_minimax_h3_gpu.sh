@@ -12,6 +12,17 @@ set -euo pipefail
 : "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# H3_PROMPT_FILE may arrive repo-relative (that is how every candidate and config
+# writes it). Whether that resolves depends on who launched us -- scripts/run.py
+# uses the repo root as cwd, launch_candidate.py cds to the runtime dir first --
+# so pin it to the repo root here rather than leaving it to the caller. h100 and
+# a100 already do this; gb10 and gb200 did not, which made the same config value
+# work under one launcher and not the other.
+REPO_ROOT="$(cd "${HERE}/../../.." && pwd)"
+if [[ -n "${H3_PROMPT_FILE:-}" && "${H3_PROMPT_FILE}" != /* ]]; then
+  export H3_PROMPT_FILE="${REPO_ROOT}/${H3_PROMPT_FILE}"
+fi
 BASELINE="$(cd "${HERE}/../gb200" && pwd)"
 mkdir -p "$OUT_DIR"
 export H3_OUTPUT_DIR="$OUT_DIR"

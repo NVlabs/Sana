@@ -1,0 +1,24 @@
+id = "ltx23_fullopt"
+kind = "composite"
+purpose = "speedup"
+description = "LTX-2.3 full acceleration stack: KWL operator fusion + stage-1 SCSP step-skip cache + stage-2 PISA sparse attention + NVFP4 video FFN + stage-2 midpoint token prune. Published speedup 2.40x (site_docs/pipelines/ltx.md); the upstream launcher comment claims 2.47x for the same stack and the two have never been reconciled — re-measure before quoting either."
+model_profile = "ltx23"
+
+[runtime]
+root = "models/ltx23/optimized"
+
+[requires]
+capabilities = [
+  "kernel_fusion",
+  "step_cache",
+  "swappable_attention",
+  "ffn_precision",
+  "prunable_tokens",
+]
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "perf.json"
+run_config = "run_config.json"

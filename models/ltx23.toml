@@ -1,0 +1,68 @@
+# Model profile for LTX-2.3 runtime defaults.
+#
+# Candidate manifests declare required capabilities; dry-run validation creates
+# a minimal manifest-derived ModelSpec rather than importing a built-in
+# per-model spec file. The 22B runtime glue stays in Sol-LTX-Infer; the two
+# runnable arms (baseline / optimized) are vendored under models/ltx23/.
+
+id = "ltx23"
+spec = "LTX2"                    # descriptive target label in generated metadata
+display_name = "Lightricks/LTX-2.3"
+family = "video_t2v"
+submodule = "Sol-LTX-Infer"
+base_commit = "b0b7eb4d0a7f1f46118a356485f4523cf52e96dd"
+run_script = "models/ltx23/baseline/scripts/run_ltx23_gpu.sh"
+optimized_run_script = "models/ltx23/optimized/scripts/run_ltx23_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_ltx23.toml"
+model_contract = "models/ltx23/model.toml"
+
+[official_config]
+model = "Lightricks/LTX-2.3"
+pipeline_class_name = "LTX2TwoStageHQPipeline"
+width = 1920
+height = 1088
+frames = 241
+fps = 24
+steps = 15                       # stage 1; stage 2 is the official 3-sigma refine
+stage2_sigmas = [0.909375, 0.725, 0.421875, 0.0]
+guidance_scale = 3.0
+seed = 42
+num_gpus = 1
+stage1_lora_strength = 0.25
+stage2_lora_strength = 0.5
+
+# No measured wall clock is recorded here yet. The one published LTX-2.3 timing
+# (119.811s Diffusers no-compile / 59.332s SGLang, docs/diffusion/
+# ltx2_1080p_speedup.md in Sol-LTX-Infer) is for the 30-step stage-1 config, NOT
+# the 15-step HQ config these two arms run — the numbers are not comparable and
+# must not be copied in. Fill [baseline] from a measured run of
+# candidates/ltx23_baseline.toml.
+[baseline]
+run_id = ""
+denoise_s = 0.0
+decode_s = 0.0
+total_s = 0.0
+measured = false
+
+[env]
+SOL_LTX_INFER_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer"
+PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python"
+HF_HUB_OFFLINE = "1"
+CUDA_VISIBLE_DEVICES = "0"
+SEED = "42"
+WARMUP = "true"
+WARMUP_STEPS = "1"
+PERFORMANCE_MODE = "speed"
+TWO_STAGE_DEVICE_MODE = "resident"
+
+# Per-seam wiring status. Candidate dry-run checks use manifest-declared
+# capabilities; real GPU usefulness still depends on the runtime consuming the
+# corresponding env/config/path in Sol-LTX-Infer.
+[seam_status]
+blocks = "wired"                 # LTX2TwoStageHQPipeline stage-1/stage-2 transformers
+kernel_fusion = "wired"          # SGLANG_LTX2_FUSED_* / COMPILE_* -> ltx2_*.py Triton kernels
+step_cache = "wired"             # stage-1 SCSP step-skip (SGLANG_LTX2_STAGE1_CACHE_CORE_*)
+swappable_attention = "wired"    # component-attention-backends transformer_2=piecewise_attn (PISA)
+ffn_precision = "wired"          # NVFP4 video FFN via SGLANG_LTX2_TE_NVFP4_VIDEO_FFN
+prunable_tokens = "wired"        # stage-2 midpoint prune over the video-token span
+teacache_signal = "n/a"          # TeaCache is unused on LTX-2.3; stage-1 SCSP replaces it

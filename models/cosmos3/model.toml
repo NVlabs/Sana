@@ -1,0 +1,64 @@
+schema_version = 1
+id = "cosmos3"
+display_name = "Cosmos3-Super 64B 1280x720 189f T2V (4-GPU sequence parallel)"
+legacy_profile = "models/cosmos3.toml"
+contract_kind = "model_baseline_minimal_copy"
+
+[baseline]
+manifest = "candidates/cosmos3_baseline.toml"
+runtime_root = "models/cosmos3/baseline"
+eval_profile = "evals/profiles/official_video_t2v_cosmos3.toml"
+description = "Cosmos3-Super official 64B 4-GPU sequence-parallel baseline with every acceleration seam explicitly off. Runnable code (variant env.sh + shared launch body + run shim) is vendored under models/cosmos3; the 64B runtime, weights and the .conda/ltx23 interpreter are referenced read-only by absolute path via SOL_LTX_INFER_ROOT."
+
+[baseline.copy]
+paths_are_repo_relative = true
+include = [
+  "models/cosmos3.toml",
+  "models/cosmos3/model.toml",
+  "models/cosmos3/README.md",
+  "models/cosmos3/run_cosmos3_common.sh",
+  "models/cosmos3/prompts/**",
+  "models/cosmos3/baseline/**",
+  "candidates/cosmos3_baseline.toml",
+  "candidates/schema.md",
+  "evals/profiles/official_video_t2v_cosmos3.toml",
+  "evals/tiers.toml",
+  "scripts/launch_candidate.py",
+  "scripts/collect_run.py",
+  "search/plan_eval.py",
+]
+exclude = [
+  ".git/**",
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "runs/**",
+  "output/**",
+  "workflow/**",
+  "search_space/**",
+]
+
+[[baseline.reference_only]]
+name = "sol_ltx_infer"
+path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer"
+repo = "Efficient-Large-Model/Sol-LTX-Infer"
+repo_type = "code"
+commit = "b0b7eb4d0a7f1f46118a356485f4523cf52e96dd"
+reason = "SGLang multimodal_gen runtime holding cosmos3_pipeline.py, the Cosmos3OmniTransformer DiT, cosmos3_teacache.py and scripts/cosmos/run_cosmos3_cache_matrix.sh, plus the .conda/ltx23 interpreter. Reached via SOL_LTX_INFER_ROOT; neutral, never copied. Pinned to elm/v1_formal — the previous pin (29d0d9e4) is a dangling commit on no branch, reachable only by explicit SHA fetch."
+
+[[baseline.reference_only]]
+name = "cosmos3_super_weights"
+# Literal path, not a ${VAR} template: create_model_experiment.py copies these
+# entries verbatim into the experiment metadata and nothing in the repo expands
+# environment variables in them. Matches HF_HUB_CACHE in models/cosmos3.toml [env].
+path = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/huggingface/hub/models--nvidia--Cosmos3-Super"
+repo = "nvidia/Cosmos3-Super"
+repo_type = "model"
+reason = "Cosmos3-Super 64B weights, resolved from the local HF snapshot ref at launch time. Neutral, never copied."
+
+[experiment_defaults]
+worktree_mode = "model_baseline_minimal_copy"
+experiments_root = "output/experiments"
+state_dir = "state"
+runs_dir = "runs"
+logs_dir = "logs"
+caches = ["tmp", "triton", "torch_extensions", "python_deps"]

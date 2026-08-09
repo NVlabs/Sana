@@ -29,6 +29,19 @@ Current local profiles include:
   `yitongl/sana_video` minimal inference bundle.
 - `lingbot_video`: LingBot-Video MoE 30B-A3B two-stage T2V on 4x GB200, with
   physically isolated CP4/FA2 baseline and cuDNN-optimized runtimes.
+- `ltx23`: LTX-2.3 22B two-stage HQ at 1088x1920/241f on a single GB200, with a
+  dense baseline and a KWL-fusion + stage-1 cache + PISA + NVFP4 + token-prune
+  optimized arm.
+- `cosmos3`: Cosmos3-Super 64B T2V at 1280x720/189f on 4x GB200, with a dense
+  baseline and a TeaCache + step-selective NVFP4 optimized arm.
+
+`ltx23` and `cosmos3` both keep their model code in the separate
+`Efficient-Large-Model/Sol-LTX-Infer` repo, declared `reference_only` and pinned
+by commit in `model.toml`; what lives here is the profile plus the two runnable
+arms. Each arm is an `env.sh` (the technique declaration, with every knob written
+out explicitly including the zeros) plus a shim that sources it and then the
+model's shared launch body — so the two arms can differ by technique and by
+nothing else.
 
 ## Directory-Style Model Contracts
 

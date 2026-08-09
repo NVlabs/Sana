@@ -9,9 +9,18 @@ spec = "Cosmos3"                 # descriptive target label in generated metadat
 display_name = "nvidia/Cosmos3-Super"
 family = "video_t2v"
 submodule = "Sol-LTX-Infer"
-base_commit = "29d0d9e464000a2472345dcad51054b15aacca8d"
-run_script = "scripts/run_cosmos3_sglang.sh"
-eval_profile = "evals/profiles/official_video_t2v.toml"
+# Re-pinned 2026-08-08. The previous pin, 29d0d9e464000a2472345dcad51054b15aacca8d
+# ("run_cosmos3_sglang.sh: make env paths overridable", 2026-06-13), sits on no
+# branch in Efficient-Large-Model/Sol-LTX-Infer — `git branch -r --contains` is
+# empty for it, so a plain `git fetch` never brings it down and every checkout
+# reported it as a bad object. It is still retrievable, but only by explicit SHA
+# (`git fetch <remote> 29d0d9e4...`). elm/v1_formal carries scripts/ltx/ and
+# scripts/cosmos/ in the layout the site docs reference, so both models pin here.
+base_commit = "b0b7eb4d0a7f1f46118a356485f4523cf52e96dd"
+run_script = "models/cosmos3/baseline/scripts/run_cosmos3_gpu.sh"
+optimized_run_script = "models/cosmos3/optimized/scripts/run_cosmos3_gpu.sh"
+eval_profile = "evals/profiles/official_video_t2v_cosmos3.toml"
+model_contract = "models/cosmos3/model.toml"
 
 [official_config]
 model = "nvidia/Cosmos3-Super"
@@ -33,7 +42,9 @@ decode_s = 5.8017
 total_s = 130.41
 
 [env]
+SOL_LTX_INFER_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer"
 PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python"
+WARMUP = "true"
 COSMOS3_CACHE = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/cosmos3"
 HF_HOME = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/huggingface"
 HF_HUB_CACHE = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/huggingface/hub"
@@ -41,8 +52,11 @@ HF_HUB_OFFLINE = "1"
 MODEL_REPO = "nvidia/Cosmos3-Super"
 NUM_GPUS = "4"
 SEED = "42"
-PROMPT = "A serene mountain lake at sunrise, mist rising off the still water, pine trees reflected on the surface, a small wooden boat drifting slowly, cinematic, high detail"
-NEGATIVE_PROMPT = ""
+# Prompts are versioned as files rather than inlined here, so the two arms
+# cannot drift apart and a run's prompt is diffable. The former inline PROMPT
+# is now models/cosmos3/prompts/default.txt verbatim.
+PROMPT_FILE = "models/cosmos3/prompts/default.txt"
+NEGATIVE_PROMPT_FILE = "models/cosmos3/prompts/negative.txt"
 
 # Per-seam wiring status. Candidate dry-run checks use manifest-declared
 # capabilities; real GPU usefulness still depends on the runtime consuming the

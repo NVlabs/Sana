@@ -1,0 +1,69 @@
+id = "official_video_t2v_cosmos3"
+description = "Cosmos3-Super 64B 1280x720 189f text-to-video evaluation profile (4x GB200, sequence parallel)."
+
+[official_config]
+model = "nvidia/Cosmos3-Super"
+width = 1280
+height = 720
+frames = 189
+fps = 24
+steps = 35
+guidance_scale = 6.0
+flow_shift = 10.0
+max_sequence_length = 4096
+seed = 42
+num_gpus = 4
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/perf.json",
+]
+optional = [
+  "outputs/run_config.json",
+  "outputs/quality.json",
+]
+
+[performance]
+baseline_candidate = "cosmos3_baseline"
+primary_metric = "total_s"
+secondary_metric = "denoise_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+# Measured baseline, carried over from models/cosmos3.toml [baseline]
+# (run_id 20260612-175151-baseline-official-baseline-autodl): denoise 121.4198s
+# + decode 5.8017s. Same official config as [official_config] above.
+baseline_total_s = 130.41
+baseline_denoise_s = 121.4198
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is the official 4-GPU pipeline with TeaCache and NVFP4 explicitly off (models/cosmos3/baseline/env.sh). An optimization must recover it when its knobs are turned off. The optimized arm is lossy by construction: both TeaCache step reuse and FP4 linear change the trajectory."
+
+[quantitative_quality]
+enabled = true
+metrics = [
+  "frame_count",
+  "duration_s",
+  "mean_abs_pixel_diff",
+  "mse",
+  "psnr",
+  "sharpness_ratio",
+  "temporal_delta_error",
+  "temporal_jitter_ratio",
+]
+frame_count_expected = 189
+duration_tolerance_s = 0.25
+sharpness_ratio_min = 0.95
+sharpness_ratio_max = 1.08
+notes = "PSNR here is measured between two generations, not against a ground truth, so it reports trajectory divergence rather than quality. Do not rank lossy arms by PSNR alone."
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate; enable a provider here if wiring an automated gate."

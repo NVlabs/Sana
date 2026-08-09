@@ -1,0 +1,21 @@
+id = "cosmos3_fullopt"
+kind = "composite"
+purpose = "speedup"
+description = "Cosmos3-Super conservative full optimization: TeaCache (threshold 1.15, start step 10, max 3 consecutive skips) + step-selective NVFP4 on gate_up/down/qkv/out with the first and last 3 steps kept dense. Published speedup 2.26x (site_docs/pipelines/cosmos3.md)."
+model_profile = "cosmos3"
+
+[runtime]
+root = "models/cosmos3/optimized"
+
+[requires]
+capabilities = [
+  "teacache_signal",
+  "ffn_precision",
+]
+
+[artifacts]
+output_dir = "outputs"
+video = "out.mp4"
+log = "run.log"
+benchmark = "perf.json"
+run_config = "run_config.json"

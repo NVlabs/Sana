@@ -1,0 +1,69 @@
+id = "official_video_t2v_ltx23"
+description = "LTX-2.3 22B 1088x1920 241f two-stage HQ text-to-video evaluation profile (LTX2TwoStageHQPipeline, single GB200 GPU)."
+
+[official_config]
+model = "Lightricks/LTX-2.3"
+pipeline_class_name = "LTX2TwoStageHQPipeline"
+width = 1920
+height = 1088
+frames = 241
+fps = 24
+steps = 15
+stage2_sigmas = [0.909375, 0.725, 0.421875, 0.0]
+guidance_scale = 3.0
+seed = 42
+num_gpus = 1
+
+[artifacts]
+required = [
+  "outputs/run.log",
+  "outputs/out.mp4",
+  "outputs/perf.json",
+]
+optional = [
+  "outputs/run_config.json",
+  "outputs/stage1_out.mp4",
+  "outputs/quality.json",
+]
+
+[performance]
+baseline_candidate = "ltx23_baseline"
+primary_metric = "total_s"
+secondary_metric = "denoise_s"
+min_speedup_for_experimental = 1.03
+min_speedup_for_promotion = 1.10
+warmup_required_for_promotion = true
+record_compile_cache_state = true
+# baseline_total_s is intentionally absent: no wall clock has been measured for
+# this 15-step HQ config. The published 119.811s LTX-2.3 figure is the 30-step
+# stage-1 Diffusers benchmark and is not comparable. Leaving the key out makes a
+# consumer fail loudly rather than compute a speedup against the wrong config.
+
+[off_identity]
+required_for_kinds = ["patch", "methodology"]
+same_seed_required = true
+same_prompt_required = true
+same_official_config_required = true
+notes = "Baseline is the official two-stage HQ pipeline with every acceleration knob explicitly zeroed (models/ltx23/baseline/env.sh). An optimization must recover it when its knobs are turned off. Note the optimized arm is NOT bit-identical by construction: PISA sparse attention, NVFP4 FFN and token pruning are lossy; only the KWL fusion subset is algorithm-lossless."
+
+[quantitative_quality]
+enabled = true
+metrics = [
+  "frame_count",
+  "duration_s",
+  "mean_abs_pixel_diff",
+  "mse",
+  "psnr",
+  "sharpness_ratio",
+  "temporal_delta_error",
+  "temporal_jitter_ratio",
+]
+frame_count_expected = 241
+duration_tolerance_s = 0.25
+sharpness_ratio_min = 0.95
+sharpness_ratio_max = 1.08
+notes = "PSNR here is measured between two generations, not against a ground truth, so it reports trajectory divergence rather than quality. Do not rank lossy arms by PSNR alone."
+
+[visual_artifact]
+enabled = false
+notes = "Codex built-in multimodal frame review used for the visual gate; enable a provider here if wiring an automated gate."

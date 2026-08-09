@@ -60,6 +60,12 @@ NEGATIVE_PROMPT = ""
 it in `metadata.json.runtime_python` and validates it before local or Slurm
 execution. Do not rely on ambient `python3` for GPU or model-runtime checks.
 
+Candidates normally inherit the model profile's environment. Set
+`inherit_profile_env = false` at the top level when a candidate uses an
+independent runtime and must not receive legacy conda, cache, or device paths.
+Candidate `[official_config]` values override individual profile values while
+retaining unspecified workload fields.
+
 ## `purpose`
 
 Supported purposes:

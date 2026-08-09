@@ -12,7 +12,7 @@ requested_runtime=${H3_CONTAINER_RUNTIME}
 export H3_CONTAINER_IMAGE=${H3_CONTAINER_IMAGE:-docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86}
 export H3_MODEL_PATH=${H3_MODEL_PATH:-MiniMaxAI/MiniMax-H3}
 export H3_MODEL_REVISION=${H3_MODEL_REVISION:-bfc8ed0353f5a9733be73e6b2c98ec0948195b86}
-export H3_PROMPT_FILE=${H3_PROMPT_FILE:-${REPO_ROOT}/models/minimax_h3/demo_prompt.json}
+export H3_PROMPT_FILE=${H3_PROMPT_FILE:-${REPO_ROOT}/models/minimax_h3/prompts/t2va_example_1.json}
 export H3_WARMUP_NUM_STEPS=${H3_WARMUP_NUM_STEPS:-50}
 export H3_MEASURED_NUM_STEPS=${H3_MEASURED_NUM_STEPS:-50}
 export H3_DURATION_SECONDS=${H3_DURATION_SECONDS:-5.166667}
@@ -124,7 +124,7 @@ case "${requested_runtime}" in
       --no-container-mount-home \
       --container-workdir="${inside_output}" \
       --no-container-entrypoint \
-      bash "${inside_repo}/models/minimax_h3/a100/run_minimax_h3_gpu.sh"
+      bash "${inside_repo}/models/minimax_h3/gb200_sglang/run_minimax_h3_gpu.sh"
     ;;
   apptainer|singularity)
     if ! command -v "${requested_runtime}" >/dev/null 2>&1; then
@@ -141,7 +141,7 @@ case "${requested_runtime}" in
       --nv \
       --bind "${host_storage_root}:/h3" \
       "${H3_CONTAINER_IMAGE}" \
-      bash "${inside_repo}/models/minimax_h3/a100/run_minimax_h3_gpu.sh"
+      bash "${inside_repo}/models/minimax_h3/gb200_sglang/run_minimax_h3_gpu.sh"
     ;;
   *)
     echo "H3_CONTAINER_RUNTIME must be none, pyxis, apptainer, or singularity" >&2

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run one model arm from a single flat config file.
 
-    python3 scripts/run.py models/minimax_h3/gb200/dense.toml
+    python3 scripts/run.py models/minimax_h3/GB200/dense.toml
 
 That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,

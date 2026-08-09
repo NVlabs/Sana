@@ -1,0 +1,58 @@
+# MiniMax-H3 on GB200, SGLang runtime -- DENSE arm (control).
+#
+#   python3 scripts/run.py models/minimax_h3/gb200_sglang/dense.toml
+#
+# This is the second implementation of MiniMax-H3 on GB200. The one in
+# ../gb200/ runs the vendored Diffusers PR #14355; this one runs the SGLang
+# multimodal_gen runtime out of the pinned container, the same one h100/ and
+# a100/ use. Same model, same official config, two frameworks -- so the pair is
+# a framework-level A/B on identical hardware, and neither number is comparable
+# to the other by construction (different schedulers, kernels and memory
+# policies). Compare dense-to-dense and profile-to-profile.
+#
+# Every acceleration switch is derived from H3_SOL_PROFILE by profiles.py, which
+# locks them: setting one by hand to a value the profile disagrees with is a
+# hard error rather than a silent override. That is why this file sets the
+# profile name and not the individual knobs.
+#
+# Measured (job 5996891, 4x GB200): inference_time_s 39.896, peak alloc 40096 MB,
+# Sol-Attn backend cute_sm100. This is the denominator for the aggressive arm.
+
+name    = "minimax_h3_gb200_sglang_dense"
+runtime = "."
+entry   = "run_minimax_h3_gpu.sh"
+gpus    = 4
+
+# --- arm selection -----------------------------------------------------------
+# dense = sol_attention off, cache none. The control every GB200 SGLang speedup
+# is measured against.
+H3_SOL_PROFILE = "dense"
+
+# --- container ---------------------------------------------------------------
+# The arm64 half of the same pinned digest h100/a100 use. Verified on
+# nvl72150-T03: sglang 0.0.0.dev1+g12eadf86f, torch 2.11.0+cu130, and the
+# minimax_h3 model file hashes to the sha256 registration.py pins.
+H3_CONTAINER_RUNTIME = "pyxis"
+H3_CONTAINER_IMAGE   = "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86"
+
+# --- weights -----------------------------------------------------------------
+# The SGLang path loads the released repository directly -- no diffusers
+# conversion, so this is MiniMaxAI/MiniMax-H3 rather than the -diffusers copy
+# ../gb200/ needs.
+H3_MODEL_PATH     = "MiniMaxAI/MiniMax-H3"
+H3_MODEL_REVISION = "bfc8ed0353f5a9733be73e6b2c98ec0948195b86"
+H3_PROMPT_FILE    = "models/minimax_h3/prompts/t2va_example_1.json"
+
+# --- official sampling config ------------------------------------------------
+H3_WARMUP_NUM_STEPS   = "50"
+H3_MEASURED_NUM_STEPS = "50"
+H3_DURATION_SECONDS   = "5.166667"
+H3_SEED               = "0"
+H3_WARMUP_SEED        = "10000"
+
+# --- storage -----------------------------------------------------------------
+# Everything the container sees must live under H3_STORAGE_ROOT: the launch
+# script mounts that one directory at /h3 and refuses any path outside it.
+H3_STORAGE_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/h3_run"
+H3_CACHE_ROOT   = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/h3_run/cache"
+HF_HUB_OFFLINE  = "0"

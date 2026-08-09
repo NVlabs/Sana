@@ -124,7 +124,7 @@ case "${requested_runtime}" in
       --no-container-mount-home \
       --container-workdir="${inside_output}" \
       --no-container-entrypoint \
-      bash "${inside_repo}/models/minimax_h3/h100/run_minimax_h3_gpu.sh"
+      bash "${inside_repo}/models/minimax_h3/A100/run_minimax_h3_gpu.sh"
     ;;
   apptainer|singularity)
     if ! command -v "${requested_runtime}" >/dev/null 2>&1; then
@@ -141,7 +141,7 @@ case "${requested_runtime}" in
       --nv \
       --bind "${host_storage_root}:/h3" \
       "${H3_CONTAINER_IMAGE}" \
-      bash "${inside_repo}/models/minimax_h3/h100/run_minimax_h3_gpu.sh"
+      bash "${inside_repo}/models/minimax_h3/A100/run_minimax_h3_gpu.sh"
     ;;
   *)
     echo "H3_CONTAINER_RUNTIME must be none, pyxis, apptainer, or singularity" >&2

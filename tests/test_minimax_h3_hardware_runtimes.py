@@ -17,10 +17,16 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNTIMES = {
-    "h100": ROOT / "models/minimax_h3/h100",
-    "a100": ROOT / "models/minimax_h3/a100",
+# id -> directory. Deliberately not the same string: the directory is a path and
+# uses the vendor's capitalisation (H100), while the id is a data value that
+# already appears in candidate filenames and in each SOURCE_SNAPSHOT's "variant"
+# field. Renaming those would rewrite recorded metadata to match what is a
+# cosmetic change to a path.
+RUNTIME_DIRS = {
+    "h100": "H100",
+    "a100": "A100",
 }
+RUNTIMES = {hid: ROOT / "models/minimax_h3" / d for hid, d in RUNTIME_DIRS.items()}
 CANDIDATES = ROOT / "candidates"
 PINNED_IMAGE = "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86"
 
@@ -32,11 +38,11 @@ def _candidate(hardware: str, profile: str) -> dict:
 
 
 def _profiles(hardware: str):
-    return importlib.import_module(f"models.minimax_h3.{hardware}.profiles")
+    return importlib.import_module(f"models.minimax_h3.{RUNTIME_DIRS[hardware]}.profiles")
 
 
 def test_hardware_runtimes_are_self_contained() -> None:
-    assert not (ROOT / "models/minimax_h3" / ("h100" + "_a100")).exists()
+    assert not (ROOT / "models/minimax_h3" / ("H100" + "_A100")).exists()
     required = {
         "README.md",
         "SOURCE_SNAPSHOT.json",
@@ -54,13 +60,13 @@ def test_hardware_runtimes_are_self_contained() -> None:
         for path in runtime.rglob("*"):
             if path.is_file() and path.suffix in {".py", ".md", ".json", ".sh"}:
                 source = path.read_text(encoding="utf-8")
-                assert f"models.minimax_h3.{other}" not in source
+                assert f"models.minimax_h3.{RUNTIME_DIRS[other]}" not in source
 
 
 def test_candidates_point_directly_to_one_hardware_runtime() -> None:
     profiles = ("dense", "quality", "balanced", "aggressive", "fullopt_exact")
     for hardware in RUNTIMES:
-        expected_root = f"models/minimax_h3/{hardware}"
+        expected_root = f"models/minimax_h3/{RUNTIME_DIRS[hardware]}"
         for profile in profiles:
             candidate = _candidate(hardware, profile)
             assert candidate["submodule"] == expected_root
@@ -148,7 +154,7 @@ def test_each_runtime_registers_locally_and_never_patches_sglang() -> None:
         assert "git apply" not in runner
         assert "cp -a" not in runner
         assert not list(runtime.rglob("*.patch"))
-        assert f"models/minimax_h3/{hardware}/run_minimax_h3_gpu.sh" in runner
+        assert f"models/minimax_h3/{RUNTIME_DIRS[hardware]}/run_minimax_h3_gpu.sh" in runner
 
 
 def test_each_source_snapshot_matches_its_runtime() -> None:
@@ -188,7 +194,7 @@ def test_adapters_use_full_prefix_sink_without_reordering() -> None:
 def test_offline_runners_use_official_metrics_and_four_way_ulysses() -> None:
     for hardware, runtime in RUNTIMES.items():
         source = (runtime / "gpu_infer.py").read_text(encoding="utf-8")
-        assert f"models.minimax_h3.{hardware}.registration" in source
+        assert f"models.minimax_h3.{RUNTIME_DIRS[hardware]}.registration" in source
         assert "DiffGenerator.from_pretrained" in source
         assert '"total_duration_s"' in source
         assert "result.peak_memory_mb" in source

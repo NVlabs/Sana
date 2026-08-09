@@ -44,8 +44,8 @@ The two `.toml` files beside this README are self-contained launch configs for
 the same two arms — no second profile, no `--env` arguments, no scheduler:
 
 ```bash
-python3 scripts/run.py models/minimax_h3/gb200/baseline.toml     # dense reference
-python3 scripts/run.py models/minimax_h3/gb200/optimized.toml    # full stack
+python3 scripts/run.py models/minimax_h3/GB200/baseline.toml     # dense reference
+python3 scripts/run.py models/minimax_h3/GB200/optimized.toml    # full stack
 ```
 
 Point `PYTHON_BIN` and `H3_MODEL_PATH` at your install by editing the config, and

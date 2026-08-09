@@ -18,7 +18,7 @@ REPO_ROOT = RUNTIME_ROOT.parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from models.minimax_h3.h100.registration import (  # noqa: E402
+from models.minimax_h3.H100.registration import (  # noqa: E402
     register_runtime,
 )
 

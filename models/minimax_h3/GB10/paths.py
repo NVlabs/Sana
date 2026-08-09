@@ -8,7 +8,7 @@ the things that legitimately live elsewhere.
 The layout this assumes is the repository's own:
 
     models/minimax_h3/demo_prompt.json   the official cell's prompt
-    models/minimax_h3/gb200/diffusers_src  the pinned diffusers (PR #14355)
+    models/minimax_h3/GB200/diffusers_src  the pinned diffusers (PR #14355)
     techniques/sparse_backends                      Sol-Attn's released kernel
 
 `run_minimax_h3_gpu.sh` exports the same variables before launching, matching the

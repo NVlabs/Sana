@@ -6,11 +6,11 @@
 #
 # Submit from the repo root:
 #
-#   sbatch models/minimax_h3/gb200/run.sbatch
-#   sbatch models/minimax_h3/gb200/run.sbatch models/minimax_h3/gb200/optimized.toml
+#   sbatch models/minimax_h3/GB200/run.sbatch
+#   sbatch models/minimax_h3/GB200/run.sbatch models/minimax_h3/GB200/optimized.toml
 #
 # Without Slurm, skip this file entirely:
-#   python3 scripts/run.py models/minimax_h3/gb200/baseline.toml
+#   python3 scripts/run.py models/minimax_h3/GB200/baseline.toml
 
 #SBATCH -A nvr_elm_llm
 #SBATCH -p batch
@@ -32,5 +32,5 @@
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
-CONFIG="${1:-models/minimax_h3/gb200/baseline.toml}"
+CONFIG="${1:-models/minimax_h3/GB200/baseline.toml}"
 python3 scripts/run.py "$CONFIG"

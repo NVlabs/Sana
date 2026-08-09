@@ -18,7 +18,7 @@ REPO_ROOT = RUNTIME_ROOT.parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from models.minimax_h3.a100.registration import (  # noqa: E402
+from models.minimax_h3.gb200_sglang.registration import (  # noqa: E402
     register_runtime,
 )
 
@@ -32,7 +32,7 @@ from sglang.multimodal_gen.runtime.entrypoints.diffusion_generator import (  # n
 )
 
 
-DEFAULT_PROMPT_FILE = REPO_ROOT / "models/minimax_h3/demo_prompt.json"
+DEFAULT_PROMPT_FILE = REPO_ROOT / "models/minimax_h3/prompts/t2va_example_1.json"
 
 
 def _load_prompt() -> tuple[str, str]:

@@ -55,9 +55,55 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+from scripts import launch_candidate  # noqa: E402
 
 # Keys this launcher consumes. Everything else that is uppercase becomes env.
 RESERVED = {"name", "runtime", "entry", "out", "description", "gpus"}
+
+# Artifact names prepare_run resolves under <run>/outputs/. Spelled out so a flat
+# config produces the same layout as a candidate manifest and collect_run.py can
+# read either.
+DEFAULT_ARTIFACTS = {
+    "output_dir": "outputs",
+    "video": "out.mp4",
+    "log": "run.log",
+    "benchmark": "benchmark.json",
+}
+
+
+def is_candidate_manifest(cfg: dict[str, object]) -> bool:
+    """A candidate declares a model_profile or a [runtime] table; a flat config
+    has neither and carries its runtime as a plain string."""
+    return "model_profile" in cfg or isinstance(cfg.get("runtime"), dict)
+
+
+def to_manifest(
+    name: str,
+    launcher: dict,
+    env: dict,
+    runtime: Path,
+    entry: Path,
+    config_path: Path,
+) -> dict:
+    """Flat config -> the manifest shape prepare_run expects.
+
+    submodule and run_script are written as repo-relative paths because that is
+    what prepare_run joins them from; the flat dialect's own bases (config-dir
+    for runtime/entry) have already been resolved by the time we get here.
+    """
+    return {
+        "id": name,
+        "kind": str(launcher.get("kind") or "baseline"),
+        "purpose": str(launcher.get("description") or "single-file config run"),
+        "submodule": str(runtime.relative_to(REPO)),
+        "run_script": str(entry.relative_to(runtime)),
+        "runtime": {"root": str(runtime.relative_to(REPO))},
+        "env": dict(env),
+        "artifacts": dict(DEFAULT_ARTIFACTS),
+        "source_config": str(config_path.relative_to(REPO)),
+    }
 
 
 def load_config(path: Path) -> dict[str, object]:
@@ -108,8 +154,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("config", help="flat TOML config, e.g. configs/foo.toml")
-    ap.add_argument("--out", help="output dir (default: runs/<name>-<utc stamp>)")
+    ap.add_argument(
+        "config",
+        help="a flat single-file config, or a candidate manifest from candidates/",
+    )
+    ap.add_argument("--run-root", default="runs", help="run bundle root")
     ap.add_argument(
         "--set",
         action="append",
@@ -135,6 +184,30 @@ def main() -> int:
             raise SystemExit(f"--set expects KEY=VALUE, got: {item}")
         key, value = item.split("=", 1)
         cfg[key] = value
+
+    # A candidate manifest needs none of the flat dialect's translation: it is
+    # already the shape prepare_run reads, including the [requires] block that
+    # drives the capability/conflict check. Run it directly.
+    if is_candidate_manifest(cfg):
+        launch_args = argparse.Namespace(
+            candidate=str(config_path), mode="local", run_root=args.run_root,
+            name_suffix="", runtime_root=None, env=None, strict_commit=False,
+            confirm_submit=False, allow_unsupported_gpu=True,
+        )
+        if args.print_only:
+            launch_args.mode = "dry-run"
+        run_dir, launch_script, _job, _data = launch_candidate.prepare_run(launch_args)
+        print(f"candidate: {cfg.get('id', config_path.stem)}")
+        print(f"run_dir  : {run_dir}")
+        if args.print_only:
+            print("status: printed only, nothing run")
+            return 0
+        proc = subprocess.run([str(launch_script)])
+        launch_candidate.update_metadata(
+            run_dir, {"status": "completed", "returncode": proc.returncode}
+        )
+        print(f"status: exit {proc.returncode}  ({run_dir})")
+        return proc.returncode
 
     launcher, env = split_config(cfg, config_path)
 
@@ -167,28 +240,9 @@ def main() -> int:
             raise SystemExit(message)
         print(f"WARN: {message}", file=sys.stderr)
 
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    out_dir = Path(
-        args.out or launcher.get("out") or REPO / "runs" / f"{name}-{stamp}"
-    ).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    resolved = {
-        "name": name,
-        "config": str(config_path),
-        "runtime": str(runtime),
-        "entry": str(entry),
-        "out_dir": str(out_dir),
-        "started_at_utc": stamp,
-        "hostname": os.uname().nodename,
-        "env": dict(sorted(env.items())),
-    }
-    (out_dir / "config.resolved.json").write_text(json.dumps(resolved, indent=2))
-
     print(f"name    : {name}")
     print(f"runtime : {runtime}")
     print(f"entry   : {entry}")
-    print(f"out_dir : {out_dir}")
     print(f"env     : {len(env)} vars")
     if args.print_only:
         for key in sorted(env):
@@ -196,17 +250,28 @@ def main() -> int:
         print("status: printed only, nothing run")
         return 0
 
-    # cwd is the repo root, not the runtime dir. Entry scripts locate themselves
-    # through BASH_SOURCE and so do not care, which leaves cwd free to mean the
-    # one useful thing: relative paths inside a config (H3_PROMPT_FILE and the
-    # like) resolve the way they read, i.e. from the repo root, matching how
-    # every other config in this tree writes a path.
-    run_env = {**os.environ, **env, "OUT_DIR": str(out_dir)}
-    proc = subprocess.run(["bash", str(entry)], env=run_env, cwd=str(REPO))
-    (out_dir / "config.resolved.json").write_text(
-        json.dumps({**resolved, "returncode": proc.returncode}, indent=2)
+    # Hand the assembled manifest to launch_candidate's prepare_run rather than
+    # executing here. That is what makes this a front-end and not a second
+    # implementation: one bundle format, one set of provenance files, and
+    # collect_run.py finds artifacts under outputs/ no matter which config
+    # dialect was used to start the run.
+    data = to_manifest(name, launcher, env, runtime, entry, config_path)
+    launch_args = argparse.Namespace(
+        candidate=str(config_path),
+        mode="local",
+        run_root=args.run_root,
+        name_suffix="",
+        runtime_root=str(runtime),
+        env=None,
+        strict_commit=False,
+        confirm_submit=False,
+        allow_unsupported_gpu=True,
     )
-    print(f"status: exit {proc.returncode}  ({out_dir})")
+    run_dir, launch_script, _job, _data = launch_candidate.prepare_run(launch_args, data)
+    print(f"run_dir : {run_dir}")
+    proc = subprocess.run([str(launch_script)])
+    launch_candidate.update_metadata(run_dir, {"status": "completed", "returncode": proc.returncode})
+    print(f"status: exit {proc.returncode}  ({run_dir})")
     return proc.returncode
 
 

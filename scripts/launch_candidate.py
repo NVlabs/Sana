@@ -308,6 +308,15 @@ def vendored_snapshot_identity(path: Path) -> str | None:
         raise SystemExit(f"Invalid vendored source snapshot: {snapshot_path}: {exc}") from exc
     core_hashes = snapshot.get("core_sha256", {})
     if not isinstance(core_hashes, dict) or not core_hashes:
+        # Two snapshot dialects live in this tree. The SGLang runtimes record
+        # core_sha256 for files they vendor and this function verifies them; the
+        # Diffusers runtimes record an upstream repo/commit pin instead, because
+        # what they vendor is a git checkout whose identity is its commit. A
+        # snapshot in the second dialect is not a broken one, so fall back to
+        # hashing the snapshot itself rather than refusing to launch.
+        if snapshot.get("upstream_commit") or snapshot.get("upstream_repo"):
+            digest = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
+            return f"snapshot:{digest}"
         raise SystemExit(f"Vendored source snapshot has no core_sha256 entries: {snapshot_path}")
     source_root = (path / str(snapshot.get("source_root", "lingbot_src"))).resolve()
     try:
@@ -703,10 +712,20 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
         )
 
 
-def prepare_run(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, Any]]:
+def prepare_run(
+    args: argparse.Namespace, data: dict[str, Any] | None = None
+) -> tuple[Path, Path, Path, dict[str, Any]]:
+    """Render one run bundle.
+
+    `data` lets a caller supply an already-assembled manifest instead of having
+    one read from `args.candidate`. scripts/run.py uses it to translate a flat
+    single-file config into this shape, so both config dialects produce the same
+    bundle from the same code rather than from two parallel implementations.
+    """
     root = repo_root()
     candidate_path = Path(args.candidate).resolve()
-    data = merge_model_profile(load_toml(candidate_path))
+    if data is None:
+        data = merge_model_profile(load_toml(candidate_path))
 
     for field in ("id", "kind", "submodule", "run_script"):
         if field not in data:

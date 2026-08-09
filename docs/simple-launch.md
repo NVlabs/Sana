@@ -124,16 +124,27 @@ output dir: the resolved env, the entry that ran, the host, and the exit code.
 144454 MiB — against the recorded reference of 159.628 / 149.696 / 49 / 144454
 from job 5813128. Same peak memory to the byte, same eval count, 0.7% on latency.
 
-## Relationship to `candidates/` + `models/<uid>.toml`
+## One command, two config dialects
 
-Both paths reach the same arms and neither replaces the other.
+`scripts/run.py` takes either kind of config and produces the same run bundle:
 
-| | this path | `candidates/` + `launch_candidate.py` |
-|---|---|---|
-| files per run | 1 | 2 (candidate + profile) |
-| scheduler | none | renders `job.sbatch`, can submit |
-| provenance | `config.resolved.json` | full run bundle + `manifest.resolved.toml` |
-| best for | running one arm, external users, other sites | experiment matrices, promotion gates |
+```bash
+python3 scripts/run.py models/minimax_h3/GB200/dense.toml        # flat, one file
+python3 scripts/run.py candidates/minimax_h3_h100_dense.toml     # candidate + profile
+```
 
-`minimax_h3` has 23 candidates sharing one profile; that sharing is worth the
-extra file. Running one arm once is not.
+It tells them apart by shape -- a candidate declares `model_profile` or a
+`[runtime]` table, a flat config carries `runtime` as a plain string -- and hands
+both to the same `prepare_run`, so `runs/<stamp>-<id>/` contains `launch.sh`,
+`job.sbatch`, `manifest.resolved.toml`, `metadata.json` and `outputs/` either
+way. `collect_run.py` reads either.
+
+Use whichever the job calls for. A flat config is one self-contained file, good
+for running one arm and for sites outside this cluster. A candidate shares a
+model profile across variants -- `minimax_h3` has 23 of them over one profile --
+and carries `kind`, `purpose` and `[requires].capabilities`, which is what drives
+the conflict check and the promotion gates.
+
+`scripts/launch_candidate.py` is still there and is what actually renders the
+bundle. Call it directly when you want the scheduler: it is the only one of the
+two that submits with `--mode sbatch --confirm-submit`.

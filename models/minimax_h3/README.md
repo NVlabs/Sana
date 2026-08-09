@@ -36,14 +36,9 @@ python scripts/launch_candidate.py <candidate> \
 without `--confirm-submit`, it only prepares the job bundle. The candidate selects the matching
 hardware runtime and enables its complete optimization stack.
 
-For example, the following H100 command reproduces the released benchmark case:
-
-| Setting | Value |
-|---|---|
-| Prompt | [`t2va_example_1.json`](prompts/t2va_example_1.json) |
-| Seed | `0` |
-| Denoising steps | `50` |
-| Workload | 1344x768 @ 5 s |
+For example, the following H100 command reproduces the released
+[`t2va_example_1`](prompts/t2va_example_1.json) benchmark at 1344x768 for 5 seconds, using seed `0`
+and 50 denoising steps:
 
 ```bash
 python scripts/launch_candidate.py \

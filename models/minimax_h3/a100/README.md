@@ -1,45 +1,31 @@
 # MiniMax-H3 on A100
 
-This self-contained runtime runs the released BF16 FL2VA checkpoint at
-1344x768, 124 frames, and 50 steps on four A100-80GB GPUs. It uses SGLang FSDP
-inference plus Ulysses-4, with no offload and no `torch.compile`.
+## Overview
 
-`gpu_infer.py` calls SGLang's process-local `DiffGenerator`, `registration.py`
-verifies the pinned upstream source before registering `model.py`, and the
-installed SGLang checkout is never patched or modified. This directory does
-not import implementation or policy code from another hardware runtime.
+This self-contained runtime runs the released BF16 FL2VA checkpoint on four A100 GPUs. It uses
+SGLang FSDP inference with Ulysses-4, keeps the model resident without offload, and does not modify
+the installed SGLang checkout.
 
-## Profiles
+## Performance
 
-| Profile | Attention | Cache |
-|---|---|---|
-| `dense` | Official SGLang dense backend | None |
-| `quality` | Sol-Attn, tau 0.5, diag, 15 dense steps | EasyCache 0.30, retain 10, max hit 1 |
-| `balanced` | Sol-Attn, tau 1.0, diag, 10 dense steps | EasyCache 0.30, retain 6, max hit 2 |
-| `aggressive` | Sol-Attn, tau 1.0, diag, 10 dense steps | FirstBlockCache 0.08 |
-| `fullopt_exact` | Sol-Attn, tau 1.0, exact, 10 dense steps | FirstBlockCache 0.08 |
+| GPUs | Workload | E2E speedup |
+|---:|---|---:|
+| 4 | 1344x768 @ 5 s | **3.55x** |
 
-Every sparse profile leaves the first two transformer layers dense. The whole
-multimodal prefix is an exact KV sink, its query rows are recomputed densely,
-and token reordering is disabled. This runtime requires SM80 and selects the
-Triton Sol-Attn backend. Profile definitions are locked in `profiles.py`; a
-conflicting environment override fails instead of changing a run silently.
+The speedup is measured against the matching dense runtime. The released configuration is pinned by
+[`minimax_h3_a100_fullopt_exact.toml`](../../../candidates/minimax_h3_a100_fullopt_exact.toml).
 
-## Environment
+## Full-Opt
 
-The candidate manifests pin:
+- **Parallelism:** FSDP inference with Ulysses-4 and no model offload.
+- **Attention:** Triton Sol-Attn with `tau=1.0`, exact thresholding, a full-prefix KV sink, dense
+  prefix queries, and the first 10 steps and first two blocks dense.
+- **Cache:** FirstBlockCache with threshold `0.08` and synchronized decisions across ranks.
+- **Runtime:** pinned SGLang BF16 execution without `torch.compile` or token reordering.
 
-- `lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86`
-- PyTorch `2.11.0+cu130`
-- Triton `3.6.0`
-- MiniMax-H3 revision `bfc8ed0353f5a9733be73e6b2c98ec0948195b86`
+## Usage
 
-Set `H3_STORAGE_ROOT` to a shared path containing this checkout. Set
-`H3_MODEL_PATH` to a local MiniMax-H3 root or FL2VA directory for offline
-clusters; otherwise the Hugging Face repository in the manifest is used. The
-runner supports `pyxis`, `singularity`/`apptainer`, and `none`.
-
-## Run
+Run from the repository root:
 
 ```bash
 python scripts/launch_candidate.py \
@@ -48,17 +34,15 @@ python scripts/launch_candidate.py \
   --env H3_STORAGE_ROOT=/shared/path/Sana
 ```
 
-Select `dense`, `quality`, `balanced`, `aggressive`, or `fullopt_exact` in the
-candidate filename. Site-specific Slurm account and partition are omitted.
-Each run writes only `out.mp4`, `benchmark.json`, and `run.log` under its output
-folder. `benchmark.json` uses SGLang's inference time and peak-memory fields and
-also records the selected backend, warmup routing density, and cache reuse.
+## Environment
 
-## Files
+- **Runtime:** `lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86`, PyTorch 2.11.0, and Triton 3.6.
+- **Weights:** released BF16 FL2VA checkpoint; set `H3_MODEL_PATH` for an offline local copy.
+- **Placement:** four A100 GPUs with shared access to `H3_STORAGE_ROOT`.
 
-- `model.py`: pinned SGLang MiniMax-H3 model with attention/cache hook points.
-- `adapter.py`: A100 packed-sequence Sol-Attn policy and full-prefix sink.
-- `easycache.py`, `first_block_cache.py`: collective cache controllers.
-- `registration.py`: source verification and process-local model registration.
-- `gpu_infer.py`: warmup plus measured offline generation.
-- `scripts/run_minimax_h3_gpu.sh`: native/container launcher.
+The launcher supports Pyxis, Apptainer/Singularity, and native execution. Site-specific Slurm account
+and partition settings remain external to the candidate.
+
+## Outputs
+
+The run bundle stores `out.mp4`, `benchmark.json`, and launch logs under `runs/`.

@@ -49,8 +49,8 @@ python3 scripts/run.py models/minimax_h3/gb200/optimized.toml    # full stack
 ```
 
 Point `PYTHON_BIN` and `H3_MODEL_PATH` at your install by editing the config, and
-add `--print` to resolve without running. Under Slurm, `run.sbatch` here wraps
-that same command; see [simple-launch](../../../docs/simple-launch.md).
+add `--print` to resolve without running. Under a scheduler, put that same line
+in your own job script; see [simple-launch](../../../docs/simple-launch.md).
 
 `optimized.toml` runs Ulysses-4 on one node rather than the Ulysses-8 in
 `minimax_h3_fullopt.toml`, because an NVL72 node exposes 4 GPUs and degree 8

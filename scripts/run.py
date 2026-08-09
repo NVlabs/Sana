@@ -5,10 +5,11 @@
 
 That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,
-put this exact command inside your own sbatch script -- see
-models/minimax_h3/gb200/run.sbatch. Nothing here reads SLURM_*, and nothing here
-calls srun/sbatch/squeue, so the same command is correct on a login node inside
-an salloc, on a bare workstation, and inside a batch job.
+put this exact command inside your own sbatch script -- job scripts are not
+tracked here because their account/partition/QoS are site-specific; see
+docs/simple-launch.md for the four-line wrapper. Nothing here reads SLURM_*, and
+nothing here calls srun/sbatch/squeue, so the same command is correct on a login
+node inside an salloc, on a bare workstation, and inside a batch job.
 
 WHERE CONFIGS LIVE
 
@@ -18,7 +19,6 @@ Beside the code they launch, one directory per hardware target:
       gb200/                        the GB200 implementation
         baseline.toml                 launch config  ->  runs gb200/baseline/
         optimized.toml                launch config  ->  runs gb200/optimized/
-        run.sbatch                    optional Slurm wrapper for this target
         baseline/  optimized/         the code
       h100/  a100/  gb10/  rtx5090/  other targets, same shape
 

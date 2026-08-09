@@ -17,7 +17,6 @@ models/minimax_h3/              the model
   gb200/                          the GB200 implementation
     baseline.toml                   launch config  ->  runs gb200/baseline/
     optimized.toml                  launch config  ->  runs gb200/optimized/
-    run.sbatch                      optional Slurm wrapper for this target
     README.md                       what this target is and what it reaches
     baseline/   optimized/          the code
   h100/  a100/  gb10/  rtx5090/  other targets, same shape
@@ -74,13 +73,29 @@ python3 scripts/run.py models/minimax_h3/gb200/baseline.toml
 srun -A nvr_elm_llm -p batch --qos=interactive -N1 --gpus-per-node=4 -t 02:00:00 --pty bash
 python3 scripts/run.py models/minimax_h3/gb200/baseline.toml
 
-# as a batch job
-sbatch models/minimax_h3/gb200/run.sbatch
+# as a batch job -- your own wrapper, whatever your scheduler is
+sbatch my_job.sbatch
 ```
 
-`run.sbatch` is the only file that mentions Slurm, and its last line is that same
-`python3 scripts/run.py ...`. A site that schedules differently replaces that one
-file and changes nothing else.
+Job scripts are not tracked in this repo (`*.gitignore`d): the account, partition
+and QoS in them are site-specific and of no use to anyone else. Write your own —
+the whole thing is a resource header plus the same one-line command:
+
+```bash
+#!/bin/bash
+#SBATCH -A <your-account>
+#SBATCH -p <your-partition>
+#SBATCH -N 1
+#SBATCH --gpus-per-node=4
+#SBATCH -t 02:00:00
+
+cd "${SLURM_SUBMIT_DIR:-$PWD}"
+python3 scripts/run.py models/minimax_h3/gb200/baseline.toml
+```
+
+That last line is the only thing the scheduler contributes to, which is the
+point: `run.py` never learns the scheduler exists, so a site that schedules
+differently rewrites this wrapper and changes nothing else.
 
 ## What it checks before it runs
 

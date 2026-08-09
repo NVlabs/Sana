@@ -89,5 +89,8 @@ The released repository is *not* in the diffusers layout, so it is converted onc
 |---|---|
 | `gpu_infer.py` | The baseline itself: placement, request loop, CUDA-event timing, JSON result. |
 | `scripts/run_minimax_h3_gpu.sh` | Registered runtime entrypoint, env-driven, `OUT_DIR` injected by the launcher. |
-| `scripts/baseline_gb200.sbatch` | Standalone one-node GB200 runner for a measurement outside the candidate launcher. |
 | `diffusers_src/` | Vendored diffusers @ `minimax-h3`, pinned in `SOURCE_SNAPSHOT.json`. |
+
+Job scripts are not tracked here: their account, partition and QoS are
+site-specific and useless elsewhere. `docs/simple-launch.md` shows the four-line
+wrapper to write for your own scheduler.

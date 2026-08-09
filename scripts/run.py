@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run one model arm from a single flat config file.
 
-    python3 scripts/run.py models/minimax_h3/gb200_sglang/dense.toml
+    python3 scripts/run.py models/minimax_h3/gb200/dense.toml
 
 That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,
@@ -16,9 +16,9 @@ WHERE CONFIGS LIVE
 Beside the code they launch, one directory per hardware target:
 
     models/minimax_h3/            the model
-      gb200_sglang/                 the GB200 SGLang implementation
+      gb200/                        the GB200 implementation
         dense.toml                    launch config  ->  the dense control
-        aggressive.toml               launch config  ->  the full stack
+        fullopt.toml                  launch config  ->  the full stack
         <driver + modules>            the code
       h100/  a100/  gb10/  rtx5090/  other targets, same shape
 

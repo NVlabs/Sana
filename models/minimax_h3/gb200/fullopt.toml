@@ -1,0 +1,58 @@
+# MiniMax-H3 on GB200, Diffusers runtime -- FULLOPT arm.
+#
+#   python3 scripts/run.py models/minimax_h3/gb200/dense.toml
+#
+# Same shape as ../gb10/: one flat directory, one driver, arms selected by env.
+# There is no separate baseline/ tree any more. It was retired after job 5995886
+# measured this exact configuration -- the optimized driver with every switch off
+# on one card -- against the old baseline driver (job 5992725):
+#
+#     total    163.466 s  vs  161.893 s   (+0.97%)
+#     denoise  150.998 s  vs  148.898 s   (+1.41%)
+#     peak     144405 MB  vs  144455 MB   (-0.03%)
+#
+# Inside the spread of the baseline arm's own three runs (159.6 / 160.7 / 161.9),
+# so install_stack() installing nothing is the same dense path the 294-line
+# driver was, and keeping two drivers only risked them drifting apart.
+
+name    = "minimax_h3_gb200_diffusers_fullopt"
+runtime = "."
+entry   = "run_minimax_h3_gpu.sh"
+gpus    = 4
+
+# --- full stack: kernel line + Sol-Attn + FirstBlockCache + sharded VAE ---
+H3_KERNEL          = "1"
+H3_SOL_ATTN        = "1"
+H3_CACHE_THRESHOLD = "0.08"
+H3_SHARD_VAE       = "1"
+H3_ULYSSES_DEGREE  = "4"
+H3_SOL_TAU         = "1.0"
+H3_SOL_THRESH_TYPE = "diag"
+H3_SOL_DENSE_STEPS = "10"
+H3_SOL_DENSE_LAYERS = "2"
+H3_SOL_SINK_MODE   = "prefix"
+H3_VAE_BATCHED     = "1"
+H3_VAE_COMPILE     = "default"
+H3_SOL_ATTN_ROOT   = "techniques/sparse_backends"
+
+# --- interpreter -------------------------------------------------------------
+PYTHON_BIN    = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2/bin/python"
+H3_CONDA_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3"
+H3_CONDA_ENV  = "lingbot-fa2"
+
+# --- weights + prompt --------------------------------------------------------
+H3_MODEL_PATH  = "/home/yitongl/code/models/MiniMax-H3-diffusers"
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+
+# --- official sampling config ------------------------------------------------
+H3_HEIGHT     = "768"
+H3_WIDTH      = "1344"
+H3_NUM_FRAMES = "124"
+H3_STEPS      = "50"
+H3_SEED       = "0"
+H3_WARMUP     = "1"
+H3_MEASURE    = "1"
+
+HF_HUB_OFFLINE       = "1"
+HF_HOME              = "/home/yitongl/code/.cache/huggingface"
+TOKENIZERS_PARALLELISM = "false"

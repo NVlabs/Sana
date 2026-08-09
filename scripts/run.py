@@ -187,16 +187,26 @@ def main() -> int:
         raise SystemExit(f"config not found: {config_path}")
     cfg = load_config(config_path)
 
+    # --set has to land where the dialect keeps that key. A flat config holds
+    # its environment at the top level, a manifest nests it under [env], so
+    # writing every override to the top level made --set PYTHON_BIN=... silently
+    # do nothing for manifests -- it added an ignored top-level key while the
+    # real value stayed in [env]. Uppercase goes to the env table for manifests;
+    # lowercase is a launcher key either way.
+    manifest = is_config_manifest(cfg)
     for item in args.set:
         if "=" not in item:
             raise SystemExit(f"--set expects KEY=VALUE, got: {item}")
         key, value = item.split("=", 1)
-        cfg[key] = value
+        if manifest and key == key.upper():
+            cfg.setdefault("env", {})[key] = value
+        else:
+            cfg[key] = value
 
     # A config manifest needs none of the flat dialect's translation: it is
     # already the shape prepare_run reads, including the [requires] block that
     # drives the capability/conflict check. Run it directly.
-    if is_config_manifest(cfg):
+    if manifest:
         launch_args = argparse.Namespace(
             config=str(config_path), mode="local", run_root=args.run_root,
             name_suffix="", runtime_root=None, env=None, strict_commit=False,
@@ -223,7 +233,9 @@ def main() -> int:
                 raise SystemExit(
                     f"run script does not exist: {REPO / str(root) / str(script)}"
                 )
-        run_dir, launch_script, _job, _data = launch_config.prepare_run(launch_args)
+        run_dir, launch_script, _job, _data = launch_config.prepare_run(
+            launch_args, launch_config.merge_model_profile(cfg)
+        )
         print(f"config: {cfg.get('id', config_path.stem)}")
         print(f"run_dir  : {run_dir}")
         if args.print_only:

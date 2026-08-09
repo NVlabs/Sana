@@ -43,18 +43,18 @@ HF_CACHE = Path(os.environ.get("HF_HOME", ROOT / "hf_cache"))
 def _diffusers_src() -> Path:
     """The pinned diffusers. MiniMax-H3 is not in a release, so this is a hard dependency.
 
-    The baseline vendors it at the commit `baseline/SOURCE_SNAPSHOT.json` records; a checkout
-    beside this variant is accepted as a fallback, because the tarball distribution of the
+    GB200 vendors it at the commit its `SOURCE_SNAPSHOT.json` records; a checkout beside
+    this variant is accepted as a fallback, because the tarball distribution of the
     repository does not carry `diffusers_src`.
     """
     override = os.environ.get("H3_DIFFUSERS_SRC")
     if override:
         return Path(override)
-    for config in (MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src",
+    for config in (MODEL_DIR / "GB200" / "diffusers_src" / "src",
                       ROOT / "diffusers_src" / "src"):
         if config.is_dir():
             return config
-    return MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src"
+    return MODEL_DIR / "GB200" / "diffusers_src" / "src"
 
 
 DIFFUSERS_SRC = _diffusers_src()

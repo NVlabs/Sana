@@ -23,7 +23,7 @@ REPO_ROOT="$(cd "${HERE}/../../.." && pwd)"
 if [[ -n "${H3_PROMPT_FILE:-}" && "${H3_PROMPT_FILE}" != /* ]]; then
   export H3_PROMPT_FILE="${REPO_ROOT}/${H3_PROMPT_FILE}"
 fi
-BASELINE="$(cd "${HERE}/../gb200" && pwd)"
+BASELINE="$(cd "${HERE}/../GB200" && pwd)"
 mkdir -p "$OUT_DIR"
 export H3_OUTPUT_DIR="$OUT_DIR"
 

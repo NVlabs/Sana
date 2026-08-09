@@ -42,5 +42,9 @@ optimization_reports/artifacts/
 *.sbatch
 
 # MiniMax-H3 GB200 SGLang runtime: a second implementation of the same card,
-# kept locally for framework A/B work and not published.
-models/minimax_h3/gb200_sglang/
+# kept locally for framework A/B work and not published. Spelled with the
+# directory's real case: this rule was written lowercase, and capitalising the
+# hardware directories silently stopped it matching, which published the whole
+# runtime. tests/test_no_private_files_tracked.py now fails on any tracked file
+# an ignore rule claims, so a stale rule cannot leak quietly again.
+models/minimax_h3/GB200_sglang/

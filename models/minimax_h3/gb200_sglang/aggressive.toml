@@ -1,0 +1,51 @@
+# MiniMax-H3 on GB200, SGLang runtime -- AGGRESSIVE arm (full algorithm stack).
+#
+#   python3 scripts/run.py models/minimax_h3/gb200_sglang/aggressive.toml
+#
+# Byte-identical to dense.toml beside it except for H3_SOL_PROFILE. That is the
+# point of the profile table: the acceleration is algorithm-level -- Sol-Attn
+# sparse attention and FirstBlockCache step reuse -- and neither depends on
+# whether the model underneath is the Diffusers or the SGLang implementation.
+# The same profile name means the same algorithm settings on h100, a100 and
+# here, so a profile is comparable across hardware as well as across frameworks.
+#
+# What "aggressive" locks (profiles.py PROFILES["aggressive"]):
+#     Sol-Attn on, tau 1.0, diagonal thresholding, prefix sink,
+#     first 10 steps and first 2 layers dense
+#     FirstBlockCache, threshold 0.08
+#     no torch.compile, no offload, no reorder
+#
+# The kernel behind Sol-Attn is the one part that IS hardware-coupled, and it is
+# already built for this card: sol_attn ships sm90/sm100/sm120, GB200 reports
+# capability (10, 0), and profiles.py pins H3_EXPECTED_SOL_BACKEND to cute_sm100
+# so a silent fall back to Triton fails the run instead of quietly reporting a
+# dense measurement under a sparse label.
+
+name    = "minimax_h3_gb200_sglang_aggressive"
+runtime = "."
+entry   = "run_minimax_h3_gpu.sh"
+gpus    = 4
+
+# --- arm selection -----------------------------------------------------------
+H3_SOL_PROFILE = "aggressive"
+
+# --- container ---------------------------------------------------------------
+H3_CONTAINER_RUNTIME = "pyxis"
+H3_CONTAINER_IMAGE   = "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86"
+
+# --- weights -----------------------------------------------------------------
+H3_MODEL_PATH     = "MiniMaxAI/MiniMax-H3"
+H3_MODEL_REVISION = "bfc8ed0353f5a9733be73e6b2c98ec0948195b86"
+H3_PROMPT_FILE    = "models/minimax_h3/prompts/t2va_example_1.json"
+
+# --- official sampling config (identical to the dense arm) -------------------
+H3_WARMUP_NUM_STEPS   = "50"
+H3_MEASURED_NUM_STEPS = "50"
+H3_DURATION_SECONDS   = "5.166667"
+H3_SEED               = "0"
+H3_WARMUP_SEED        = "10000"
+
+# --- storage -----------------------------------------------------------------
+H3_STORAGE_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/h3_run"
+H3_CACHE_ROOT   = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/h3_run/cache"
+HF_HUB_OFFLINE  = "0"

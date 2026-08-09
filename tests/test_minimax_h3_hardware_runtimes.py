@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import asdict
+import dataclasses
 import hashlib
 import importlib
 import json
@@ -223,3 +224,73 @@ ContractsTest = type(
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --- GB200 SGLang runtime -------------------------------------------------
+#
+# Not in RUNTIMES above: those tests key a directory by its hardware name, and
+# this runtime cannot be models/minimax_h3/gb200/ because that name is taken by
+# the Diffusers implementation of the same card. It is also driven by flat
+# configs beside it rather than by candidates/, so the candidate-shaped
+# assertions do not apply. What is worth pinning is that it is a faithful port:
+# the algorithm table is shared verbatim with H100 and only the hardware row
+# differs.
+
+GB200_SGLANG = ROOT / "models/minimax_h3/gb200_sglang"
+
+
+def test_gb200_sglang_differs_from_h100_only_in_hardware() -> None:
+    gb200 = importlib.import_module("models.minimax_h3.gb200_sglang.profiles")
+    h100 = importlib.import_module("models.minimax_h3.h100.profiles")
+
+    # The whole point of the port: identical algorithm settings, so a profile
+    # name means the same thing on both cards and the numbers stay comparable.
+    # Compared field-by-field rather than by object: each module defines its own
+    # RuntimeProfile dataclass, and dataclass equality requires the same class,
+    # so identical settings would otherwise compare unequal.
+    assert {k: dataclasses.asdict(v) for k, v in gb200.PROFILES.items()} == {
+        k: dataclasses.asdict(v) for k, v in h100.PROFILES.items()
+    }
+    assert gb200.PINNED_IMAGE == h100.PINNED_IMAGE
+    assert gb200.PINNED_MODEL_REVISION == h100.PINNED_MODEL_REVISION
+    assert gb200.PINNED_SGLANG_MODEL_SHA256 == h100.PINNED_SGLANG_MODEL_SHA256
+
+    assert gb200.HARDWARE.name == "gb200"
+    assert gb200.HARDWARE.capability == (10, 0)
+    assert gb200.HARDWARE.sol_backend == "cute_sm100"
+
+
+def test_gb200_sglang_never_reaches_into_the_h100_runtime() -> None:
+    for path in GB200_SGLANG.glob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        assert "models.minimax_h3.h100" not in source, path.name
+        assert "models/minimax_h3/h100" not in source, path.name
+    shim = (GB200_SGLANG / "run_minimax_h3_gpu.sh").read_text(encoding="utf-8")
+    assert "models/minimax_h3/h100" not in shim
+    assert "models/minimax_h3/gb200_sglang/run_minimax_h3_gpu.sh" in shim
+
+
+def test_gb200_sglang_flat_configs_are_one_layer_and_launchable() -> None:
+    for arm, profile in (("dense", "dense"), ("aggressive", "aggressive")):
+        with (GB200_SGLANG / f"{arm}.toml").open("rb") as handle:
+            config = tomllib.load(handle)
+        # One layer: no tables at all, so nothing here nests.
+        assert not any(isinstance(v, dict) for v in config.values()), arm
+        assert config["runtime"] == "."
+        assert config["entry"] == "run_minimax_h3_gpu.sh"
+        assert config["gpus"] == 4
+        assert config["H3_SOL_PROFILE"] == profile
+        assert config["H3_CONTAINER_IMAGE"] == PINNED_IMAGE
+        assert (GB200_SGLANG / config["entry"]).is_file()
+
+
+def test_gb200_sglang_snapshot_matches_its_runtime() -> None:
+    snapshot = json.loads(
+        (GB200_SGLANG / "SOURCE_SNAPSHOT.json").read_text(encoding="utf-8")
+    )
+    assert snapshot["variant"] == "gb200"
+    assert list(snapshot["hardware"]) == ["gb200"]
+    assert snapshot["hardware"]["gb200"]["sol_attn_backend"] == "cute_sm100"
+    for relative, expected in snapshot["core_sha256"].items():
+        actual = hashlib.sha256((GB200_SGLANG / relative).read_bytes()).hexdigest()
+        assert actual == expected, relative

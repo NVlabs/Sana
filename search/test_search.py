@@ -36,7 +36,7 @@ check("search returns results once a dimension exists", isinstance(results, list
 # diagnostic. Compose readiness is useful, but it must not gate subagent launch.
 for r in results:
     check(f"{r['dimension']}/{r['technique']} has a verdict",
-          r["composable"] + r["rejected"] == r["transfeat"])
+          r["composable"] + r["rejected"] == r["config"])
     check(f"{r['dimension']}/{r['technique']} is launchable", r["eligible"])
     check(f"{r['dimension']}/{r['technique']} exposes method baselines",
           bool(r.get("method_baselines")))
@@ -74,8 +74,8 @@ for dim_id, dim in load_dimensions():
     baselines = dim.get("method_baseline", [])
     check(f"loops/{dim_id} declares method baselines", bool(baselines))
     check(
-        f"loops/{dim_id} declares a wired or transfeat-wired baseline",
-        any(item.get("tier") in {"wired", "transfeat_wired"} for item in baselines),
+        f"loops/{dim_id} declares a wired or config-wired baseline",
+        any(item.get("tier") in {"wired", "config_wired"} for item in baselines),
     )
 
 sparse_dim = dict(load_dimensions()).get("sparse_attention", {})

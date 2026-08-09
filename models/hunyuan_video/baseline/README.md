@@ -19,11 +19,11 @@ generic controller in `efficiency/techniques/teacache.py`).
   controller-approved steps. No-op unless `SGLANG_HQ_TEACACHE_*` is set.
 
 ## Wiring
-`transfeat/hunyuan_diffusers_baseline.toml` points here via `[runtime] root =
+`config/hunyuan_diffusers_baseline.toml` points here via `[runtime] root =
 "runtime/hunyuan_diffusers_baseline"`, so the unobtainable submodule gitlink is
 left untouched. Launch:
 ```
-python3 scripts/launch_transfeat.py transfeat/hunyuan_diffusers_baseline.toml --mode sbatch --confirm-submit
+python3 scripts/launch_config.py config/hunyuan_diffusers_baseline.toml --mode sbatch --confirm-submit
 ```
 
 ## Environments

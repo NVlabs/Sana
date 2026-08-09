@@ -9,7 +9,7 @@ and Symposium support closure.
 Prepare the registered controls without submitting GPU work:
 
 ```bash
-python3 scripts/launch_transfeat.py transfeat/lingbot_video/baseline.toml --mode dry-run
+python3 scripts/launch_config.py config/lingbot_video/baseline.toml --mode dry-run
 ```
 
 Create a clean experiment from the baseline contract:

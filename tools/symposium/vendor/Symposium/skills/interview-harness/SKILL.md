@@ -76,6 +76,6 @@ stop_reason: convergence | safety_valve
 - Call sub-skills; do not rewrite their internal process.
 - Prefer the sub-skills' multiple-choice question style when asking for user decisions, while preserving free-form edit options.
 - Keep only one canonical latest Seed and one canonical latest Ontology in `socrates.md`.
-- Never auto-adopt evolve-step transfeat.
+- Never auto-adopt evolve-step config.
 - Never decide boundary equivalence without user confirmation.
 - Do not exceed 5 cycles.

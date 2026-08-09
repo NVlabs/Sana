@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Compare local step-cache transfeat against public VideoSys PAB boundaries.
+"""Compare local step-cache config against public VideoSys PAB boundaries.
 
 This is a public-behavior boundary probe, not a usefulness benchmark. It pins
 the public Pyramid Attention Broadcast (PAB) control surface and records how the
-current local step-cache transfeat differ from that public implementation.
+current local step-cache config differ from that public implementation.
 """
 
 from __future__ import annotations
@@ -31,11 +31,11 @@ from techniques.methods.payload_cache import PABBroadcastController  # noqa: E40
 PUBLIC_VIDEOSYS = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/VideoSys")
 PUBLIC_PAB_MGR = PUBLIC_VIDEOSYS / "videosys" / "core" / "pab" / "pab_mgr.py"
 PUBLIC_PAB_DOC = PUBLIC_VIDEOSYS / "docs" / "pab.md"
-STEP_CACHE_TRANSFEAT = {
-    "scheduled_step_reuse": ROOT / "transfeat" / "step_cache" / "scheduled_step_reuse.toml",
-    "adaptive_delta_forecast": ROOT / "transfeat" / "step_cache" / "adaptive_delta_forecast.toml",
-    "attention_broadcast": ROOT / "transfeat" / "step_cache" / "attention_broadcast.toml",
-    "block_layer_feature_cache": ROOT / "transfeat" / "step_cache" / "block_layer_feature_cache.toml",
+STEP_CACHE_CONFIG = {
+    "scheduled_step_reuse": ROOT / "config" / "step_cache" / "scheduled_step_reuse.toml",
+    "adaptive_delta_forecast": ROOT / "config" / "step_cache" / "adaptive_delta_forecast.toml",
+    "attention_broadcast": ROOT / "config" / "step_cache" / "attention_broadcast.toml",
+    "block_layer_feature_cache": ROOT / "config" / "step_cache" / "block_layer_feature_cache.toml",
 }
 
 
@@ -164,10 +164,10 @@ def public_pab_decisions() -> dict[str, Any]:
 
 
 def local_pab_decisions() -> dict[str, Any]:
-    attention_params = load_toml(STEP_CACHE_TRANSFEAT["attention_broadcast"])[
+    attention_params = load_toml(STEP_CACHE_CONFIG["attention_broadcast"])[
         "efficiency"
     ]["params"]
-    block_params = load_toml(STEP_CACHE_TRANSFEAT["block_layer_feature_cache"])[
+    block_params = load_toml(STEP_CACHE_CONFIG["block_layer_feature_cache"])[
         "efficiency"
     ]["params"]
 
@@ -221,13 +221,13 @@ def local_pab_decisions() -> dict[str, Any]:
     }
 
 
-def local_transfeat_alignment() -> dict[str, dict[str, Any]]:
+def local_config_alignment() -> dict[str, dict[str, Any]]:
     public_behavior = public_pab_decisions()
     local_behavior = local_pab_decisions()
-    attention_params = load_toml(STEP_CACHE_TRANSFEAT["attention_broadcast"])[
+    attention_params = load_toml(STEP_CACHE_CONFIG["attention_broadcast"])[
         "efficiency"
     ]["params"]
-    block_params = load_toml(STEP_CACHE_TRANSFEAT["block_layer_feature_cache"])[
+    block_params = load_toml(STEP_CACHE_CONFIG["block_layer_feature_cache"])[
         "efficiency"
     ]["params"]
     attention_controller_match = (
@@ -243,42 +243,42 @@ def local_transfeat_alignment() -> dict[str, dict[str, Any]]:
     )
     return {
         "scheduled_step_reuse": {
-            "manifest": str(STEP_CACHE_TRANSFEAT["scheduled_step_reuse"]),
+            "manifest": str(STEP_CACHE_CONFIG["scheduled_step_reuse"]),
             "matches_public_pab": False,
             "reason": (
-                "local transfeat skips/reuses the whole denoiser step output on "
+                "local config skips/reuses the whole denoiser step output on "
                 "an explicit step index set; public PAB broadcasts attention/MLP "
                 "module outputs using attention type, timestep threshold, and "
                 "range/count guards."
             ),
         },
         "adaptive_delta_forecast": {
-            "manifest": str(STEP_CACHE_TRANSFEAT["adaptive_delta_forecast"]),
+            "manifest": str(STEP_CACHE_CONFIG["adaptive_delta_forecast"]),
             "matches_public_pab": False,
             "reason": (
-                "local transfeat delta-extrapolates whole denoiser outputs; public "
+                "local config delta-extrapolates whole denoiser outputs; public "
                 "PAB does not define output-delta forecasting."
             ),
         },
         "attention_broadcast": {
-            "manifest": str(STEP_CACHE_TRANSFEAT["attention_broadcast"]),
+            "manifest": str(STEP_CACHE_CONFIG["attention_broadcast"]),
             "matches_public_pab": False,
             "matches_public_pab_controller": attention_controller_match,
             "matches_public_pab_full_runtime": False,
             "reason": (
-                "local transfeat now uses the public cross-attention "
+                "local config now uses the public cross-attention "
                 "threshold/range/count controller, but it only adapts Cosmos3 GEN "
                 "cross-attention and does not claim VideoSys' full spatial/"
                 "temporal/cross model hooks or passing GPU quality evidence."
             ),
         },
         "block_layer_feature_cache": {
-            "manifest": str(STEP_CACHE_TRANSFEAT["block_layer_feature_cache"]),
+            "manifest": str(STEP_CACHE_CONFIG["block_layer_feature_cache"]),
             "matches_public_pab": False,
             "matches_public_pab_controller": mlp_controller_match,
             "matches_public_pab_full_runtime": False,
             "reason": (
-                "local transfeat now uses the public MLP start-timestep/block/"
+                "local config now uses the public MLP start-timestep/block/"
                 "skip-count controller and caches Cosmos3 MLP outputs, but it does "
                 "not claim VideoSys' full model hook layout or passing GPU quality "
                 "evidence."
@@ -300,7 +300,7 @@ def probe() -> dict[str, Any]:
         },
         "public_behavior_probe": public_pab_decisions(),
         "local_behavior_probe": local_pab_decisions(),
-        "transfeat_manifest_alignment": local_transfeat_alignment(),
+        "config_manifest_alignment": local_config_alignment(),
     }
 
 

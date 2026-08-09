@@ -13,7 +13,7 @@ description: |
 
 Restate turns the active cycle's `### Refine` shared meaning into one goal sentence that another person could read and pursue.
 
-Ask the user to write or approve one goal transfeat. Do not freely write the goal for the user.
+Ask the user to write or approve one goal config. Do not freely write the goal for the user.
 
 ## Question Style
 
@@ -23,9 +23,9 @@ Use this shape:
 
 ```markdown
 Which goal statement should become the Seed goal?
-A. <goal transfeat>
-B. <goal transfeat>
-C. <goal transfeat>
+A. <goal config>
+B. <goal config>
+C. <goal config>
 D. Other / rewrite it in your own words
 ```
 

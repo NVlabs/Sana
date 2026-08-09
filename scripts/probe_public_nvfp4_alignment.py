@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Pin the NVFP4/TransformerEngine boundary for model-agnostic transfeat.
+"""Pin the NVFP4/TransformerEngine boundary for model-agnostic config.
 
-The NVFP4 transfeat cite TransformerEngine, ModelOpt, and CUTLASS. Cosmos3 is a
+The NVFP4 config cite TransformerEngine, ModelOpt, and CUTLASS. Cosmos3 is a
 validation target, not the algorithm boundary. This probe separates the generic
 FP4/NVFP4 linear consumer and recipe axes that are already wired from
 LTX2-specific TE fused-epilogue glue that does not semantically map to Cosmos3's
@@ -27,11 +27,11 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 RUNTIME_PYTHON = ROOT / "Sol-LTX-Infer/.conda/ltx23/bin/python"
-TE_MANIFEST = ROOT / "transfeat/nvfp4_ffn/te_recipe_variant.toml"
-CONSERVATIVE_MANIFEST = ROOT / "transfeat/nvfp4_ffn/conservative_ffn_nvfp4.toml"
-PROFILED_MANIFEST = ROOT / "transfeat/nvfp4_ffn/profiled_hot_linear_nvfp4.toml"
-DENSE_GUARD_MANIFEST = ROOT / "transfeat/nvfp4_ffn/dense_guard_policy.toml"
-BACKEND_PADDING_MANIFEST = ROOT / "transfeat/nvfp4_ffn/backend_padding_policy.toml"
+TE_MANIFEST = ROOT / "config/nvfp4_ffn/te_recipe_variant.toml"
+CONSERVATIVE_MANIFEST = ROOT / "config/nvfp4_ffn/conservative_ffn_nvfp4.toml"
+PROFILED_MANIFEST = ROOT / "config/nvfp4_ffn/profiled_hot_linear_nvfp4.toml"
+DENSE_GUARD_MANIFEST = ROOT / "config/nvfp4_ffn/dense_guard_policy.toml"
+BACKEND_PADDING_MANIFEST = ROOT / "config/nvfp4_ffn/backend_padding_policy.toml"
 GENERIC_NVFP4_TRANSFORM = ROOT / "efficiency/transforms/nvfp4_ffn.py"
 RUNTIME_NVFP4_TRANSFORM = (
     ROOT
@@ -52,10 +52,10 @@ COSMOS3_MODEL = (
 LTX2_MODEL = (
     ROOT / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/ltx_2.py"
 )
-LAUNCH_CANDIDATE = ROOT / "scripts/launch_transfeat.py"
+LAUNCH_CANDIDATE = ROOT / "scripts/launch_config.py"
 
 
-NON_TE_NVFP4_TRANSFEAT = {
+NON_TE_NVFP4_CONFIG = {
     "conservative_ffn_nvfp4": CONSERVATIVE_MANIFEST,
     "profiled_hot_linear_nvfp4": PROFILED_MANIFEST,
     "dense_guard_policy": DENSE_GUARD_MANIFEST,
@@ -304,7 +304,7 @@ def transform_env_probe() -> dict[str, Any]:
     }
 
 
-def transfeat_alignment(
+def config_alignment(
     runtime_dependency: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     te_data = load_toml(TE_MANIFEST)
@@ -314,7 +314,7 @@ def transfeat_alignment(
     checks = source_checks()
     env_probe = transform_env_probe()
     non_te_rows: dict[str, dict[str, Any]] = {}
-    for cid, manifest in NON_TE_NVFP4_TRANSFEAT.items():
+    for cid, manifest in NON_TE_NVFP4_CONFIG.items():
         non_te_rows[cid] = {
             "manifest": str(manifest),
             "algorithm_boundary": "ModelOpt/CUTLASS NVFP4 linear path",
@@ -351,7 +351,7 @@ def transfeat_alignment(
         "algorithm_boundary": (
             "TransformerEngine NVFP4 recipe family with only generic recipe "
             "axes enabled in the manifest; model-specific fused epilogues must "
-            "prove their FFN semantics before becoming a transfeat claim."
+            "prove their FFN semantics before becoming a config claim."
         ),
         "row_scaled_recipe_flag_declared": bool(te_params.get("row_scaled_activation")),
         "fused_proj_in_gelu_flag_declared": bool(te_params.get("fused_proj_in_gelu")),
@@ -472,7 +472,7 @@ def probe() -> dict[str, Any]:
     return {
         "status": status,
         "public_reference_role": {
-            "non_te_nvfp4_transfeat": (
+            "non_te_nvfp4_config": (
                 "TransformerEngine/ModelOpt/CUTLASS motivate the generic "
                 "NVFP4 linear algorithm boundary; Cosmos3 consumes the local "
                 "online ModelOpt FP4 linear path."
@@ -486,7 +486,7 @@ def probe() -> dict[str, Any]:
         "checks": checks,
         "transform_env_probe": env_probe,
         "runtime_dependency": runtime_dependency,
-        "transfeat_manifest_alignment": transfeat_alignment(runtime_dependency),
+        "config_manifest_alignment": config_alignment(runtime_dependency),
     }
 
 

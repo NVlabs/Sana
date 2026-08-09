@@ -2,7 +2,7 @@
 #
 # Model-agnostic sparse-attention routing policies.
 #
-# These helpers describe which key/value blocks a sparse-attention transfeat
+# These helpers describe which key/value blocks a sparse-attention config
 # wants to keep. They intentionally do not know about Cosmos3 modules, run
 # scripts, or backend kernels. A model adapter may consume the returned mask or
 # fixed-width indices; until then these functions are pure algorithm evidence,
@@ -821,23 +821,23 @@ def minference_dynamic_pattern_bank_mask(
         pattern_block_size=pattern_block_size,
         is_causal=is_causal,
     )
-    transfeat_masks = torch.stack((a_shape, vertical_slash, block_sparse), dim=0)
+    config_masks = torch.stack((a_shape, vertical_slash, block_sparse), dim=0)
     scores = torch.matmul(q.float(), k.float().transpose(-2, -1)) / (float(dim) ** 0.5)
     if is_causal:
         arange = torch.arange(n, device=q.device)
         scores = scores.masked_fill(arange.view(1, 1, 1, n) > arange.view(1, 1, n, 1), -torch.inf)
     dense_hidden = torch.matmul(_safe_softmax(scores), value.float())
     mses = torch.empty((3, bsz, heads), dtype=torch.float32, device=q.device)
-    for pattern_idx, pattern_mask in enumerate(transfeat_masks):
+    for pattern_idx, pattern_mask in enumerate(config_masks):
         sparse_scores = scores.masked_fill(~pattern_mask, -torch.inf)
         sparse_hidden = torch.matmul(_safe_softmax(sparse_scores), value.float())
         mses[pattern_idx] = (sparse_hidden - dense_hidden).pow(2).mean(dim=(2, 3))
     best = torch.argmin(mses, dim=0)
     mask = torch.zeros((bsz, heads, n, n), dtype=torch.bool, device=q.device)
-    for pattern_idx in range(transfeat_masks.shape[0]):
+    for pattern_idx in range(config_masks.shape[0]):
         mask = torch.where(
             (best == pattern_idx).view(bsz, heads, 1, 1),
-            transfeat_masks[pattern_idx],
+            config_masks[pattern_idx],
             mask,
         )
     pattern_names = ("a_shape", "vertical_slash", "block_sparse")
@@ -876,14 +876,14 @@ def _layout_mask(
         q_frame = min(frames - 1, q_idx // frame_size)
         spatial = q_idx % frame_size
         if role == "temporal":
-            transfeat = [
+            config = [
                 frame * frame_size + spatial
                 for frame in range(frames)
                 if frame * frame_size + spatial < nk
             ]
-            if not transfeat:
-                transfeat = [min(nk - 1, q_idx)]
-            order = sorted(transfeat, key=lambda idx: abs((idx // frame_size) - q_frame))
+            if not config:
+                config = [min(nk - 1, q_idx)]
+            order = sorted(config, key=lambda idx: abs((idx // frame_size) - q_frame))
             chosen = order[:keep]
         else:
             start = q_frame * frame_size

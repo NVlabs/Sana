@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # Registered MiniMax-H3 *gb10* runtime entrypoint.
 #
-# Same contract as the baseline and optimized entrypoints: the transfeat manifest sets OUT_DIR
+# Same contract as the baseline and optimized entrypoints: the config manifest sets OUT_DIR
 # and the H3_* switches, this resolves the vendored deps and launches the driver. The
 # acceleration line is entirely env-gated (see `gb10/gpu_infer.py`), so this script is
-# identical for every transfeat in `transfeat/minimax_h3_gb10_*.toml`.
+# identical for every config in `config/minimax_h3_gb10_*.toml`.
 #
 # No torchrun. One GB10 is one process; there is no context parallelism to launch into.
 set -euo pipefail
 
-: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_transfeat.py}"
+: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_config.py}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# H3_PROMPT_FILE may arrive repo-relative (that is how every transfeat and config
+# H3_PROMPT_FILE may arrive repo-relative (that is how every config and config
 # writes it). Whether that resolves depends on who launched us -- scripts/run.py
-# uses the repo root as cwd, launch_transfeat.py cds to the runtime dir first --
+# uses the repo root as cwd, launch_config.py cds to the runtime dir first --
 # so pin it to the repo root here rather than leaving it to the caller. h100 and
 # a100 already do this; gb10 and gb200 did not, which made the same config value
 # work under one launcher and not the other.

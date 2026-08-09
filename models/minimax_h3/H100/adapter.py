@@ -398,7 +398,7 @@ def _run_correctness_gate(
     shape = (int(q.shape[1]), int(q.shape[2]), int(q.shape[3]))
     if shape in _STATE.gated_shapes or os.getenv("H3_SOL_CORRECTNESS_GATE", "1") != "1":
         return
-    transfeat = kernel(
+    config = kernel(
         q,
         k,
         v,
@@ -416,7 +416,7 @@ def _run_correctness_gate(
         scale=scale,
     ).transpose(1, 2)
     torch.cuda.synchronize(q.device)
-    stats = _error_stats(transfeat, reference)
+    stats = _error_stats(config, reference)
     limits = {
         "max_abs": float(os.getenv("H3_SOL_GATE_MAX_ABS", "0.15")),
         "mean_abs": float(os.getenv("H3_SOL_GATE_MEAN_ABS", "0.002")),

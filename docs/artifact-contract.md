@@ -1,12 +1,12 @@
 # Artifact Contract
 
-Every transfeat launch writes a self-contained run bundle under `runs/`.
+Every config launch writes a self-contained run bundle under `runs/`.
 
 ## Required Files
 
 | File | Producer | Purpose |
 | --- | --- | --- |
-| `metadata.json` | launcher/collector | Machine-readable run metadata: transfeat ID, purpose, time, mode, repo paths, runtime Python, submodule commit, current status, and `status_history`. |
+| `metadata.json` | launcher/collector | Machine-readable run metadata: config ID, purpose, time, mode, repo paths, runtime Python, submodule commit, current status, and `status_history`. |
 | `manifest.resolved.toml` | launcher | Original manifest plus resolved paths and run IDs. |
 | `launch.sh` | launcher | Exact shell entrypoint used for local execution or Slurm payload. |
 | `job.sbatch` | launcher | Slurm wrapper, even in dry-run mode. |
@@ -32,7 +32,7 @@ Use these status labels in reports:
 - `canceled_by_orchestrator_release`: job was intentionally cancelled because the orchestrator released or dropped the dimension.
 - `blocked`: prerequisite missing, such as weights, CUDA env, or Slurm access.
 - `rejected_quality`: output exists but required quality evidence is missing or an exact/numeric hard gate failed.
-- `promoted`: transfeat/profile has speed evidence and Gemini+LPIPS quality evidence for a delivery target.
+- `promoted`: config/profile has speed evidence and Gemini+LPIPS quality evidence for a delivery target.
 
 `metadata.json.status_history` must append every state transition instead of
 overwriting the past. This is the source of truth for lifecycle events such as
@@ -40,10 +40,10 @@ submit, collect, failure, and orchestrator-release cancellation.
 
 ## Baseline Comparison
 
-Transfeat reports should include:
+Config reports should include:
 
 - baseline run ID
-- transfeat run ID
+- config run ID
 - official config checksum or parameter table
 - wall-clock time
 - denoise time when available

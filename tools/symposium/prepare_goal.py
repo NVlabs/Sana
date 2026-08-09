@@ -56,7 +56,7 @@ HISTORICAL_RECORD_IGNORE_PATHS = (
     "`RELEASE.md`",
     "`RELEASE-fanout.md`",
     "`evals/verdicts/*.json`",
-    "`transfeat/cosmos3_*.toml`",
+    "`config/cosmos3_*.toml`",
     "`output/launch_orchestrator.sh`",
     "`output/orchestrator-prompt.txt`",
     "`output/orchestrator.log`",
@@ -81,7 +81,7 @@ HISTORICAL_RECORD_GLOBS = (
     "ORCHESTRATOR-LOG.md",
     "RELEASE.md",
     "RELEASE-fanout.md",
-    "transfeat/cosmos3_*.toml",
+    "config/cosmos3_*.toml",
     "evals/verdicts/*.json",
     "output/launch_orchestrator.sh",
     "output/orchestrator-prompt.txt",
@@ -106,7 +106,7 @@ HISTORICAL_RECORD_GLOBS = (
 )
 HISTORICAL_RECORD_POLICY = (
     "clean_start_current_experiment_only: do not read stale optimization "
-    "reports, verdicts, worktrees, session-state files, or transfeat run "
+    "reports, verdicts, worktrees, session-state files, or config run "
     "directories unless the main orchestrator explicitly passes them as "
     "current-experiment inputs."
 )
@@ -116,29 +116,29 @@ RUN_ID_ENV_VARS = (
     "RUN_ID",
 )
 
-FANOUT_LOOP_CONTRACT = f"""This is a bounded per-dimension search loop, not a one-transfeat target.
+FANOUT_LOOP_CONTRACT = f"""This is a bounded per-dimension search loop, not a one-config target.
 
 Each loop iteration:
 
 1. Observe current-experiment state only: read this goal's `SEARCH_JOURNAL.md`,
-   retained frontier transfeat, discarded/rejected signatures, and the
+   retained frontier config, discarded/rejected signatures, and the
    canonical baseline.
 2. Propose the next hypothesis before implementation: what mechanism changes,
    why it should improve over the previous loop, what recorded failure it avoids,
    and what evidence would reject it.
-3. Implement exactly one transfeat and one manifest. Do not batch unrelated
-   mechanisms into one transfeat.
+3. Implement exactly one config and one manifest. Do not batch unrelated
+   mechanisms into one config.
 4. Preflight with static/unit checks, dry-run rendering, and OFF identity when
    the dimension has an inactive path.
 5. Launch through Slurm only after preflight passes.
 6. Run the authoritative gate with:
    `{SANA_PYTHON} search/plan_eval.py --assess <run_dir> --baseline-frames {CANONICAL_BASELINE_FRAMES} --out <run_dir>/assess_verdict.json`
 7. Decide:
-   - quality improved or speed improved: retain the transfeat in
-     `frontier_transfeat`, record the improvement axis, then loop;
+   - quality improved or speed improved: retain the config in
+     `frontier_config`, record the improvement axis, then loop;
    - quality did not improve and speed did not improve or regressed: discard the
-     transfeat with the reason, then loop;
-   - hard-invalid transfeat such as missing artifacts, broken OFF identity, or
+     config with the reason, then loop;
+   - hard-invalid config such as missing artifacts, broken OFF identity, or
      runtime failure: reject it with a failure signature, then loop;
    - blocker: record the real external dependency and stop;
    - structured negative: record it as a proposal/failure signature and continue
@@ -147,7 +147,7 @@ Each loop iteration:
 
 The default fan-out mode is fixed-budget frontier search: run the
 `max_iters={DEFAULT_MAX_ITERS}` budget unless there is a real external blocker or
-explicit orchestrator release. Do not stop because a transfeat failed an old
+explicit orchestrator release. Do not stop because a config failed an old
 per-tier quality threshold, and do not let a dimension agent unilaterally
 terminate the budget with `structured_negative`.
 `early_stop_patience={DEFAULT_EARLY_STOP_PATIENCE}`
@@ -159,11 +159,11 @@ dimensions. LPIPS and aligned pairwise Gemini are recorded together as quality
 evidence. When budget fires, write `status=terminal_pending_review` rather than
 treating the dimension as globally complete. The main orchestrator selects
 quality-best winners for the 1.5x, 2.0x, and 3.0x speed targets from retained
-frontier transfeat, using Gemini artifact severity/status and LPIPS together,
+frontier config, using Gemini artifact severity/status and LPIPS together,
 or reopens the dimension with a new direction, requests validation, drops it, or
 marks a blocker. Numeric checks, tolerance declarations, OFF identity,
 silent-fallback detection, and precision-support proof are diagnostics unless a
-transfeat contract explicitly declares a reliable hard gate. Collector
+config contract explicitly declares a reliable hard gate. Collector
 `quality.json` is telemetry; the authoritative gate provides quality and speed
 evidence for frontier retention and final speed-target selection."""
 
@@ -174,7 +174,7 @@ experiment can be called complete.
 Each integration iteration:
 
 1. Read every selected dimension's current-experiment `AGENT-STATUS.json`,
-   `SUMMARY.md`, `SEARCH_JOURNAL.md`, transfeat manifests, and run artifacts.
+   `SUMMARY.md`, `SEARCH_JOURNAL.md`, config manifests, and run artifacts.
 2. Reconcile stale status with durable run artifacts, recording which source of
    truth was used for each tier winner.
 3. Build one delivery-target plan at a time from retained per-dimension winners.
@@ -208,12 +208,12 @@ def loop_contract_values(args: argparse.Namespace) -> dict:
         "frontier_keep_rule": "keep_if_quality_improves_or_speed_or_memory_improves",
         "frontier_discard_rule": "discard_if_no_quality_improvement_and_no_speed_or_memory_improvement",
         "tier_selection": "after_budget_select_1p5x_2x_3x_speed_targets_by_best_gemini_and_lpips_quality",
-        "failed_transfeat_action": "record_interaction_failure_and_loop"
+        "failed_config_action": "record_interaction_failure_and_loop"
         if args.role == "integration"
         else "discard_or_reject_log_and_loop",
-        "successful_transfeat_action": "keep_composed_tier_incumbent_and_loop"
+        "successful_config_action": "keep_composed_tier_incumbent_and_loop"
         if args.role == "integration"
-        else "retain_frontier_transfeat_and_loop",
+        else "retain_frontier_config_and_loop",
     }
     if args.role != "integration" and args.dimension == "kwl_fusion":
         values.update(
@@ -225,10 +225,10 @@ def loop_contract_values(args: argparse.Namespace) -> dict:
     return values
 
 
-def transfeat_retention_rule(args: argparse.Namespace) -> str:
+def config_retention_rule(args: argparse.Namespace) -> str:
     if args.role != "integration" and args.dimension == "kwl_fusion":
         return (
-            "retain_kwl_transfeat_if_quality_improves_or_latency_or_peak_memory_"
+            "retain_kwl_config_if_quality_improves_or_latency_or_peak_memory_"
             "improves_with_off_identity_and_semantic_boundary"
         )
     return "retain_if_quality_improves_or_speed_or_memory_improves_discard_if_neither_improves"
@@ -258,7 +258,7 @@ def dimension_loop_note(dimension: str, role: str) -> str:
 
 For `kwl_fusion`, apply the KWL-specific retention rule from
 `loops/kwl_fusion/acceptance.md`: run the full fixed-budget frontier loop,
-retain transfeat that improve latency, peak memory, aligned quality, or
+retain config that improve latency, peak memory, aligned quality, or
 reliable numeric stability, then let final low/medium/high selection pick the
 best retained profiles by speed target and quality ranking. ON bit-exactness is
 not required; record the declared tolerance class and aligned quality evidence.
@@ -270,18 +270,18 @@ backend-selection, SDPA-backend, framework-dispatch, FlashAttention/FlashInfer
 dispatch, or env-flag-only probes.
 If prior local `AGENT-STATUS.json`, `SEARCH_JOURNAL.md`, or run directories
 contain backend-selection work, mark those records stale/cancelled and start a
-fresh module/DiT microbench transfeat.
+fresh module/DiT microbench config.
 Write a module-level or DiT-block-level warm paired microbenchmark before any
-full denoising or video generation run. OFF baseline and ON transfeat must run
+full denoising or video generation run. OFF baseline and ON config must run
 in the same process, same Slurm allocation/GPU, same tensors, same dtype, and
 same warmed cache state. Report median/p25/p75/min/max latency, iteration
 count, OFF/ON ordering, tensor diff, launch/profile evidence, and expected full
 contribution (`saved_ms_per_call * calls_per_step * steps`). Full denoise is a
 visual sanity/gross-regression check, not the primary speed authority for
-sub-percent KWL transfeat. Only after module-local kernel/operator transfeat
+sub-percent KWL config. Only after module-local kernel/operator config
 are exhausted should the agent try `torch.compile`, regional compile, CUDA
 graph capture, or other global graph machinery.
-Reject transfeat that change scheduler, step count, token set, attention
+Reject config that change scheduler, step count, token set, attention
 semantics, cache/prune semantics, quantization policy, prompt/guidance, LoRA
 state, resolution, frame count, or output shape.
 """
@@ -292,8 +292,8 @@ def kwl_model_reference_md(model_id: str, dimension: str, role: str) -> str:
         return ""
     return """## Hunyuan Diffusers DiT Fusion References
 
-Use these concrete structure-derived examples as transfeat references. They are
-not fixed recipes; each transfeat still needs a small module/DiT microbench
+Use these concrete structure-derived examples as config references. They are
+not fixed recipes; each config still needs a small module/DiT microbench
 before any full denoising run.
 
 - Attention path: fuse Q/K projection output handling with QK RMSNorm and RoPE,
@@ -318,8 +318,8 @@ before any full denoising run.
   the official benchmark shape.
 
 Do not run full Hunyuan denoising to test a kernel idea first. The first
-artifact for each new KWL transfeat should be a warm paired DiT/module
-microbench JSON with OFF baseline latency, ON transfeat latency,
+artifact for each new KWL config should be a warm paired DiT/module
+microbench JSON with OFF baseline latency, ON config latency,
 median/p25/p75/min/max stats, iteration count, OFF/ON ordering, max/mean tensor
 diff, shape/dtype, launch/profile evidence, expected full contribution, and
 exact command.
@@ -332,7 +332,7 @@ def historical_record_policy_md() -> str:
 
 This goal is a clean-start current-experiment loop. Do not use previous
 optimization reports, verdicts, old worktrees, archived tmux captures, stale
-session-state files, or old transfeat run directories as priors. Use only:
+session-state files, or old config run directories as priors. Use only:
 
 - the canonical baseline frames at `{CANONICAL_BASELINE_FRAMES}`;
 - `search_space/`, `loops/<dimension>/`, model/runtime code, and this goal's
@@ -498,15 +498,15 @@ def method_baseline_catalog_md(method_baselines: list[dict]) -> str:
 
 No method-baseline catalog is declared for this dimension. Treat the
 search-space document as authoritative, but explicitly record whether each
-transfeat is wired, transfeat-wired, runtime-patched, or probe-only.
+config is wired, config-wired, runtime-patched, or probe-only.
 """
     lines = [
         "## Method Baseline Catalog",
         "",
         "Use this catalog to avoid overfitting the search to the first wired helper.",
-        "`tier=wired` means a transfeat can start from existing code; `transfeat_wired`",
+        "`tier=wired` means a config can start from existing code; `config_wired`",
         "means a helper/env exists but target-runtime consumption still needs proof;",
-        "`runtime_patch` means the transfeat must patch the live inference path;",
+        "`runtime_patch` means the config must patch the live inference path;",
         "`upper_bound_probe` is diagnostic and must not become a delivery winner unless",
         "it later gains full quality evidence and safe fallback behavior.",
         "",
@@ -552,15 +552,15 @@ def method_baselines_for_runtime(method_baselines: list[dict], runtime_repo: str
 
 def implementation_loop_acceptance() -> list[str]:
     return [
-        "run the fixed-budget fan-out loop; do not stop after a single transfeat success or failure",
-        "write a hypothesis before each transfeat explaining the expected improvement and the prior failure it avoids",
-        "record each transfeat in `SEARCH_JOURNAL.md` with quality evidence, speed evidence, retention decision, and next-hypothesis requirement",
-        "retain a transfeat when quality improves or speed/memory improves, even if it is not yet selected for a 1.5x/2.0x/3.0x speed target",
-        "discard a transfeat only when neither quality nor speed/memory improves; reject hard-invalid transfeat with a failure signature",
+        "run the fixed-budget fan-out loop; do not stop after a single config success or failure",
+        "write a hypothesis before each config explaining the expected improvement and the prior failure it avoids",
+        "record each config in `SEARCH_JOURNAL.md` with quality evidence, speed evidence, retention decision, and next-hypothesis requirement",
+        "retain a config when quality improves or speed/memory improves, even if it is not yet selected for a 1.5x/2.0x/3.0x speed target",
+        "discard a config only when neither quality nor speed/memory improves; reject hard-invalid config with a failure signature",
         "after a discard or reject, generate a meaningfully different hypothesis instead of repeating the same mechanism with cosmetic parameters",
         "continue searching until max_iters, real blocker, or explicit orchestrator release; a dimension-agent structured_negative proposal is logged but does not stop the default fixed-budget loop",
         "track `no_improve_count` as telemetry; it must not stop the default fixed-budget frontier loop",
-        "record every transfeat verdict with `tools/symposium/loop_control.py record-transfeat`, then run `decide-next` and `validate-status` before continuing",
+        "record every config verdict with `tools/symposium/loop_control.py record-config`, then run `decide-next` and `validate-status` before continuing",
         "on max_iters, write `status=terminal_pending_review` and recommend select_tiers_for_integration, restart_with_new_direction, validate, drop, or mark_blocked for main-agent review",
         "use the authoritative `sana` `search/plan_eval.py --assess` gate with canonical baseline frames for retention evidence and final speed-target selection",
         "do not apply hard LPIPS/Gemini thresholds during lossy generative search; record aligned pairwise Gemini and LPIPS together, then rank quality by Gemini severity/status plus LPIPS after the budget closes",
@@ -577,7 +577,7 @@ def integration_acceptance() -> list[str]:
         "never report composed speedup or quality from single-dimension runs; launch and gate the merged profile itself",
         "run the authoritative `sana` `search/plan_eval.py --assess` gate with canonical baseline frames for every composed profile",
         "if a composed gate fails, record an interaction failure signature and loop with a repaired merge, reduced subset, or different tier plan",
-        "record composed delivery transfeat with `--purpose delivery`; record upper-bound or unsafe high probes with `--purpose blocker_probe` or `--purpose unsafe_probe` so they cannot become tier incumbents",
+        "record composed delivery config with `--purpose delivery`; record upper-bound or unsafe high probes with `--purpose blocker_probe` or `--purpose unsafe_probe` so they cannot become tier incumbents",
         "write INTEGRATION-STATUS.json, INTEGRATION-JOURNAL.md, composed manifests, run artifacts, per-tier blockers, and a release matrix",
         "run `python3 tools/fanout_audit.py --run <fanout_run_id_or_path>` before declaring the workflow complete",
         "finish only when every 1.5x/2.0x/3.0x target has a gated composed profile or an explicit blocker",
@@ -590,10 +590,10 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
 
     if role == "gate":
         return [
-            "review the implementation diff and transfeat manifest without authoring implementation code",
-            "reproduce or inspect the run artifacts required by the transfeat contract",
+            "review the implementation diff and config manifest without authoring implementation code",
+            "reproduce or inspect the run artifacts required by the config contract",
             "write a structured gate verdict JSON covering OFF identity, pixel metrics, LPIPS, Gemini, timing, speed-target bucket, and quality-ranking evidence",
-            "mark the transfeat rejected when any required quality artifact is missing, deferred, unavailable, or prose-only",
+            "mark the config rejected when any required quality artifact is missing, deferred, unavailable, or prose-only",
             "write `SUMMARY.md` with the verdict, evidence paths, and any non-reproducible gaps",
         ]
 
@@ -604,9 +604,9 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
             "inspect the cache method families in `search_space/01_cache.md` before proposing implementations",
             "identify at least five caching mechanisms, including TeaCache-style signal reuse, EasyCache-style runtime-adaptive transform reuse, PAB-style attention broadcast, block/residual/FFN reuse, and token-wise, CFG-aware, content-adaptive, or predictive/delta caching when applicable",
             "derive per-layer, per-step, signal, threshold, fallback, and schedule choices from target-model inference code or traces rather than predefined constants",
-            "modify the inference code directly when that is the shortest path to a runnable transfeat; do not wait for a predeclared seam",
+            "modify the inference code directly when that is the shortest path to a runnable config; do not wait for a predeclared seam",
             "prove OFF identity against the baseline path before reporting speedup",
-            "produce at least one runnable transfeat manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
+            "produce at least one runnable config manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
         ]
     if dimension == "token_prune":
@@ -617,7 +617,7 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
             "prove gather/scatter or masking keeps positional tensors, attention masks, and output restoration aligned",
             "modify the inference code directly when needed; do not require a predeclared prunable-token seam",
             "prove OFF identity against the baseline path before reporting speedup",
-            "produce at least one runnable transfeat manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
+            "produce at least one runnable config manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
         ]
     if dimension == "sparse_attention":
@@ -630,7 +630,7 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
             "measure mask-search, permutation, gather/scatter, and fallback overhead separately from sparse attention kernel time",
             "modify the inference code directly when needed; do not require a predeclared swappable-attention seam",
             "prove OFF identity and verify dense fallback behavior before reporting speedup",
-            "produce at least one runnable transfeat manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
+            "produce at least one runnable config manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
         ]
     if dimension == "nvfp4_ffn":
@@ -638,36 +638,36 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
             "inspect `search_space/03_quantization.md` before proposing implementations",
             "run and record NVFP4 preflight before GPU search: GPU architecture, TransformerEngine import/version, NVFP4BlockScaling availability, FP4 GEMM backend availability, minimal TE/loader smoke, OFF identity, and env-consumption proof",
             "profile or inspect target-model hot linear modules, including FFN/MLP, attention projections, and output projections, to choose module scope, layer guards, step guards, TE recipe flags, fused epilogue path, backend, padding policy, and fallback policy",
-            "separate already-wired runtime env axes from metadata-only axes that require transfeat-side loader wiring",
+            "separate already-wired runtime env axes from metadata-only axes that require config-side loader wiring",
             "record hardware/library prerequisites, warm/cold compile state, backend selection, and fallback policy explicitly",
             "modify the inference/loading code directly when needed; do not require a predeclared precision seam",
             "prove OFF identity against the BF16 baseline path before reporting speedup",
-            "record reliable numeric precision checks, silent-fallback detection, and BF16 fallback integrity; only treat a numeric gate as hard when the transfeat contract explicitly declares it",
-            "produce at least one runnable transfeat manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
+            "record reliable numeric precision checks, silent-fallback detection, and BF16 fallback integrity; only treat a numeric gate as hard when the config contract explicitly declares it",
+            "produce at least one runnable config manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
         ]
     if dimension == "kwl_fusion":
         return common + [
             "inspect `search_space/05_kernel_fusion.md` before proposing implementations",
             "do not implement, resume, or rerun backend-selection, SDPA-backend, framework-dispatch, FlashAttention/FlashInfer dispatch, or env-flag-only probes",
-            "if prior local AGENT-STATUS, SEARCH_JOURNAL, or run directories contain backend-selection work, mark those records stale/cancelled and start a fresh module-level or DiT-block-level microbench transfeat",
+            "if prior local AGENT-STATUS, SEARCH_JOURNAL, or run directories contain backend-selection work, mark those records stale/cancelled and start a fresh module-level or DiT-block-level microbench config",
             "run and record KWL preflight before GPU search: hot-path evidence, launch count, memory traffic, tensor shapes, dtype, kernel availability, microbench plan, OFF identity, fallback behavior, and semantic boundary proof",
             "apply a microbench-first lossless bias: look for existing operator chains, launch overhead, layout/copy/allocation churn, static metadata/workspace reuse, and equivalent projection or small-kernel batching before global graph mechanisms",
-            "write a module-level or DiT-block-level warm paired microbench before any full denoising/video generation run; OFF baseline and ON transfeat must run in the same process/allocation/GPU with same tensors, dtype, and warmed cache state; record median/p25/p75/min/max latency, OFF/ON ordering, iteration count, max/mean tensor diff, shape/dtype, launch/profile evidence, expected full contribution, and exact reproduction command",
-            "promote a transfeat to full denoising only when warm paired DiT/module microbench latency or peak memory improves and tensor drift is inside the declared tolerance; use full denoise as visual/gross-regression sanity, not primary speed authority for sub-percent KWL changes",
-            "for each lossless transfeat, state the semantic equivalence argument: same tensor inputs, parameters, masks, shape contract, dtype contract, dependency order, output placement, and aliasing/in-place behavior",
+            "write a module-level or DiT-block-level warm paired microbench before any full denoising/video generation run; OFF baseline and ON config must run in the same process/allocation/GPU with same tensors, dtype, and warmed cache state; record median/p25/p75/min/max latency, OFF/ON ordering, iteration count, max/mean tensor diff, shape/dtype, launch/profile evidence, expected full contribution, and exact reproduction command",
+            "promote a config to full denoising only when warm paired DiT/module microbench latency or peak memory improves and tensor drift is inside the declared tolerance; use full denoise as visual/gross-regression sanity, not primary speed authority for sub-percent KWL changes",
+            "for each lossless config, state the semantic equivalence argument: same tensor inputs, parameters, masks, shape contract, dtype contract, dependency order, output placement, and aliasing/in-place behavior",
             "for Hunyuan Diffusers, consider concrete DiT fusion references such as Q/K projection output plus QK RMSNorm plus RoPE, packed latent/text QKV projections, single-stream cat(attn, mlp)->proj_out->gate->residual, dual-stream gate/residual epilogues, LayerNorm->scale/shift, FFN epilogues, attention output split/projection, final norm/proj/layout, and static mask/RoPE/layout descriptors",
-            "identify at least seven KWL method families, including exact-preferred and quality-gated approximate variants across GEMM epilogues, norm/modulation/residual fusion, attention-adjacent dense fusion, layout/copy elimination, launch batching, stream overlap, decode/postprocess fusion, and compile/CUDA graph capture only after local module transfeat are exhausted",
-            "profile or inspect target-model hot ops and choose exact, numerically tolerant, or quality-gated approximate kernel/operator transfeat from evidence",
+            "identify at least seven KWL method families, including exact-preferred and quality-gated approximate variants across GEMM epilogues, norm/modulation/residual fusion, attention-adjacent dense fusion, layout/copy elimination, launch batching, stream overlap, decode/postprocess fusion, and compile/CUDA graph capture only after local module config are exhausted",
+            "profile or inspect target-model hot ops and choose exact, numerically tolerant, or quality-gated approximate kernel/operator config from evidence",
             "separate KWL-safe kernel/operator approximations from algorithm changes; route cache, prune, sparse-attention, scheduler, or quantization-policy changes to other dimensions",
-            "retain speed or memory transfeat when OFF identity passes, microbench latency or peak memory improves, and tensor drift is acceptable; ON bit-exactness is not required",
-            "retain aligned quality or reliable numeric-stability transfeat when those signals improve, even without a speedup",
+            "retain speed or memory config when OFF identity passes, microbench latency or peak memory improves, and tensor drift is acceptable; ON bit-exactness is not required",
+            "retain aligned quality or reliable numeric-stability config when those signals improve, even without a speedup",
             "record expected numeric tolerance as bit-exact, dtype-rounding-only, reduction-order drift, FMA/epilogue drift, fast-math drift, or approximate-kernel drift",
             "record cold compile, warm compile, autotune, graph replay, and cache-reuse timing modes separately; do not claim speed from unpaired full-run timing against a historical baseline, and only use compile/graph mechanisms after module-level options are exhausted",
             "if final full denoising shows severe visual artifacts after a passing microbench, first suspect a kernel/module bug such as aliasing, layout, mask, split/concat, dtype, stream ordering, or stale workspace rather than harmless numeric drift accumulation",
             "reject semantic changes to scheduler, step count, token set, attention semantics, cache/prune semantics, quantization policy, prompt/guidance, LoRA state, resolution, frame count, or output shape",
             "modify the inference/build code directly when needed; do not require a predeclared kernel-fusion seam",
-            "produce at least one runnable transfeat manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
+            "produce at least one runnable config manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
             "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
         ]
     return common + [
@@ -675,7 +675,7 @@ def dimension_acceptance(dimension: str, role: str) -> list[str]:
         "derive all model-specific knobs from traces or code inspection rather than predefined constants",
         "modify inference code directly when needed; do not wait for a predeclared interface",
         "keep implementation work in the isolated worktree and declared write scope",
-        "produce at least one runnable transfeat manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
+        "produce at least one runnable config manifest or a structured-negative proposal for orchestrator review; do not use the proposal to stop the default fixed-budget loop",
         "write exact reproduction commands, changed files, run artifacts, and current structured speed/quality evidence status",
     ]
 
@@ -686,13 +686,13 @@ def resolved_write_scope(args: argparse.Namespace) -> list[str]:
     if args.role == "integration":
         return [
             "Sol-LTX-Infer/",
-            "transfeat/",
+            "config/",
             "integration/",
             "search/",
             "scripts/",
             "evals/",
         ]
-    return ["Sol-LTX-Infer/", "transfeat/", "loops/", "search/", "scripts/"]
+    return ["Sol-LTX-Infer/", "config/", "loops/", "search/", "scripts/"]
 
 
 def required_artifacts(role: str) -> list[str]:
@@ -707,17 +707,17 @@ def required_artifacts(role: str) -> list[str]:
         ]
     return [
         "`AGENT-STATUS.json` maintained by `tools/symposium/loop_control.py`",
-        "`SEARCH_JOURNAL.md` updated once per recorded transfeat",
-        "transfeat manifest or structured-negative proposal note",
-        "run bundle artifacts when a transfeat is launched",
-        "failure signatures for every rejected transfeat",
+        "`SEARCH_JOURNAL.md` updated once per recorded config",
+        "config manifest or structured-negative proposal note",
+        "run bundle artifacts when a config is launched",
+        "failure signatures for every rejected config",
         "`SUMMARY.md`",
     ]
 
 
 def render_goal_md(
     args: argparse.Namespace,
-    transfeat_rel: str,
+    config_rel: str,
     search_space_rel: str,
     search_doc_rel: str,
     search_space_summary: str,
@@ -793,30 +793,30 @@ Read `docs/fanout-loop-contract.md`. The operational summary for this goal is:
 - quality ranking: aligned pairwise Gemini severity/status + aligned LPIPS,
   then higher speed as tie-breaker. LPIPS and Gemini are both considered; LPIPS
   alone is not the selector.
-- failed transfeat action: `{loop_values["failed_transfeat_action"]}`
-- successful transfeat action: `{loop_values["successful_transfeat_action"]}`
-- terminal handoff: write `terminal_pending_review` with frontier transfeat,
-  discarded/rejected transfeat, failure signatures, remaining hypotheses, and
+- failed config action: `{loop_values["failed_config_action"]}`
+- successful config action: `{loop_values["successful_config_action"]}`
+- terminal handoff: write `terminal_pending_review` with frontier config,
+  discarded/rejected config, failure signatures, remaining hypotheses, and
   an `agent_recommendation` for the main orchestrator.
 
 Runtime controller commands:
 
 ```bash
 python3 tools/symposium/loop_control.py init --dimension {args.dimension} --goal-id {args.goal_id} --max-iters {loop_values["max_iters"]} --early-stop-patience {loop_values["early_stop_patience"]} --loop-mode fixed_budget_frontier
-python3 tools/symposium/loop_control.py record-transfeat --transfeat-id <id> --decision <quality_improved|speed_improved|quality_and_speed_improved|discarded_regression|rejected|blocked|structured_negative> --reason "<short reason>" [--purpose frontier|delivery|evidence|blocker_probe|unsafe_probe|control] [--improvement-axis quality|speed|both|none] [--tier low|medium|high] [--run-dir <run_dir>] [--evidence <run_dir>/assess_verdict.json]
-python3 tools/symposium/loop_control.py add-evidence --transfeat-id <id> --evidence <run_dir>/assess_verdict.json --reason "backfilled authoritative gate artifact"
+python3 tools/symposium/loop_control.py record-config --config-id <id> --decision <quality_improved|speed_improved|quality_and_speed_improved|discarded_regression|rejected|blocked|structured_negative> --reason "<short reason>" [--purpose frontier|delivery|evidence|blocker_probe|unsafe_probe|control] [--improvement-axis quality|speed|both|none] [--tier low|medium|high] [--run-dir <run_dir>] [--evidence <run_dir>/assess_verdict.json]
+python3 tools/symposium/loop_control.py add-evidence --config-id <id> --evidence <run_dir>/assess_verdict.json --reason "backfilled authoritative gate artifact"
 python3 tools/symposium/loop_control.py decide-next
 python3 tools/symposium/loop_control.py validate-status
 python3 tools/symposium/loop_control.py status-summary
 ```
 
-Call `record-transfeat` after every authoritative gate. For run-backed
-transfeat, evidence must include a durable authoritative gate artifact:
+Call `record-config` after every authoritative gate. For run-backed
+config, evidence must include a durable authoritative gate artifact:
 `assess_verdict.json`, `verdict.json`, `gate_assess.json`, or
 `reject_note.json`. Collector-only telemetry such as `outputs/quality.json`
-cannot by itself retain or reject a transfeat. Use `add-evidence` only to
+cannot by itself retain or reject a config. Use `add-evidence` only to
 backfill a current-experiment record after the durable gate artifact exists. If
-`decide-next` returns `terminal_pending_review` or `blocked`, stop transfeat
+`decide-next` returns `terminal_pending_review` or `blocked`, stop config
 search and hand the status to the main orchestrator. Watchers must treat
 `complete`, `terminal_pending_review`, and `blocked` as terminal states by using
 `status-summary` or JSON parsing; do not grep only for `status=complete`.
@@ -833,22 +833,22 @@ There is no `codex exec` process-exit loop in autorun mode. The TUI remains
 attachable after an agent response, and the Symposium session manager owns
 status, capture, follow-up input, stop, and release. Executor agents must keep
 the durable loop state current rather than relying on process exit. Before an
-executor reports terminal handoff, at least one current run-backed transfeat
+executor reports terminal handoff, at least one current run-backed config
 must have a smooth full evaluation:
 
-- full transfeat generation/denoise has completed or produced a structured
+- full config generation/denoise has completed or produced a structured
   run-backed rejection;
 - `search/plan_eval.py --assess ... --out <run_dir>/assess_verdict.json` has
   run with the canonical baseline frames and correct model profile;
-- the resulting gate artifact is valid JSON with baseline time, transfeat time,
+- the resulting gate artifact is valid JSON with baseline time, config time,
   speedup, and no infrastructure blockers such as missing frames, missing
   baseline frames, missing benchmark, missing ffmpeg, or missing API key;
 - for KWL executors, speed evidence includes a warm paired DiT/module-level
   OFF/ON evaluation artifact with median/p25/p75/min/max timing, tensor diff,
   launch/profile evidence, and expected full contribution; full denoise alone
   is not sufficient speed evidence for sub-percent kernel changes;
-- the transfeat record references the authoritative gate artifact, or the
-  artifact is ready for immediate `add-evidence`/`record-transfeat`.
+- the config record references the authoritative gate artifact, or the
+  artifact is ready for immediate `add-evidence`/`record-config`.
 
 If this smooth evaluation is missing, keep the executor session active and send
 a concrete follow-up through `codex_goal_session.py send`. When evaluation is
@@ -867,14 +867,14 @@ generate process-exit resume cycles.
 - Execution repo: `{runtime_repo}`
 - Primary implementation surface: inspect and modify the model inference path
   under `{runtime_repo}` directly in this isolated worktree.
-- Launcher: `python3 scripts/launch_transfeat.py {transfeat_rel} --mode dry-run`
+- Launcher: `python3 scripts/launch_config.py {config_rel} --mode dry-run`
 - Collector: `python3 scripts/collect_run.py runs/<run-id>`
 - Authoritative assess: `{SANA_PYTHON} search/plan_eval.py --assess <run_dir> --baseline-frames {CANONICAL_BASELINE_FRAMES} --out <run_dir>/assess_verdict.json`
 - Quality source of truth: OFF identity, aligned LPIPS, and aligned pairwise
   Gemini from the authoritative gate. `outputs/quality.json` is telemetry and
   not the quality source of truth when it contradicts aligned gate artifacts.
   For generative dimensions, LPIPS/Gemini are ranking evidence rather than hard
-  absolute thresholds; numeric checks are diagnostics unless a transfeat
+  absolute thresholds; numeric checks are diagnostics unless a config
   contract explicitly declares a reliable hard gate.
 
 ## Allowed Worktree Scope
@@ -895,10 +895,10 @@ Produce a final Seed with:
 - acceptance criteria
 - ontology boundary
 
-## Transfeat Contract
+## Config Contract
 
-- Transfeat manifest: `{transfeat_rel}`
-- Launch dry-run: `python3 scripts/launch_transfeat.py {transfeat_rel} --mode dry-run`
+- Config manifest: `{config_rel}`
+- Launch dry-run: `python3 scripts/launch_config.py {config_rel} --mode dry-run`
 - Collect: `python3 scripts/collect_run.py runs/<run-id>`
 - Assess: `{SANA_PYTHON} search/plan_eval.py --assess <run_dir> --baseline-frames {CANONICAL_BASELINE_FRAMES} --out <run_dir>/assess_verdict.json`
 
@@ -942,7 +942,7 @@ def main() -> int:
     parser.add_argument("--clean-stale-records", action="store_true")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--goal-id")
-    parser.add_argument("--transfeat")
+    parser.add_argument("--config")
     parser.add_argument("--objective")
     parser.add_argument("--role", choices=("implementation", "gate", "integration"), default="implementation")
     parser.add_argument("--dimension", default="general")
@@ -973,7 +973,7 @@ def main() -> int:
         return check_stale_records(root, args.run_id)
     missing = [
         name
-        for name in ("goal_id", "transfeat", "objective")
+        for name in ("goal_id", "config", "objective")
         if not getattr(args, name)
     ]
     if missing:
@@ -989,10 +989,10 @@ def main() -> int:
     if not args.submodule_branch:
         args.submodule_branch = f"codex/{goal_id}-sol"
 
-    transfeat = (root / args.transfeat).resolve()
-    if not transfeat.exists():
-        raise SystemExit(f"Transfeat manifest does not exist: {transfeat}")
-    transfeat_rel = str(transfeat.relative_to(root))
+    config = (root / args.config).resolve()
+    if not config.exists():
+        raise SystemExit(f"Config manifest does not exist: {config}")
+    config_rel = str(config.relative_to(root))
     search_space_rel, search_doc_rel, search_space_summary = read_search_space_summary(
         root,
         args.search_space_root,
@@ -1017,11 +1017,11 @@ def main() -> int:
         raise SystemExit(f"Goal already exists: {goal_dir} (use --overwrite)")
     goal_dir.mkdir(parents=True, exist_ok=True)
 
-    shutil.copy2(transfeat, goal_dir / "transfeat.toml")
+    shutil.copy2(config, goal_dir / "config.toml")
     baseline_frames = resolve_baseline_frames(root, args.model_id, args.baseline_frames)
     goal_md = render_goal_md(
         args,
-        transfeat_rel,
+        config_rel,
         search_space_rel,
         search_doc_rel,
         search_space_summary,
@@ -1042,7 +1042,7 @@ def main() -> int:
         "created_by": "tools/symposium/prepare_goal.py",
         "target_agent": "codex",
         "mode": "interactive-goal",
-        "transfeat_manifest": transfeat_rel,
+        "config_manifest": config_rel,
         "run_id": args.run_id,
         "role": args.role,
         "dimension": args.dimension,
@@ -1081,7 +1081,7 @@ def main() -> int:
             "authoritative_python": SANA_PYTHON,
             "canonical_baseline_frames": baseline_frames,
             "quality_source_of_truth": quality_source_of_truth(args),
-            "transfeat_retention": transfeat_retention_rule(args),
+            "config_retention": config_retention_rule(args),
             "collector_quality_json": "telemetry_not_promotion_authority_when_contradicted",
             "speed_targets": {"low": 1.5, "medium": 2.0, "high": 3.0},
             "quality_ranking": [
@@ -1095,7 +1095,7 @@ def main() -> int:
                 if args.dimension == "kwl_fusion"
                 else "authoritative_run_assess_against_model_profile"
             ),
-            "hard_quality_thresholds": "disabled_by_default_numeric_gates_require_explicit_transfeat_contract",
+            "hard_quality_thresholds": "disabled_by_default_numeric_gates_require_explicit_config_contract",
             "global_done_requires_integration": True,
             "stop_hook_lifecycle": {
                 "enabled": False,

@@ -5,7 +5,7 @@ legacy_profile = "models/ltx23.toml"
 contract_kind = "model_baseline_minimal_copy"
 
 [baseline]
-manifest = "transfeat/ltx23/baseline.toml"
+manifest = "config/ltx23/baseline.toml"
 runtime_root = "models/ltx23/baseline"
 eval_profile = "evals/profiles/official_video_t2v_ltx23.toml"
 description = "LTX-2.3 official two-stage HQ baseline with every acceleration seam explicitly off. Runnable code (variant env.sh + shared launch body + run shim) is vendored under models/ltx23; the 22B runtime, weights and the .conda/ltx23 interpreter are referenced read-only by absolute path via SOL_LTX_INFER_ROOT."
@@ -19,14 +19,14 @@ include = [
   "models/ltx23/run_ltx23_common.sh",
   "models/ltx23/prompts/**",
   "models/ltx23/baseline/**",
-  "transfeat/ltx23/baseline.toml",
-  "transfeat/schema.md",
+  "config/ltx23/baseline.toml",
+  "config/schema.md",
   "evals/profiles/official_video_t2v_ltx23.toml",
   "evals/tiers.toml",
-  "scripts/launch_transfeat.py",
+  "scripts/launch_config.py",
   "scripts/collect_run.py",
   "search/plan_eval.py",
-  "techniques/transfeat_manifest.py",
+  "techniques/config_manifest.py",
 ]
 exclude = [
   ".git/**",

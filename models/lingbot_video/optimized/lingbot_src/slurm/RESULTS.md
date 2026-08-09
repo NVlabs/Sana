@@ -127,7 +127,7 @@ refiner_vae + refiner_denoise + vae_decode; model loading EXCLUDED. Autonomous a
   fallback [cuDNN, flash, efficient] handles shapes cuDNN rejects (480p base). OFF path unchanged.
 - The Ulysses all-to-all is ~ms (negligible), so the lever was the kernel, not the collective →
   Ring/EP/TP rejected by the data. Refiner attention now ~56% of hardware peak (near roofline).
-- Repro: `sbatch agent_opt/transfeat/c5_cudnn_attn.sbatch`. Full report: `agent_opt/REPORT.md`.
+- Repro: `sbatch agent_opt/config/c5_cudnn_attn.sbatch`. Full report: `agent_opt/REPORT.md`.
 
 ## MoE megafusion (torch.compile) + overlap attempt
 

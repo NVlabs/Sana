@@ -4,7 +4,7 @@ SpargeAttention is a training-free sparse attention family cited by the paper. I
 
 ## Role in Sol-Engine
 
-SpargeAttention is part of the sparse-attention design space. It is a transfeat when the attention map has clear block-level structure and the deployment can tolerate approximate attention entries.
+SpargeAttention is part of the sparse-attention design space. It is a config when the attention map has clear block-level structure and the deployment can tolerate approximate attention entries.
 
 ## Search knobs
 

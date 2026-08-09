@@ -24,7 +24,7 @@ models/ltx23/
   optimized/env.sh                 the validated full stack
   optimized/scripts/run_ltx23_gpu.sh
 models/ltx23.toml                  flat profile (official config, env, seams)
-transfeat/ltx23_{baseline,fullopt}.toml
+config/ltx23_{baseline,fullopt}.toml
 evals/profiles/official_video_t2v_ltx23.toml
 ```
 
@@ -40,7 +40,7 @@ control.
 
 ## Running
 
-`scripts/launch_transfeat.py` generates `launch.sh`, which cd's to the runtime
+`scripts/launch_config.py` generates `launch.sh`, which cd's to the runtime
 root, exports the model `[env]` plus `OUT_DIR`, and calls the arm's shim:
 
 ```bash
@@ -81,14 +81,14 @@ profile deliberately omits `baseline_total_s`. The one published LTX-2.3 timing
 `docs/diffusion/ltx2_1080p_speedup.md` in Sol-LTX-Infer) is for a **30-step**
 stage-1 config; these arms run the **15-step** HQ config. The numbers are not
 comparable, so nothing was copied in. Fill them from a measured run of
-`transfeat/ltx23/baseline.toml`.
+`config/ltx23/baseline.toml`.
 
 ## History
 
 The LTX-2.3 spec entered this repo on 2026-06-13 as
 `efficiency/models/ltx2_spec.py` (`6a0d38f`, "Port LTX-2.3 efficiency framework
 into repo (efficiency/) + Cosmos3 spec") and was deleted a week later on
-2026-06-20 by `5b725f0` ("Add model-agnostic efficiency transfeat and audits"),
+2026-06-20 by `5b725f0` ("Add model-agnostic efficiency config and audits"),
 which moved every model onto manifest-declared capabilities. Cosmos3 came back
 as `models/cosmos3.toml` in that reorg; LTX-2.3 did not, and `models/` carried no
 LTX entry at all until this directory. This is a re-add in the current

@@ -205,7 +205,7 @@ def disable_cache(transformer) -> None:
         invalidate_child_registry_cache(transformer)
 
 
-def video_psnr(reference: list, transfeat: list) -> dict:
+def video_psnr(reference: list, config: list) -> dict:
     """PSNR of a generated clip against the lossless reference from the same seed.
 
     Frames arrive as PIL images. A cache that skips too aggressively shows up here as a low PSNR,
@@ -214,11 +214,11 @@ def video_psnr(reference: list, transfeat: list) -> dict:
     """
     import numpy as np
 
-    if reference is None or transfeat is None or len(reference) != len(transfeat):
+    if reference is None or config is None or len(reference) != len(config):
         return {"frames": None, "psnr_db": None, "note": "frame count mismatch"}
 
     total, worst = 0.0, float("inf")
-    for ref_frame, cand_frame in zip(reference, transfeat):
+    for ref_frame, cand_frame in zip(reference, config):
         ref = np.asarray(ref_frame, dtype=np.float64)
         cand = np.asarray(cand_frame, dtype=np.float64)
         mse = float(((ref - cand) ** 2).mean())
@@ -233,17 +233,17 @@ def video_psnr(reference: list, transfeat: list) -> dict:
     }
 
 
-def audio_mse(reference: torch.Tensor, transfeat: torch.Tensor) -> dict:
+def audio_mse(reference: torch.Tensor, config: torch.Tensor) -> dict:
     """Audio is generated jointly with the video, so it needs its own check.
 
     A cache that perturbs the packed sequence can leave every per-frame video metric clean while
     desynchronizing or degrading the soundtrack — the failure mode the other registered models in
     this repository cannot have.
     """
-    if reference is None or transfeat is None:
+    if reference is None or config is None:
         return {"samples": None, "mse": None}
     ref = reference.detach().to(torch.float64).cpu()
-    cand = transfeat.detach().to(torch.float64).cpu()
+    cand = config.detach().to(torch.float64).cpu()
     if ref.shape != cand.shape:
         return {"samples": None, "mse": None, "note": f"shape mismatch {tuple(ref.shape)} vs {tuple(cand.shape)}"}
     return {"samples": int(ref.numel()), "mse": round(float(((ref - cand) ** 2).mean()), 12)}

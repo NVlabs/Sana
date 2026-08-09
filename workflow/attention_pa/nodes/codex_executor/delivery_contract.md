@@ -37,13 +37,13 @@ directly. Use this shape and expand it to conservative, balanced, and aggressive
   "frontier_points": [
     {
       "tier": "conservative",
-      "transfeat_id": "<distinct id>",
+      "config_id": "<distinct id>",
       "run_dir": "runs/<completed run>",
-      "implementation_manifest": "transfeat/<manifest>.toml",
+      "implementation_manifest": "config/<manifest>.toml",
       "activation": {"env": {"<activation env var for this technique>": "1"}},
       "compute_budget": {"density": 0.1, "layer_step_policy": "<path-or-id>"},
       "quality": {
-        "transfeat_relation": "<blind-review relation to locked baseline>",
+        "config_relation": "<blind-review relation to locked baseline>",
         "max_artifact_severity": "none | low"
       },
       "runtime_evidence": {"assessment_path": "runs/<run>/assess_verdict.json"},

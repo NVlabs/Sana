@@ -123,7 +123,7 @@ def install_pisa_attention(pipe: Any, output_dir: Path) -> dict[str, Any]:
         raise RuntimeError(f"local PISA implementation is missing: {source}")
 
     # Keep the archived adapter's tested configuration surface, while allowing
-    # Wan transfeat to use WAN22_* names in their manifests.
+    # Wan config to use WAN22_* names in their manifests.
     aliases = {
         "WAN22_PISA_DENSITY": "SANA_PISA_DENSITY",
         "WAN22_PISA_DENSITY_RULES": "SANA_PISA_DENSITY_RULES",
@@ -1079,9 +1079,9 @@ def install_compiled_qkv_norm_rope(pipe: Any) -> dict[str, Any]:
         if model is None:
             continue
         for block in getattr(model, "blocks", ()):
-            transfeat = getattr(block, "attn1", None)
-            if transfeat is not None:
-                reference_attn = transfeat
+            config = getattr(block, "attn1", None)
+            if config is not None:
+                reference_attn = config
                 break
         if reference_attn is not None:
             break

@@ -4,7 +4,7 @@ TaylorSeer is a cross-step feature forecasting method. Instead of only replaying
 
 ## Role in Sol-Engine
 
-TaylorSeer is part of the cache design space considered by the cache agent. It is useful as a transfeat when plain residual replay produces too much drift at the desired skip interval.
+TaylorSeer is part of the cache design space considered by the cache agent. It is useful as a config when plain residual replay produces too much drift at the desired skip interval.
 
 ## Search knobs
 

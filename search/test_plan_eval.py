@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CPU test for plan_eval: speed-target binning + transfeat rendering.
+"""CPU test for plan_eval: speed-target binning + config rendering.
 Run: ~/lustre/miniconda3/envs/sana/bin/python search/test_plan_eval.py
 """
 import os
@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from search.plan_eval import assess, gemini_quality_blockers, load_profile, load_tiers, promotion_note, quality_ranking_key, tier_of, render_transfeat  # noqa: E402
+from search.plan_eval import assess, gemini_quality_blockers, load_profile, load_tiers, promotion_note, quality_ranking_key, tier_of, render_config  # noqa: E402
 from tools.vision.nvidia_gemini_judge import extract_json  # noqa: E402
 
 ok = fail = 0
@@ -191,15 +191,15 @@ with tempfile.TemporaryDirectory() as tmp:
     check("assess: pairwise Gemini fail blocks speed bucket", verdict["tier"] is None)
     check("assess: pairwise Gemini fail note is explicit", "quality failed" in verdict["note"])
 
-# --- render_transfeat produces a launcher-valid sparse manifest ---
+# --- render_config produces a launcher-valid sparse manifest ---
 try:
     prof = load_profile("cosmos3")
-    m = render_transfeat(prof, "sparse_attention", {"sparsity": 0.9, "component": "transformer"})
+    m = render_config(prof, "sparse_attention", {"sparsity": 0.9, "component": "transformer"})
     check("render: has official_config + slurm", "official_config" in m and "slurm" in m)
     check("render: composed sparse env present",
           "SGLANG_HQ_COMPONENT_ATTENTION_BACKENDS" in m["env"])
     check("render: carries model base env (MODEL_REPO)", m["env"].get("MODEL_REPO") == "nvidia/Cosmos3-Super")
-    q = render_transfeat(
+    q = render_config(
         prof,
         "nvfp4_ffn",
         {
@@ -220,7 +220,7 @@ try:
           not any(key.startswith("SGLANG_LTX2_TE_NVFP4_") for key in q["env"]))
     check("render nvfp4: backend propagated", q["env"].get("SGLANG_DIFFUSION_FLASHINFER_FP4_GEMM_BACKEND") == "cudnn")
     check("render nvfp4: dense guard metadata propagated", q["env"].get("SGLANG_HQ_NVFP4_DENSE_LAYERS") == "0-1")
-    p = render_transfeat(
+    p = render_config(
         prof,
         "nvfp4_ffn",
         {
@@ -235,7 +235,7 @@ try:
     check("render nvfp4 profile: selector-derived dense guards propagated",
           p["env"].get("SGLANG_HQ_NVFP4_DENSE_LAYERS") == "0-1,30-31")
 except Exception as e:  # torch/efficiency import issues shouldn't fail the tier logic
-    print(f"  SKIP  render_transfeat ({type(e).__name__}: {e})")
+    print(f"  SKIP  render_config ({type(e).__name__}: {e})")
 
 print(f"\n=== {ok} passed, {fail} failed ===")
 sys.exit(1 if fail else 0)

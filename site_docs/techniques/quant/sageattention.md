@@ -8,7 +8,7 @@ Attention quantization differs from FFN quantization because attention scores an
 
 ## Role in Sol-Engine
 
-SageAttention is a transfeat for deployments where attention remains a major bottleneck after cache, sparse attention, or token pruning choices are fixed.
+SageAttention is a config for deployments where attention remains a major bottleneck after cache, sparse attention, or token pruning choices are fixed.
 
 ## Validation
 

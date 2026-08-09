@@ -34,7 +34,7 @@ def write_fake_run(root: Path) -> Path:
     (run_dir / "metadata.json").write_text(
         json.dumps(
             {
-                "transfeat_id": "baseline",
+                "config_id": "baseline",
                 "kind": "baseline",
                 "status": "prepared",
             }
@@ -142,7 +142,7 @@ def test_quality_blocks_promotion_without_baseline_frames() -> None:
         (frames_dir / "f_001.png").write_bytes(b"placeholder")
         quality = collect_run.build_quality(
             run_dir=run_dir,
-            metadata={"transfeat_id": "transfeat"},
+            metadata={"config_id": "config"},
             frames_dir=frames_dir,
             frames={"status": "existing", "count": 1},
             baseline_frames=[],
@@ -156,7 +156,7 @@ def test_quality_blocks_promotion_without_baseline_frames() -> None:
 def test_lpips_missing_baseline_is_blocked() -> None:
     collect_run = load_collect_run()
     result = collect_run.run_lpips_judge(
-        frame_paths=[Path("transfeat.png")],
+        frame_paths=[Path("config.png")],
         baseline_frames=[],
         skip=False,
     )
@@ -176,7 +176,7 @@ def test_lpips_unavailable_dependency_is_blocked() -> None:
     collect_run.importlib.util.find_spec = fake_find_spec
     try:
         result = collect_run.run_lpips_judge(
-            frame_paths=[Path("transfeat.png")],
+            frame_paths=[Path("config.png")],
             baseline_frames=["baseline.png"],
             skip=False,
         )
@@ -215,7 +215,7 @@ def test_pixel_metrics_include_temporal_and_patch_targets() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         base_dir = root / "baseline"
-        cand_dir = root / "transfeat"
+        cand_dir = root / "config"
         base_dir.mkdir()
         cand_dir.mkdir()
 

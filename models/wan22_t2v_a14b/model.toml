@@ -5,7 +5,7 @@ legacy_profile = "models/wan22_t2v_a14b.toml"
 contract_kind = "model_baseline_minimal_copy"
 
 [baseline]
-manifest = "transfeat/wan22_t2v_a14b/baseline.toml"
+manifest = "config/wan22_t2v_a14b/baseline.toml"
 runtime_root = "models/wan22_t2v_a14b/baseline"
 eval_profile = "evals/profiles/official_video_t2v_wan22_t2v_a14b.toml"
 description = "Wan2.2-T2V-A14B t2v baseline (2-expert MoE). Runnable code vendored in models/wan22_t2v_a14b/baseline; weights referenced read-only by absolute path via WAN22_WEIGHTS; diffusers/torch env is the sparse_attn_training .venv."
@@ -16,14 +16,14 @@ include = [
   "models/wan22_t2v_a14b.toml",
   "models/wan22_t2v_a14b/**",
   "models/wan22_t2v_a14b/baseline/**",
-  "transfeat/wan22_t2v_a14b/baseline.toml",
-  "transfeat/schema.md",
+  "config/wan22_t2v_a14b/baseline.toml",
+  "config/schema.md",
   "evals/profiles/official_video_t2v_wan22_t2v_a14b.toml",
   "evals/tiers.toml",
-  "scripts/launch_transfeat.py",
+  "scripts/launch_config.py",
   "scripts/collect_run.py",
   "search/plan_eval.py",
-  "techniques/transfeat_manifest.py",
+  "techniques/config_manifest.py",
 ]
 exclude = [
   ".git/**",

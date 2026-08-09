@@ -5,7 +5,7 @@ inference computation is partitioned, placed, communicated, and scheduled across
 the exact frozen GPU resource envelope. Work only inside your materialized
 experiment worktree. Your `DELIVERY.json` component is exactly `topology`.
 
-This is a mathematical/algorithmic **lossless** technique. A valid transfeat
+This is a mathematical/algorithmic **lossless** technique. A valid config
 computes the same global model function and performs the same logical model work;
 only its distributed execution changes. Floating-point reduction order may move
 numeric output and is not a correctness failure.
@@ -14,7 +14,7 @@ numeric output and is not a correctness failure.
 
 Read the model profile, baseline manifest, eval profile, frozen baseline block,
 and live inference code. Record `TOPOLOGY-PREFLIGHT.json` before the first
-transfeat with both contracts below:
+config with both contracts below:
 
 1. **Semantic workload:** checkpoint and model components, prompt/conditioning,
    seed policy, scheduler, denoising steps, guidance, frame count, resolution,
@@ -30,7 +30,7 @@ load-excluded, and warm-server objectives.
 
 ### Owned optimization surface
 
-Profile first, then choose one measured bottleneck per transfeat. In scope:
+Profile first, then choose one measured bottleneck per config. In scope:
 
 - context/sequence parallelism, including Ulysses, Ring, or a justified hybrid;
 - tensor parallelism for attention, dense projections, or experts;
@@ -45,7 +45,7 @@ Profile first, then choose one measured bottleneck per transfeat. In scope:
 - distributed load, prefetch, offload, and stage scheduling only when included in
   the frozen timing scope.
 
-Do not assume every named degree multiplies independently. For every transfeat,
+Do not assume every named degree multiplies independently. For every config,
 write the coordinate of every rank and list every process group's members. State
 whether CP/SP, TP, EP, CFG, and sharding axes are orthogonal, nested, or reuse the
 same ranks, and prove that the construction matches the frozen world size.
@@ -82,7 +82,7 @@ Map the baseline before proposing a replacement:
 Use profiler/code evidence rather than topology labels alone. An environment
 variable with no dispatch/activity evidence is not an implementation.
 
-### Transfeat preflight
+### Config preflight
 
 Every ON path needs an explicit OFF guard that restores the frozen baseline
 topology. Before a full run, create a small distributed correctness preflight that
@@ -90,8 +90,8 @@ proves all applicable invariants:
 
 Baseline adapters may intentionally allow only already-registered topologies.
 Inside this isolated experiment you may extend that allowlist for the new
-transfeat, but the dispatch must remain transfeat-id-specific and fail closed for
-unknown combinations. Create a new transfeat manifest rather than relabeling the
+config, but the dispatch must remain config-id-specific and fail closed for
+unknown combinations. Create a new config manifest rather than relabeling the
 baseline. If the runtime uses a vendored source snapshot, update its recorded
 hash/identity after code changes so strict provenance still verifies.
 
@@ -104,22 +104,22 @@ hash/identity after code changes so strict provenance still verifies.
 - all ranks agree on process groups and collective ordering;
 - async buffers remain live through completion and stream/event dependencies are
   valid;
-- every requested rank participates and the transfeat has zero silent fallback.
+- every requested rank participates and the config has zero silent fallback.
 
 A deadlock, rank mismatch, missing shard, duplicate token, silent baseline
 fallback, or invalid output is an implementation failure. Repair it; do not score
 it as topology evidence.
 
-For each full transfeat run, copy the transfeat-specific preflight result to
+For each full config run, copy the config-specific preflight result to
 `outputs/topology_preflight.json` with `status = "pass"`, the frozen `world_size`,
 and non-empty structured `checks` whose every entry explicitly passed. Include
-the exact `transfeat_id` and run-directory basename as `run_id`. A
+the exact `config_id` and run-directory basename as `run_id`. A
 coordinator-level preflight claim without this run-local snapshot is not durable
-transfeat evidence.
+config evidence.
 
 ### Bounded search loop
 
-Hard budget: **20 transfeat rounds**. One round is one hypothesis, one isolated
+Hard budget: **20 config rounds**. One round is one hypothesis, one isolated
 implementation, one preflight, one complete GPU run, one gate, and one durable
 decision. Deliver early only when the measured frontier has genuinely plateaued.
 
@@ -127,13 +127,13 @@ For each round:
 
 1. Read `TOPOLOGY-SEARCH-STATE.json`, prior failures, and the current frontier.
 2. Propose exactly one topology or scheduling hypothesis tied to a measured cost.
-3. Implement exactly one guarded transfeat and one transfeat manifest.
+3. Implement exactly one guarded config and one config manifest.
 4. Run the distributed preflight, then launch the full frozen workload through
-   `scripts/launch_transfeat.py` on the same Slurm resource envelope.
+   `scripts/launch_config.py` on the same Slurm resource envelope.
 5. Collect with `scripts/collect_run.py` and evaluate against the frozen baseline.
 6. Record latency in the identical timing scope, per-stage/per-rank timing,
    collective bytes/time, overlap, skew, peak memory, and fallback counters.
-7. Retain only a mathematically equivalent transfeat that improves the primary
+7. Retain only a mathematically equivalent config that improves the primary
    latency metric or establishes a non-dominated peak-memory point. Otherwise
    record a reusable failure signature and choose a meaningfully different idea.
 
@@ -149,12 +149,12 @@ batching or partitioning. Include:
 
 ```json
 {
-  "transfeat_id": "transfeat manifest id",
+  "config_id": "config manifest id",
   "run_id": "runs directory basename",
   "baseline_steps": 0,
-  "transfeat_steps": 0,
+  "config_steps": 0,
   "baseline_dit_calls": 0,
-  "transfeat_dit_calls": 0,
+  "config_dit_calls": 0,
   "method_argument": "why this distributed program computes the same function",
   "topology": {
     "world_size": 4,
@@ -176,7 +176,7 @@ run. Every process group needs a non-empty `kind` or `name` plus its member rank
 `outputs/topology_manifest.json` (declared topology plus source hashes) and
 `outputs/topology_trace.json` (observed participation, collectives, bytes/timing,
 memory, and fallback counters). All four run-local artifacts—equivalence,
-preflight, manifest, and trace—must carry the same exact `transfeat_id` and
+preflight, manifest, and trace—must carry the same exact `config_id` and
 `run_id`. The trace must contain exactly one record per rank with
 `participated = true`, positive `total_s`, and positive `peak_memory_mib`. The
 master independently audits the code, manifests, and traces; self-asserted
@@ -192,10 +192,10 @@ signatures, in-flight run, and next hypothesis. At completion write schema-versi
 2 `DELIVERY.json` with `component = "topology"`. Every frontier point must name a
 real run directory and include:
 
-- transfeat manifest and activation;
+- config manifest and activation;
 - topology manifest, trace, preflight, and equivalence artifacts;
-- frozen-baseline and transfeat timing in the same scope;
-- numeric frozen-baseline total, transfeat total, recomputed speedup, per-rank
+- frozen-baseline and config timing in the same scope;
+- numeric frozen-baseline total, config total, recomputed speedup, per-rank
   peak memory, and method/semantics argument;
 - `performance.frontier_axis` set to exactly `latency` or `peak_memory`, matching
   the measured improvement being claimed;

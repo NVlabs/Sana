@@ -5,7 +5,7 @@ distributed execution of a frozen model workload on a frozen resource envelope.
 
 This is a method-family and evidence contract, not a fixed topology grid. The
 target model's shapes, divisibility, process groups, current kernels, and measured
-communication/compute balance determine useful transfeat.
+communication/compute balance determine useful config.
 
 ## Method families
 
@@ -46,7 +46,7 @@ communication/compute balance determine useful transfeat.
   branch coverage with no loss or duplication.
 - Record every rank's mesh coordinate and every process group's membership.
 - Record collective order, bytes, calls, time, overlap, rank skew, and per-rank
-  peak memory from the actual transfeat run.
+  peak memory from the actual config run.
 - Require a full frozen-workload latency measurement; microbench projections are
   screening evidence only.
 - Preserve a real OFF path that restores the baseline topology.

@@ -3,7 +3,7 @@
 
 This is a public-behavior boundary probe, not a claim of full public-original
 equivalence. It pins the parts that match the public TeaCache decision rule and
-the parts where the current Cosmos3 transfeat intentionally differs.
+the parts where the current Cosmos3 config intentionally differs.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from techniques.methods.teacache import (  # noqa: E402
 
 PUBLIC_REF = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/TeaCache")
 PUBLIC_COSMOS_T2V = PUBLIC_REF / "TeaCache4Cosmos" / "teacache_sample_video_t2v.py"
-MANIFEST = ROOT / "transfeat" / "step_cache" / "teacache_signal_reuse.toml"
+MANIFEST = ROOT / "config" / "step_cache" / "teacache_signal_reuse.toml"
 COSMOS_STAGE = ROOT / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/pipelines_core/stages/model_specific_stages/cosmos3.py"
 COSMOS_MODEL = ROOT / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
 
@@ -342,7 +342,7 @@ def probe() -> dict[str, Any]:
             "runtime_public_boundary_match": runtime_public_boundary_match,
             "known_boundary_difference": "public TeaCache4Cosmos forces the final branch visit to compute; local generic TeaCache does not force final-step recompute unless configured externally.",
         },
-        "transfeat_manifest_alignment": {
+        "config_manifest_alignment": {
             "manifest": str(MANIFEST),
             "current_threshold": manifest_threshold,
             "current_coefficients": manifest_coefficients or [1.0, 0.0],

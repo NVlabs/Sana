@@ -9,7 +9,7 @@ protocols outside the implementation repo.
 
 The implementation plane is the `Sol-LTX-Infer` submodule. That repo owns model
 code, SGLang diffusion runtime changes, Slurm scripts, kernels, quantization,
-and the Cosmos3/LTX reference implementations. This repo owns how transfeat
+and the Cosmos3/LTX reference implementations. This repo owns how config
 are described, launched, compared, and summarized.
 
 ## News
@@ -46,13 +46,13 @@ above.
 M0 establishes the folder layout and contracts:
 
 - `docs/` explains the orchestration model and artifact layout.
-- `transfeat/` stores transfeat manifests.
+- `config/` stores config manifests.
 - `agents/` stores the launch-agent operating protocol.
 - `scripts/` stores orchestration utilities.
 - `runs/` stores local or cluster run bundles and outputs. Runtime artifacts are
   intentionally ignored by git.
 
-M1 adds a baseline transfeat and a launcher that can prepare a run bundle, dry
+M1 adds a baseline config and a launcher that can prepare a run bundle, dry
 run the baseline, or submit it to Slurm.
 
 M1.6 adds the evaluation and sub-loop structure used by future independent
@@ -73,7 +73,7 @@ git submodule update --init --recursive
 Create a baseline run bundle without submitting GPU work:
 
 ```bash
-python3 scripts/launch_transfeat.py transfeat/wan22_ti2v_5b/baseline.toml --mode dry-run
+python3 scripts/launch_config.py config/wan22_ti2v_5b/baseline.toml --mode dry-run
 ```
 
 Collect artifacts and write a report for a run bundle:
@@ -85,19 +85,19 @@ python3 scripts/collect_run.py runs/<run-id>
 Render the Slurm wrapper without submitting GPU work:
 
 ```bash
-python3 scripts/launch_transfeat.py transfeat/wan22_ti2v_5b/baseline.toml --mode sbatch
+python3 scripts/launch_config.py config/wan22_ti2v_5b/baseline.toml --mode sbatch
 ```
 
-Submit the same transfeat through Slurm:
+Submit the same config through Slurm:
 
 ```bash
-python3 scripts/launch_transfeat.py transfeat/wan22_ti2v_5b/baseline.toml --mode sbatch --confirm-submit
+python3 scripts/launch_config.py config/wan22_ti2v_5b/baseline.toml --mode sbatch --confirm-submit
 ```
 
 Run it directly on the current node, only when that node is a suitable GPU node:
 
 ```bash
-python3 scripts/launch_transfeat.py transfeat/wan22_ti2v_5b/baseline.toml --mode local
+python3 scripts/launch_config.py config/wan22_ti2v_5b/baseline.toml --mode local
 ```
 
 Install Symposium skills for project-local Codex use:
@@ -114,7 +114,7 @@ python3 tools/symposium/probe_goal_mode.py --json
 | `Sol-LTX-Infer/` | Execution submodule with SGLang diffusion code and model-specific acceleration implementation. |
 | `models/` | Vendored per-model runtimes (`baseline/` + `optimized/`), incl. [**HunyuanVideo**](models/hunyuan_video/) and [**Wan2.1-14B**](models/wan21_t2v_14b/). |
 | `techniques/` | Acceleration technique implementations, incl. the [**SOL Attention**](techniques/sparse_backends/) sparse backends. |
-| `transfeat/` | Declarative manifests for baseline and acceleration transfeat. |
+| `config/` | Declarative manifests for baseline and acceleration config. |
 | `agents/` | Prompt/runbook material for the top-level launch agent. |
 | `docs/` | Orchestration design, folder layout, and artifact contracts. |
 | `evals/` | Eval profiles, metrics, and visual-judge rubrics. |
@@ -124,15 +124,15 @@ python3 tools/symposium/probe_goal_mode.py --json
 | `tools/symposium/` | Vendored Symposium skill pack plus adapters for preparing Codex interactive goal bundles. |
 | `runs/` | Generated run bundles, logs, videos, frames, and reports. Ignored except for `runs/README.md`. |
 
-## Transfeat Lifecycle
+## Config Lifecycle
 
-1. Describe one transfeat in `transfeat/*.toml`.
-2. Generate a run bundle with `scripts/launch_transfeat.py`.
+1. Describe one config in `config/*.toml`.
+2. Generate a run bundle with `scripts/launch_config.py`.
 3. Launch through `local` or `sbatch`.
 4. Collect `run.log`, `out.mp4`, timing files, extracted frames, and a report
    under the run directory with `scripts/collect_run.py`.
-5. Compare against the official target-model baseline before promoting a transfeat.
+5. Compare against the official target-model baseline before promoting a config.
 
-M2-M5 should each become independent transfeat goals that plug into this same
+M2-M5 should each become independent config goals that plug into this same
 contract: sparse attention, step cache, token pruning, KWL fusion, NVFP4, and
 eventual full-stack composition.

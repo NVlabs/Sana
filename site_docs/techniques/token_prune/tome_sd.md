@@ -4,7 +4,7 @@ ToMe-SD is a token merging method for diffusion inference. The paper cites it as
 
 ## Role in Sol-Engine
 
-ToMe-SD is part of the token-reduction design space. It is a transfeat when merging similar tokens is safer than dropping tokens outright.
+ToMe-SD is part of the token-reduction design space. It is a config when merging similar tokens is safer than dropping tokens outright.
 
 ## Search knobs
 

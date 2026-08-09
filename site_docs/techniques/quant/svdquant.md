@@ -4,7 +4,7 @@ SVDQuant reduces low-bit quantization error by absorbing weight and activation o
 
 ## Role in Sol-Engine
 
-SVDQuant is part of the quantization design space described by the paper. It is a transfeat when a deployment needs 4-bit execution but direct low-bit conversion causes outlier-driven quality loss.
+SVDQuant is part of the quantization design space described by the paper. It is a config when a deployment needs 4-bit execution but direct low-bit conversion causes outlier-driven quality loss.
 
 ## Practical path
 

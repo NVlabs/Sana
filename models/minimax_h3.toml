@@ -105,7 +105,7 @@ TOKENIZERS_PARALLELISM = "false"
 default_techniques = ["topology", "kernel", "sol_attn", "cache"]
 inference_world_size = 8
 first_line = "topology: declare a _cp_plan on MiniMaxH3Transformer3DModel and turn on Ulysses across 8 GB200s in one NVL72 rack; the attention processor already forwards _parallel_config."
-note = "The shipped line runs at Ulysses8 over two nodes in one rack, where the NCCL MNNVL path keeps the cross-node all-to-all on NVLink (503 GB/s, above the 486 GB/s of the 4-GPU intra-node case). The [slurm] block below is the single-node baseline allocation; the optimized transfeat request two nodes."
+note = "The shipped line runs at Ulysses8 over two nodes in one rack, where the NCCL MNNVL path keeps the cross-node all-to-all on NVLink (503 GB/s, above the 486 GB/s of the 4-GPU intra-node case). The [slurm] block below is the single-node baseline allocation; the optimized config request two nodes."
 
 [slurm]
 account = "nvr_elm_llm"
@@ -137,10 +137,10 @@ variant = "sglang_registered_bf16_single_rtx5090"
 status = "single_gpu_layerwise_offload"
 runtime_root = "models/minimax_h3/RTX5090"
 run_script = "models/minimax_h3/RTX5090/run_minimax_h3_gpu.sh"
-transfeat = [
-  "transfeat/minimax_h3/rtx5090_dense.toml",
-  "transfeat/minimax_h3/rtx5090_sol.toml",
-  "transfeat/minimax_h3/rtx5090_fullopt.toml",
+config = [
+  "config/minimax_h3/rtx5090_dense.toml",
+  "config/minimax_h3/rtx5090_sol.toml",
+  "config/minimax_h3/rtx5090_fullopt.toml",
 ]
 hardware = "1x NVIDIA RTX 5090, 32 GiB GDDR7, SM120; 188 GiB host RAM"
 cell = "1344x768, 124 frames, 5 seconds, 50 steps, released BF16 FL2VA"
@@ -166,12 +166,12 @@ variant = "sglang_registered_bf16_4gpu_h100"
 status = "measured_h100"
 runtime_root = "models/minimax_h3/H100"
 run_script = "models/minimax_h3/H100/run_minimax_h3_gpu.sh"
-transfeat = [
-  "transfeat/minimax_h3/h100_dense.toml",
-  "transfeat/minimax_h3/h100_quality.toml",
-  "transfeat/minimax_h3/h100_balanced.toml",
-  "transfeat/minimax_h3/h100_aggressive.toml",
-  "transfeat/minimax_h3/h100_fullopt_exact.toml",
+config = [
+  "config/minimax_h3/h100_dense.toml",
+  "config/minimax_h3/h100_quality.toml",
+  "config/minimax_h3/h100_balanced.toml",
+  "config/minimax_h3/h100_aggressive.toml",
+  "config/minimax_h3/h100_fullopt_exact.toml",
 ]
 hardware = "4x H100-80GB (SM90)"
 cell = "1344x768, 124 frames, 5.166667 seconds, 50 steps, BF16 FL2VA"
@@ -193,12 +193,12 @@ variant = "sglang_registered_bf16_4gpu_a100"
 status = "measured_a100"
 runtime_root = "models/minimax_h3/A100"
 run_script = "models/minimax_h3/A100/run_minimax_h3_gpu.sh"
-transfeat = [
-  "transfeat/minimax_h3/a100_dense.toml",
-  "transfeat/minimax_h3/a100_quality.toml",
-  "transfeat/minimax_h3/a100_balanced.toml",
-  "transfeat/minimax_h3/a100_aggressive.toml",
-  "transfeat/minimax_h3/a100_fullopt_exact.toml",
+config = [
+  "config/minimax_h3/a100_dense.toml",
+  "config/minimax_h3/a100_quality.toml",
+  "config/minimax_h3/a100_balanced.toml",
+  "config/minimax_h3/a100_aggressive.toml",
+  "config/minimax_h3/a100_fullopt_exact.toml",
 ]
 hardware = "4x A100-80GB (SM80)"
 cell = "1344x768, 124 frames, 5.166667 seconds, 50 steps, BF16 FL2VA"
@@ -226,12 +226,12 @@ variant = "diffusers_modular_pruned_fp8_scaled_single_gb10"
 status = "measured_single_gpu_resident_fp8"
 runtime_root = "models/minimax_h3/GB10"
 run_script = "models/minimax_h3/GB10/run_minimax_h3_gpu.sh"
-transfeat = [
-  "transfeat/minimax_h3/gb10_baseline.toml",
-  "transfeat/minimax_h3/gb10_kernel.toml",
-  "transfeat/minimax_h3/gb10_kernel_sol.toml",
-  "transfeat/minimax_h3/gb10_cache.toml",
-  "transfeat/minimax_h3/gb10_fullopt.toml",
+config = [
+  "config/minimax_h3/gb10_baseline.toml",
+  "config/minimax_h3/gb10_kernel.toml",
+  "config/minimax_h3/gb10_kernel_sol.toml",
+  "config/minimax_h3/gb10_cache.toml",
+  "config/minimax_h3/gb10_fullopt.toml",
 ]
 hardware = "1x NVIDIA GB10, 121 GiB unified LPDDR5X shared with the host, SM121"
 cell = "832x480, 124 frames, 50 steps"

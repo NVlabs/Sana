@@ -44,7 +44,7 @@ def main() -> int:
         block = (
             f"\n\n## Orchestrator correction ({stamp})\n\n"
             "Your previous delivery was independently re-verified and REJECTED. Fix "
-            "exactly these problems, re-run the affected transfeat(s) end-to-end "
+            "exactly these problems, re-run the affected config(s) end-to-end "
             "(launch + collect + plan_eval), and rewrite DELIVERY.json with honest, "
             "re-measured numbers:\n\n" + args.feedback.strip() + "\n"
         )

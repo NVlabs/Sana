@@ -12,7 +12,7 @@ Cache-DiT is a diffusion-cache family that includes block-level reuse policies s
 
 ## Role in Sol-Engine
 
-Cache-DiT-style methods are useful baselines and transfeat when a deployment benefits from block-level reuse instead of skipping an entire model path. They are not the selected default for the three reported full optimization stacks.
+Cache-DiT-style methods are useful baselines and config when a deployment benefits from block-level reuse instead of skipping an entire model path. They are not the selected default for the three reported full optimization stacks.
 
 ## Practical notes
 

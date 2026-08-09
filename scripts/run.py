@@ -57,13 +57,13 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
-from scripts import launch_transfeat  # noqa: E402
+from scripts import launch_config  # noqa: E402
 
 # Keys this launcher consumes. Everything else that is uppercase becomes env.
 RESERVED = {"name", "runtime", "entry", "out", "description", "gpus"}
 
 # Artifact names prepare_run resolves under <run>/outputs/. Spelled out so a flat
-# config produces the same layout as a transfeat manifest and collect_run.py can
+# config produces the same layout as a config manifest and collect_run.py can
 # read either.
 DEFAULT_ARTIFACTS = {
     "output_dir": "outputs",
@@ -73,8 +73,8 @@ DEFAULT_ARTIFACTS = {
 }
 
 
-def is_transfeat_manifest(cfg: dict[str, object]) -> bool:
-    """A transfeat declares a model_profile or a [runtime] table; a flat config
+def is_config_manifest(cfg: dict[str, object]) -> bool:
+    """A config declares a model_profile or a [runtime] table; a flat config
     has neither and carries its runtime as a plain string."""
     return "model_profile" in cfg or isinstance(cfg.get("runtime"), dict)
 
@@ -156,7 +156,7 @@ def main() -> int:
     )
     ap.add_argument(
         "config",
-        help="a flat single-file config, or a transfeat manifest from transfeat/",
+        help="a flat single-file config, or a config manifest from config/",
     )
     ap.add_argument("--run-root", default="runs", help="run bundle root")
     ap.add_argument(
@@ -185,25 +185,25 @@ def main() -> int:
         key, value = item.split("=", 1)
         cfg[key] = value
 
-    # A transfeat manifest needs none of the flat dialect's translation: it is
+    # A config manifest needs none of the flat dialect's translation: it is
     # already the shape prepare_run reads, including the [requires] block that
     # drives the capability/conflict check. Run it directly.
-    if is_transfeat_manifest(cfg):
+    if is_config_manifest(cfg):
         launch_args = argparse.Namespace(
-            transfeat=str(config_path), mode="local", run_root=args.run_root,
+            config=str(config_path), mode="local", run_root=args.run_root,
             name_suffix="", runtime_root=None, env=None, strict_commit=False,
             confirm_submit=False, allow_unsupported_gpu=True,
         )
         if args.print_only:
             launch_args.mode = "dry-run"
-        run_dir, launch_script, _job, _data = launch_transfeat.prepare_run(launch_args)
-        print(f"transfeat: {cfg.get('id', config_path.stem)}")
+        run_dir, launch_script, _job, _data = launch_config.prepare_run(launch_args)
+        print(f"config: {cfg.get('id', config_path.stem)}")
         print(f"run_dir  : {run_dir}")
         if args.print_only:
             print("status: printed only, nothing run")
             return 0
         proc = subprocess.run([str(launch_script)])
-        launch_transfeat.update_metadata(
+        launch_config.update_metadata(
             run_dir, {"status": "completed", "returncode": proc.returncode}
         )
         print(f"status: exit {proc.returncode}  ({run_dir})")
@@ -250,14 +250,14 @@ def main() -> int:
         print("status: printed only, nothing run")
         return 0
 
-    # Hand the assembled manifest to launch_transfeat's prepare_run rather than
+    # Hand the assembled manifest to launch_config's prepare_run rather than
     # executing here. That is what makes this a front-end and not a second
     # implementation: one bundle format, one set of provenance files, and
     # collect_run.py finds artifacts under outputs/ no matter which config
     # dialect was used to start the run.
     data = to_manifest(name, launcher, env, runtime, entry, config_path)
     launch_args = argparse.Namespace(
-        transfeat=str(config_path),
+        config=str(config_path),
         mode="local",
         run_root=args.run_root,
         name_suffix="",
@@ -267,10 +267,10 @@ def main() -> int:
         confirm_submit=False,
         allow_unsupported_gpu=True,
     )
-    run_dir, launch_script, _job, _data = launch_transfeat.prepare_run(launch_args, data)
+    run_dir, launch_script, _job, _data = launch_config.prepare_run(launch_args, data)
     print(f"run_dir : {run_dir}")
     proc = subprocess.run([str(launch_script)])
-    launch_transfeat.update_metadata(run_dir, {"status": "completed", "returncode": proc.returncode})
+    launch_config.update_metadata(run_dir, {"status": "completed", "returncode": proc.returncode})
     print(f"status: exit {proc.returncode}  ({run_dir})")
     return proc.returncode
 

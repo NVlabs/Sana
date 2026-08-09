@@ -58,7 +58,7 @@ ls .symposium/scratch
 Important files:
 
 - `socrates.md`: the interview cycles plus latest Seed and Ontology.
-- `evolve-step.md`: blind-spot transfeat and accepted changes.
+- `evolve-step.md`: blind-spot config and accepted changes.
 - `interview-harness.md`: ontology snapshots and convergence scores.
 
 ## 5. Use The Final Seed

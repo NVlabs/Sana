@@ -28,11 +28,11 @@ acceptance_criteria:
 ## Process
 
 1. Preserve v1 exactly.
-2. Generate exactly six transfeat:
+2. Generate exactly six config:
    - Q1: three user perspectives missing from the Seed.
    - Q2: three possibilities cut off by the Seed.
-3. Ask the user to mark each transfeat as accepted or rejected.
-4. Apply only accepted transfeat to Seed v2.
+3. Ask the user to mark each config as accepted or rejected.
+4. Apply only accepted config to Seed v2.
 5. Replace `.symposium/scratch/socrates.md` top-level `## Seed` with Seed v2.
 6. Append the audit block to `.symposium/scratch/evolve-step.md`.
 
@@ -40,12 +40,12 @@ acceptance_criteria:
 
 Ask:
 
-> Mark each of the six transfeat as accepted or rejected. No transfeat is accepted by default.
+> Mark each of the six config as accepted or rejected. No config is accepted by default.
 
 Prefer a compact checkbox-style multiple-choice prompt:
 
 ```markdown
-Which transfeat should enter Seed v2?
+Which config should enter Seed v2?
 A. [ ] <missing user perspective 1>
 B. [ ] <missing user perspective 2>
 C. [ ] <missing user perspective 3>
@@ -60,7 +60,7 @@ The user may answer with letters, checked boxes, or free-form edits. Accept only
 
 Do not derive v2 before the user responds.
 
-If no transfeat are accepted, v2 equals v1 and the transferred meaning is `No transferred meaning`.
+If no config are accepted, v2 equals v1 and the transferred meaning is `No transferred meaning`.
 
 ## Audit Format
 
@@ -72,7 +72,7 @@ If no transfeat are accepted, v2 equals v1 and the transferred meaning is `No tr
 ...
 ```
 
-## Blind Spot Transfeats
+## Blind Spot Configs
 ### Q1. Missing user perspectives
 - accepted/rejected — ...
 - accepted/rejected — ...
@@ -95,6 +95,6 @@ If no transfeat are accepted, v2 equals v1 and the transferred meaning is `No tr
 ## Rules
 
 - Preserve v1 exactly in the audit.
-- Apply only accepted transfeat.
-- Do not change multiple Seed slots for one transfeat unless the user explicitly asks.
+- Apply only accepted config.
+- Do not change multiple Seed slots for one config unless the user explicitly asks.
 - Keep the transferred meaning concrete: name which slot changed and how.

@@ -81,7 +81,7 @@ def attention_kernel() -> str:
     if RUNTIME_DIR.name == "lingbot_video_baseline" and value != "fa2":
         raise SystemExit(
             "[lingbot_video] the physically isolated baseline runtime supports only fa2; "
-            "use runtime/lingbot_video_optimized for the cudnn transfeat"
+            "use runtime/lingbot_video_optimized for the cudnn config"
         )
     return value
 
@@ -91,9 +91,9 @@ def resolve_input(value: str) -> Path:
     if path.is_absolute():
         return path
     for root in (REPO_ROOT, SOURCE_ROOT, RUNTIME_DIR):
-        transfeat = (root / path).resolve()
-        if transfeat.exists():
-            return transfeat
+        config = (root / path).resolve()
+        if config.exists():
+            return config
     return (REPO_ROOT / path).resolve()
 
 
@@ -259,7 +259,7 @@ def build_command(
     active_experiments = [name for name, enabled in experimental_flags.items() if enabled]
     if active_experiments:
         raise SystemExit(
-            "[lingbot_video] registered baseline/c5 transfeat forbid unrelated experimental "
+            "[lingbot_video] registered baseline/c5 config forbid unrelated experimental "
             "switches: " + ", ".join(active_experiments)
         )
     fixed_backends = {
@@ -276,13 +276,13 @@ def build_command(
         for name, expected in fixed_backends.items()
         if env(name, expected).strip().lower() != expected
     }
-    # The kernel-fusion transfeat is allowed to enable fused QKV (it only pays off
+    # The kernel-fusion config is allowed to enable fused QKV (it only pays off
     # under torch.compile, which fuses the per-call weight-cat away).
-    if env_bool("LINGBOT_FUSED_QKV_LINEAR", False) and env("AUTOVIDEO_TRANSFEAT_ID", "") != "lingbot_video_cudnn_kernel_compile":
+    if env_bool("LINGBOT_FUSED_QKV_LINEAR", False) and env("AUTOVIDEO_CONFIG_ID", "") != "lingbot_video_cudnn_kernel_compile":
         mismatched_backends["LINGBOT_FUSED_QKV_LINEAR"] = "1"
     if mismatched_backends:
         raise SystemExit(
-            "[lingbot_video] registered transfeat require fixed non-c5 backends; "
+            "[lingbot_video] registered config require fixed non-c5 backends; "
             f"unexpected overrides: {mismatched_backends}"
         )
     if RUNTIME_DIR.name == "lingbot_video_optimized" and attn_kernel == "cudnn":
@@ -294,10 +294,10 @@ def build_command(
             and refiner_batch_cfg_enabled
         ):
             raise SystemExit(
-                "[lingbot_video] the registered c5 cudnn transfeat requires CP4 Ulysses, "
+                "[lingbot_video] the registered c5 cudnn config requires CP4 Ulysses, "
                 "FSDP, base batch_cfg, and refiner batch_cfg"
             )
-    transfeat_id = env("AUTOVIDEO_TRANSFEAT_ID", required=True)
+    config_id = env("AUTOVIDEO_CONFIG_ID", required=True)
     expected_kernel = {
         "lingbot_video_cudnn_optimized": "cudnn",
         "lingbot_video_cudnn_off": "fa2",
@@ -305,24 +305,24 @@ def build_command(
         "lingbot_video_cudnn_pisa_easycache": "cudnn",
         "lingbot_video_cudnn_pisa_easycache_refiner": "cudnn",
         "lingbot_video_cudnn_kernel_compile": "cudnn",
-    }.get(transfeat_id)
+    }.get(config_id)
     if expected_kernel is None:
-        raise SystemExit(f"[lingbot_video] unsupported optimized runtime transfeat: {transfeat_id}")
+        raise SystemExit(f"[lingbot_video] unsupported optimized runtime config: {config_id}")
     if attn_kernel != expected_kernel:
         raise SystemExit(
-            f"[lingbot_video] transfeat {transfeat_id} requires attention kernel {expected_kernel}"
+            f"[lingbot_video] config {config_id} requires attention kernel {expected_kernel}"
         )
-    _pisa_transfeat = {
+    _pisa_config = {
         "lingbot_video_cudnn_pisa_full",
         "lingbot_video_cudnn_pisa_easycache",
         "lingbot_video_cudnn_pisa_easycache_refiner",
         "lingbot_video_cudnn_kernel_compile",
     }
-    pisa_enabled = env_bool("LINGBOT_PISA_ENABLED", transfeat_id in _pisa_transfeat)
-    if transfeat_id in _pisa_transfeat and not pisa_enabled:
-        raise SystemExit("[lingbot_video] a PISA transfeat requires LINGBOT_PISA_ENABLED=1")
-    if transfeat_id not in _pisa_transfeat and pisa_enabled:
-        raise SystemExit(f"[lingbot_video] transfeat {transfeat_id} does not permit the PISA path")
+    pisa_enabled = env_bool("LINGBOT_PISA_ENABLED", config_id in _pisa_config)
+    if config_id in _pisa_config and not pisa_enabled:
+        raise SystemExit("[lingbot_video] a PISA config requires LINGBOT_PISA_ENABLED=1")
+    if config_id not in _pisa_config and pisa_enabled:
+        raise SystemExit(f"[lingbot_video] config {config_id} does not permit the PISA path")
     if not (
         cp_degree == nproc
         and fsdp_enabled
@@ -467,7 +467,7 @@ def build_command(
         "experimental_flags": experimental_flags,
         "fixed_backends": fixed_backends,
         "source_variant": env("LINGBOT_SOURCE_VARIANT", "baseline"),
-        "transfeat_id": transfeat_id,
+        "config_id": config_id,
     }
     return command, config
 
@@ -632,7 +632,7 @@ def write_benchmark(
         (RUNTIME_DIR / "SOURCE_SNAPSHOT.json").read_bytes()
     ).hexdigest()
     effective_env_keys = (
-        "AUTOVIDEO_TRANSFEAT_ID",
+        "AUTOVIDEO_CONFIG_ID",
         "DIFFUSERS_ATTN_BACKEND",
         "LINGBOT_ATTN_KERNEL",
         "LINGBOT_BATCH_CFG",

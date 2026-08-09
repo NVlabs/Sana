@@ -1,6 +1,6 @@
 ## Transformer Optimization Objective
 
-Optimize the target model's transformer/DiT denoising path. New transfeat should
+Optimize the target model's transformer/DiT denoising path. New config should
 target kernel-level or runtime-level work inside repeated transformer blocks,
 attention paths, FFN paths, and transformer glue code.
 
@@ -46,7 +46,7 @@ the official end-to-end objective.
 
 ### What "lossless" means here (mathematical / algorithmic correctness ONLY)
 
-"Lossless" here means the transfeat is a **mathematically valid, semantics-
+"Lossless" here means the config is a **mathematically valid, semantics-
 preserving implementation of the same algorithm**, judged at the level of
 METHOD, RULE, and REASONING — **never** by comparing outputs. Do NOT gate on any
 result artifact whatsoever: not bit-identity, not a latent/tensor difference, not
@@ -59,7 +59,7 @@ an implementation incorrect merely because its output moved relative to another
 (rougher, or "reference") implementation. Correctness is a property of the
 METHOD, not of how close the output lands.
 
-A transfeat is admissible iff, by reasoning about the method, it:
+A config is admissible iff, by reasoning about the method, it:
 - computes the *same mathematical function / algorithm* — the change is an
   implementation transformation (e.g. fusing, reordering, compiling with any
   aggressiveness, changing a local operator layout, caching a provably
@@ -72,7 +72,7 @@ A transfeat is admissible iff, by reasoning about the method, it:
 Cross-rank partitioning and scheduling are owned by the `topology` executor. Do
 not change CP/SP/TP/EP/FSDP/CFG degrees, process groups, rank maps, collective
 algorithms or ordering, parameter/expert placement, distributed loading, or
-multi-device stage scheduling in a kernel transfeat. Preserve the frozen
+multi-device stage scheduling in a kernel config. Preserve the frozen
 baseline topology while measuring local kernels. If profiling exposes a
 distributed bottleneck, record it for the topology executor instead of claiming
 it as kernel work.
@@ -82,10 +82,10 @@ and why it is the same mathematics — together with the structural invariants
 (denoising-step count and DiT-call count unchanged). That argument, NOT any output
 measurement, is the retention and delivery criterion here. Do NOT run, cite, or
 gate on an output-difference check of any kind (no bit diff, no latent diff, no fp
-tolerance, no LPIPS). NEVER reject a transfeat because its numbers moved — reject
+tolerance, no LPIPS). NEVER reject a config because its numbers moved — reject
 ONLY if the method introduces a real algorithmic approximation or changes the
 work. A faster implementation whose output differs but whose algorithm is provably
-unchanged is CORRECT and MUST be retained. (Earlier transfeat rejected only for
+unchanged is CORRECT and MUST be retained. (Earlier config rejected only for
 numeric divergence — e.g. compiler floating-point contraction changing rounding —
 were WRONGLY rejected; do not repeat that: aggressive compilation and fp
 reordering are the same algorithm and are allowed.)
@@ -99,7 +99,7 @@ Separate method admissibility from benchmark comparability:
   preserved.
 
 The primary search objective remains the repeated transformer/DiT path. If an
-allowed transfeat also changes an adjacent stage or runtime mechanism, measure
+allowed config also changes an adjacent stage or runtime mechanism, measure
 and label that contribution separately so the kernel attribution remains
 intelligible. Ordinary loop evaluation stays at single-DiT or module level. Full
 diffusion evaluation is reserved for terminal validation after reviewer exit
@@ -156,24 +156,24 @@ Do not begin with an isolated operator chosen only because it is easy to
 microbenchmark. Use this order:
 
 1. Read and verify the graph-created `BASELINE-LOCK.json` before implementing
-   transfeat changes. The graph already ran the experiment's one allowed
+   config changes. The graph already ran the experiment's one allowed
    baseline. Never rerun or modify it.
 2. Establish a durable `KERNEL-PREFLIGHT.json` from the active, registry-resolved
    target model path. Record the official block mix, tensor shapes, dtype, dominant
    kernel families, launch/layout costs, and a warm repeated full-DiT profile.
-3. Use the live full-DiT profile to choose transfeat by expected integrated
+3. Use the live full-DiT profile to choose config by expected integrated
    contribution. A module microbench is a screening surface, not the portfolio
    objective.
 4. Keep a cumulative canonical ON manifest and accumulated acceleration stack.
-   After every two positive component transfeat, or after any material
+   After every two positive component config, or after any material
    attention/FFN/AttnRes change, rerun a warm paired full-DiT OFF/ON benchmark
    for the composed frontier.
 
 Once a method is judged effective by the current gate, add it to the accumulated
-acceleration stack and record it in `canonical_on_manifest`. Later transfeat
+acceleration stack and record it in `canonical_on_manifest`. Later config
 experiments must run with that accumulated ON stack enabled unless they are
 explicitly isolating or debugging a stack interaction. Report both the new
-transfeat's incremental contribution on top of the stack and the cumulative
+config's incremental contribution on top of the stack and the cumulative
 OFF/ON speed of the full stack.
 
 Adding a module-level method to the stack does not close that module. The
@@ -181,20 +181,20 @@ executor may continue refining the same module later; each later refinement is
 measured as an additional change on top of the accumulated stack, not as a
 replacement for the earlier effective method.
 
-Retaining a transfeat does not require continuing to refine it immediately. A
-positive or unresolved transfeat may be recorded as `retained_parked` while the
+Retaining a config does not require continuing to refine it immediately. A
+positive or unresolved config may be recorded as `retained_parked` while the
 executor moves to a higher-impact method family. Return to it only when profile
 evidence ranks its next refinement above the alternatives. This workflow must
 maintain breadth across major hotspots without discarding preserved work.
 
-Implement one concrete transfeat per iteration, but keep at least the following
+Implement one concrete config per iteration, but keep at least the following
 portfolio fields current in `AGENT-STATUS.json`:
 
-- `active_transfeat_id` and `active_gate` for the transfeat evaluated by the
+- `active_config_id` and `active_gate` for the config evaluated by the
   current executor invocation;
-- `transfeat_iteration`, which counts transfeat iterations rather than workflow
+- `config_iteration`, which counts config iterations rather than workflow
   node transitions;
-- `frontier_transfeat`, including retained and retained-parked methods;
+- `frontier_config`, including retained and retained-parked methods;
 - `canonical_on_manifest` and the latest integrated full-DiT gate;
 - `ranked_next_families`, with estimated full-DiT contribution and evidence.
 
@@ -258,7 +258,7 @@ documentation, when available.
 
 ## Execution round limit
 
-You have a hard budget of **40 optimization rounds** (transfeat attempts) for this
+You have a hard budget of **40 optimization rounds** (config attempts) for this
 workflow. The lossless local-implementation space spans several distinct
 families, and its highest-impact levers (local layout/movement,
 primitive/backend selection, and exact invariant preparation) may require a
@@ -267,7 +267,7 @@ cost more per round. Spend the budget in proportion to profiled impact:
 screen broadly and cheaply where you can, invest full-inference rounds on the
 ranked high-impact levers, and **deliver early if the lossless frontier plateaus** —
 do not burn rounds refining a converged operator-fusion stack when your profile
-shows the remaining recoverable time is elsewhere. One round = one transfeat
+shows the remaining recoverable time is elsewhere. One round = one config
 implemented, launched, evaluated, and gated; do not plan beyond 40 rounds. This
 scope's round budget governs for this workflow.
 
@@ -286,7 +286,7 @@ whichever comes first:**
 2. **No improvement (plateau)** — your retained lossless frontier has not improved
    for several consecutive rounds (use judgment; roughly 3–4 rounds with no new
    best after genuinely different hypotheses).
-3. **Target reached** — a transfeat meets or exceeds the stretch target *and*
+3. **Target reached** — a config meets or exceeds the stretch target *and*
    passes the full lossless correctness gate.
 
 Do not keep searching past a plateau merely because the target is unmet — an

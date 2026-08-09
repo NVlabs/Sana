@@ -77,7 +77,7 @@ if [[ -z "${TERM:-}" || "$TERM" == "dumb" ]]; then
 fi
 
 resolve_codex_autorun() {
-  local transfeat
+  local config
   if [[ -n "${CODEX_AUTORUN:-}" ]]; then
     if [[ -f "$CODEX_AUTORUN" && -x "$CODEX_AUTORUN" ]]; then
       printf '%s\n' "$CODEX_AUTORUN"
@@ -86,9 +86,9 @@ resolve_codex_autorun() {
     echo "CODEX_AUTORUN is not an executable file: $CODEX_AUTORUN" >&2
     return 1
   fi
-  for transfeat in "$HOME/codex_auto_run.py" "$HOME/code/codex_exec/codex_auto_run.py"; do
-    if [[ -f "$transfeat" && -x "$transfeat" ]]; then
-      printf '%s\n' "$transfeat"
+  for config in "$HOME/codex_auto_run.py" "$HOME/code/codex_exec/codex_auto_run.py"; do
+    if [[ -f "$config" && -x "$config" ]]; then
+      printf '%s\n' "$config"
       return 0
     fi
   done

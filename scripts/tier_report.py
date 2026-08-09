@@ -3,9 +3,9 @@
 
 Reads one or more `--verdict path/to/plan_eval_assess.json` (the JSON emitted by
 `search/plan_eval.py --assess RUN_DIR`) and prints:
-  1. a transfeat table with speed and quality telemetry
+  1. a config table with speed and quality telemetry
   2. low/medium/high delivery recommendations:
-     for each speed target, choose the best-quality transfeat/profile at or
+     for each speed target, choose the best-quality config/profile at or
      above the target speed.
 
 The composition step calls efficiency.compose() against manifest-declared
@@ -45,7 +45,7 @@ def main() -> int:
         help="Path to one plan_eval assess JSON (repeatable).",
     )
     ap.add_argument("--label", action="append", default=[],
-                    help="Optional label per verdict (defaults to transfeat id).")
+                    help="Optional label per verdict (defaults to config id).")
     args = ap.parse_args()
 
     profile = load_profile(args.model)
@@ -72,7 +72,7 @@ def main() -> int:
         lpips_s = f"{lpips:.4f}" if isinstance(lpips, (int, float)) else "-"
         print(f"{r['label']:50} {tier:8} {speedup_s:9} {gemini:8} {sev:9} {lpips_s:9}")
 
-    # Delivery winner per target: choose the best quality among transfeat that
+    # Delivery winner per target: choose the best quality among config that
     # meet the target speed. LPIPS/Gemini are ranking signals, not hard thresholds.
     print()
     print("# Delivery winners (best quality at or above each speed target)")
@@ -91,7 +91,7 @@ def main() -> int:
                 f"lpips={w.get('lpips_max')}) cand={w['label']}"
             )
         else:
-            print(f"  {t:8} target {target}x  -- no transfeat reaches speed target")
+            print(f"  {t:8} target {target}x  -- no config reaches speed target")
     return 0
 
 

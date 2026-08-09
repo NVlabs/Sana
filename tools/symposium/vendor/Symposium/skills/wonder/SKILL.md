@@ -4,18 +4,18 @@ description: |
   Expand a vague word or request by asking what other meanings may be hidden inside it. In the Socrates loop, Wonder writes only the current cycle's ### Wonder section.
   Triggers (EN): wonder, expand meaning, explore hidden meanings, what else could this mean
   Do NOT use when: comparing meaning gaps (-> reflect), merging meanings (-> refine), restating a goal (-> restate), or running the full Seed loop (-> socrates)
-  vs reflect: Wonder expands meaning transfeat; Reflect compares those transfeat against the user's intended meaning.
+  vs reflect: Wonder expands meaning config; Reflect compares those config against the user's intended meaning.
 ---
 
 # Wonder
 
 ## Details
 
-Wonder expands the hidden meanings inside the user's vague request until at least three user-grounded meaning transfeat are visible.
+Wonder expands the hidden meanings inside the user's vague request until at least three user-grounded meaning config are visible.
 
 Ask the user one question at a time. Use `request_user_input` in Codex Plan mode when available, `AskUserQuestion` in Claude when available, or a normal conversational question otherwise. Do not invent meanings to fill the section.
 
-Do not complete Wonder immediately after generating multiple-choice options. Options are probes, not collected meanings. A meaning transfeat is collected only after the user selects, rejects, edits, or explains it.
+Do not complete Wonder immediately after generating multiple-choice options. Options are probes, not collected meanings. A meaning config is collected only after the user selects, rejects, edits, or explains it.
 
 ## Word Boundary Discovery
 
@@ -25,7 +25,7 @@ Before asking, identify the smallest quoted phrase that carries the ambiguity. A
 
 For the first Wonder question, infer several possible semantic boundaries around that word or phrase, then ask which boundary is closest.
 
-Do not use a fixed question template. Read the user's wording and generate boundary transfeat from what the phrase could mean in context:
+Do not use a fixed question template. Read the user's wording and generate boundary config from what the phrase could mean in context:
 
 - the smallest concrete artifact the phrase could refer to
 - the larger workflow, decision, or operating model the phrase may imply
@@ -50,9 +50,9 @@ Use this shape:
 
 ```markdown
 Which hidden meaning is closest to what you meant?
-A. <transfeat meaning>
-B. <transfeat meaning>
-C. <transfeat meaning>
+A. <config meaning>
+B. <config meaning>
+C. <config meaning>
 D. Other / edit in your own words
 ```
 
@@ -64,14 +64,14 @@ Run at least two user turns unless the user explicitly says the first answer is 
 
 1. Ask a boundary-choice question.
 2. After the user answers, ask one follow-up about the same word's meaning: what it includes, what it excludes, which nearby meaning is wrong, or what assumption makes the word obvious to the user.
-3. Record the user's answer as meaning transfeat.
-4. Continue only until at least three user-grounded transfeat are visible, then hand off to `reflect`.
+3. Record the user's answer as meaning config.
+4. Continue only until at least three user-grounded config are visible, then hand off to `reflect`.
 
 Never treat model-generated choices alone as the final Wonder output.
 
 ## Output
 
-Write at least three user-grounded meaning transfeat as a Markdown list:
+Write at least three user-grounded meaning config as a Markdown list:
 
 ```markdown
 - Meaning A — one-line explanation
@@ -94,4 +94,4 @@ If there is no active cycle, create:
 ...
 ```
 
-When at least three user-grounded meaning transfeat are collected and the word boundary is clear enough to compare against the user's intent, stop and hand off to `reflect`.
+When at least three user-grounded meaning config are collected and the word boundary is clear enough to compare against the user's intent, stop and hand off to `reflect`.

@@ -2,7 +2,7 @@
 """Compare local ``tome_merge_restore`` against public ToMe/ToMeSD behavior.
 
 This is a public-behavior boundary probe. It pins the public ToMe family core
-that the transfeat cites and records whether the current local pure algorithm
+that the config cites and records whether the current local pure algorithm
 matches that merge/unmerge boundary. Cosmos3 runtime quality is assessed
 separately; this probe is only about the public ToMe algorithm shape.
 """
@@ -23,7 +23,7 @@ PUBLIC_TOME = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitong
 PUBLIC_TOMESD = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/tomesd")
 PUBLIC_TOME_MERGE = PUBLIC_TOME / "tome" / "merge.py"
 PUBLIC_TOMESD_MERGE = PUBLIC_TOMESD / "tomesd" / "merge.py"
-MANIFEST = ROOT / "transfeat" / "token_prune" / "tome_merge_restore.toml"
+MANIFEST = ROOT / "config" / "token_prune" / "tome_merge_restore.toml"
 
 
 def git_commit(path: Path) -> str | None:

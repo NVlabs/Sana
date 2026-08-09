@@ -5,7 +5,7 @@ This is the trusted check the master runs — it does NOT trust the executor's
 numbers. For each frontier point it: (1) confirms the run_dir + out.mp4 +
 benchmark.json exist and were produced by a real run (provenance), (2) RE-RUNS
 `plan_eval --assess` for quality-gated techniques, and (3) recomputes speedup
-directly from the frozen baseline plus durable transfeat benchmark. Mismatches,
+directly from the frozen baseline plus durable config benchmark. Mismatches,
 missing artifacts, or fabricated runs are reported.
 
 For a LOSSLESS technique (for example kernel or topology), correctness is
@@ -23,7 +23,7 @@ measured-frontier evidence. The lossless path never invokes an output-difference
 metric.
 The MASTER then independently REASONS about that evidence + the actual code
 changes to accept algorithmic-semantic correctness (see master.md); it must never
-reject a lossless transfeat merely because its output moved.
+reject a lossless config merely because its output moved.
 
 plan_eval is invoked with $PLAN_EVAL_PYTHON if set (the eval env python), else
 this interpreter. Prints JSON: {objective_ok, issues, points}.
@@ -178,15 +178,15 @@ def check_correctness(fp: dict, run_dir: Path) -> tuple[list[str], dict]:
         change here means the *work* changed → an algorithmic change, not just a
         different implementation);
       - surfaces whether a method/semantics argument was recorded for the master.
-    It NEVER flags a transfeat for numeric output divergence.
+    It NEVER flags a config for numeric output divergence.
     """
     ev = find_equivalence(fp, run_dir)
     if not ev:
         return ["correctness_evidence_missing"], {}
     issues: list[str] = []
-    cs = _num(ev, "transfeat_steps", "on_denoising_steps", "steps")
+    cs = _num(ev, "config_steps", "on_denoising_steps", "steps")
     bs = _num(ev, "baseline_steps", "off_denoising_steps", "expected_denoising_steps")
-    cc = _num(ev, "transfeat_dit_calls", "on_dit_calls", "dit_calls")
+    cc = _num(ev, "config_dit_calls", "on_dit_calls", "dit_calls")
     bc = _num(ev, "baseline_dit_calls", "off_dit_calls", "expected_dit_calls")
     if cs is None or bs is None:
         issues.append("step_count_evidence_missing")
@@ -197,7 +197,7 @@ def check_correctness(fp: dict, run_dir: Path) -> tuple[list[str], dict]:
     elif ev.get("dit_calls_match", ev.get("calls_match")) is False or cc != bc:
         issues.append("dit_call_count_changed")
     argument = next((ev.get(k) for k in ("method_argument", "semantics_argument", "justification",
-                                          "rationale", "reference_path", "transfeat_path")
+                                          "rationale", "reference_path", "config_path")
                      if isinstance(ev.get(k), str) and ev.get(k).strip()), None)
     if not argument:
         issues.append("method_argument_missing")
@@ -207,10 +207,10 @@ def check_correctness(fp: dict, run_dir: Path) -> tuple[list[str], dict]:
 
 def expected_world_size(model_id: str, baseline: dict) -> int | None:
     """Resolve the frozen global rank count from durable baseline/profile data."""
-    transfeat = [baseline.get("world_size"), baseline.get("num_gpus")]
+    config = [baseline.get("world_size"), baseline.get("num_gpus")]
     envelope = baseline.get("resource_envelope")
     if isinstance(envelope, dict):
-        transfeat.append(envelope.get("world_size"))
+        config.append(envelope.get("world_size"))
     profile_path = ROOT / "models" / f"{model_id}.toml"
     if profile_path.is_file():
         with profile_path.open("rb") as handle:
@@ -218,20 +218,20 @@ def expected_world_size(model_id: str, baseline: dict) -> int | None:
         official = profile.get("official_config")
         orchestration = profile.get("orchestration")
         if isinstance(orchestration, dict):
-            transfeat.append(orchestration.get("inference_world_size"))
+            config.append(orchestration.get("inference_world_size"))
         if isinstance(official, dict):
-            transfeat.append(official.get("num_gpus"))
+            config.append(official.get("num_gpus"))
         slurm = profile.get("slurm")
         if isinstance(slurm, dict):
             nodes = slurm.get("nodes")
             gpus_per_node = slurm.get("gpus_per_node")
             if all(isinstance(value, int) and not isinstance(value, bool) and value > 0
                    for value in (nodes, gpus_per_node)):
-                transfeat.append(nodes * gpus_per_node)
+                config.append(nodes * gpus_per_node)
     return next(
         (
             value
-            for value in transfeat
+            for value in config
             if isinstance(value, int) and not isinstance(value, bool) and value > 0
         ),
         None,
@@ -282,39 +282,39 @@ def check_performance_evidence(
         performance = {}
 
     baseline_total = _num(baseline, "total_s")
-    transfeat_total = _num(benchmark, "total_s")
+    config_total = _num(benchmark, "total_s")
     if baseline_total is None or float(baseline_total) <= 0:
         issues.append("frozen_baseline_total_missing_or_invalid")
-    if transfeat_total is None or float(transfeat_total) <= 0:
-        issues.append("transfeat_total_missing_or_invalid")
+    if config_total is None or float(config_total) <= 0:
+        issues.append("config_total_missing_or_invalid")
 
     frozen_scope = baseline.get("timing_scope")
-    transfeat_scope = benchmark.get("timing_scope")
+    config_scope = benchmark.get("timing_scope")
     if require_complete:
         if not isinstance(frozen_scope, str) or not frozen_scope.strip():
             issues.append("frozen_timing_scope_missing")
-        if not isinstance(transfeat_scope, str) or not transfeat_scope.strip():
-            issues.append("transfeat_timing_scope_missing")
-        elif transfeat_scope != frozen_scope:
-            issues.append("transfeat_timing_scope_mismatch")
+        if not isinstance(config_scope, str) or not config_scope.strip():
+            issues.append("config_timing_scope_missing")
+        elif config_scope != frozen_scope:
+            issues.append("config_timing_scope_mismatch")
 
     recomputed_speedup = None
     if (
         baseline_total is not None
-        and transfeat_total is not None
+        and config_total is not None
         and float(baseline_total) > 0
-        and float(transfeat_total) > 0
+        and float(config_total) > 0
     ):
-        recomputed_speedup = float(baseline_total) / float(transfeat_total)
+        recomputed_speedup = float(baseline_total) / float(config_total)
 
     claimed_baseline = _num(performance, "baseline_total_s")
-    claimed_transfeat = _num(performance, "transfeat_total_s")
+    claimed_config = _num(performance, "config_total_s")
     claimed_speedup = _num(performance, "speedup")
     if require_complete:
         if claimed_baseline is None:
             issues.append("performance_baseline_total_missing")
-        if claimed_transfeat is None:
-            issues.append("performance_transfeat_total_missing")
+        if claimed_config is None:
+            issues.append("performance_config_total_missing")
         if claimed_speedup is None:
             issues.append("performance_speedup_missing")
     if baseline_total is not None and float(baseline_total) > 0 and claimed_baseline is not None:
@@ -322,11 +322,11 @@ def check_performance_evidence(
             issues.append(
                 f"wrong_baseline claimed={claimed_baseline} frozen={float(baseline_total):.4f}"
             )
-    if transfeat_total is not None and float(transfeat_total) > 0 and claimed_transfeat is not None:
-        if abs(float(claimed_transfeat) - float(transfeat_total)) / float(transfeat_total) > 0.01:
+    if config_total is not None and float(config_total) > 0 and claimed_config is not None:
+        if abs(float(claimed_config) - float(config_total)) / float(config_total) > 0.01:
             issues.append(
-                "transfeat_total_misreport "
-                f"claimed={claimed_transfeat} measured={float(transfeat_total):.4f}"
+                "config_total_misreport "
+                f"claimed={claimed_config} measured={float(config_total):.4f}"
             )
     if recomputed_speedup is not None and claimed_speedup is not None:
         if abs(float(claimed_speedup) - recomputed_speedup) / recomputed_speedup > SPEEDUP_TOL:
@@ -336,7 +336,7 @@ def check_performance_evidence(
             )
 
     baseline_peak = _peak_memory_mib(baseline)
-    transfeat_peak = _peak_memory_mib(benchmark)
+    config_peak = _peak_memory_mib(benchmark)
     trace = load(run_dir / "outputs" / "topology_trace.json")
     per_rank = trace.get("per_rank") if isinstance(trace, dict) else None
     rank_peaks = [
@@ -347,22 +347,22 @@ def check_performance_evidence(
         and float(item["peak_memory_mib"]) > 0
     ]
     trace_peak = max(rank_peaks) if rank_peaks else None
-    if transfeat_peak is not None and trace_peak is not None:
-        denominator = max(transfeat_peak, trace_peak)
-        if denominator > 0 and abs(transfeat_peak - trace_peak) / denominator > MEMORY_REPORT_TOL:
+    if config_peak is not None and trace_peak is not None:
+        denominator = max(config_peak, trace_peak)
+        if denominator > 0 and abs(config_peak - trace_peak) / denominator > MEMORY_REPORT_TOL:
             issues.append("topology_trace_benchmark_peak_memory_mismatch")
     latency_improved = (
         baseline_total is not None
-        and transfeat_total is not None
+        and config_total is not None
         and float(baseline_total) > 0
-        and float(transfeat_total)
+        and float(config_total)
         < float(baseline_total) * (1.0 - MIN_FRONTIER_REL_GAIN)
     )
     memory_improved = (
         baseline_peak is not None
         and baseline_peak > 0
-        and transfeat_peak is not None
-        and transfeat_peak < baseline_peak * (1.0 - MIN_FRONTIER_REL_GAIN)
+        and config_peak is not None
+        and config_peak < baseline_peak * (1.0 - MIN_FRONTIER_REL_GAIN)
     )
     frontier_axis = performance.get("frontier_axis")
     if require_improvement:
@@ -375,16 +375,16 @@ def check_performance_evidence(
 
     return issues, {
         "baseline_total_s": baseline_total,
-        "transfeat_total_s": transfeat_total,
+        "config_total_s": config_total,
         "speedup": recomputed_speedup,
-        "timing_scope": transfeat_scope,
+        "timing_scope": config_scope,
         "baseline_peak_memory_mib": baseline_peak,
-        "transfeat_peak_memory_mib": transfeat_peak,
+        "config_peak_memory_mib": config_peak,
         "trace_peak_memory_mib": trace_peak,
         "frontier_axis": frontier_axis,
         "latency_improved": latency_improved,
         "memory_improved": memory_improved,
-        "source": "frozen_baseline_and_durable_transfeat_benchmark",
+        "source": "frozen_baseline_and_durable_config_benchmark",
     }
 
 
@@ -470,10 +470,10 @@ def check_topology_evidence(
         issues.append("topology_trace_missing")
 
     metadata = load(run_dir / "metadata.json")
-    expected_transfeat = fp.get("transfeat_id")
+    expected_config = fp.get("config_id")
     expected_run_id = run_dir.name
-    if not isinstance(expected_transfeat, str) or not expected_transfeat.strip():
-        issues.append("topology_transfeat_id_missing")
+    if not isinstance(expected_config, str) or not expected_config.strip():
+        issues.append("topology_config_id_missing")
     for artifact_name, artifact in (
         ("equivalence", equivalence),
         ("preflight", preflight),
@@ -482,12 +482,12 @@ def check_topology_evidence(
     ):
         if not artifact:
             continue
-        if artifact.get("transfeat_id") != expected_transfeat:
-            issues.append(f"topology_{artifact_name}_transfeat_id_mismatch")
+        if artifact.get("config_id") != expected_config:
+            issues.append(f"topology_{artifact_name}_config_id_mismatch")
         if artifact.get("run_id") != expected_run_id:
             issues.append(f"topology_{artifact_name}_run_id_mismatch")
-    if metadata and metadata.get("transfeat_id") != expected_transfeat:
-        issues.append("topology_metadata_transfeat_id_mismatch")
+    if metadata and metadata.get("config_id") != expected_config:
+        issues.append("topology_metadata_config_id_mismatch")
 
     topology = equivalence.get("topology") if isinstance(equivalence, dict) else None
     if not isinstance(topology, dict) or not topology:
@@ -755,7 +755,7 @@ def main() -> int:
         if not isinstance(fp, dict):
             issues.append(f"point_{i}:frontier_point_invalid")
             continue
-        pid = fp.get("transfeat_id", f"point_{i}")
+        pid = fp.get("config_id", f"point_{i}")
         raw_run_dir = fp.get("run_dir")
         run_dir = runs_root / f"__invalid_point_{i}"
         if not isinstance(raw_run_dir, str) or not raw_run_dir.strip():
@@ -782,8 +782,8 @@ def main() -> int:
             meta = load(run_dir / "metadata.json")
             if not (meta.get("slurm_job_id") or (run_dir / "job-started.json").exists()):
                 p_issues.append("no_run_provenance")
-            if meta.get("transfeat_id") != pid:
-                p_issues.append("run_transfeat_id_mismatch")
+            if meta.get("config_id") != pid:
+                p_issues.append("run_config_id_mismatch")
         performance: dict = {}
         if run_dir.is_dir():
             perf_issues, performance = check_performance_evidence(
@@ -800,7 +800,7 @@ def main() -> int:
             if require_correctness:
                 # The trusted lossless path never computes/reads an output metric.
                 # Its authoritative speedup is already frozen-baseline / durable
-                # transfeat benchmark above.
+                # config benchmark above.
                 reverify = {
                     "speedup": performance.get("speedup"),
                     "source": performance.get("source"),
@@ -840,7 +840,7 @@ def main() -> int:
                 {key: reverify.get(key) for key in ("lpips_max", "tier")}
             )
         points_out.append({
-            "transfeat_id": pid, "run_dir": str(run_dir), "objective_ok": not p_issues,
+            "config_id": pid, "run_dir": str(run_dir), "objective_ok": not p_issues,
             "issues": p_issues,
             "reverify": reverify_summary,
             "lossless_required": require_correctness,
@@ -848,7 +848,7 @@ def main() -> int:
             "topology_required": require_topology,
             "topology": topology,
             "performance": performance,
-            "transfeat_frames": str(run_dir / "outputs" / "frames"),
+            "config_frames": str(run_dir / "outputs" / "frames"),
             "baseline_frames": base_frames,
             "visual_check": (
                 "authenticity_only_no_output_comparison"
@@ -866,7 +866,7 @@ def main() -> int:
         "unchanged) and that a "
         "method/semantics argument was recorded. The master MUST independently REASON about "
         "that argument + the actual code changes (same algorithm? no approximation, sparsity, "
-        "step-skip, sub-16-bit quant, or reduced work?) and MUST NOT reject a transfeat merely "
+        "step-skip, sub-16-bit quant, or reduced work?) and MUST NOT reject a config merely "
         "because its numeric output moved." if require_correctness else "")
     topology_note = (
         " Topology evidence additionally proves the declared world size, active ranks, "
@@ -879,7 +879,7 @@ def main() -> int:
         "MUST NOT compare output similarity or visual quality."
         if require_correctness
         else
-        "The master MUST independently view transfeat_frames against baseline_frames and "
+        "The master MUST independently view config_frames against baseline_frames and "
         "apply the visual-artifact rubric before accepting."
     )
     print(json.dumps({

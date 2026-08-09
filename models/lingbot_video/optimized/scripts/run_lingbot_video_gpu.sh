@@ -2,7 +2,7 @@
 # Registered LingBot-Video runtime entrypoint.
 set -euo pipefail
 
-: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_transfeat.py}"
+: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_config.py}"
 : "${LINGBOT_MODEL_DIR:?LINGBOT_MODEL_DIR must point to the external MoE checkpoint}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

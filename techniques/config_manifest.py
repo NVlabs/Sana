@@ -1,4 +1,4 @@
-"""Transfeat-manifest validation and model-agnostic dry-run helpers."""
+"""Config-manifest validation and model-agnostic dry-run helpers."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def load_toml(path: Path) -> dict[str, Any]:
 def manifest_id(data: dict[str, Any]) -> str:
     raw = data.get("id")
     if isinstance(raw, dict):
-        value = raw.get("name") or raw.get("transfeat") or raw.get("id")
+        value = raw.get("name") or raw.get("config") or raw.get("id")
         if value:
             return str(value)
     if raw is not None:
@@ -42,7 +42,7 @@ def manifest_family(data: dict[str, Any]) -> str:
     return str(data.get("family", ""))
 
 
-def is_efficiency_transfeat(data: dict[str, Any]) -> bool:
+def is_efficiency_config(data: dict[str, Any]) -> bool:
     return isinstance(data.get("id"), dict) or "requirements" in data or "efficiency" in data
 
 
@@ -57,13 +57,13 @@ def load_model_profile(data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
 
 def schema_errors(data: dict[str, Any], repo_root: Path) -> list[str]:
-    if not is_efficiency_transfeat(data):
+    if not is_efficiency_config(data):
         return []
 
     errors: list[str] = []
     raw_id = data.get("id")
     if not isinstance(raw_id, dict):
-        errors.append("[id] table is required for efficiency transfeat")
+        errors.append("[id] table is required for efficiency config")
     else:
         for key in ("name", "dimension", "family"):
             if not str(raw_id.get(key, "")).strip():
@@ -221,12 +221,12 @@ def dry_run_manifest(
 ) -> dict[str, Any] | None:
     """Validate schema, capabilities, adapter discovery, and transform preview."""
 
-    if not is_efficiency_transfeat(data):
+    if not is_efficiency_config(data):
         return None
 
     errors = schema_errors(data, repo_root)
     if errors:
-        raise ValueError("transfeat schema errors:\n  - " + "\n  - ".join(errors))
+        raise ValueError("config schema errors:\n  - " + "\n  - ".join(errors))
 
     from techniques import compose
     from techniques.transform import ModelTransform
@@ -254,7 +254,7 @@ def dry_run_manifest(
         raise ValueError("generic implementation hard-codes the Cosmos3 runtime module path")
 
     return {
-        "transfeat_id": manifest_id(data),
+        "config_id": manifest_id(data),
         "dimension": manifest_dimension(data),
         "family": manifest_family(data),
         "model_spec": spec.name,

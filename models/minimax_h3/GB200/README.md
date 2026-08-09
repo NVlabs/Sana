@@ -13,7 +13,7 @@ sequence with Ulysses-8 and keeps the complete model resident without offload.
 | 8 | 1344x768 @ 5 s | **3.97x** |
 
 The speedup is measured against the matching dense runtime. The released configuration is pinned by
-[`minimax_h3_fullopt.toml`](../../../transfeat/minimax_h3/fullopt.toml).
+[`minimax_h3_fullopt.toml`](../../../config/minimax_h3/fullopt.toml).
 
 ## Full-Opt
 
@@ -36,7 +36,7 @@ python3 scripts/run.py models/minimax_h3/GB200/dense.toml                 # the 
 ```
 
 `scripts/run.py` takes either config dialect -- a flat single-file config or a
-transfeat manifest -- and renders the same run bundle under `runs/`:
+config manifest -- and renders the same run bundle under `runs/`:
 `launch.sh`, `job.sbatch`, `manifest.resolved.toml`, `metadata.json` and
 `outputs/`. Add `--print` to resolve without running, or `--set KEY=VALUE` to
 override one value for a single run without editing the config:
@@ -51,7 +51,7 @@ your own job script, or call the renderer directly, which is the one thing
 `run.py` does not do:
 
 ```bash
-python3 scripts/launch_transfeat.py models/minimax_h3/GB200/fullopt.toml --mode sbatch --confirm-submit
+python3 scripts/launch_config.py models/minimax_h3/GB200/fullopt.toml --mode sbatch --confirm-submit
 ```
 
 ## Environment

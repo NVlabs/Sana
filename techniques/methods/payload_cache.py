@@ -193,7 +193,7 @@ class PABBroadcastController:
 class PayloadCache(Technique):
     """Scheduled intermediate-payload replay policy.
 
-    `scope` names the model-adapter payload boundary. The current transfeat use
+    `scope` names the model-adapter payload boundary. The current config use
     `attention_broadcast` for attention outputs and `block_layer_feature` for a
     full block/layer hidden-state payload. The adapter must provide shape/key
     guards and dense fallback; this policy only records when replay is allowed.

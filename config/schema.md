@@ -1,6 +1,6 @@
-# Transfeat Manifest Schema
+# Config Manifest Schema
 
-Transfeat manifests are TOML files.
+Config manifests are TOML files.
 
 ## Required Top-Level Fields
 
@@ -26,7 +26,7 @@ purpose = "control"
 ## `official_config`
 
 Use this table for benchmark-defining values. Do not report speedups from a
-transfeat whose official config differs from baseline.
+config whose official config differs from baseline.
 
 ```toml
 [official_config]
@@ -60,10 +60,10 @@ NEGATIVE_PROMPT = ""
 it in `metadata.json.runtime_python` and validates it before local or Slurm
 execution. Do not rely on ambient `python3` for GPU or model-runtime checks.
 
-Transfeats normally inherit the model profile's environment. Set
-`inherit_profile_env = false` at the top level when a transfeat uses an
+Configs normally inherit the model profile's environment. Set
+`inherit_profile_env = false` at the top level when a config uses an
 independent runtime and must not receive legacy conda, cache, or device paths.
-Transfeat `[official_config]` values override individual profile values while
+Config `[official_config]` values override individual profile values while
 retaining unspecified workload fields.
 
 ## `purpose`
@@ -71,9 +71,9 @@ retaining unspecified workload fields.
 Supported purposes:
 
 - `control`: baseline, OFF identity, warmup, profile, or other non-scored run.
-- `delivery`: transfeat with current public-alignment and quality/speed evidence
+- `delivery`: config with current public-alignment and quality/speed evidence
   strong enough to become a gated tier delivery profile.
-- `frontier`: fan-out transfeat retained for later tier selection.
+- `frontier`: fan-out config retained for later tier selection.
 - `evidence`: measured support that should not become a tier winner.
 - `blocker_probe`: bounded probe used to prove a target blocker.
 - `unsafe_probe`: intentionally aggressive/unsafe diagnostic probe.
@@ -84,12 +84,12 @@ profiles.
 
 ## Algorithm vs Model Glue
 
-Transfeat manifests should preserve the model-agnostic algorithm or policy as
+Config manifests should preserve the model-agnostic algorithm or policy as
 the durable artifact. Cosmos3-specific run scripts, env bridges, dependency
 overlays, component names, and fallback plumbing are allowed as reproduction
 or validation glue, but they must not be reported as the public algorithm.
 
-Source visibility is not a blocker by itself. A transfeat is blocked for
+Source visibility is not a blocker by itself. A config is blocked for
 meaningful GPU evidence only when the pure algorithm is not implemented, the
 Cosmos3 runtime does not consume it, the algorithm does not match Cosmos3's
 semantics, required quantized weights/online replacement are missing, or the
@@ -129,9 +129,9 @@ job_name = "autovideo-baseline"
 exclusive = true
 ```
 
-## Future Patch Transfeats
+## Future Patch Configs
 
-Patch transfeat should add:
+Patch config should add:
 
 ```toml
 [patch]
@@ -161,16 +161,16 @@ write_scope = [
 The orchestration layer should use this block to create isolated worktrees and
 avoid two agents editing the same submodule checkout.
 
-## Model-Agnostic Efficiency Transfeats
+## Model-Agnostic Efficiency Configs
 
-Efficiency transfeat may use the layered schema below. The launcher accepts
+Efficiency config may use the layered schema below. The launcher accepts
 these manifests directly; `model_profile = "cosmos3"` fills the standard
 runtime, env, and Slurm defaults from `models/cosmos3.toml`.
 
 ```toml
 kind = "methodology"
 purpose = "frontier"
-description = "Short runnable transfeat summary."
+description = "Short runnable config summary."
 model_profile = "cosmos3"
 
 [id]
@@ -229,11 +229,11 @@ bundle is inspectable before GPU submission.
 
 ## Cosmos3 GPU Readiness Gate
 
-`verification.mode = "gpu"` means the transfeat ultimately needs GPU evidence.
+`verification.mode = "gpu"` means the config ultimately needs GPU evidence.
 It does not mean the current Cosmos3 runtime already consumes every advertised
-optimization. `scripts/launch_transfeat.py` therefore allows `--mode dry-run`
-for all valid transfeat, but refuses `--mode local` and `--mode sbatch` for
-Cosmos3 transfeat that are currently only pure policies without runtime
+optimization. `scripts/launch_config.py` therefore allows `--mode dry-run`
+for all valid config, but refuses `--mode local` and `--mode sbatch` for
+Cosmos3 config that are currently only pure policies without runtime
 consumers, wiring probes, unconsumed env/config adapters, or wired paths with
 missing runtime dependencies.
 
@@ -243,16 +243,16 @@ implemented or active.
 
 ## Public Reference Alignment Gate
 
-`scripts/audit_public_reference_alignment.py` records each transfeat's actual
+`scripts/audit_public_reference_alignment.py` records each config's actual
 scope relative to its public/canonical references. This is separate from URL
 validation:
 
 - A public URL proves provenance, not full implementation equivalence.
 - Public source access means an implementation can be attempted; it does not
-  prove the local transfeat already implements or consumes that algorithm.
+  prove the local config already implements or consumes that algorithm.
 - Baselines, pure policy layers, env adapters, and blocker probes must not be
   promoted as line-for-line public-reference ports.
-- A transfeat with any current public-alignment `true_blocker` must not use
+- A config with any current public-alignment `true_blocker` must not use
   `purpose = "delivery"`. At minimum the Cosmos3 runtime must consume the
   advertised env/config, a GPU run must prove that path is active, and current
   quality/speed evidence must not be blocked.

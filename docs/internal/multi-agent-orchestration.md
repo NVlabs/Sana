@@ -5,7 +5,7 @@ launching independent jobs with isolated source trees.
 
 ## Core Problem
 
-Acceleration transfeat will eventually need code edits inside `Sol-LTX-Infer`.
+Acceleration config will eventually need code edits inside `Sol-LTX-Infer`.
 If two agents share one submodule checkout, they can conflict on:
 
 - git branches
@@ -65,10 +65,10 @@ create goal
   -> enter interactive Codex
   -> send /goal follow <goal.md>
   -> run dimension loop:
-       observe -> hypothesize -> implement one transfeat
+       observe -> hypothesize -> implement one config
        -> preflight -> launch -> collect -> authoritative gate
        -> retain/discard/reject and loop
-  -> spawn independent gate goal or main-gate promising transfeat
+  -> spawn independent gate goal or main-gate promising config
   -> stop only at max_iters, real blocker, or explicit release
   -> terminal_pending_review for main-agent tier-selection/restart/validate/integrate decision
   -> summarize and close
@@ -94,7 +94,7 @@ with:
   "agent": "codex",
   "root_branch": "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune",
   "submodule_branch": "codex/fanout_YYYYMMDDTHHMMSSZ-token-prune-sol",
-  "transfeat": "transfeat/token_prune_feat_norm_075.toml",
+  "config": "config/token_prune_feat_norm_075.toml",
   "status": "claimed"
 }
 ```
@@ -102,9 +102,9 @@ with:
 This gives humans and other agents a cheap lock/coordination point without
 requiring a central service.
 
-## Transfeat Ownership
+## Config Ownership
 
-Each transfeat manifest should add an optional ownership block once we start
+Each config manifest should add an optional ownership block once we start
 parallel goals:
 
 ```toml
@@ -138,13 +138,13 @@ cold or warm.
 ## Loop And Gate Discipline
 
 Each native implementation goal follows `docs/fanout-loop-contract.md`. A single
-transfeat failure is not a completed dimension: the agent records the failure
+config failure is not a completed dimension: the agent records the failure
 signature and proposes a different next hypothesis. A single success is also not
 completion: it is retained in the frontier when quality or speed improves, and
 the loop continues until a stop condition or orchestrator release.
 
 Default fan-out loop budget is fixed max_iters=40 with early_stop_patience=0,
-which disables patience early stop. Discarded/rejected transfeat increment
+which disables patience early stop. Discarded/rejected config increment
 `no_improve_count` as telemetry; retained quality or speed improvements reset it.
 Budget exits are `terminal_pending_review` handoffs to the main agent, which
 decides whether to select low/medium/high winners from the frontier, reopen the

@@ -115,8 +115,8 @@ def write_metadata(exp_dir: Path, data: dict[str, Any]) -> None:
     metadata_path(exp_dir).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
-def default_transfeat(model_id: str) -> str:
-    return f"transfeat/{model_id}_baseline.toml"
+def default_config(model_id: str) -> str:
+    return f"config/{model_id}_baseline.toml"
 
 
 def default_objective(model_id: str, dimension: str) -> str:
@@ -178,7 +178,7 @@ def create(args: argparse.Namespace, *, root: Path | None = None) -> dict[str, A
     goal_id = sanitize(args.goal_id or DEFAULT_GOAL_ID)
     dimension = args.dimension or DEFAULT_DIMENSION
     model_id = args.model_id or DEFAULT_MODEL_ID
-    transfeat = args.transfeat or default_transfeat(model_id)
+    config = args.config or default_config(model_id)
     objective = args.objective or default_objective(model_id, dimension)
     exp_dir = experiment_dir(root, args.experiments_root, exp_id)
     worktree = exp_dir / "worktree"
@@ -236,7 +236,7 @@ def create(args: argparse.Namespace, *, root: Path | None = None) -> dict[str, A
         "dimension": dimension,
         "role": args.role,
         "model_id": model_id,
-        "transfeat": transfeat,
+        "config": config,
         "objective": objective,
         "session_name": args.session_name or f"exp-{exp_id}-{goal_id}",
         "isolation": {
@@ -266,8 +266,8 @@ def prepare_goal(meta: dict[str, Any], *, overwrite: bool) -> None:
         "tools/symposium/prepare_goal.py",
         "--goal-id",
         meta["goal_id"],
-        "--transfeat",
-        meta["transfeat"],
+        "--config",
+        meta["config"],
         "--objective",
         meta["objective"],
         "--dimension",
@@ -421,7 +421,7 @@ def build_parser() -> argparse.ArgumentParser:
     create_p.add_argument("--dimension", default=DEFAULT_DIMENSION)
     create_p.add_argument("--role", choices=("implementation", "gate", "integration"), default="implementation")
     create_p.add_argument("--model-id", default=DEFAULT_MODEL_ID)
-    create_p.add_argument("--transfeat")
+    create_p.add_argument("--config")
     create_p.add_argument("--objective")
     create_p.add_argument("--session-name")
     create_p.add_argument("--skip-goal", action="store_true")

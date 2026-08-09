@@ -5,7 +5,7 @@ legacy_profile = "models/minimax_h3.toml"
 contract_kind = "model_baseline_minimal_copy"
 
 [baseline]
-manifest = "transfeat/minimax_h3/baseline.toml"
+manifest = "config/minimax_h3/baseline.toml"
 runtime_root = "models/minimax_h3/GB200"
 eval_profile = "evals/profiles/official_video_t2va_minimax_h3.toml"
 description = "Pristine upstream Modular Diffusers inference: eager DiT, released BF16/FP32 precision, default attention backend, no cache, no sparsity, no compile, no quantization, no offload."
@@ -16,18 +16,18 @@ include = [
   "models/minimax_h3.toml",
   "models/minimax_h3/**",
   "models/minimax_h3/GB200/**",
-  "transfeat/minimax_h3/baseline.toml",
-  "transfeat/schema.md",
+  "config/minimax_h3/baseline.toml",
+  "config/schema.md",
   "evals/profiles/official_video_t2va_minimax_h3.toml",
   "evals/rubrics/gemini_visual_artifact_gate.md",
   "evals/tiers.toml",
-  "scripts/launch_transfeat.py",
+  "scripts/launch_config.py",
   "scripts/collect_run.py",
   "search/plan_eval.py",
   "tools/vision/README.md",
   "tools/vision/lpips_judge.py",
   "tools/vision/nvidia_gemini_judge.py",
-  "efficiency/transfeat_manifest.py",
+  "efficiency/config_manifest.py",
 ]
 exclude = [
   ".git/**",

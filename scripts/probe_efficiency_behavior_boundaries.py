@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tensor-level behavior probes for generic efficiency transfeat.
+"""Tensor-level behavior probes for generic efficiency config.
 
 These probes are not public-original equivalence proofs. They pin the local
 generic behavior boundary for completed smoke families: whole-step scheduled

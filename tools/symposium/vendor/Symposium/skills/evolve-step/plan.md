@@ -7,9 +7,9 @@ Review an existing Seed for blind spots and produce a user-approved next Seed.
 ## Success Criteria
 
 - Preserves Seed v1 exactly in the audit.
-- Produces exactly six blind-spot transfeat.
+- Produces exactly six blind-spot config.
 - Waits for user accept/reject decisions.
-- Applies only accepted transfeat to v2.
+- Applies only accepted config to v2.
 - Replaces top-level `## Seed` and appends audit history.
 
 ## Boundaries

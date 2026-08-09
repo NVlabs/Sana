@@ -12,7 +12,7 @@ density[layer_index, step_index, attention_type] = value in (0, 1]
 
 `density=1.0` is dense-equivalent. A `pisa` cell must execute the real PISA
 exact and approximate phases. Cross-attention and text/prompt attention remain
-dense by default; approximate them only as a separately identified transfeat
+dense by default; approximate them only as a separately identified config
 with independent quality evidence.
 
 ### Required Preflight
@@ -26,7 +26,7 @@ Before tuning, inspect and record:
 - Q/K/V shapes, head count, head dimension, GQA or Q/K-length mismatch, token
   frame/tile layout, masks, and positional encoding;
 - existing dense backend, available PISA kernel/backend, block-size constraints,
-  and whether the transfeat really dispatches sparse kernels;
+  and whether the config really dispatches sparse kernels;
 - per-layer and per-step dense attention latency plus mask-selection overhead.
 
 Write this to `runs/pisa_preflight/attention_map.json` and reference it from
@@ -68,12 +68,12 @@ Maintain `PISA-SEARCH-STATE.json` with at least:
 ```json
 {
   "schema_version": 1,
-  "active_transfeat_id": "<id>",
+  "active_config_id": "<id>",
   "attention_map": "runs/pisa_preflight/attention_map.json",
   "trials": [
     {
-      "transfeat_id": "<id>",
-      "parent_transfeat_id": "<id or empty>",
+      "config_id": "<id>",
+      "parent_config_id": "<id or empty>",
       "backend": "<actual implementation>",
       "block_size": [64, 64],
       "route_mode": "score",

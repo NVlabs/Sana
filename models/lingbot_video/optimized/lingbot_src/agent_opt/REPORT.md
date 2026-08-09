@@ -43,7 +43,7 @@ Correctness: FA2 vs cuDNN max_abs_diff 1.2e-4, rel 5.3e-3 (bf16 reduction-order 
 
 ## Best config — exact reproduction
 ```
-sbatch agent_opt/transfeat/c5_cudnn_attn.sbatch
+sbatch agent_opt/config/c5_cudnn_attn.sbatch
 ```
 Identical to the golden `slurm/accel_cp4_refiner.sbatch` (CP4 Ulysses + FSDP + batch_cfg, 4×GB200)
 plus two env vars:
@@ -91,7 +91,7 @@ Correctness: (a) first-principles audit above, and (b) sanity check — exit 0, 
   equal; negligible expected gain (same total work).
 
 ## Files
-- Transfeat: `agent_opt/transfeat/c5_cudnn_attn.sbatch`
+- Config: `agent_opt/config/c5_cudnn_attn.sbatch`
 - Code: `lingbot_video/transformer_lingbot_video.py` (`_cudnn_varlen_attention`, `_attn_kernel`)
 - Microbench: `slurm/bench_attn_kernel.py` + `slurm/bench_attn_kernel.sbatch`
 - Run: `outputs/c5_cudnn_20260710_072019/` (log `slurm/logs/lbv-c5cudnn_4506351.out`)

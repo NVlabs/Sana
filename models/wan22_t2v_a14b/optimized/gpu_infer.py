@@ -96,7 +96,7 @@ def main():
     # the controller's distributed reductions already no-op when dist is uninitialized.
     if cache_method and context_parallel and world_size != 4:
         raise RuntimeError(
-            "cache transfeat must execute on the frozen four-rank Ulysses substrate "
+            "cache config must execute on the frozen four-rank Ulysses substrate "
             f"(context_parallel={context_parallel}, world_size={world_size})"
         )
 
@@ -164,7 +164,7 @@ def main():
             )
         if (ring_degree, ulysses_degree) not in ((1, 4), (2, 2)):
             raise ValueError(
-                "certified Wan topology transfeat are ring1/ulysses4 or "
+                "certified Wan topology config are ring1/ulysses4 or "
                 f"ring2/ulysses2, got ring={ring_degree} ulysses={ulysses_degree}"
             )
         for model_name in ("transformer", "transformer_2"):
@@ -391,7 +391,7 @@ def main():
         "decode_s": decode_median,
         "timing_scope": "text_to_video_hot_after_warmup_pass",
         "warm_steady_state": True,
-        "baseline_class": "cache_transfeat" if cache_method else "pristine_cp4_control",
+        "baseline_class": "cache_config" if cache_method else "pristine_cp4_control",
         "config": run_config,
         "aggregate": {
             "total_s": total_median,

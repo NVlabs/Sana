@@ -40,15 +40,15 @@ Use `request_user_input` in Codex Plan mode when available, `AskUserQuestion` in
 
 ## Question Style
 
-Prefer multiple-choice prompts for both boundary and properties, but keep them editable. Choices are transfeat boundaries/properties, not final ontology terms.
+Prefer multiple-choice prompts for both boundary and properties, but keep them editable. Choices are config boundaries/properties, not final ontology terms.
 
 Boundary prompt shape:
 
 ```markdown
 Where does this idea's meaning begin and end?
-A. <boundary transfeat>
-B. <boundary transfeat>
-C. <boundary transfeat>
+A. <boundary config>
+B. <boundary config>
+C. <boundary config>
 D. Other / define the boundary in your own words
 ```
 

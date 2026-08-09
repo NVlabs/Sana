@@ -12,8 +12,8 @@ The layout this assumes is the repository's own:
     techniques/sparse_backends                      Sol-Attn's released kernel
 
 `run_minimax_h3_gpu.sh` exports the same variables before launching, matching the
-8xGB200 entrypoint next door, so a transfeat run never depends on these fallbacks. They exist
-so the entrypoint can also be run by hand, without a transfeat manifest.
+8xGB200 entrypoint next door, so a config run never depends on these fallbacks. They exist
+so the entrypoint can also be run by hand, without a config manifest.
 """
 
 from __future__ import annotations
@@ -50,10 +50,10 @@ def _diffusers_src() -> Path:
     override = os.environ.get("H3_DIFFUSERS_SRC")
     if override:
         return Path(override)
-    for transfeat in (MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src",
+    for config in (MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src",
                       ROOT / "diffusers_src" / "src"):
-        if transfeat.is_dir():
-            return transfeat
+        if config.is_dir():
+            return config
     return MODEL_DIR / "gb200" / "baseline" / "diffusers_src" / "src"
 
 

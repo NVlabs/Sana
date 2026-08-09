@@ -7,7 +7,7 @@ Merge reflected meaning gaps into one user-approved shared meaning.
 ## Success Criteria
 
 - Reads the active cycle's `### Reflect` section.
-- Asks for one shared meaning transfeat at a time.
+- Asks for one shared meaning config at a time.
 - Writes exactly one `shared meaning: ...` line.
 - Does not invent consensus without user approval.
 

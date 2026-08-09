@@ -13,7 +13,7 @@ MiniMax-H3 FL2VA pipeline.
 | 1 | 832x480 @ 5 s | **3.92x** |
 
 The speedup is measured against the matching unoptimized GB10 runtime. The released configuration
-is pinned by [`minimax_h3_gb10_fullopt.toml`](../../../transfeat/minimax_h3/gb10_fullopt.toml).
+is pinned by [`minimax_h3_gb10_fullopt.toml`](../../../config/minimax_h3/gb10_fullopt.toml).
 
 ## Full-Opt
 
@@ -30,18 +30,18 @@ benchmark with seed `0`, 50 denoising steps and the workload above. Run it from
 the repository root:
 
 ```bash
-python3 scripts/run.py transfeat/minimax_h3/gb10_fullopt.toml                 # the optimized arm
-python3 scripts/run.py transfeat/minimax_h3/gb10_baseline.toml                 # the control it is measured against
+python3 scripts/run.py config/minimax_h3/gb10_fullopt.toml                 # the optimized arm
+python3 scripts/run.py config/minimax_h3/gb10_baseline.toml                 # the control it is measured against
 ```
 
 `scripts/run.py` takes either config dialect -- a flat single-file config or a
-transfeat manifest -- and renders the same run bundle under `runs/`:
+config manifest -- and renders the same run bundle under `runs/`:
 `launch.sh`, `job.sbatch`, `manifest.resolved.toml`, `metadata.json` and
 `outputs/`. Add `--print` to resolve without running, or `--set KEY=VALUE` to
 override one value for a single run without editing the config:
 
 ```bash
-python3 scripts/run.py transfeat/minimax_h3/gb10_fullopt.toml \
+python3 scripts/run.py config/minimax_h3/gb10_fullopt.toml \
   --set PYTHON_BIN=/path/to/venv/bin/python
 ```
 
@@ -50,7 +50,7 @@ your own job script, or call the renderer directly, which is the one thing
 `run.py` does not do:
 
 ```bash
-python3 scripts/launch_transfeat.py transfeat/minimax_h3/gb10_fullopt.toml --mode sbatch --confirm-submit
+python3 scripts/launch_config.py config/minimax_h3/gb10_fullopt.toml --mode sbatch --confirm-submit
 ```
 
 ## Environment

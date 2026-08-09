@@ -1,15 +1,15 @@
 # Delivery tiers — the project delivers THREE configs selected by SPEED TARGET,
 # then chooses the best quality profile available within each target bucket.
 #
-# EACH dimension's search loop emits retained frontier transfeat. The integration
-# stage then stacks compatible transfeat and selects final low/medium/high
+# EACH dimension's search loop emits retained frontier config. The integration
+# stage then stacks compatible config and selects final low/medium/high
 # delivery profiles by target speed:
 #
 #   low    >= 1.5x
 #   medium >= 2.0x
 #   high   >= 3.0x
 #
-# Within each speed bucket, choose the transfeat/profile with the best quality
+# Within each speed bucket, choose the config/profile with the best quality
 # evidence, ordered by aligned pairwise Gemini severity/status, aligned LPIPS,
 # and then higher speed as a tie-breaker. LPIPS is telemetry and ranking signal,
 # not an absolute delivery threshold for lossy generative dimensions.
@@ -21,7 +21,7 @@
 # Exceptions: exact/numeric dimensions such as kernel/operator fusion and
 # low-precision numeric transforms may enforce OFF identity, numeric tolerance,
 # silent-fallback checks, or precision-specific non-regression as hard gates.
-# Transfeat artifacts still record LPIPS and Gemini for comparison.
+# Config artifacts still record LPIPS and Gemini for comparison.
 
 [low]
 label = "1.5x quality-best"

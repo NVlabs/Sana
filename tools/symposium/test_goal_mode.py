@@ -40,8 +40,8 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
             str(PREPARE),
             "--goal-id",
             goal_id,
-            "--transfeat",
-            "transfeat/wan22_ti2v_5b/baseline.toml",
+            "--config",
+            "config/wan22_ti2v_5b/baseline.toml",
             "--objective",
             "Explore caching as an open-ended goal.",
             "--dimension",
@@ -75,7 +75,7 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert "`attention_broadcast` [runtime_patch/not_wired]" in text
     assert "bounded per-dimension search loop" in text
     assert "quality improved or speed improved" in text
-    assert "retained frontier transfeat" in text
+    assert "retained frontier config" in text
     assert "`quality.json` is telemetry" in text
     assert "final speed-target selection" in text
     assert "`max_iters`: 40" in text
@@ -122,9 +122,9 @@ def test_prepare_goal_embeds_search_space_and_acceptance() -> None:
     assert context["loop_contract"]["max_iters"] == 40
     assert context["loop_contract"]["early_stop_patience"] == 0
     assert context["loop_contract"]["loop_mode"] == "fixed_budget_frontier"
-    assert context["loop_contract"]["failed_transfeat_action"] == "discard_or_reject_log_and_loop"
-    assert context["loop_contract"]["successful_transfeat_action"] == "retain_frontier_transfeat_and_loop"
-    assert context["loop_contract"]["transfeat_retention"] == "retain_if_quality_improves_or_speed_or_memory_improves_discard_if_neither_improves"
+    assert context["loop_contract"]["failed_config_action"] == "discard_or_reject_log_and_loop"
+    assert context["loop_contract"]["successful_config_action"] == "retain_frontier_config_and_loop"
+    assert context["loop_contract"]["config_retention"] == "retain_if_quality_improves_or_speed_or_memory_improves_discard_if_neither_improves"
     assert context["loop_contract"]["early_stop_exit_status"] == "terminal_pending_review"
     assert context["loop_contract"]["speed_targets"] == {"low": 1.5, "medium": 2.0, "high": 3.0}
     assert "aligned_pairwise_gemini_max_artifact_severity" in context["loop_contract"]["quality_ranking"]
@@ -214,8 +214,8 @@ def test_prepare_goal_preserves_current_isolated_worktree_records() -> None:
     prepare_mod = load_module(PREPARE, "prepare_goal_isolated_worktree_test")
     with tempfile.TemporaryDirectory() as tmp:
         active = Path(tmp) / "output/fanout_runs/current/step_cache"
-        (active / "transfeat").mkdir(parents=True)
-        (active / "transfeat/cosmos3_current.toml").write_text("[transfeat]\n")
+        (active / "config").mkdir(parents=True)
+        (active / "config/cosmos3_current.toml").write_text("[config]\n")
         (active / "evals/verdicts").mkdir(parents=True)
         (active / "evals/verdicts/cosmos3__current.json").write_text("{}")
         (active / "runs/20260617-stepcache-current").mkdir(parents=True)
@@ -231,8 +231,8 @@ def test_prepare_goal_can_clean_stale_records() -> None:
         root = Path(tmp)
         (root / "output/fanout_runs/current").mkdir(parents=True)
         (root / "output/fanout_runs/old").mkdir(parents=True)
-        (root / "transfeat").mkdir()
-        (root / "transfeat/cosmos3_old.toml").write_text("[optimization]\n")
+        (root / "config").mkdir()
+        (root / "config/cosmos3_old.toml").write_text("[optimization]\n")
         (root / "evals/verdicts").mkdir(parents=True)
         (root / "evals/verdicts/gate__old.json").write_text("{}")
 
@@ -241,7 +241,7 @@ def test_prepare_goal_can_clean_stale_records() -> None:
         assert "output/fanout_runs/current" not in removed
         assert (root / "output/fanout_runs/current").exists()
         assert not (root / "output/fanout_runs/old").exists()
-        assert not (root / "transfeat/cosmos3_old.toml").exists()
+        assert not (root / "config/cosmos3_old.toml").exists()
         assert not (root / "evals/verdicts/gate__old.json").exists()
 
 
@@ -257,8 +257,8 @@ def test_prepare_goal_can_create_integration_goal() -> None:
             str(PREPARE),
             "--goal-id",
             goal_id,
-            "--transfeat",
-            "transfeat/wan22_ti2v_5b/baseline.toml",
+            "--config",
+            "config/wan22_ti2v_5b/baseline.toml",
             "--objective",
             "Integrate fan-out winners into composed low, medium, and high profiles.",
             "--dimension",
@@ -289,8 +289,8 @@ def test_prepare_goal_can_create_integration_goal() -> None:
     assert context["loop_contract"]["kind"] == "fan_in_integration_loop"
     assert context["loop_contract"]["max_iters"] == 40
     assert context["loop_contract"]["early_stop_patience"] == 0
-    assert context["loop_contract"]["failed_transfeat_action"] == "record_interaction_failure_and_loop"
-    assert context["loop_contract"]["successful_transfeat_action"] == "keep_composed_tier_incumbent_and_loop"
+    assert context["loop_contract"]["failed_config_action"] == "record_interaction_failure_and_loop"
+    assert context["loop_contract"]["successful_config_action"] == "keep_composed_tier_incumbent_and_loop"
     assert context["loop_contract"]["speed_targets"] == {"low": 1.5, "medium": 2.0, "high": 3.0}
     assert "integration/" in context["write_scope"]
 
@@ -307,8 +307,8 @@ def test_prepare_goal_embeds_token_prune_search_space_only() -> None:
             str(PREPARE),
             "--goal-id",
             goal_id,
-            "--transfeat",
-            "transfeat/wan22_ti2v_5b/baseline.toml",
+            "--config",
+            "config/wan22_ti2v_5b/baseline.toml",
             "--objective",
             "Explore token pruning as an open-ended goal.",
             "--dimension",
@@ -348,8 +348,8 @@ def test_prepare_goal_embeds_sparse_attention_method_baselines() -> None:
             str(PREPARE),
             "--goal-id",
             goal_id,
-            "--transfeat",
-            "transfeat/wan22_ti2v_5b/baseline.toml",
+            "--config",
+            "config/wan22_ti2v_5b/baseline.toml",
             "--objective",
             "Explore sparse attention baselines beyond the wired helper.",
             "--dimension",
@@ -391,8 +391,8 @@ def test_prepare_goal_embeds_kwl_quality_gated_rules() -> None:
             str(PREPARE),
             "--goal-id",
             goal_id,
-            "--transfeat",
-            "transfeat/wan22_ti2v_5b/baseline.toml",
+            "--config",
+            "config/wan22_ti2v_5b/baseline.toml",
             "--objective",
             "Explore quality-gated KWL optimization as an open-ended goal.",
             "--dimension",
@@ -424,7 +424,7 @@ def test_prepare_goal_embeds_kwl_quality_gated_rules() -> None:
     context = json.loads((goal_dir / "context.json").read_text())
     assert context["dimension"] == "kwl_fusion"
     assert context["search_space_doc"] == "search_space/05_kernel_fusion.md"
-    assert "retain_kwl_transfeat" in context["loop_contract"]["transfeat_retention"]
+    assert "retain_kwl_config" in context["loop_contract"]["config_retention"]
     assert "declared_numeric_tolerance" in context["loop_contract"]["quality_source_of_truth"]
     assert "module_level_tensor_diff_when_available" in context["loop_contract"]["quality_source_of_truth"]
     assert (

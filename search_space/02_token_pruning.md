@@ -107,7 +107,7 @@ code, traces, and artifacts.
   salience signals, restoration policies, and dense fallback rules from
   target-model behavior; do not predefine them from this document.
 - Prove OFF identity before claiming any speed or memory gain.
-- When a transfeat fails, record whether the root cause is positional/layout
+- When a config fails, record whether the root cause is positional/layout
   mismatch, scatter/merge restoration error, prompt-conditioning loss,
   cross-attention sensitivity, insufficient kernel speedup, dynamic-shape compile
   overhead, quality cliff from too few tokens, or no actual token compute saved.

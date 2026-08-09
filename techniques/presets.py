@@ -1,7 +1,7 @@
 # Copyright 2025 SGLang authors
 #
 # Presets -- named assemblies of techniques + transforms. These are replay
-# helpers for known optimization bundles; transfeat manifests remain the
+# helpers for known optimization bundles; config manifests remain the
 # authoritative entry point for current Cosmos3 work.
 #
 #   build/load transforms (exact -- delegate to the existing env mechanism):

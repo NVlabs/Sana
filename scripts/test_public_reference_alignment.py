@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AUDIT_PATH = ROOT / "scripts" / "audit_public_reference_alignment.py"
-LAUNCH_PATH = ROOT / "scripts" / "launch_transfeat.py"
+LAUNCH_PATH = ROOT / "scripts" / "launch_config.py"
 COSMOS3_PATH = (
     ROOT
     / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/pipelines_core/stages/model_specific_stages/cosmos3.py"
@@ -31,7 +31,7 @@ COSMOS3_MODEL_PATH = (
     / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/models/dits/cosmos3video.py"
 )
 BACKEND_SELECTION_MANIFEST_PATH = (
-    ROOT / "transfeat/kwl_fusion/backend_selection_probe.toml"
+    ROOT / "config/kwl_fusion/backend_selection_probe.toml"
 )
 MODELOPT_FP4_PATH = (
     ROOT
@@ -46,7 +46,7 @@ TOME_PROBE_PATH = ROOT / "scripts/probe_public_tome_alignment.py"
 PAB_PROBE_PATH = ROOT / "scripts/probe_public_pab_alignment.py"
 PISA_PROBE_PATH = ROOT / "scripts/probe_public_pisa_alignment.py"
 PIECEWISE_PISA_MANIFEST_PATH = (
-    ROOT / "transfeat/sparse_attention/piecewise_pisa_env.toml"
+    ROOT / "config/sparse_attention/piecewise_pisa_env.toml"
 )
 TOKEN_PRUNE_PROBE_PATH = ROOT / "scripts/probe_public_token_prune_alignment.py"
 SVG_PROBE_PATH = ROOT / "scripts/probe_public_svg_alignment.py"
@@ -74,7 +74,7 @@ def check(name: str, condition: bool) -> None:
 
 def main() -> int:
     audit = load_module(AUDIT_PATH, "audit_public_reference_alignment_unit")
-    launch = load_module(LAUNCH_PATH, "launch_transfeat_unit")
+    launch = load_module(LAUNCH_PATH, "launch_config_unit")
 
     check(
         "immediate negation suppresses overclaim",
@@ -95,7 +95,7 @@ def main() -> int:
         )
         == "full_public_original_equivalence",
     )
-    audit_rows = {row["transfeat"]: row for row in audit.audit()[0]}
+    audit_rows = {row["config"]: row for row in audit.audit()[0]}
     check(
         "public audit exposes algorithm boundary and true blocker fields",
         all(
@@ -131,10 +131,10 @@ def main() -> int:
         ),
     )
     local_baseline_note_paths = {
-        "adaptive_delta_forecast": ROOT / "transfeat/step_cache/adaptive_delta_forecast.toml",
-        "scheduled_step_reuse": ROOT / "transfeat/step_cache/scheduled_step_reuse.toml",
-        "feature_norm_prune": ROOT / "transfeat/token_prune/feature_norm_prune.toml",
-        "region_dynamic_density": ROOT / "transfeat/token_prune/region_dynamic_density.toml",
+        "adaptive_delta_forecast": ROOT / "config/step_cache/adaptive_delta_forecast.toml",
+        "scheduled_step_reuse": ROOT / "config/step_cache/scheduled_step_reuse.toml",
+        "feature_norm_prune": ROOT / "config/token_prune/feature_norm_prune.toml",
+        "region_dynamic_density": ROOT / "config/token_prune/region_dynamic_density.toml",
     }
     check(
         "local-baseline reference notes mark motivation-only boundary",
@@ -152,9 +152,9 @@ def main() -> int:
     )
     adapter_probe_note_paths = {
         "backend_selection_probe": ROOT
-        / "transfeat/kwl_fusion/backend_selection_probe.toml",
+        / "config/kwl_fusion/backend_selection_probe.toml",
         "compile_graph_capture": ROOT
-        / "transfeat/kwl_fusion/compile_graph_capture.toml",
+        / "config/kwl_fusion/compile_graph_capture.toml",
     }
     check(
         "adapter/probe reference notes mark not-public boundary",
@@ -205,12 +205,12 @@ def main() -> int:
         ),
     )
     kwl_no_delta_paths = {
-        "env_flag_kwl_bundle": ROOT / "transfeat/kwl_fusion/env_flag_kwl_bundle.toml",
-        "gemm_epilogue_fusion": ROOT / "transfeat/kwl_fusion/gemm_epilogue_fusion.toml",
+        "env_flag_kwl_bundle": ROOT / "config/kwl_fusion/env_flag_kwl_bundle.toml",
+        "gemm_epilogue_fusion": ROOT / "config/kwl_fusion/gemm_epilogue_fusion.toml",
         "layout_copy_elimination": ROOT
-        / "transfeat/kwl_fusion/layout_copy_elimination.toml",
+        / "config/kwl_fusion/layout_copy_elimination.toml",
         "norm_modulation_residual_fusion": ROOT
-        / "transfeat/kwl_fusion/norm_modulation_residual_fusion.toml",
+        / "config/kwl_fusion/norm_modulation_residual_fusion.toml",
     }
     check(
         "Cosmos3-baseline/LTX2 rows are blocker probes with no-delta notes",
@@ -242,13 +242,13 @@ def main() -> int:
         and audit_rows["shape_stable_compute_mask"]["purpose"] == "frontier",
     )
 
-    blocked = set(launch.cosmos3_blocked_transfeat_ids())
+    blocked = set(launch.cosmos3_blocked_config_ids())
     expected_blocked = {
-        row["transfeat"]
+        row["config"]
         for row in audit_rows.values()
         if row["cosmos3_status"] in audit.COSMOS3_GPU_UNSUPPORTED_STATUSES
     }
-    check("launcher blocklist entries are transfeat ids", blocked <= set(audit.ALIGNMENT))
+    check("launcher blocklist entries are config ids", blocked <= set(audit.ALIGNMENT))
     check("launcher blocklist matches unsupported statuses", blocked == expected_blocked)
 
     cosmos3_source = COSMOS3_PATH.read_text()
@@ -352,7 +352,7 @@ def main() -> int:
     nvfp4_probe = load_module(NVFP4_PROBE_PATH, "probe_public_nvfp4_alignment_unit")
     nvfp4_result = nvfp4_probe.probe()
     nvfp4_checks = nvfp4_result["checks"]
-    nvfp4_rows = nvfp4_result["transfeat_manifest_alignment"]
+    nvfp4_rows = nvfp4_result["config_manifest_alignment"]
     check(
         "NVFP4 public checker separates pure FP4 consumer from TE fused adapter",
         nvfp4_result["status"] == "pass"
@@ -421,7 +421,7 @@ def main() -> int:
     teacache_probe = load_module(TEACACHE_PROBE_PATH, "probe_public_teacache_alignment_unit")
     teacache_result = teacache_probe.probe()
     teacache_row = next(
-        row for row in audit.audit()[0] if row["transfeat"] == "teacache_signal_reuse"
+        row for row in audit.audit()[0] if row["config"] == "teacache_signal_reuse"
     )
     check(
         "TeaCache public checker pins TeaCache4Cosmos controller/residual adapter and short speed gap",
@@ -429,7 +429,7 @@ def main() -> int:
         and teacache_result["core_formula_probe"]["intermediate_core_match"]
         and teacache_result["core_formula_probe"]["runtime_core_match"]
         and teacache_result["core_formula_probe"]["runtime_public_boundary_match"]
-        and teacache_result["transfeat_manifest_alignment"]["matches_public_cosmos_profile"]
+        and teacache_result["config_manifest_alignment"]["matches_public_cosmos_profile"]
         and all(teacache_result["cosmos3_adapter_alignment"]["checks"].values())
         and teacache_row["public_equivalence_gap"]
         == "public_controller_residual_adapter_short_quality_pass_speedup_missing",
@@ -440,7 +440,7 @@ def main() -> int:
         subprocess.check_output([str(RUNTIME_PYTHON), str(TOME_PROBE_PATH)], text=True)
     )
     tome_row = next(
-        row for row in audit.audit()[0] if row["transfeat"] == "tome_merge_restore"
+        row for row in audit.audit()[0] if row["config"] == "tome_merge_restore"
     )
     tome_probe_source = TOME_PROBE_PATH.read_text()
     tome_behavior = tome_result["behavior_probe"]
@@ -462,9 +462,9 @@ def main() -> int:
     pab_probe = load_module(PAB_PROBE_PATH, "probe_public_pab_alignment_unit")
     pab_result = pab_probe.probe()
     pab_rows = {
-        row["transfeat"]: row
+        row["config"]: row
         for row in audit.audit()[0]
-        if row["transfeat"]
+        if row["config"]
         in {
             "scheduled_step_reuse",
             "adaptive_delta_forecast",
@@ -477,16 +477,16 @@ def main() -> int:
         pab_result["public_reference"]["checks"]["uses_count_mod_range"]
         and pab_result["public_reference"]["checks"]["uses_timestep_thresholds"]
         and pab_result["public_reference"]["checks"]["has_mlp_block_skip_cache"]
-        and not pab_result["transfeat_manifest_alignment"]["scheduled_step_reuse"][
+        and not pab_result["config_manifest_alignment"]["scheduled_step_reuse"][
             "matches_public_pab"
         ]
-        and not pab_result["transfeat_manifest_alignment"]["adaptive_delta_forecast"][
+        and not pab_result["config_manifest_alignment"]["adaptive_delta_forecast"][
             "matches_public_pab"
         ]
-        and pab_result["transfeat_manifest_alignment"]["attention_broadcast"][
+        and pab_result["config_manifest_alignment"]["attention_broadcast"][
             "matches_public_pab_controller"
         ]
-        and pab_result["transfeat_manifest_alignment"]["block_layer_feature_cache"][
+        and pab_result["config_manifest_alignment"]["block_layer_feature_cache"][
             "matches_public_pab_controller"
         ]
         and pab_rows["scheduled_step_reuse"]["public_equivalence_gap"]
@@ -501,7 +501,7 @@ def main() -> int:
     pisa_probe = load_module(PISA_PROBE_PATH, "probe_public_pisa_alignment_unit")
     pisa_checks = pisa_probe.source_checks()
     pisa_row = next(
-        row for row in audit.audit()[0] if row["transfeat"] == "piecewise_pisa_env"
+        row for row in audit.audit()[0] if row["config"] == "piecewise_pisa_env"
     )
     pisa_probe_source = PISA_PROBE_PATH.read_text()
     pisa_manifest_source = PIECEWISE_PISA_MANIFEST_PATH.read_text()
@@ -529,11 +529,11 @@ def main() -> int:
         )
     )
     token_prune_behavior = token_prune_result["behavior_probe"]
-    token_prune_alignment = token_prune_behavior["transfeat_manifest_alignment"]
+    token_prune_alignment = token_prune_behavior["config_manifest_alignment"]
     token_prune_rows = {
-        row["transfeat"]: row
+        row["config"]: row
         for row in audit.audit()[0]
-        if row["transfeat"]
+        if row["config"]
         in {
             "feature_norm_prune",
             "shape_stable_compute_mask",
@@ -586,7 +586,7 @@ def main() -> int:
     svg_result = svg_probe.probe()
     svg_checks = svg_result["public_reference"]["checks"]
     svg_row = next(
-        row for row in audit.audit()[0] if row["transfeat"] == "semantic_permutation"
+        row for row in audit.audit()[0] if row["config"] == "semantic_permutation"
     )
     check(
         "Sparse-VideoGen public checker pins Cosmos SAP core/runtime boundary",
@@ -597,13 +597,13 @@ def main() -> int:
         and svg_checks["local_uses_sap_algorithm_shape"]
         and svg_checks["local_has_pure_sap_plan"]
         and svg_checks["local_has_cosmos3_text_kv_prefix_adapter"]
-        and svg_result["transfeat_manifest_alignment"][
+        and svg_result["config_manifest_alignment"][
             "matches_public_cosmos_sap_hyperparams"
         ]
-        and svg_result["transfeat_manifest_alignment"]["matches_pure_sap_plan"]
+        and svg_result["config_manifest_alignment"]["matches_pure_sap_plan"]
         and "identify_dynamic_map"
-        in svg_result["transfeat_manifest_alignment"]["pure_sap_algorithm_steps"]
-        and not svg_result["transfeat_manifest_alignment"][
+        in svg_result["config_manifest_alignment"]["pure_sap_algorithm_steps"]
+        and not svg_result["config_manifest_alignment"][
             "matches_public_runtime_assumptions"
         ]
         and svg_row["public_equivalence_gap"]
@@ -615,9 +615,9 @@ def main() -> int:
     kwl_result = kwl_probe.probe()
     kwl_checks = kwl_result["checks"]
     kwl_rows = {
-        row["transfeat"]: row
+        row["config"]: row
         for row in audit.audit()[0]
-        if row["transfeat"] in {"backend_selection_probe", "compile_graph_capture"}
+        if row["config"] in {"backend_selection_probe", "compile_graph_capture"}
     }
     check(
         "KWL public checker pins backend/compile policy boundaries",
@@ -629,10 +629,10 @@ def main() -> int:
         and kwl_checks["cosmos_run_script_consumes_torch_compile_probe"]
         and kwl_result["transform_env_probe"]["backend_plan"]["matches_policy_env"]
         and kwl_result["transform_env_probe"]["compile_capture_plan"]["matches_policy_env"]
-        and not kwl_result["transfeat_manifest_alignment"][
+        and not kwl_result["config_manifest_alignment"][
             "backend_selection_probe"
         ]["matches_full_public_backend_implementation"]
-        and not kwl_result["transfeat_manifest_alignment"][
+        and not kwl_result["config_manifest_alignment"][
             "compile_graph_capture"
         ]["matches_full_public_compile_or_graph_capture_implementation"]
         and "not a CUTLASS graph-capture"
@@ -660,9 +660,9 @@ def main() -> int:
         )
     )["behavior_probe"]
     sparse_policy_rows = {
-        row["transfeat"]: row
+        row["config"]: row
         for row in audit.audit()[0]
-        if row["transfeat"]
+        if row["config"]
         in {
             "spatial_temporal_head_routing",
             "online_mask_search_reuse",
@@ -695,43 +695,43 @@ def main() -> int:
         and sparse_policy_behavior["sparse_videogen_sample_mse_core"][
             "matches_public_core"
         ]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "spatial_temporal_head_routing"
         ]["matches_public_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "spatial_temporal_head_routing"
         ]["matches_svg_sample_mse_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "online_mask_search_reuse"
         ]["refresh_matches_spargeattn_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "online_mask_search_reuse"
         ]["reuse_path_works"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "proxy_mask_prediction"
         ]["matches_public_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "proxy_mask_prediction"
         ]["matches_sparge_fuse_quant_proxy_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "qk_coclustering"
         ]["matches_public_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "headwise_adaptive_budgets"
         ]["matches_sparge_headwise_topk_budget_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "headwise_adaptive_budgets"
         ]["matches_public_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "dynamic_pattern_probe"
         ]["matches_minference_dynamic_pattern_bank_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "dynamic_pattern_probe"
         ]["matches_public_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "rotating_anchor_windows"
         ]["matches_svg_first_frame_temporal_window_core"]
-        and sparse_policy_behavior["transfeat_manifest_alignment"][
+        and sparse_policy_behavior["config_manifest_alignment"][
             "rotating_anchor_windows"
         ]["matches_public_core"]
         and len(sparse_policy_rows) == 7

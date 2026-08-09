@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """GPU-stage eval for the acceleration search.
 
-Drives one transfeat (or a dimension's bounded loop) through the real pipeline:
-render a transfeat manifest from the model profile + composed technique env ->
-launch (scripts/launch_transfeat.py, sbatch) -> collect (scripts/collect_run.py)
+Drives one config (or a dimension's bounded loop) through the real pipeline:
+render a config manifest from the model profile + composed technique env ->
+launch (scripts/launch_config.py, sbatch) -> collect (scripts/collect_run.py)
 -> quality (tools/vision/nvidia_gemini_judge.py) -> compare vs the model baseline
 -> bin into a speed-target delivery bucket (evals/tiers.toml [targets]).
 
-The orchestration logic (render_transfeat / assess / tier_of / search_loop) lives
+The orchestration logic (render_config / assess / tier_of / search_loop) lives
 here; the GPU work is the existing scripts. `assess()` also runs standalone on an
 already-completed run dir (no GPU) — used to validate the harness on an existing run.
 
@@ -38,7 +38,7 @@ _OVERALL = {"pass": 0, "fail": 1, "inconclusive": 2, None: 3}
 # the runtime out-of-band. Each entry maps a registered technique name to:
 #   {param_name -> (env_var_name, stringifier)}
 # Adding a runtime technique here makes plan_eval able to drive it through the
-# render_transfeat -> launcher -> Sol-LTX-Infer pipeline without further glue.
+# render_config -> launcher -> Sol-LTX-Infer pipeline without further glue.
 _RUNTIME_TECHNIQUE_ENV: dict[str, dict[str, tuple[str, callable]]] = {
     "step_cache": {
         "skip": ("SGLANG_HQ_STEP_CACHE_SKIP", str),
@@ -174,7 +174,7 @@ def quality_ranking_key(row: dict) -> tuple:
 
 
 def tier_of(speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
-    """Speed-target delivery bucket the transfeat reaches, or None.
+    """Speed-target delivery bucket the config reaches, or None.
 
     Fan-out retention is frontier-based, not LPIPS-threshold based. Final
     low/medium/high delivery profiles are speed target buckets (1.5x / 2x / 3x
@@ -200,7 +200,7 @@ def tier_of(speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
 
 
 def promotion_note(tier, quality_blockers, speedup, peak_mem_ratio, gemini, tiers, lpips_delta=None):
-    """Human-readable reason a transfeat did not reach a delivery speed bucket."""
+    """Human-readable reason a config did not reach a delivery speed bucket."""
     if tier:
         return None
     if quality_blockers:
@@ -239,8 +239,8 @@ def promotion_note(tier, quality_blockers, speedup, peak_mem_ratio, gemini, tier
     return "memory improved but no speed target bucket reached -> retained frontier evidence"
 
 
-def render_transfeat(profile: dict, technique: str, cfg: dict, kind: str = "build_transform",
-                     transfeat_id: str | None = None, out_path: Path | None = None) -> dict:
+def render_config(profile: dict, technique: str, cfg: dict, kind: str = "build_transform",
+                     config_id: str | None = None, out_path: Path | None = None) -> dict:
     """Model profile + the composed technique env -> a launcher-valid manifest."""
     sys.path.insert(0, str(REPO))
     from efficiency import ModelSpec, compose
@@ -259,11 +259,11 @@ def render_transfeat(profile: dict, technique: str, cfg: dict, kind: str = "buil
         # runtime techniques: publish their cfg through SGLANG_HQ_* env so the
         # Sol-LTX-Infer side can rebuild the same technique inside the denoise loop.
         tech_env.update(_runtime_technique_env(technique, cfg))
-    cid = transfeat_id or f"{profile['id']}__{technique}"
+    cid = config_id or f"{profile['id']}__{technique}"
     manifest = {
         "id": cid,
         "kind": "methodology",
-        "description": f"{technique} transfeat on {profile['display_name']} (search-rendered).",
+        "description": f"{technique} config on {profile['display_name']} (search-rendered).",
         "submodule": profile["submodule"],
         "base_commit": profile["base_commit"],
         "run_script": profile["run_script"],
@@ -320,11 +320,11 @@ def _suppress_hallucinated_pairwise_fail(
            "--out", str(rj), "--max-tokens", "4096",
            "--context",
            "Recheck of two clips expected to be near-identical (aligned LPIPS~0). "
-           "Report a new artifact ONLY if the transfeat genuinely differs; do not "
+           "Report a new artifact ONLY if the config genuinely differs; do not "
            "infer a different scene from minor pixel noise or compression."]
     indices = [0] if n == 1 else [round(i * (total - 1) / (n - 1)) for i in range(n)]
     for i in indices:
-        cmd += ["--baseline-frame", str(base_fr[i]), "--transfeat-frame", str(cand_frames[i])]
+        cmd += ["--baseline-frame", str(base_fr[i]), "--config-frame", str(cand_frames[i])]
     subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
     recheck = _load_json_if_present(rj)
     if usable_gemini_verdict(recheck) and not _gem_is_fail(recheck):
@@ -382,7 +382,7 @@ def assess(
                "and severe degradation."]
         indices = [0] if n == 1 else [round(i * (total - 1) / (n - 1)) for i in range(n)]
         for i in indices:
-            cmd += ["--baseline-frame", str(base_fr[i]), "--transfeat-frame", str(cand_frames[i])]
+            cmd += ["--baseline-frame", str(base_fr[i]), "--config-frame", str(cand_frames[i])]
         subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
         pairwise_gem = _load_json_if_present(pj)
     collector_gem = ((quality.get("judges") or {}).get("nvidia_gemini") or {}).get("result")
@@ -404,7 +404,7 @@ def assess(
     return {
         "run_dir": str(run_dir),
         "baseline_total_s": base_total,
-        "transfeat_total_s": cand_total,
+        "config_total_s": cand_total,
         "speedup": round(speedup, 4) if speedup else None,
         "gemini_overall": (gem or {}).get("overall"),
         "max_artifact_severity": max_gemini_severity(gem) if gem else None,
@@ -419,7 +419,7 @@ def assess(
 
 
 def _write_toml(d: dict, path: Path) -> None:
-    """Minimal TOML writer for the flat transfeat manifest (no extra deps)."""
+    """Minimal TOML writer for the flat config manifest (no extra deps)."""
     def val(v):
         if isinstance(v, bool): return "true" if v else "false"
         if isinstance(v, (int, float)): return repr(v)

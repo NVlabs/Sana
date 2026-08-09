@@ -27,8 +27,8 @@ class NVFP4FFN(ModelTransform):
 
     The default values preserve the historical FFN-only recipe. Extra parameters
     expose search axes for recipe variants, optional model-matched fused
-    epilogues, padding policy, and transfeat metadata. A target loader may
-    ignore metadata env until a transfeat explicitly wires and validates it.
+    epilogues, padding policy, and config metadata. A target loader may
+    ignore metadata env until a config explicitly wires and validates it.
     """
 
     name = "nvfp4_ffn"

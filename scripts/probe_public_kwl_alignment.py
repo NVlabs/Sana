@@ -3,7 +3,7 @@
 
 ``backend_selection_probe`` and ``compile_graph_capture`` cite public backend
 families (FlashAttention, CUTLASS, TransformerEngine) as provenance, but the
-local transfeat are runtime/backend probes: one selects the Cosmos3 transformer
+local config are runtime/backend probes: one selects the Cosmos3 transformer
 attention backend, the other enables Cosmos3's torch.compile path. This checker
 prevents those probes from being mistaken for public kernel ports.
 """
@@ -31,8 +31,8 @@ RUNTIME_KWL_TRANSFORM = (
     / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/efficiency/transforms/kwl_fusions.py"
 )
 COSMOS3_RUN_SCRIPT = ROOT / "Sol-LTX-Infer" / "scripts" / "run_cosmos3_sglang.sh"
-BACKEND_MANIFEST = ROOT / "transfeat" / "kwl_fusion" / "backend_selection_probe.toml"
-COMPILE_MANIFEST = ROOT / "transfeat" / "kwl_fusion" / "compile_graph_capture.toml"
+BACKEND_MANIFEST = ROOT / "config" / "kwl_fusion" / "backend_selection_probe.toml"
+COMPILE_MANIFEST = ROOT / "config" / "kwl_fusion" / "compile_graph_capture.toml"
 KWL_FLAGS = (
     "SHARE_BLOCK0_SELF_ATTN",
     "SHARE_GUIDANCE_PREFIX",
@@ -189,7 +189,7 @@ def transform_env_probe() -> dict[str, Any]:
     }
 
 
-def transfeat_alignment() -> dict[str, dict[str, Any]]:
+def config_alignment() -> dict[str, dict[str, Any]]:
     backend = load_toml(BACKEND_MANIFEST)
     compile_ = load_toml(COMPILE_MANIFEST)
     backend_params = backend.get("efficiency", {}).get("params", {})
@@ -206,7 +206,7 @@ def transfeat_alignment() -> dict[str, dict[str, Any]]:
                 "This row selects Cosmos3 transformer=torch_sdpa through the "
                 "generic component-backend policy. The pure policy is preserved, "
                 "but the public references are backend families; no FlashAttention "
-                "or CUTLASS kernel is implemented by this transfeat."
+                "or CUTLASS kernel is implemented by this config."
             ),
         },
         "compile_graph_capture": {
@@ -253,7 +253,7 @@ def probe() -> dict[str, Any]:
         },
         "checks": checks,
         "transform_env_probe": env_probe,
-        "transfeat_manifest_alignment": transfeat_alignment(),
+        "config_manifest_alignment": config_alignment(),
     }
 
 

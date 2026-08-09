@@ -44,7 +44,7 @@ LOCAL_COSMOS_STAGE = (
     ROOT
     / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/pipelines_core/stages/model_specific_stages/cosmos3.py"
 )
-MANIFEST = ROOT / "transfeat" / "sparse_attention" / "semantic_permutation.toml"
+MANIFEST = ROOT / "config" / "sparse_attention" / "semantic_permutation.toml"
 
 PUBLIC_COSMOS_SAP_CONFIG = {
     "component": "transformer",
@@ -167,7 +167,7 @@ def manifest_config_alignment() -> dict[str, Any]:
         "matches_public_runtime_assumptions": False,
         "matches_full_public_sparse_videogen_cosmos": False,
         "known_difference": (
-            "The transfeat uses the public Cosmos SAP hyperparameters and the "
+            "The config uses the public Cosmos SAP hyperparameters and the "
             "SAP kmeans/dynamic-map/permutation core, but the local SGLang "
             "backend adds Cosmos3-specific GQA expansion, text-KV prefix "
             "clusters, varlen FlashInfer wrapper compatibility, metadata "
@@ -188,7 +188,7 @@ def probe() -> dict[str, Any]:
             "cosmos_sap_script": str(PUBLIC_COSMOS_SCRIPT),
             "checks": source_checks(),
         },
-        "transfeat_manifest_alignment": manifest_config_alignment(),
+        "config_manifest_alignment": manifest_config_alignment(),
     }
 
 

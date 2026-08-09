@@ -24,7 +24,7 @@ models/cosmos3/
   optimized/env.sh                 TeaCache + NVFP4, with the dense-step policy
   optimized/scripts/run_cosmos3_gpu.sh
 models/cosmos3.toml                flat profile (official config, env, seams)
-transfeat/cosmos3_{baseline,fullopt}.toml
+config/cosmos3_{baseline,fullopt}.toml
 evals/profiles/official_video_t2v_cosmos3.toml
 ```
 
@@ -75,4 +75,4 @@ so both models now pin to `elm/v1_formal`, which is the branch carrying
 `swappable_attention = "declared"` and `residual_tuple = "todo"`. Those were
 written against the old spec file and are **not** re-validated by this re-add.
 The two arms here only exercise `teacache_signal` and `ffn_precision`, which is
-why `transfeat/cosmos3/fullopt.toml` requires exactly those two capabilities.
+why `config/cosmos3/fullopt.toml` requires exactly those two capabilities.

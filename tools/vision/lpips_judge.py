@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score transfeat frames against baseline frames with LPIPS when available."""
+"""Score config frames against baseline frames with LPIPS when available."""
 
 from __future__ import annotations
 
@@ -91,10 +91,10 @@ def score_frame_pairs(
         scores: list[float] = []
         no_grad = getattr(torch_module, "no_grad")
         with no_grad():
-            for baseline_frame, transfeat_frame in frame_pairs:
+            for baseline_frame, config_frame in frame_pairs:
                 baseline_tensor = frame_to_tensor(lpips_module, baseline_frame)
-                transfeat_tensor = frame_to_tensor(lpips_module, transfeat_frame)
-                value = model(baseline_tensor, transfeat_tensor)
+                config_tensor = frame_to_tensor(lpips_module, config_frame)
+                value = model(baseline_tensor, config_tensor)
                 if hasattr(value, "item"):
                     value = value.item()
                 scores.append(float(value))
@@ -157,24 +157,24 @@ def validate_existing_paths(parser: argparse.ArgumentParser, paths: Iterable[str
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline-frame", action="append", default=[])
-    parser.add_argument("--transfeat-frame", action="append", default=[])
+    parser.add_argument("--config-frame", action="append", default=[])
     parser.add_argument("--baseline-video")
-    parser.add_argument("--transfeat-video")
+    parser.add_argument("--config-video")
     parser.add_argument("--sample-fps", type=positive_float, default=1.0)
     parser.add_argument("--out", help="Write JSON to this path. Defaults to stdout.")
     args = parser.parse_args(argv)
 
-    if len(args.baseline_frame) != len(args.transfeat_frame):
-        parser.error("--baseline-frame and --transfeat-frame counts must match")
-    if bool(args.baseline_video) != bool(args.transfeat_video):
-        parser.error("--baseline-video and --transfeat-video must be provided together")
+    if len(args.baseline_frame) != len(args.config_frame):
+        parser.error("--baseline-frame and --config-frame counts must match")
+    if bool(args.baseline_video) != bool(args.config_video):
+        parser.error("--baseline-video and --config-video must be provided together")
     if not args.baseline_frame and not args.baseline_video:
         parser.error("provide at least one frame pair or one video pair")
 
-    validate_existing_paths(parser, args.baseline_frame + args.transfeat_frame)
+    validate_existing_paths(parser, args.baseline_frame + args.config_frame)
     validate_existing_paths(
         parser,
-        [path for path in (args.baseline_video, args.transfeat_video) if path],
+        [path for path in (args.baseline_video, args.config_video) if path],
     )
     return args
 
@@ -185,11 +185,11 @@ def collect_frame_pairs(
 ) -> tuple[list[FramePair], list[str]]:
     notes = ["lower_is_better", "frames_paired_by_order"]
     frame_pairs: list[FramePair] = [
-        (Path(baseline).expanduser(), Path(transfeat).expanduser())
-        for baseline, transfeat in zip(args.baseline_frame, args.transfeat_frame)
+        (Path(baseline).expanduser(), Path(config).expanduser())
+        for baseline, config in zip(args.baseline_frame, args.config_frame)
     ]
 
-    if args.baseline_video and args.transfeat_video:
+    if args.baseline_video and args.config_video:
         if temp_dir is None:
             raise MetricUnavailable("internal error: video extraction requires a temporary directory")
         ffmpeg = resolve_ffmpeg()
@@ -199,17 +199,17 @@ def collect_frame_pairs(
             args.sample_fps,
             ffmpeg,
         )
-        transfeat_frames = extract_video_frames(
-            Path(args.transfeat_video).expanduser(),
-            temp_dir / "transfeat",
+        config_frames = extract_video_frames(
+            Path(args.config_video).expanduser(),
+            temp_dir / "config",
             args.sample_fps,
             ffmpeg,
         )
-        if len(baseline_frames) != len(transfeat_frames):
+        if len(baseline_frames) != len(config_frames):
             notes.append(
                 "video frame counts differed after sampling; paired common prefix only"
             )
-        frame_pairs.extend(zip(baseline_frames, transfeat_frames))
+        frame_pairs.extend(zip(baseline_frames, config_frames))
         notes.append(f"sample_fps={args.sample_fps}")
 
     return frame_pairs, notes

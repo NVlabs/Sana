@@ -19,12 +19,12 @@ reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 - run script and submodule commit
 - human seam/status notes for what the current runtime consumes
 
-Transfeat manifests declare their required capabilities. During dry-run,
-`techniques.transfeat_manifest` builds a minimal manifest-derived `ModelSpec`
+Config manifests declare their required capabilities. During dry-run,
+`techniques.config_manifest` builds a minimal manifest-derived `ModelSpec`
 and `compose()` checks the selected technique/transform against that contract.
-Because `scripts/launch_transfeat.py` imports `techniques.transfeat_manifest` at
+Because `scripts/launch_config.py` imports `techniques.config_manifest` at
 module scope, every contract's copy allowlist must include
-`techniques/transfeat_manifest.py` — otherwise the copied worktree is created
+`techniques/config_manifest.py` — otherwise the copied worktree is created
 successfully and only fails later, on import.
 
 Current local profiles include:
@@ -60,9 +60,9 @@ models/<model_uid>/model.toml
   -> output/experiments/<experiment_uid>/worktree/
 ```
 
-The copy scope should include baseline runtime code, the baseline transfeat
+The copy scope should include baseline runtime code, the baseline config
 manifest, launch/collect/eval helper scripts, and evaluation profiles. It should
-not include generated transfeat, historical runs, search spaces, cache methods,
+not include generated config, historical runs, search spaces, cache methods,
 compiled artifacts, model weights, Conda environments, or Torch/Triton caches.
 
 Use `scripts/create_model_experiment.py` to create this kind of experiment:

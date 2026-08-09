@@ -110,7 +110,7 @@ def freeze_baseline(model_id: str, out_path: Path, override_run_dir: str | None)
     else:
         raise SystemExit(
             f"no recorded [baseline] for {model_id}. Run it once first:\n"
-            f"  python scripts/launch_transfeat.py transfeat/{model_id}_baseline.toml --mode sbatch --confirm-submit\n"
+            f"  python scripts/launch_config.py config/{model_id}_baseline.toml --mode sbatch --confirm-submit\n"
             f"then re-run with --baseline-run-dir runs/<id>, or record it in models/{model_id}.toml [baseline]."
         )
     run_dir = run_dir.resolve()

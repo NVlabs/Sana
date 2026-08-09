@@ -44,8 +44,8 @@ sol-video/
 │   ├─ harness.py             # warmup + median-over-prompts + benchmark.json + video export
 │   └─ diffusion_core/        # extracted from multimodal_gen (SANA/Cosmos/LTX) + sgl-kernel
 ├─ orchestration/             # = current workflow_lite (master + executors + scopes + gates)
-├─ scripts/                   # launch_transfeat, collect_run, create_model_experiment, per-model run_*.sh
-├─ transfeat/                # declarative manifests (pruned to live ones)
+├─ scripts/                   # launch_config, collect_run, create_model_experiment, per-model run_*.sh
+├─ config/                # declarative manifests (pruned to live ones)
 ├─ docs/                      # site_docs + pipelines + techniques + agent-workflow
 └─ evals/                     # eval profiles, quality-gate rubrics, golden snapshots
 ```
@@ -80,8 +80,8 @@ sol-video/
 | framework `scripts/{sana,cosmos,ltx}/*.sh` | `scripts/<model>/run_*.sh` | |
 | `workflow_lite/` | `orchestration/` | rename only |
 | `workflow/<uid>/nodes/codex_executor/*_scope.md` | `orchestration/scopes/<uid>/` | repoint `techniques.toml` + `spawn_executor` prefix check |
-| `scripts/{launch_transfeat,collect_run,create_model_experiment}.py` | `scripts/` | KEEP as-is |
-| `transfeat/*.toml` (live set) | `transfeat/` | prune ~24 `*_fused_invariant` sweep residue |
+| `scripts/{launch_config,collect_run,create_model_experiment}.py` | `scripts/` | KEEP as-is |
+| `config/*.toml` (live set) | `config/` | prune ~24 `*_fused_invariant` sweep residue |
 | 7 onboarding runtime dirs (bernini, hunyuan*, cosmos_predict2, helios/vace/skyreels) | `models/_onboarding/` or drop | NOT among the six |
 | SGLang `srt` serving / LLM zoo / `test/` / `benchmark/` / `sgl-model-gateway/` / `rust/` / `proto/` / `3rdparty/` | **deleted** | see framework slim table |
 
@@ -99,7 +99,7 @@ sol-video/
 ## 6. Correctness / reproduction eval (confirm before any code change)
 
 The refactor **moves code, it must not change numerics.** So the acceptance bar is: for the
-same transfeat/script + same seed, post-refactor output equals the pre-refactor **golden**
+same config/script + same seed, post-refactor output equals the pre-refactor **golden**
 snapshot. Tiered checklist:
 
 ### Tier 0 — static (CPU, seconds; run on every commit)
@@ -107,7 +107,7 @@ snapshot. Tiered checklist:
       `orchestration/bin/*` import cleanly (`python -c "import ..."`).
 - [ ] `benchmark.json` schema unchanged: `schema_version==2`, same top-level keys and
       `config{}` keys as golden.
-- [ ] every live `transfeat/*.toml` still validates: `launch_transfeat.py <c> --mode dry-run`.
+- [ ] every live `config/*.toml` still validates: `launch_config.py <c> --mode dry-run`.
 - [ ] orchestration intact: `spawn_executor.py ... --no-launch` assembles a prompt and reads
       all 4 scopes.
 
@@ -128,14 +128,14 @@ One baseline+optimized pair per model; the ratio must reproduce the published sp
 
 | Model | Baseline unit | Optimized unit | Target |
 |---|---|---|---|
-| Wan-5B (1 GPU) | `transfeat/wan22_ti2v_5b/baseline.toml` | `transfeat/wan22_ti2v_5b/wan5b_kernel_easycache_pisa.toml` | ~2.885× |
-| Wan-14B (1 GPU) | `transfeat/wan22_t2v_a14b/baseline.toml` | `transfeat/wan22_t2v_a14b/singlegpu_opt.toml` | ~2.17× |
-| LingBot (4 GPU) | `transfeat/lingbot_video/baseline.toml` | `transfeat/lingbot_video_cudnn_pisa_full.toml` | ~2.60× |
+| Wan-5B (1 GPU) | `config/wan22_ti2v_5b/baseline.toml` | `config/wan22_ti2v_5b/wan5b_kernel_easycache_pisa.toml` | ~2.885× |
+| Wan-14B (1 GPU) | `config/wan22_t2v_a14b/baseline.toml` | `config/wan22_t2v_a14b/singlegpu_opt.toml` | ~2.17× |
+| LingBot (4 GPU) | `config/lingbot_video/baseline.toml` | `config/lingbot_video_cudnn_pisa_full.toml` | ~2.60× |
 | SANA-Video (1 GPU) | `scripts/sana/run_sana_video_t2v.sh` (baseline env) | same (fullopt env) | ~2.77× |
 | Cosmos3-Super (4 GPU) | `scripts/cosmos/slurm_cosmos3_super.sh` (baseline) | same (fullopt) | ~2.27× |
 | LTX-2.3 (1 GPU) | `scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh` (baseline) | same (fullopt) | ~2.38× |
 
-Run via `launch_transfeat.py <c> --mode local` (or `--mode sbatch`), then `collect_run.py runs/<id>`.
+Run via `launch_config.py <c> --mode local` (or `--mode sbatch`), then `collect_run.py runs/<id>`.
 
 ### Cost note / recommended minimal subset
 Full Tier-3 is 12 GPU runs (Wan-14B baseline ~450 s, LingBot 4-GPU, Cosmos 4×B200 — expensive).

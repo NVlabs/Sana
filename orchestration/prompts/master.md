@@ -29,7 +29,7 @@ orchestration layer — the scheduling is yours.
   provenance, plus LPIPS only for lossy techniques; the visual check is YOUR
   job — see step 3b):
   `python orchestration/bin/verify_delivery.py --worktree <wt> --model {MODEL_ID} --tech <tech> --baseline {BASELINE_JSON}`
-  → prints `{objective_ok, issues, points}`; each point has `transfeat_frames` + `baseline_frames`.
+  → prints `{objective_ok, issues, points}`; each point has `config_frames` + `baseline_frames`.
 - Resume a sub-agent with a correction:
   `python orchestration/bin/resume_executor.py --worktree <wt> --name <name> --goal-dir <gd> --feedback "<specific problems>"`
 
@@ -45,19 +45,19 @@ orchestration layer — the scheduling is yours.
    vision API. NEVER trust a delivery you have not verified both ways.
    - (a) Objective: run `verify_delivery` (re-runs speedup + provenance; LPIPS for
      lossy techniques, a STRUCTURAL correctness check for lossless ones). It prints
-     `objective_ok`, `lossless_required`, and per point `transfeat_frames` +
+     `objective_ok`, `lossless_required`, and per point `config_frames` +
      `baseline_frames`.
    - (b) Visual (YOUR OWN built-in multimodal vision — do NOT call any external
-     vision/Gemini API): open each point's `transfeat_frames/*.png` next to
+     vision/Gemini API): open each point's `config_frames/*.png` next to
      `baseline_frames/*.png`.
      - LOSSY technique (cache, pisa): this is the quality gate — judge new visual
        artifacts per `evals/rubrics/gemini_visual_artifact_gate.md`, AND confirm
-       authenticity (a real run of the claimed transfeat, NOT the baseline
+       authenticity (a real run of the claimed config, NOT the baseline
        resubmitted, NOT a mismatched clip).
      - LOSSLESS technique (kernel, topology): use the frames ONLY for AUTHENTICITY (real run
-       of the claimed transfeat, not resubmitted/mismatched). Do NOT judge artifacts
+       of the claimed config, not resubmitted/mismatched). Do NOT judge artifacts
        or output similarity — numeric output divergence is NOT a defect for a
-       lossless method (see (c)). Never reject a lossless transfeat on visuals.
+       lossless method (see (c)). Never reject a lossless config on visuals.
    - (c) Correctness (LOSSLESS techniques only — `kernel` and `topology`): correctness is
      MATHEMATICAL / ALGORITHMIC — a property of the METHOD, judged by REASONING,
      NOT by comparing outputs. Do NOT compute or gate on ANY output difference
@@ -65,7 +65,7 @@ orchestration layer — the scheduling is yours.
      correct implementations of the same algorithm can diverge numerically and are
      equally correct. `verify_delivery` (`lossless_required: true`) checks only the
      STRUCTURE (denoising-step + DiT-call counts unchanged) + that a method argument
-     was recorded. YOU then independently REASON about the transfeat's ACTUAL CODE
+     was recorded. YOU then independently REASON about the config's ACTUAL CODE
      CHANGES + its recorded method/semantics argument, and accept iff it computes
      the SAME algorithm with NO approximation, step-skip, sparsity, sub-16-bit
      quantization, rank reduction, or changed logical model work. For `kernel`,
@@ -74,7 +74,7 @@ orchestration layer — the scheduling is yours.
      process groups, token/head/expert/parameter/CFG coverage, collective ordering,
      all-rank participation, and zero silent fallback; `verify_delivery` also
      requires its durable topology evidence. Use global logical DiT evaluations,
-     not per-rank physical call counts. NEVER reject a lossless transfeat because
+     not per-rank physical call counts. NEVER reject a lossless config because
      its numeric output moved.
    - Accept the component ONLY if `objective_ok` AND authenticity holds AND — for a
      LOSSY technique — your visual quality check passes; for a LOSSLESS technique,
@@ -94,8 +94,8 @@ orchestration layer — the scheduling is yours.
      topology; do not assume a local implementation, tensor shape, process group,
      or collective remains compatible. Otherwise preserve the frozen baseline
      topology exactly.
-   - Launch the composed GPU runs (`launch_transfeat.py` with the combined
-     transfeat) and collect them. Always re-check speedup, provenance,
+   - Launch the composed GPU runs (`launch_config.py` with the combined
+     config) and collect them. Always re-check speedup, provenance,
      authenticity, and every selected component's structural/method correctness
      against the SAME frozen baseline. Recompute authoritative speedup directly
      as frozen `BASELINE.json.total_s / outputs/benchmark.json.total_s`, with an

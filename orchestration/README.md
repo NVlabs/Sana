@@ -25,7 +25,7 @@ master agent  (prompts/master.md, runs in the coordinator checkout)
   └─ integrates itself        -> compose recipes, gate them, write INTEGRATED-DELIVERY.json
 
 executor sub-agent  (prompts/loop_and_gate_contract.md + the technique scope)
-  └─ bounded loop: implement -> launch_transfeat -> collect_run -> mode-specific gate -> DELIVERY.json
+  └─ bounded loop: implement -> launch_config -> collect_run -> mode-specific gate -> DELIVERY.json
 ```
 
 ## Design decisions (as agreed)

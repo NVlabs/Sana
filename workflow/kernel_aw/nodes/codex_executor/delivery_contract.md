@@ -24,14 +24,14 @@ Before requesting terminal acceptance, write `DELIVERY-DRAFT.json`; do not write
   "frontier_points": [
     {
       "tier": "exact_fastest",
-      "transfeat_id": "<composed canonical id>",
+      "config_id": "<composed canonical id>",
       "run_dir": "runs/<terminal full run>",
-      "implementation_manifest": "transfeat/<canonical manifest>.toml",
+      "implementation_manifest": "config/<canonical manifest>.toml",
       "activation": {"env": {"<kernel guard>": "1"}},
       "compute_budget": {"dit_calls_preserved": true, "denoising_steps": "<official step count>"},
       "quality": {
         "lossless": true,
-        "transfeat_relation": "mathematically equivalent; terminal visual gate passed",
+        "config_relation": "mathematically equivalent; terminal visual gate passed",
         "max_artifact_severity": "none"
       },
       "runtime_evidence": {"assessment_path": "runs/<run>/assess_verdict.json"},

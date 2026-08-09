@@ -62,7 +62,7 @@ def main() -> int:
         check(f"{dim} has no legacy seeds", "[[seeds]]" not in text)
         check(f"{dim} loop max_iters is 40", "max_iters = 40" in text)
         check(f"{dim} loop early_stop_patience is 0", "early_stop_patience = 0" in text)
-        check(f"{dim} loop keeps frontier", 'keep = "frontier_transfeat"' in text)
+        check(f"{dim} loop keeps frontier", 'keep = "frontier_config"' in text)
 
         goal_id = f"e2e-{dim}"
         run(
@@ -71,8 +71,8 @@ def main() -> int:
                 "tools/symposium/prepare_goal.py",
                 "--goal-id",
                 goal_id,
-                "--transfeat",
-                "transfeat/wan22_ti2v_5b/baseline.toml",
+                "--config",
+                "config/wan22_ti2v_5b/baseline.toml",
                 "--dimension",
                 dim,
                 "--role",
@@ -97,7 +97,7 @@ def main() -> int:
         check(f"{dim} context search_space_root", context["search_space_root"] == "search_space")
         check(f"{dim} context search_space_doc", context["search_space_doc"] == f"search_space/{DIMENSIONS[dim]}")
         check(f"{dim} context method baselines", bool(context["method_baselines"]))
-        check(f"{dim} has at least one wired/transfeat baseline", any(item["tier"] in {"wired", "transfeat_wired"} for item in context["method_baselines"]))
+        check(f"{dim} has at least one wired/config baseline", any(item["tier"] in {"wired", "config_wired"} for item in context["method_baselines"]))
         check(f"{dim} context history policy", context["history_policy"]["mode"] == "clean_start_current_experiment_only")
         check(f"{dim} goal uses relevant search doc", f"Relevant search doc: `search_space/{DIMENSIONS[dim]}`" in goal)
         check(f"{dim} context max_iters", context["loop_contract"]["max_iters"] == 40)

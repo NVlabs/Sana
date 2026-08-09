@@ -29,7 +29,7 @@ def project_root() -> Path:
 def read_prompt(rubric: Path, extra: str) -> str:
     prompt = rubric.read_text()
     if extra:
-        prompt += "\n\n## Transfeat Context\n\n" + extra.strip() + "\n"
+        prompt += "\n\n## Config Context\n\n" + extra.strip() + "\n"
     prompt += (
         "\n\nReturn only valid JSON matching the Required JSON Output schema. "
         "Do not wrap it in Markdown."
@@ -85,7 +85,7 @@ def build_command(args: argparse.Namespace, prompt: str) -> list[str]:
     ]
     for path in args.baseline_frame:
         cmd.extend(["--image", str(Path(path).expanduser())])
-    for path in args.transfeat_frame:
+    for path in args.config_frame:
         cmd.extend(["--image", str(Path(path).expanduser())])
     for path in args.side_by_side_frame:
         cmd.extend(["--image", str(Path(path).expanduser())])
@@ -104,7 +104,7 @@ def main() -> int:
     parser.add_argument("--base-url", default=os.environ.get("NVIDIA_BASE_URL", DEFAULT_BASE_URL))
     parser.add_argument("--model", default=os.environ.get("NVIDIA_VISION_MODEL", DEFAULT_MODEL))
     parser.add_argument("--baseline-frame", action="append", default=[])
-    parser.add_argument("--transfeat-frame", action="append", default=[])
+    parser.add_argument("--config-frame", action="append", default=[])
     parser.add_argument("--side-by-side-frame", action="append", default=[])
     parser.add_argument("--video", action="append", default=[])
     parser.add_argument("--context", default="")
@@ -123,7 +123,7 @@ def main() -> int:
 
     media_count = (
         len(args.baseline_frame)
-        + len(args.transfeat_frame)
+        + len(args.config_frame)
         + len(args.side_by_side_frame)
         + len(args.video)
     )

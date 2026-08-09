@@ -1,7 +1,7 @@
 # Search Space: Kernel Fusion and Quality-Gated Operator Optimization
 
 **Scope**: Find kernel-level and graph-level implementation optimizations that
-preserve the same model algorithm. KWL transfeat may change floating-point
+preserve the same model algorithm. KWL config may change floating-point
 operation order, fused-multiply-add behavior, launch grouping, memory layout, or
 custom-kernel implementation, but must not change the scheduler, step count,
 token set, prompt/guidance state, LoRA state, resolution, frame count, attention
@@ -10,7 +10,7 @@ attention/backend dispatch policy.
 
 The `KWLFusions` transform is a build-time helper that emits
 `SGLANG_HQ_KWL_*` flags. It is historical diagnostic scaffolding, not a valid
-transfeat by itself. Subagents should inspect the target-model hot path directly
+config by itself. Subagents should inspect the target-model hot path directly
 and may implement exact fused operators, custom kernel wrappers, module-local
 microbenchmarks, or layout fixes in the execution repo.
 
@@ -37,11 +37,11 @@ lossless-within-existing-dtype optimizations before global compiler changes:
 Framework backend selection, SDPA backend swaps, FlashAttention/FlashInfer
 dispatch switches, and env-flag-only bundles are out of scope for KWL agent
 startup. Do not implement, resume, or re-run backend-selection probes. A KWL
-transfeat must modify an operator, module, layout path, custom kernel, or
+config must modify an operator, module, layout path, custom kernel, or
 microbenchmarked DiT-level fusion boundary.
 If `AGENT-STATUS.json`, `SEARCH_JOURNAL.md`, or a prior run directory contains
 a partially completed backend-selection probe, mark that record stale/cancelled
-and start a fresh module/DiT microbench transfeat instead of resuming it.
+and start a fresh module/DiT microbench config instead of resuming it.
 
 ## Microbench-First Contract
 
@@ -49,7 +49,7 @@ Do not launch a full denoising/video generation run for a new KWL idea. First
 write a module-level or DiT-block-level warm paired microbenchmark that:
 
 - constructs representative tensors from the target model shape contract;
-- runs OFF baseline and ON transfeat implementations in the same process, same
+- runs OFF baseline and ON config implementations in the same process, same
   Slurm allocation/GPU, same input tensors, same dtype, and same warmed cache
   state;
 - uses explicit warmup iterations before timing and reports repeat statistics:
@@ -62,11 +62,11 @@ write a module-level or DiT-block-level warm paired microbenchmark that:
   time, and expected full-run speedup ceiling;
 - records exact reproduction commands and writes a durable JSON result.
 
-Promote a transfeat to full inference only when the microbench shows positive
+Promote a config to full inference only when the microbench shows positive
 latency or peak-memory movement under this warm paired DiT/module test and the
 tensor difference is inside the declared tolerance. Full denoise is final
 visual/quality sanity and gross-regression evidence; it is not the primary speed
-authority for sub-percent KWL transfeat. If a full denoise later has visual
+authority for sub-percent KWL config. If a full denoise later has visual
 artifacts, suspect a kernel, layout, aliasing, masking, or module-boundary bug
 first; do not dismiss it as small numeric drift accumulation without
 module-level evidence.
@@ -77,7 +77,7 @@ For `hunyuan_diffusers`, inspect the installed Diffusers transformer before
 editing. The current structure has 20 dual-stream transformer blocks and 40
 single-stream transformer blocks, with 24 attention heads, head dim 128, inner
 dim 3072, patch size 2, and patch size t=1. Use these examples as concrete
-starting points for microbench transfeat:
+starting points for microbench config:
 
 - attention-adjacent Q/K projection output + QK RMSNorm + RoPE application;
 - packed latent QKV projection and packed text added-QKV projection, preserving
@@ -95,30 +95,30 @@ starting points for microbench transfeat:
 - attention mask and RoPE/layout descriptor construction when the values are
   invariant for the official benchmark shape.
 
-Only after these module-local fusion transfeat are exhausted should an agent
+Only after these module-local fusion config are exhausted should an agent
 try `torch.compile`, regional compile, CUDA graph capture, or other global graph
 machinery.
 
 ## Quality-Gated Frontier Contract
 
 KWL is an implementation optimization dimension with a strict semantic boundary.
-Bit-exact or dtype-rounding-only transfeat are preferred. Non-bit-exact custom
+Bit-exact or dtype-rounding-only config are preferred. Non-bit-exact custom
 kernel/operator paths are valid only when their module-level tensor drift is
 declared, microbenchmarked, and then visually gated at the end.
 
 - OFF path must be identity to baseline for guarded code paths.
 - ON path may change floating-point order, FMA/epilogue behavior, custom kernel
   lowering, or use a declared approximate kernel path.
-- Every transfeat must record its expected tolerance class: bit-exact,
+- Every config must record its expected tolerance class: bit-exact,
   dtype-rounding-only, reduction-order drift, FMA/epilogue drift, fast-math
   drift, or approximate-kernel drift.
-- Use the standard fixed-budget frontier rule: retain a transfeat when quality
+- Use the standard fixed-budget frontier rule: retain a config when quality
   improves, latency improves, peak memory improves, or both quality and
   efficiency improve. Do not discard a speed/memory win only because it is not
   bit-exact; keep the aligned quality evidence for final tier selection.
 - Final low/medium/high winners are selected after the 40-iteration budget by
   speed target and aligned quality ranking, the same as other dimensions.
-- Any transfeat that changes sampling, denoising steps, token count, attention
+- Any config that changes sampling, denoising steps, token count, attention
   density, cache reuse, quantization policy, prompt handling, or output shape is
   not KWL. Route it to the appropriate dimension instead.
 - Full denoising/video generation is a final validation step only, not the first
@@ -126,7 +126,7 @@ declared, microbenchmarked, and then visually gated at the end.
 
 ## Required Preflight
 
-Before proposing the first runnable transfeat, record:
+Before proposing the first runnable config, record:
 
 - hot-path profile or code-inspection evidence: dominant kernel families,
   launch count, memory traffic, tensor shapes, dtype, and repeated operator
@@ -137,7 +137,7 @@ Before proposing the first runnable transfeat, record:
 - microbench plan: tensor shapes, warmup/iteration counts, paired OFF/ON
   ordering, median/p25/p75/min/max stats, diff metrics, profiler or
   launch-count collection, expected full contribution, and acceptance criterion;
-- compile/graph state only after module-level transfeat are exhausted: cold
+- compile/graph state only after module-level config are exhausted: cold
   compile cost, warm steady-state timing, graph breaks, dynamic-shape guards,
   CUDA graph compatibility, and whether timing is cold, warm, or cache-reused;
 - identity proof: OFF flag leaves the baseline path byte-identical or otherwise
@@ -147,7 +147,7 @@ Before proposing the first runnable transfeat, record:
 
 ## Method Families
 
-These are method families, not a fixed grid. Each transfeat should select one
+These are method families, not a fixed grid. Each config should select one
 family, prove why it is hot for the target model, implement one mechanism, and
 record the expected numerical tolerance and aligned quality evidence.
 
@@ -192,7 +192,7 @@ Guardrails:
 - in-place outputs must not alias tensors consumed later by the baseline graph;
 - compare both module-level tensor diffs and full generated output quality when
   tensor diffs are practical; full aligned quality evidence is required for
-  retained transfeat.
+  retained config.
 
 ### 3. Attention-Adjacent Fusion
 
@@ -219,7 +219,7 @@ Hard boundary:
 Use compiler or capture mechanisms to reduce launch overhead while preserving
 the eager graph. This family is lower priority than module-local kernel/operator
 fusion; use it only after microbench evidence shows no viable local fusion
-transfeat remains.
+config remains.
 
 Possible targets:
 
@@ -326,7 +326,7 @@ Guardrails:
   postprocess-only, whole repeated denoising region
 - implementation path: eager PyTorch reference, custom Triton, cuBLASLt/CUTLASS
   epilogue, project-local CUDA/C++ op, TorchInductor/CUDA graph only after
-  module-local transfeat are exhausted
+  module-local config are exhausted
 - guard: env flag, module flag, shape/dtype guard, warm-cache guard, fallback
   policy
 - numerical tolerance: bit-exact, dtype-rounding-only, reduction-order drift,
@@ -373,7 +373,7 @@ A structured negative is acceptable only after the subagent records:
 - kernel implementation availability and fallback evidence for custom ops;
 - OFF identity results for any touched guard path;
 - expected speed ceiling explaining why more KWL work is unlikely to produce a
-  useful retained frontier transfeat.
+  useful retained frontier config.
 
 ## Primary References
 

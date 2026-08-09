@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_transfeat.py}"
+: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_config.py}"
 : "${H3_MODEL_PATH:?H3_MODEL_PATH must point to the MiniMax-H3 FL2VA directory}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,0 +1,43 @@
+# MiniMax-H3 on GB200 -- BASELINE arm (dense reference).
+#
+#   python3 scripts/run.py configs/minimax_h3_gb200_baseline.toml
+#
+# One layer, no tables. lowercase = launcher, UPPERCASE = exported as env.
+# Reference for this exact config (models/minimax_h3.toml [baseline], job
+# 5813128 on nvl72086-T04): request_s 159.628, denoise_gpu_s 149.696,
+# 49 DiT evals, peak 144454 MiB, 1 resident GB200.
+
+name    = "minimax_h3_gb200_baseline"
+runtime = "models/minimax_h3/gb200/baseline"
+entry   = "scripts/run_minimax_h3_gpu.sh"
+gpus    = 1
+
+# --- interpreter -------------------------------------------------------------
+PYTHON_BIN    = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2/bin/python"
+H3_CONDA_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3"
+H3_CONDA_ENV  = "lingbot-fa2"
+
+# --- weights + prompt --------------------------------------------------------
+H3_MODEL_PATH  = "/home/yitongl/code/models/MiniMax-H3-diffusers"
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+
+# --- official sampling config ------------------------------------------------
+H3_HEIGHT     = "768"
+H3_WIDTH      = "1344"
+H3_NUM_FRAMES = "124"
+H3_STEPS      = "50"
+H3_SEED       = "0"
+
+# --- placement + measurement -------------------------------------------------
+# Both models stay resident on one card; warmup is a separate request so the
+# compile/alloc cost lands outside the measured one.
+H3_DIT_DEVICE     = "0"
+H3_ENCODER_DEVICE = "0"
+H3_WARMUP         = "1"
+H3_MEASURE        = "1"
+H3_SOURCE_VARIANT = "baseline_pristine_plus_timing"
+
+# --- environment hygiene -----------------------------------------------------
+HF_HUB_OFFLINE       = "1"
+HF_HOME              = "/home/yitongl/code/.cache/huggingface"
+TOKENIZERS_PARALLELISM = "false"

@@ -1,0 +1,76 @@
+# MiniMax-H3 on GB200 -- OPTIMIZED arm.
+#
+#   python3 scripts/run.py configs/minimax_h3_gb200_optimized.toml
+#
+# Same file shape as the baseline config and the same official sampling block;
+# the only differences below the sampling section are the acceleration switches.
+# The runtime is entirely env-gated, so the entry script is byte-identical for
+# every variant of this arm -- changing the stack means changing this file, not
+# the code.
+#
+# Ulysses degree is 4, not the 8 in candidates/minimax_h3_fullopt.toml: a GB200
+# NVL72 node exposes 4 GPUs, so degree 8 needs two nodes. Run it at 4 for a
+# single-node comparison against the 1-GPU baseline, or raise it and give the
+# sbatch wrapper -N2.
+
+name    = "minimax_h3_gb200_optimized"
+runtime = "models/minimax_h3/gb200/optimized"
+entry   = "scripts/run_minimax_h3_gpu.sh"
+gpus    = 4
+
+# --- interpreter -------------------------------------------------------------
+PYTHON_BIN    = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2/bin/python"
+H3_CONDA_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3"
+H3_CONDA_ENV  = "lingbot-fa2"
+
+# --- weights + prompt --------------------------------------------------------
+H3_MODEL_PATH  = "/home/yitongl/code/models/MiniMax-H3-diffusers"
+H3_PROMPT_FILE = "models/minimax_h3/prompts/t2va_example_1.json"
+
+# --- official sampling config (identical to the baseline arm) ----------------
+H3_HEIGHT     = "768"
+H3_WIDTH      = "1344"
+H3_NUM_FRAMES = "124"
+H3_STEPS      = "50"
+H3_SEED       = "0"
+H3_WARMUP     = "1"
+H3_MEASURE    = "1"
+
+# --- acceleration: context parallelism ---------------------------------------
+H3_ULYSSES_DEGREE = "4"
+
+# --- acceleration: fused kernel line -----------------------------------------
+H3_KERNEL = "1"
+
+# --- acceleration: Sol-Attn sparse attention ---------------------------------
+# SOL_ATTN_STRICT is forced on by the entry script: a sparse config that
+# silently fell back to dense would be a dense measurement wearing a sparse
+# label, so the run must fail instead.
+#
+# H3_SOL_ATTN_ROOT is set explicitly because the entry script's fallback is one
+# level short since the GB200 runtimes were regrouped under gb200/: it computes
+# ${HERE}/../../../techniques/sparse_backends, which now lands on
+# models/techniques/sparse_backends and does not exist. Setting it here is the
+# documented override, but the fallback itself still needs a fourth '..'.
+H3_SOL_ATTN_ROOT   = "techniques/sparse_backends"
+H3_SOL_ATTN        = "1"
+H3_SOL_TAU         = "1.0"
+H3_SOL_THRESH_TYPE = "diag"
+H3_SOL_DENSE_STEPS = "10"
+H3_SOL_DENSE_LAYERS = "2"
+H3_SOL_SINK_MODE   = "prefix"
+
+# --- acceleration: step cache + VAE ------------------------------------------
+H3_CACHE_THRESHOLD = "0.08"
+H3_SHARD_VAE  = "1"
+H3_VAE_BATCHED = "1"
+H3_VAE_COMPILE = "default"
+
+# --- environment hygiene -----------------------------------------------------
+HF_HUB_OFFLINE       = "1"
+HF_HOME              = "/home/yitongl/code/.cache/huggingface"
+TOKENIZERS_PARALLELISM = "false"
+TORCHINDUCTOR_CACHE_DIR = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/torch_inductor"
+TRITON_CACHE_DIR = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/triton"
+TORCH_HOME = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/torch"
+XDG_CACHE_HOME = "/lustre/fsw/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/agent_deploy/Sol-LTX-Infer/output/caches/minimax_h3/xdg"

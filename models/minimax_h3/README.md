@@ -20,8 +20,6 @@ latency across GPUs.
 
 ## Usage
 
-### Generic
-
 Run the launcher from the repository root and select the full-opt candidate for your GPU from the
 table above:
 
@@ -38,9 +36,7 @@ python scripts/launch_candidate.py <candidate> \
 without `--confirm-submit`, it only prepares the job bundle. The candidate selects the matching
 hardware runtime and enables its complete optimization stack.
 
-### Reproducible Example
-
-The following H100 command reproduces the released benchmark case:
+For example, the following H100 command reproduces the released benchmark case:
 
 | Setting | Value |
 |---|---|

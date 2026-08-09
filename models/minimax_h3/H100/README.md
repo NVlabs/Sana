@@ -25,15 +25,32 @@ The speedup is measured against the matching dense runtime. The released configu
 
 ## Usage
 
-The command below reproduces the
-[`demo_prompt`](../demo_prompt.json) benchmark with seed `0`, 50 denoising steps, and
-the 5-second workload shown above. Run it from the repository root:
+One command runs any arm. It reproduces the [`demo_prompt`](../demo_prompt.json)
+benchmark with seed `0`, 50 denoising steps and the workload above. Run it from
+the repository root:
 
 ```bash
-python scripts/launch_candidate.py \
-  candidates/minimax_h3_h100_fullopt_exact.toml \
-  --mode sbatch --confirm-submit \
-  --env H3_STORAGE_ROOT=/shared/path/Sana
+python3 scripts/run.py candidates/minimax_h3_h100_fullopt_exact.toml                 # the optimized arm
+python3 scripts/run.py candidates/minimax_h3_h100_dense.toml                 # the control it is measured against
+```
+
+`scripts/run.py` takes either config dialect -- a flat single-file config or a
+candidate manifest -- and renders the same run bundle under `runs/`:
+`launch.sh`, `job.sbatch`, `manifest.resolved.toml`, `metadata.json` and
+`outputs/`. Add `--print` to resolve without running, or `--set KEY=VALUE` to
+override one value for a single run without editing the config:
+
+```bash
+python3 scripts/run.py candidates/minimax_h3_h100_fullopt_exact.toml \
+  --set H3_STORAGE_ROOT=/shared/path/Sana
+```
+
+It contains no scheduler. To run under Slurm either put that same command in
+your own job script, or call the renderer directly, which is the one thing
+`run.py` does not do:
+
+```bash
+python3 scripts/launch_candidate.py candidates/minimax_h3_h100_fullopt_exact.toml --mode sbatch --confirm-submit
 ```
 
 ## Environment

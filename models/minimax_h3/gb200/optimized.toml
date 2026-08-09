@@ -1,12 +1,12 @@
 # MiniMax-H3 on GB200 -- OPTIMIZED arm.
 #
-#   python3 scripts/run.py configs/minimax_h3_gb200_optimized.toml
+#   python3 scripts/run.py models/minimax_h3/gb200/optimized.toml
 #
-# Same file shape as the baseline config and the same official sampling block;
-# the only differences below the sampling section are the acceleration switches.
-# The runtime is entirely env-gated, so the entry script is byte-identical for
-# every variant of this arm -- changing the stack means changing this file, not
-# the code.
+# Same file shape as baseline.toml beside it and the same official sampling
+# block; the only differences below the sampling section are the acceleration
+# switches. The runtime is entirely env-gated, so the entry script is
+# byte-identical for every variant of this arm -- changing the stack means
+# changing this file, not the code.
 #
 # Ulysses degree is 4, not the 8 in candidates/minimax_h3_fullopt.toml: a GB200
 # NVL72 node exposes 4 GPUs, so degree 8 needs two nodes. Run it at 4 for a
@@ -14,7 +14,7 @@
 # sbatch wrapper -N2.
 
 name    = "minimax_h3_gb200_optimized"
-runtime = "models/minimax_h3/gb200/optimized"
+runtime = "optimized"
 entry   = "scripts/run_minimax_h3_gpu.sh"
 gpus    = 4
 

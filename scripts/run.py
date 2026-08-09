@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
 """Run one model arm from a single flat config file.
 
-    python3 scripts/run.py configs/minimax_h3_gb200_baseline.toml
+    python3 scripts/run.py models/minimax_h3/gb200/baseline.toml
 
 That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,
 put this exact command inside your own sbatch script -- see
-configs/minimax_h3_gb200.sbatch. Nothing here reads SLURM_*, and nothing here
+models/minimax_h3/gb200/run.sbatch. Nothing here reads SLURM_*, and nothing here
 calls srun/sbatch/squeue, so the same command is correct on a login node inside
 an salloc, on a bare workstation, and inside a batch job.
+
+WHERE CONFIGS LIVE
+
+Beside the code they launch, one directory per hardware target:
+
+    models/minimax_h3/            the model
+      gb200/                        the GB200 implementation
+        baseline.toml                 launch config  ->  runs gb200/baseline/
+        optimized.toml                launch config  ->  runs gb200/optimized/
+        run.sbatch                    optional Slurm wrapper for this target
+        baseline/  optimized/         the code
+      h100/  a100/  gb10/  rtx5090/  other targets, same shape
+
+There is no top-level configs/ directory. A config is part of the hardware
+implementation it launches, so it ships and moves with it.
 
 CONFIG FORMAT -- one layer, no nesting:
 
@@ -19,6 +34,14 @@ That split is the entire schema. It needs no [sections] because environment
 variables are conventionally uppercase already, so the two namespaces cannot
 collide. A config is therefore also readable by anything that can split on '=';
 this file carries a 12-line fallback parser so it does not even need tomllib.
+
+PATHS -- two bases, one rule each:
+
+    runtime, entry   resolve against THIS CONFIG'S directory. A config sitting
+                     in gb200/ says runtime = "baseline", not the long repo path.
+    UPPERCASE values are handed to a process whose cwd is the repo root, so a
+                     path in them reads from there (H3_PROMPT_FILE =
+                     "models/minimax_h3/prompts/t2va_example_1.json").
 """
 
 from __future__ import annotations
@@ -121,7 +144,10 @@ def main() -> int:
     if not runtime_rel or not entry_rel:
         raise SystemExit(f"{config_path}: 'runtime' and 'entry' are required")
 
-    runtime = (REPO / str(runtime_rel)).resolve()
+    # Resolved against the config's own directory, with no repo-root fallback.
+    # A single base keeps it predictable: a config that sits next to its arm
+    # says runtime = "baseline", and moving the pair moves both.
+    runtime = (config_path.parent / str(runtime_rel)).resolve()
     entry = (runtime / str(entry_rel)).resolve()
 
     # The checks that matter, done before anything is allocated or launched.

@@ -38,6 +38,24 @@ python scripts/launch_candidate.py \
   --env PYTHON_BIN=/path/to/python
 ```
 
+### Single-file launch
+
+The two `.toml` files beside this README are self-contained launch configs for
+the same two arms — no second profile, no `--env` arguments, no scheduler:
+
+```bash
+python3 scripts/run.py models/minimax_h3/gb200/baseline.toml     # dense reference
+python3 scripts/run.py models/minimax_h3/gb200/optimized.toml    # full stack
+```
+
+Point `PYTHON_BIN` and `H3_MODEL_PATH` at your install by editing the config, and
+add `--print` to resolve without running. Under Slurm, `run.sbatch` here wraps
+that same command; see [simple-launch](../../../docs/simple-launch.md).
+
+`optimized.toml` runs Ulysses-4 on one node rather than the Ulysses-8 in
+`minimax_h3_fullopt.toml`, because an NVL72 node exposes 4 GPUs and degree 8
+needs two of them.
+
 ## Environment
 
 - **Runtime:** vendored Diffusers source, Sol-Attn, and NVIDIA CUTLASS DSL 4.5 or newer.

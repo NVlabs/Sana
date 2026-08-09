@@ -3,6 +3,8 @@ kind = "optimized"
 purpose = "lossless"
 description = "Adds the four fused Triton kernels and the fused QKV projection. Every one is bit-identical to the eager path it replaces, verified against `dit_reference/` rather than asserted: 1.387x on the DiT forward with EXACT on all five steps."
 model_profile = "minimax_h3"
+submodule = "models/minimax_h3/GB10"
+run_script = "run_minimax_h3_gpu.sh"
 
 [runtime]
 root = "models/minimax_h3/GB10"

@@ -3,9 +3,11 @@ kind = "baseline"
 purpose = "control"
 description = "MiniMax-H3 pristine upstream Modular Diffusers on GB200: eager DiT, released BF16/FP32 precision, default attention backend, no cache, no sparsity, no compile, no quantization, no offload."
 model_profile = "minimax_h3"
+submodule = "models/minimax_h3/GB200"
+run_script = "run_minimax_h3_gpu.sh"
 
 [runtime]
-root = "models/minimax_h3/GB200/baseline"
+root = "models/minimax_h3/GB200"
 
 [env]
 H3_PROMPT_FILE = "models/minimax_h3/demo_prompt.json"

@@ -3,6 +3,8 @@ kind = "baseline"
 purpose = "control"
 description = "MiniMax-H3 on one GB10 with no acceleration: pruned FP8 checkpoint read into upstream Modular Diffusers, eager quantiser, no fused kernels, no cache, no sparse attention. The FP8 weights are the substitution that makes the model fit at all, not an optimisation — measured at 13,428 ms/step against the released BF16 model's 13,417 ms, a 0.08% difference."
 model_profile = "minimax_h3"
+submodule = "models/minimax_h3/GB10"
+run_script = "run_minimax_h3_gpu.sh"
 
 [runtime]
 root = "models/minimax_h3/GB10"

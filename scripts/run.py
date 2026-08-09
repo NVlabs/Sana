@@ -203,7 +203,26 @@ def main() -> int:
             confirm_submit=False, allow_unsupported_gpu=True,
         )
         if args.print_only:
+            # dry-run mode so machine-specific paths -- PYTHON_BIN, weights,
+            # anything outside the repo -- do not fail a config written for a
+            # different cluster. It also sets allow_missing_runtime, which is
+            # how five GB200 configs kept pointing at baseline/ and optimized/
+            # after those were flattened away, so the repo-side paths are
+            # checked here instead. Fatal for what is wrong everywhere, silent
+            # for what is only wrong here.
             launch_args.mode = "dry-run"
+            # Only [runtime].root, never submodule: root is repo-relative by
+            # contract, while submodule may name an external checkout
+            # (config/cosmos3/sglang_baseline.toml points at Sol-LTX-Infer),
+            # which is machine-specific and belongs in the warn bucket.
+            root = cfg.get("runtime", {}).get("root") if isinstance(cfg.get("runtime"), dict) else None
+            if root and not (REPO / str(root)).is_dir():
+                raise SystemExit(f"runtime root does not exist: {REPO / str(root)}")
+            script = cfg.get("run_script")
+            if root and script and not (REPO / str(root) / str(script)).is_file():
+                raise SystemExit(
+                    f"run script does not exist: {REPO / str(root) / str(script)}"
+                )
         run_dir, launch_script, _job, _data = launch_config.prepare_run(launch_args)
         print(f"config: {cfg.get('id', config_path.stem)}")
         print(f"run_dir  : {run_dir}")

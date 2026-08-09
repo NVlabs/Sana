@@ -127,9 +127,17 @@ def sanitize_id(value: str) -> str:
 
 
 def default_slurm(data: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    """Defaults for the sbatch renderer. Nothing on the local path reads these.
+
+    The account comes from $SLURM_ACCOUNT and is omitted when that is unset --
+    render_sbatch only emits `-A` for a truthy account. It used to be one
+    cluster's account name spelled out here and repeated across eleven config
+    files, which is site-specific in the same way the job scripts were: correct
+    on exactly one cluster and noise everywhere else.
+    """
     official = data.get("official_config") or profile.get("official_config") or {}
     return {
-        "account": "nvr_elm_llm",
+        "account": os.environ.get("SLURM_ACCOUNT", ""),
         "partition": "batch",
         "nodes": 1,
         "gpus_per_node": official.get("num_gpus", 4),

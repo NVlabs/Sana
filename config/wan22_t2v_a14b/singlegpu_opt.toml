@@ -48,7 +48,8 @@ frames_dir = "frames"
 quality = "quality.json"
 
 [slurm]
-account = "nvr_elm_llm"
+# account: not set here. scripts/launch_config.py takes it from $SLURM_ACCOUNT
+# and omits -A entirely when that is unset; a cluster account is site-specific.
 partition = "batch"
 nodes = 1
 gpus_per_node = 4

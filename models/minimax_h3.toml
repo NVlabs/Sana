@@ -108,7 +108,8 @@ first_line = "topology: declare a _cp_plan on MiniMaxH3Transformer3DModel and tu
 note = "The shipped line runs at Ulysses8 over two nodes in one rack, where the NCCL MNNVL path keeps the cross-node all-to-all on NVLink (503 GB/s, above the 486 GB/s of the 4-GPU intra-node case). The [slurm] block below is the single-node baseline allocation; the optimized config request two nodes."
 
 [slurm]
-account = "nvr_elm_llm"
+# account: not set here. scripts/launch_config.py takes it from $SLURM_ACCOUNT
+# and omits -A entirely when that is unset; a cluster account is site-specific.
 partition = "batch"
 qos = "interactive"
 nodes = 1

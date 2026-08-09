@@ -116,9 +116,12 @@ patch_summary = "patch_summary.md"
 
 The launcher turns this into `job.sbatch`.
 
+`account` is deliberately absent: the launcher reads `$SLURM_ACCOUNT` and omits
+`-A` altogether when that is unset. Put it here only to pin one config to one
+account.
+
 ```toml
 [slurm]
-account = "nvr_elm_llm"
 partition = "batch"
 nodes = 1
 gpus_per_node = 4

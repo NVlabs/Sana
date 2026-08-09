@@ -76,7 +76,8 @@ SANA_VIDEO_PROMPTS = "models/sana_video/prompts/dpo_holdout_qwen35_val64_concret
 PROMPT = "A coastal city at sunrise, warm light reflecting on glass towers and calm water, pedestrians crossing a waterfront promenade, cinematic camera motion."
 
 [slurm]
-account = "nvr_elm_llm"
+# account: not set here. scripts/launch_config.py takes it from $SLURM_ACCOUNT
+# and omits -A entirely when that is unset; a cluster account is site-specific.
 partition = "batch"
 nodes = 1
 gpus_per_node = 4

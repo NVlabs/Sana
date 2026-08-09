@@ -45,7 +45,8 @@ LINGBOT_OFFLOAD_BASE_BEFORE_REFINER = "0"
 
 [slurm]
 job_name = "autovideo-lingbot-easycache-base-refiner"
-account = "nvr_elm_llm"
+# account: not set here. scripts/launch_config.py takes it from $SLURM_ACCOUNT
+# and omits -A entirely when that is unset; a cluster account is site-specific.
 partition = "batch"
 nodes = 1
 gpus_per_node = 4

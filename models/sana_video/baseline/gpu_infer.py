@@ -93,7 +93,60 @@ def resolve_config_path(raw: str, base: Path) -> Path:
     return (base / path).resolve()
 
 
+def apply_overlays(bundle_root: Path) -> list[str]:
+    """Put this repository's patched files on top of the vendor bundle.
+
+    `models/sana_video/overlays/` mirrors the bundle's own layout, one file per
+    path it replaces. Today that is `inference_video_scripts/inference_sana_video.py`,
+    which carries the hot-timing instrumentation: it times the denoise loop
+    alone and writes `hot-timing.json` beside the samples. The vendor copy has
+    no such thing.
+
+    Nothing used to apply them. The bundle ran with the vendor's own script,
+    which produced samples and no `hot-timing.json`, so the run reported the
+    inference as finished and then exited 1 on the missing artifact -- the
+    overlay directory sat next to the code being unread. Applied at every
+    point that yields a bundle, not only after extraction: the bundle is a
+    shared cache that another checkout may have extracted, and a stale copy
+    looks exactly like a fresh one.
+
+    Idempotent, and byte-compares before writing so a repeat run is a no-op and
+    the reported list is only what actually changed.
+    """
+    overlay_root = Path(__file__).resolve().parents[1] / "overlays"
+    if not overlay_root.is_dir():
+        return []
+    applied = []
+    for src in sorted(p for p in overlay_root.rglob("*") if p.is_file()):
+        rel = src.relative_to(overlay_root)
+        dst = bundle_root / rel
+        if not dst.parent.is_dir():
+            raise SystemExit(
+                f"overlay {rel} has no counterpart in the bundle at {dst.parent}. "
+                "The bundle layout changed; the overlay needs rebasing onto it."
+            )
+        if dst.exists() and dst.read_bytes() == src.read_bytes():
+            continue
+        # Keep the vendor file the first time we displace it, so a diff against
+        # upstream stays possible from the bundle alone.
+        pristine = dst.with_suffix(dst.suffix + ".vendor")
+        if dst.exists() and not pristine.exists():
+            shutil.copy2(dst, pristine)
+        shutil.copy2(src, dst)
+        applied.append(str(rel))
+    if applied:
+        print(f"[overlay] applied onto {bundle_root}: {', '.join(applied)}", flush=True)
+    return applied
+
+
 def ensure_bundle(root: Path) -> Path:
+    """Locate or fetch the bundle, then patch it. Every return goes through both."""
+    bundle_root = _locate_bundle(root)
+    apply_overlays(bundle_root)
+    return bundle_root
+
+
+def _locate_bundle(root: Path) -> Path:
     raw_bundle = os.environ.get("SANA_VIDEO_BUNDLE_ROOT")
     bundle_root = (
         resolve_config_path(raw_bundle, config_base())

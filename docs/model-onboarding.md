@@ -36,4 +36,4 @@ in their full-optimization stacks:
 - [**HunyuanVideo-13B**](../models/hunyuan_video/) — release benchmark pending
   (`config/hunyuan_video/full.toml`).
 - [**Wan2.1-T2V-14B**](../models/wan21_t2v_14b/) — release benchmark pending
-  (`config/wan21_t2v_14b/wan21_14b_fullstack.toml`).
+  (`config/wan21_t2v_14b/fullstack.toml`).

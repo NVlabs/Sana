@@ -9,11 +9,11 @@ by a Claude Code subagent instead of Codex goal sessions.
 - `search_space.md` — technique families (Ulysses / Ring / EP / TP / FSDP / replication /
   offload scheduling), their status (implemented / needs-impl), exact knobs, and the
   4-GPU / lossless constraints.
-- `verify_lossless.py` — the lossless gate (PSNR of candidate refined video vs golden).
-- `JOURNAL.md` — append-only per-candidate log + frontier + rejected signatures.
+- `verify_lossless.py` — the lossless gate (PSNR of transfeat refined video vs golden).
+- `JOURNAL.md` — append-only per-transfeat log + frontier + rejected signatures.
 - `STATUS.json` — machine-readable loop state (iter, frontier, blockers).
 - `baseline/golden_refined.mp4` — the golden output (produced at iter 0).
-- `candidates/` — per-candidate sbatch/config the agent generates.
+- `transfeat/` — per-transfeat sbatch/config the agent generates.
 - `REPORT.md` — final deliverable (frontier + best config + reproduction + rejects).
 
 ## Scope (fixed by the orchestrator)
@@ -25,9 +25,9 @@ resolution, scheduler, seed, dtype-for-quality are FIXED (changing them = lossy 
 ## Launch (orchestrator = monitor only)
 Launched as a background Claude Code subagent told to follow `GOAL.md`. The
 orchestrator monitors `JOURNAL.md` / `STATUS.json` and relays progress; it does
-not implement candidates itself.
+not implement transfeat itself.
 
 ## Monitor
 - `cat agent_opt/STATUS.json` — iter / frontier / blockers
-- `tail -40 agent_opt/JOURNAL.md` — latest candidate entries
-- `squeue -u $USER` — in-flight GB200 candidate jobs
+- `tail -40 agent_opt/JOURNAL.md` — latest transfeat entries
+- `squeue -u $USER` — in-flight GB200 transfeat jobs

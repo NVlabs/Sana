@@ -12,7 +12,7 @@ vague acceleration idea
   -> Symposium interview-harness
   -> final Seed / acceptance criteria
   -> Codex interactive goal mode
-  -> candidate launch + collection
+  -> transfeat launch + collection
 ```
 
 ## Layout
@@ -23,7 +23,7 @@ vague acceleration idea
 | `vendor/Symposium/` | Vendored upstream Symposium source files. |
 | `install_project_skills.py` | Install Symposium skills into this project root. |
 | `probe_goal_mode.py` | Check whether Symposium skills and interactive Codex goal-mode prerequisites are present. |
-| `prepare_goal.py` | Create a goal bundle with `goal.md`, `context.json`, and candidate manifest. |
+| `prepare_goal.py` | Create a goal bundle with `goal.md`, `context.json`, and transfeat manifest. |
 | `codex_goal_session.py` | Manage detached Codex autorun sessions and their exact tmux panes. |
 | `start_claude_goal.sh` | Start an interactive Claude session with the goal prompt. |
 | `start_codex_goal.sh` | Resolve `codex_auto_run.py` and launch a guarded Codex TUI goal session. |
@@ -94,7 +94,7 @@ The probe checks:
 ```bash
 python3 tools/symposium/prepare_goal.py \
   --goal-id sparse-attention \
-  --candidate candidates/baseline.toml \
+  --transfeat transfeat/wan22_ti2v_5b/baseline.toml \
   --dimension sparse_attention \
   --role implementation \
   --run-id ${RUN_ID:-} \
@@ -107,14 +107,14 @@ This writes:
 goals/<goal-id>/
   goal.md
   context.json
-  candidate.toml
+  transfeat.toml
 ```
 
 Each generated `goal.md` includes its own search-space-start section, fan-out
 loop contract, required artifacts, write scope, and acceptance criteria.
 Subagents should not need to infer acceptance criteria from external
-orchestration docs. In particular, a failed candidate gate means
-discard-or-reject/log/loop; a successful candidate means retain it in the
+orchestration docs. In particular, a failed transfeat gate means
+discard-or-reject/log/loop; a successful transfeat means retain it in the
 frontier when quality or speed improves and continue until max_iters, a real
 blocker, or explicit orchestrator release. A structured-negative decision is
 logged as a proposal/failure signature and does not stop the default
@@ -132,7 +132,7 @@ Runtime loop accounting is machine-checked:
 
 ```bash
 python3 tools/symposium/loop_control.py init --dimension <dim> --goal-id <goal-id> --max-iters 40 --early-stop-patience 0 --loop-mode fixed_budget_frontier
-python3 tools/symposium/loop_control.py record-candidate --candidate-id <id> --decision rejected --reason "<reason>"
+python3 tools/symposium/loop_control.py record-transfeat --transfeat-id <id> --decision rejected --reason "<reason>"
 python3 tools/symposium/loop_control.py decide-next
 python3 tools/symposium/loop_control.py validate-status
 ```

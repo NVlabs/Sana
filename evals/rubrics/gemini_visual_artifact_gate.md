@@ -1,21 +1,21 @@
 # Gemini Visual Artifact Gate
 
-Use this rubric for a multimodal judge such as Gemini when comparing a candidate
+Use this rubric for a multimodal judge such as Gemini when comparing a transfeat
 video against the official baseline.
 
 ## Inputs
 
 - baseline sampled frames
-- candidate sampled frames
+- transfeat sampled frames
 - optional side-by-side video or side-by-side sampled frames
-- candidate manifest
+- transfeat manifest
 - performance summary
 
-Frame indices must match between baseline and candidate.
+Frame indices must match between baseline and transfeat.
 
 ## Task
 
-Compare candidate frames against baseline frames. Decide whether the candidate
+Compare transfeat frames against baseline frames. Decide whether the transfeat
 introduces any new visible artifacts that are absent or materially weaker in the
 baseline.
 
@@ -72,7 +72,7 @@ Return a decision for each category:
     "detail_degradation": "pass | fail | uncertain"
   },
   "baseline_notes": "Short description.",
-  "candidate_notes": "Short description.",
+  "transfeat_notes": "Short description.",
   "recommendation": "promote | tune | reject | rerun"
 }
 ```
@@ -80,7 +80,7 @@ Return a decision for each category:
 ## Passing Rule
 
 `overall=pass` only if no new artifact is medium/high severity. Low-severity
-differences may pass only when the candidate has a meaningful speedup and the
+differences may pass only when the transfeat has a meaningful speedup and the
 artifact is not temporal flicker/popping, loss of temporal coherence,
 patch-boundary discontinuity, mosaic/blocking, snow/static, ghosting/smearing,
 broken motion, or major blur. Treat frame-to-frame shimmer, block boundary

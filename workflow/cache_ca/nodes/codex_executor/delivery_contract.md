@@ -20,7 +20,7 @@ implementation. Deliver exactly three distinct points:
 Visual difference is not an automatic rejection. It locates an operating point
 on the frontier. At each measured compute budget, optimize for the highest
 quality available among TeaCache, EasyCache, and TaylorSeer. Points must use
-distinct candidates/runs and strictly increasing measured speedups. A rough
+distinct transfeat/runs and strictly increasing measured speedups. A rough
 engineering prior is that the aggressive practical ceiling may be around 2x to
 3x for full inference, but this is not a target, guarantee, acceptance
 threshold, or universal property; determine the target model's actual frontier from data.
@@ -40,13 +40,13 @@ contain:
   "frontier_points": [
     {
       "tier": "conservative",
-      "candidate_id": "<distinct id>",
+      "transfeat_id": "<distinct id>",
       "run_dir": "runs/<completed run>",
-      "implementation_manifest": "candidates/<manifest>.toml",
+      "implementation_manifest": "transfeat/<manifest>.toml",
       "activation": {"env": {"FORWARD_CACHE_METHOD": "<family>"}},
       "compute_budget": {"time_ratio": 0.0, "target": "<measured budget>"},
       "quality": {
-        "candidate_relation": "<blind-review relation to locked baseline>",
+        "transfeat_relation": "<blind-review relation to locked baseline>",
         "max_artifact_severity": "none | low"
       },
       "runtime_evidence": {"assessment_path": "runs/<run>/assess_verdict.json"},

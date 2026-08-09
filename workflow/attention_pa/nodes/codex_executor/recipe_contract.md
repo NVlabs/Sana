@@ -31,7 +31,7 @@ label or an untested suggestion.
 
 Each recipe object must include:
 
-- `status="measured"`, candidate id, parent id, source commit/hash, and run dir;
+- `status="measured"`, transfeat id, parent id, source commit/hash, and run dir;
 - authoritative local PISA source path, commit and SHA-256, copied/adapted
   experiment-local source hashes, actual backend/kernel, block size, route
   mode, exact-remainder approximation configuration, dense fallback, and guard
@@ -48,7 +48,7 @@ Each recipe object must include:
 - exact launch environment/config and a concise explanation of why this point
   belongs in the tier.
 
-All three recipe entries must use distinct candidate ids, strictly increasing
+All three recipe entries must use distinct transfeat ids, strictly increasing
 measured speedups, and distinct existing `assess_verdict.json` files from
 fixed-contract full runs. A visual fail remains valid measured evidence and may
 define a balanced or aggressive point when its severity fits that tier. Do not mark

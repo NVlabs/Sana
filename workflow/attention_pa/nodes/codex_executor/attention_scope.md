@@ -70,7 +70,7 @@ target model. Verify them against the target model's actual shapes and backend.
 
 ### Fixed Full-Evaluation Contract
 
-Every candidate that can influence a recipe must run the complete official
+Every transfeat that can influence a recipe must run the complete official
 workload of the target model:
 
 - the first five prompts of the target model's validation prompt set (see the
@@ -93,4 +93,4 @@ and artifact severity, and exact run/config provenance.
 
 ## Execution round limit
 
-You have a hard budget of **20 optimization rounds** (candidate attempts) for this workflow. This is an execution-round limit, not a suggestion: pace your search so that by round 20 you have finalized and delivered your best retained frontier. Do not plan for more than 20 rounds. One round = one candidate implemented, launched, evaluated, and gated.
+You have a hard budget of **20 optimization rounds** (transfeat attempts) for this workflow. This is an execution-round limit, not a suggestion: pace your search so that by round 20 you have finalized and delivered your best retained frontier. Do not plan for more than 20 rounds. One round = one transfeat implemented, launched, evaluated, and gated.

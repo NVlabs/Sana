@@ -38,7 +38,7 @@ published AGENTS.md 只有部署脚本,**我们这套编排完全没进去**:
 - [ ] **workflow_lite**(1-master + 3-executor sub-agent)—— 无文档
 - [ ] **symposium** skills / goal-mode.env / socrates·evolve·ontology 等交互收敛工具 —— 未提
 - [ ] **质量门**(LPIPS + NVIDIA-Gemini vision gate,side-by-side rubric)—— 未提
-- [ ] **fanout search / candidate manifest / run_orchestrated_experiment.py** —— 未提
+- [ ] **fanout search / transfeat manifest / run_orchestrated_experiment.py** —— 未提
 - [ ] **per-technique executors**(kernel_aw / cache_ca / pisa)—— 未提
 - 建议:要么写一份真正描述编排的 AGENTS.md(或单独 `docs/agent-workflow.md`),要么至少在「Quick start (agent-native)」里链到这套工具 + 说明 master/executor + 质量门的用法
 
@@ -79,4 +79,4 @@ per model (Wan-5B / Wan-14B / LingBot):
 - [ ] AGENTS.md 加该模型的 env/download/run 段(对齐现有 sana/ltx/cosmos 格式)
 
 ## Agent workflow 文档(单独一份)
-- [ ] `docs/agent-workflow.md`:workflow_lite (master+executor) · symposium skills · LPIPS+Gemini 质量门 · fanout/candidate-manifest · per-technique executors
+- [ ] `docs/agent-workflow.md`:workflow_lite (master+executor) · symposium skills · LPIPS+Gemini 质量门 · fanout/transfeat-manifest · per-technique executors

@@ -44,8 +44,8 @@ def init_repo(root: Path) -> str:
     (root / "tools/symposium").mkdir(parents=True)
     (root / "tools/symposium/prepare_goal.py").write_text("# placeholder\n")
     (root / "tools/symposium/codex_goal_session.py").write_text("# placeholder\n")
-    (root / "candidates").mkdir()
-    (root / "candidates/hunyuan_diffusers_baseline.toml").write_text("kind = 'baseline'\n")
+    (root / "transfeat").mkdir()
+    (root / "transfeat/hunyuan_diffusers_baseline.toml").write_text("kind = 'baseline'\n")
     git(root, "add", ".")
     git(root, "commit", "-m", "baseline")
     return git(root, "rev-parse", "HEAD")
@@ -62,7 +62,7 @@ def create_args(**overrides):
         "dimension": "kwl_fusion",
         "role": "implementation",
         "model_id": "hunyuan_diffusers",
-        "candidate": None,
+        "transfeat": None,
         "objective": None,
         "session_name": None,
         "skip_goal": True,
@@ -118,10 +118,10 @@ def test_local_state_requires_explicit_resume() -> None:
         (worktree / "runs/README.md").write_text("tracked placeholder\n")
         assert mod.local_state_paths(worktree) == []
 
-        (worktree / "runs/candidate-1").mkdir()
+        (worktree / "runs/transfeat-1").mkdir()
         paths = [path.name for path in mod.local_state_paths(worktree)]
         assert paths == ["runs"]
-        (worktree / "runs/candidate-1").rmdir()
+        (worktree / "runs/transfeat-1").rmdir()
 
         (worktree / "AGENT-STATUS.json").write_text("{}\n")
         paths = [path.name for path in mod.local_state_paths(worktree)]

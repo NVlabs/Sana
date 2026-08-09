@@ -12,7 +12,7 @@ traces, and artifacts.
 
 - Whole-step denoiser output reuse: reuse, extrapolate, blend, or otherwise
   predict the complete denoiser output across nearby steps. Start with simple
-  deterministic schedules only as baselines; useful candidates should discover
+  deterministic schedules only as baselines; useful transfeat should discover
   when the output is stable enough to reuse.
 - TeaCache-style timestep-aware reuse: estimate output change from cheap input
   signals such as timestep embedding, timestep-modulated noisy input, hidden
@@ -34,7 +34,7 @@ traces, and artifacts.
   intermediate outputs across denoising steps, with explicit layer/stage guards
   and refresh intervals.
 - Token-wise feature caching: cache only low-risk token features instead of
-  caching every token uniformly. Candidate signals can include temporal
+  caching every token uniformly. Transfeat signals can include temporal
   redundancy, token-feature distance, spatial coverage, cross-attention
   importance, accumulated cache error, and expected error propagation.
 - CFG-aware feature caching: exploit redundancy between conditional and
@@ -101,7 +101,7 @@ traces, and artifacts.
 - Discover all layer, step, signal, threshold, refresh, and fallback choices from
   target-model behavior; do not predefine them from this document.
 - Prove OFF identity before claiming any speed or memory gain.
-- When a candidate fails, record whether the root cause is stale-feature error,
+- When a transfeat fails, record whether the root cause is stale-feature error,
   schedule too aggressive, wrong payload boundary, guidance drift, token/layout
   mismatch, memory overhead, compile/cold-start distortion, or no real compute
   saved.

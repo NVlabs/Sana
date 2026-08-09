@@ -33,7 +33,7 @@ def write_goal(root: Path, goal_id: str = "kwl-fusion", role: str = "implementat
                 "role": role,
                 "dimension": "kwl_fusion",
                 "model_id": "hunyuan_diffusers",
-                "candidate_manifest": "candidates/hunyuan_diffusers_baseline.toml",
+                "transfeat_manifest": "transfeat/hunyuan_diffusers_baseline.toml",
                 "loop_contract": {
                     "canonical_baseline_frames": str(root / "runs/baseline/outputs/frames"),
                     "authoritative_python": "python3",
@@ -45,7 +45,7 @@ def write_goal(root: Path, goal_id: str = "kwl-fusion", role: str = "implementat
     return goal_dir
 
 
-def write_smooth_gate(root: Path, run_id: str = "candidate") -> Path:
+def write_smooth_gate(root: Path, run_id: str = "transfeat") -> Path:
     run_dir = root / "runs" / run_id
     run_dir.mkdir(parents=True)
     gate = run_dir / "assess_verdict.json"
@@ -53,7 +53,7 @@ def write_smooth_gate(root: Path, run_id: str = "candidate") -> Path:
         json.dumps(
             {
                 "baseline_total_s": 100.0,
-                "candidate_total_s": 99.0,
+                "transfeat_total_s": 99.0,
                 "speedup": 1.0101,
                 "quality_status": "available",
                 "quality_blockers": [],

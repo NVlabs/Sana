@@ -3,7 +3,7 @@
 
 ``backend_selection_probe`` and ``compile_graph_capture`` cite public backend
 families (FlashAttention, CUTLASS, TransformerEngine) as provenance, but the
-local candidates are runtime/backend probes: one selects the Cosmos3 transformer
+local transfeat are runtime/backend probes: one selects the Cosmos3 transformer
 attention backend, the other enables Cosmos3's torch.compile path. This checker
 prevents those probes from being mistaken for public kernel ports.
 """
@@ -31,8 +31,8 @@ RUNTIME_KWL_TRANSFORM = (
     / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/efficiency/transforms/kwl_fusions.py"
 )
 COSMOS3_RUN_SCRIPT = ROOT / "Sol-LTX-Infer" / "scripts" / "run_cosmos3_sglang.sh"
-BACKEND_MANIFEST = ROOT / "candidates" / "kwl_fusion" / "backend_selection_probe.toml"
-COMPILE_MANIFEST = ROOT / "candidates" / "kwl_fusion" / "compile_graph_capture.toml"
+BACKEND_MANIFEST = ROOT / "transfeat" / "kwl_fusion" / "backend_selection_probe.toml"
+COMPILE_MANIFEST = ROOT / "transfeat" / "kwl_fusion" / "compile_graph_capture.toml"
 KWL_FLAGS = (
     "SHARE_BLOCK0_SELF_ATTN",
     "SHARE_GUIDANCE_PREFIX",
@@ -189,7 +189,7 @@ def transform_env_probe() -> dict[str, Any]:
     }
 
 
-def candidate_alignment() -> dict[str, dict[str, Any]]:
+def transfeat_alignment() -> dict[str, dict[str, Any]]:
     backend = load_toml(BACKEND_MANIFEST)
     compile_ = load_toml(COMPILE_MANIFEST)
     backend_params = backend.get("efficiency", {}).get("params", {})
@@ -206,7 +206,7 @@ def candidate_alignment() -> dict[str, dict[str, Any]]:
                 "This row selects Cosmos3 transformer=torch_sdpa through the "
                 "generic component-backend policy. The pure policy is preserved, "
                 "but the public references are backend families; no FlashAttention "
-                "or CUTLASS kernel is implemented by this candidate."
+                "or CUTLASS kernel is implemented by this transfeat."
             ),
         },
         "compile_graph_capture": {
@@ -253,7 +253,7 @@ def probe() -> dict[str, Any]:
         },
         "checks": checks,
         "transform_env_probe": env_probe,
-        "candidate_manifest_alignment": candidate_alignment(),
+        "transfeat_manifest_alignment": transfeat_alignment(),
     }
 
 

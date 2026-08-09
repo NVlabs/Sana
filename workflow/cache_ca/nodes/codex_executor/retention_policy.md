@@ -24,13 +24,13 @@ select the next implementation or parameter point but cannot retain, discard,
 or complete a cache family by themselves.
 
 The final state must also include `CACHE-SEARCH-STATE.json` with explicit
-TeaCache, EasyCache, and TaylorSeer family state. These are the only candidate
-families. Every viable family requires a faithful full-run seed candidate and
+TeaCache, EasyCache, and TaylorSeer family state. These are the only transfeat
+families. Every viable family requires a faithful full-run seed transfeat and
 at least one child refinement selected from measured speed, cache statistics,
 LPIPS, and Codex visual evidence.
 
 A cross-family quality decision additionally requires matched full-run E2E
-time: normalize each candidate as `candidate_total_s / baseline_total_s`, use
+time: normalize each transfeat as `transfeat_total_s / baseline_total_s`, use
 the same baseline and execution conditions, and compare only points within 2%
 relative `time_ratio`. Tune toward a common target when points are unmatched.
 Module timing, single-DiT timing, projected speedup, or different time budgets
@@ -57,7 +57,7 @@ only with an explicit reason.
 
 ### Discard Standard
 
-As the sole executor, you may discard a concrete candidate or exhausted method
+As the sole executor, you may discard a concrete transfeat or exhausted method
 family only when all applicable conditions hold:
 
 - a completed fixed-contract full target-model run and aligned LPIPS/Codex assessment

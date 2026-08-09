@@ -12,7 +12,7 @@ GEMM epilogue fusion executes memory-bound follow-up work while intermediate GEM
 
 ## Role in Sol-Engine
 
-These fusions are candidates after profiling shows that fragmented memory-bound operators dominate the partially optimized stack.
+These fusions are transfeat after profiling shows that fragmented memory-bound operators dominate the partially optimized stack.
 
 ## Validation
 

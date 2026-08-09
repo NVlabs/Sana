@@ -354,20 +354,20 @@ def executable_path(value: str) -> str | None:
 
 
 def resolve_ffmpeg(override: str | None) -> dict[str, Any]:
-    candidates: list[tuple[str, str]] = []
+    transfeat: list[tuple[str, str]] = []
     if override:
-        candidates.append(("cli", override))
+        transfeat.append(("cli", override))
     if os.environ.get("FFMPEG_BIN"):
-        candidates.append(("env", os.environ["FFMPEG_BIN"]))
+        transfeat.append(("env", os.environ["FFMPEG_BIN"]))
     path_ffmpeg = shutil.which("ffmpeg")
     if path_ffmpeg:
-        candidates.append(("path", path_ffmpeg))
-    candidates.append(("lustre", str(Path.home() / "lustre/bin/ffmpeg")))
+        transfeat.append(("path", path_ffmpeg))
+    transfeat.append(("lustre", str(Path.home() / "lustre/bin/ffmpeg")))
 
     checked: list[dict[str, str]] = []
-    for source, candidate in candidates:
-        checked.append({"source": source, "candidate": candidate})
-        resolved = executable_path(candidate)
+    for source, transfeat in transfeat:
+        checked.append({"source": source, "transfeat": transfeat})
+        resolved = executable_path(transfeat)
         if resolved:
             return {"path": resolved, "source": source, "checked": checked}
     return {"path": None, "source": None, "checked": checked}
@@ -454,7 +454,7 @@ def extract_frames(
     # frames in chronological order (frame-accurate). This avoids the trailing
     # frame that per-timestamp input seeking drops near end-of-stream, so a
     # 129-frame HunyuanVideo output produces a 129-frame set (not 128). Baseline
-    # and candidate runs use the identical policy, so aligned LPIPS/Gemini frame
+    # and transfeat runs use the identical policy, so aligned LPIPS/Gemini frame
     # pairs stay index-matched. frame_count caps below native via even subsample.
     tmp_glob = "f_*.png"
     cmd = [
@@ -622,12 +622,12 @@ def select_stratified_and_worst_pairs(
         import numpy as np  # type: ignore
 
         scored: list[tuple[float, tuple[Path, Path]]] = []
-        for baseline, candidate in pairs:
+        for baseline, transfeat in pairs:
             ba = image_array(baseline)
-            ca = image_array(candidate)
+            ca = image_array(transfeat)
             if ba.shape != ca.shape:
                 continue
-            scored.append((float(np.abs(ca - ba).mean()), (baseline, candidate)))
+            scored.append((float(np.abs(ca - ba).mean()), (baseline, transfeat)))
         for _score, pair in sorted(scored, key=lambda item: item[0], reverse=True)[:worst_case_limit]:
             add(pair)
     except Exception:
@@ -665,8 +665,8 @@ def run_lpips_judge(frame_paths: list[Path], baseline_frames: list[str], skip: b
             total_limit=LPIPS_MAX_PAIRS,
         )
         cmd = [sys.executable, str(tool), "--out", str(out_path)]
-        for baseline, candidate in pairs:
-            cmd.extend(["--baseline-frame", str(baseline), "--candidate-frame", str(candidate)])
+        for baseline, transfeat in pairs:
+            cmd.extend(["--baseline-frame", str(baseline), "--transfeat-frame", str(transfeat)])
         proc = subprocess.run(
             cmd,
             cwd=project_root(),
@@ -692,9 +692,9 @@ def run_lpips_judge(frame_paths: list[Path], baseline_frames: list[str], skip: b
 def run_nvidia_gemini_judge(
     frame_paths: list[Path],
     baseline_frames: list[str],
-    candidate_id: str,
+    transfeat_id: str,
     skip: bool,
-    candidate_video: Path | None = None,
+    transfeat_video: Path | None = None,
     baseline_video: Path | None = None,
     side_by_side_video: Path | None = None,
 ) -> dict[str, Any]:
@@ -733,22 +733,22 @@ def run_nvidia_gemini_judge(
             str(GEMINI_VIDEO_FRAME_INTERVAL),
             "--context",
             (
-                f"Autovideo candidate run: {candidate_id}. Images are provided "
-                "as matched baseline/candidate pairs in chronological order. "
+                f"Autovideo transfeat run: {transfeat_id}. Images are provided "
+                "as matched baseline/transfeat pairs in chronological order. "
                 "Videos, when present, are provided as baseline video first, "
-                "candidate video second, and side-by-side video third. Prioritize "
+                "transfeat video second, and side-by-side video third. Prioritize "
                 "temporal flicker/popping, patch-boundary instability, patch-level "
                 "texture mismatch, broken motion coherence, blur/detail loss, "
                 "ghosting/smearing, snow/static, and severe perceptual degradation."
             ),
         ]
-        for baseline, candidate in pairs:
+        for baseline, transfeat in pairs:
             cmd.extend(["--baseline-frame", str(baseline)])
-            cmd.extend(["--candidate-frame", str(candidate)])
+            cmd.extend(["--transfeat-frame", str(transfeat)])
         if baseline_video and baseline_video.exists():
             cmd.extend(["--video", str(baseline_video)])
-        if candidate_video and candidate_video.exists():
-            cmd.extend(["--video", str(candidate_video)])
+        if transfeat_video and transfeat_video.exists():
+            cmd.extend(["--video", str(transfeat_video)])
         if side_by_side_video and side_by_side_video.exists():
             cmd.extend(["--video", str(side_by_side_video)])
 
@@ -822,11 +822,11 @@ def build_off_identity(frame_paths: list[Path], baseline_frames: list[str]) -> d
         np, _Image = load_image_arrays()
         max_abs = 0.0
         nonidentical = 0
-        for baseline, candidate in pairs:
+        for baseline, transfeat in pairs:
             ba = image_array(baseline)
-            ca = image_array(candidate)
+            ca = image_array(transfeat)
             if ba.shape != ca.shape:
-                return {"status": "failed", "reason": "shape_mismatch", "baseline": str(baseline), "candidate": str(candidate)}
+                return {"status": "failed", "reason": "shape_mismatch", "baseline": str(baseline), "transfeat": str(transfeat)}
             diff = np.abs(ca - ba)
             frame_max = float(diff.max())
             max_abs = max(max_abs, frame_max)
@@ -859,14 +859,14 @@ def build_pixel_metrics(frame_paths: list[Path], baseline_frames: list[str]) -> 
         patch_ratios: list[float] = []
         patch_ratios_by_size: dict[int, list[float]] = {patch: [] for patch in PATCH_BOUNDARY_SIZES}
         baseline_prev = None
-        candidate_prev = None
+        transfeat_prev = None
         temporal_delta_errors: list[float] = []
         temporal_jitter_ratios: list[float] = []
-        for baseline, candidate in pairs:
+        for baseline, transfeat in pairs:
             ba = image_array(baseline)
-            ca = image_array(candidate)
+            ca = image_array(transfeat)
             if ba.shape != ca.shape:
-                return {"status": "blocked", "reason": "shape_mismatch", "baseline": str(baseline), "candidate": str(candidate)}
+                return {"status": "blocked", "reason": "shape_mismatch", "baseline": str(baseline), "transfeat": str(transfeat)}
             diff = ca - ba
             mse = float(np.square(diff).mean())
             mae = float(np.abs(diff).mean())
@@ -885,15 +885,15 @@ def build_pixel_metrics(frame_paths: list[Path], baseline_frames: list[str]) -> 
             psnr_values.append(psnr)
             sharpness_ratios.append(cand_sharp / max(base_sharp, 1e-8))
             patch_ratios.append(max(per_size_patch_ratios))
-            if baseline_prev is not None and candidate_prev is not None:
+            if baseline_prev is not None and transfeat_prev is not None:
                 base_delta = ba - baseline_prev
-                cand_delta = ca - candidate_prev
+                cand_delta = ca - transfeat_prev
                 temporal_delta_errors.append(float(np.abs(cand_delta - base_delta).mean()))
                 base_delta_mag = float(np.abs(base_delta).mean())
                 cand_delta_mag = float(np.abs(cand_delta).mean())
                 temporal_jitter_ratios.append(cand_delta_mag / max(base_delta_mag, 1e-8))
             baseline_prev = ba
-            candidate_prev = ca
+            transfeat_prev = ca
         finite_psnr = [value for value in psnr_values if math.isfinite(value)]
         return {
             "status": "ok",
@@ -931,7 +931,7 @@ def build_quality(
     frames: dict[str, Any],
     baseline_frames: list[str],
     skip_judges: bool,
-    candidate_video: Path | None = None,
+    transfeat_video: Path | None = None,
     baseline_video: Path | None = None,
     side_by_side_video: Path | None = None,
 ) -> dict[str, Any]:
@@ -950,7 +950,7 @@ def build_quality(
             "frame_count": 0,
         }
 
-    candidate_id = str(metadata.get("candidate_id", run_dir.name))
+    transfeat_id = str(metadata.get("transfeat_id", run_dir.name))
     off_identity = build_off_identity(frame_paths, baseline_frames)
     pixel_metrics = build_pixel_metrics(frame_paths, baseline_frames)
     judges = {
@@ -958,9 +958,9 @@ def build_quality(
         "nvidia_gemini": run_nvidia_gemini_judge(
             frame_paths,
             baseline_frames,
-            candidate_id,
+            transfeat_id,
             skip_judges,
-            candidate_video=candidate_video,
+            transfeat_video=transfeat_video,
             baseline_video=baseline_video,
             side_by_side_video=side_by_side_video,
         ),
@@ -992,14 +992,14 @@ def resolve_baseline_video(args: argparse.Namespace) -> Path | None:
     baseline_run_dir = getattr(args, "baseline_run_dir", None)
     if not baseline_run_dir:
         return None
-    candidate = Path(baseline_run_dir).expanduser() / "outputs" / "out.mp4"
-    return candidate if candidate.exists() else None
+    transfeat = Path(baseline_run_dir).expanduser() / "outputs" / "out.mp4"
+    return transfeat if transfeat.exists() else None
 
 
 def render_risk_notes(metadata: dict[str, Any]) -> str:
     if metadata.get("kind") == "baseline":
         return "no risk; baseline reference run\n"
-    return "risk notes pending for non-baseline candidate run\n"
+    return "risk notes pending for non-baseline transfeat run\n"
 
 
 def render_patch_summary(
@@ -1023,7 +1023,7 @@ def render_patch_summary(
     official = manifest.get("official_config", {}) or resolved_official
     artifacts = manifest.get("artifacts", {})
     lines = [
-        f"# Candidate Report: {metadata.get('candidate_id', run_dir.name)}",
+        f"# Transfeat Report: {metadata.get('transfeat_id', run_dir.name)}",
         "",
         f"Status: `{status}`",
         f"Run: `{run_dir.name}`",
@@ -1154,7 +1154,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
     if isinstance(run_config, dict):
         model_hint = str(run_config.get("model_path") or "")
     if not model_hint:
-        model_hint = str(manifest.get("model_profile") or metadata.get("candidate_id") or "")
+        model_hint = str(manifest.get("model_profile") or metadata.get("transfeat_id") or "")
 
     if args.frame_count is not None:
         effective_frame_count = args.frame_count
@@ -1198,7 +1198,7 @@ def collect(args: argparse.Namespace) -> dict[str, Any]:
         frames,
         resolve_baseline_frames(args),
         args.skip_judges,
-        candidate_video=paths["video"],
+        transfeat_video=paths["video"],
         baseline_video=resolve_baseline_video(args),
         side_by_side_video=paths["side_by_side_video"],
     )
@@ -1298,7 +1298,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--baseline-run-dir",
-        help="Baseline run directory whose outputs/frames are paired with candidate frames",
+        help="Baseline run directory whose outputs/frames are paired with transfeat frames",
     )
     parser.add_argument(
         "--skip-judges",

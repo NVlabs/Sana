@@ -29,7 +29,7 @@ PUBLIC_TOMESD = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yito
 PUBLIC_TOMESD_MERGE = PUBLIC_TOMESD / "tomesd" / "merge.py"
 LOCAL_TOKEN_PRUNE = ROOT / "efficiency" / "techniques" / "token_prune.py"
 MANIFESTS = {
-    cid: ROOT / "candidates" / "token_prune" / f"{cid}.toml"
+    cid: ROOT / "transfeat" / "token_prune" / f"{cid}.toml"
     for cid in (
         "feature_norm_prune",
         "shape_stable_compute_mask",
@@ -261,16 +261,16 @@ def behavior_probe() -> dict[str, Any]:
         "cluster_representative_update": local_cat_indices,
     }
 
-    per_candidate = {}
+    per_transfeat = {}
     for cid, indices in local.items():
-        per_candidate[cid] = {
+        per_transfeat[cid] = {
             "manifest": str(MANIFESTS[cid]),
             "local_indices": indices.tolist(),
             "cat_core_boundary_indices": cat_indices.tolist(),
             "matches_cat_core_boundary": bool(torch.equal(indices, cat_indices)),
             "matches_public_original": False,
         }
-    per_candidate["cluster_representative_update"].update(
+    per_transfeat["cluster_representative_update"].update(
         {
             "local_cat_selector_indices": local_cat_indices.tolist(),
             "cat_seed_indices": seed_indices.tolist(),
@@ -296,7 +296,7 @@ def behavior_probe() -> dict[str, Any]:
             ),
         }
     )
-    per_candidate["shape_stable_compute_mask"] = {
+    per_transfeat["shape_stable_compute_mask"] = {
         "manifest": str(MANIFESTS["shape_stable_compute_mask"]),
         "public_merged_shape": list(public_shape_merged.shape),
         "local_merged_shape": list(local_shape_merged.shape),
@@ -326,7 +326,7 @@ def behavior_probe() -> dict[str, Any]:
             "torch_kmeans_fallback_labels": fallback_labels.tolist(),
             "torch_kmeans_fallback_valid": fallback_valid,
         },
-        "candidate_manifest_alignment": per_candidate,
+        "transfeat_manifest_alignment": per_transfeat,
     }
 
 

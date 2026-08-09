@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
+: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_transfeat.py}"
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 RUNTIME_ROOT="${SCRIPT_DIR}"

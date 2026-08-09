@@ -2,7 +2,7 @@
 
 The module is deliberately inert unless ``WAN22_CACHE_FAMILY`` names one of
 ``teacache``, ``easycache``, or ``taylorseer``.  This keeps the disabled path
-identical to the materialized baseline while allowing candidate manifests to
+identical to the materialized baseline while allowing transfeat manifests to
 select and fully describe one cache family at a time.
 """
 

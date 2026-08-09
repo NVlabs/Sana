@@ -94,16 +94,16 @@ def command_help_contains(command: str, needle: str, env: dict[str, str]) -> boo
 
 
 def resolve_codex_autorun(env: dict[str, str]) -> str | None:
-    candidates = []
+    transfeat = []
     if env.get("CODEX_AUTORUN"):
-        candidates.append(Path(env["CODEX_AUTORUN"]).expanduser())
-    candidates.extend(
+        transfeat.append(Path(env["CODEX_AUTORUN"]).expanduser())
+    transfeat.extend(
         [
             Path.home() / "codex_auto_run.py",
             Path.home() / "code/codex_exec/codex_auto_run.py",
         ]
     )
-    for path in candidates:
+    for path in transfeat:
         if path.is_file() and os.access(path, os.X_OK):
             return str(path)
     return None

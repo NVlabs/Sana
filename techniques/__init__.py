@@ -11,7 +11,7 @@
 #                     (effect system), orders by phase -> an executable Plan.
 #   * registry     -- register_technique / register_transform.
 #
-# Candidate dry-runs synthesize a minimal ModelSpec from manifest capabilities.
+# Transfeat dry-runs synthesize a minimal ModelSpec from manifest capabilities.
 # External adapters may still register a ModelSpec, but this package no longer
 # ships unvalidated per-model specs.
 

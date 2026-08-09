@@ -86,9 +86,9 @@ def resolve_input(value: str) -> Path:
     if path.is_absolute():
         return path
     for root in (REPO_ROOT, SOURCE_ROOT, RUNTIME_DIR):
-        candidate = (root / path).resolve()
-        if candidate.exists():
-            return candidate
+        transfeat = (root / path).resolve()
+        if transfeat.exists():
+            return transfeat
     return (REPO_ROOT / path).resolve()
 
 
@@ -275,11 +275,11 @@ def build_command(
         mismatched_backends["LINGBOT_FUSED_QKV_LINEAR"] = "1"
     if mismatched_backends:
         raise SystemExit(
-            "[lingbot_video] registered candidates require fixed non-c5 backends; "
+            "[lingbot_video] registered transfeat require fixed non-c5 backends; "
             f"unexpected overrides: {mismatched_backends}"
         )
-    candidate_id = env("AUTOVIDEO_CANDIDATE_ID", required=True)
-    if candidate_id == "lingbot_video_baseline":
+    transfeat_id = env("AUTOVIDEO_TRANSFEAT_ID", required=True)
+    if transfeat_id == "lingbot_video_baseline":
         valid_variant = (
             cp_degree == nproc
             and fsdp_enabled
@@ -287,7 +287,7 @@ def build_command(
             and batch_cfg_enabled
             and refiner_batch_cfg_enabled
         )
-    elif candidate_id == "lingbot_video_fsdp4_reference":
+    elif transfeat_id == "lingbot_video_fsdp4_reference":
         valid_variant = (
             cp_degree == 1
             and fsdp_enabled
@@ -296,10 +296,10 @@ def build_command(
             and not refiner_batch_cfg_enabled
         )
     else:
-        raise SystemExit(f"[lingbot_video] unsupported baseline runtime candidate: {candidate_id}")
+        raise SystemExit(f"[lingbot_video] unsupported baseline runtime transfeat: {transfeat_id}")
     if not valid_variant:
         raise SystemExit(
-            f"[lingbot_video] runtime topology does not match registered candidate {candidate_id}"
+            f"[lingbot_video] runtime topology does not match registered transfeat {transfeat_id}"
         )
     duration_s = float(env("LINGBOT_DURATION", "5"))
     fps = int(env("LINGBOT_FPS", "24"))
@@ -432,7 +432,7 @@ def build_command(
         "experimental_flags": experimental_flags,
         "fixed_backends": fixed_backends,
         "source_variant": env("LINGBOT_SOURCE_VARIANT", "baseline"),
-        "candidate_id": candidate_id,
+        "transfeat_id": transfeat_id,
     }
     return command, config
 
@@ -593,7 +593,7 @@ def write_benchmark(
         (RUNTIME_DIR / "SOURCE_SNAPSHOT.json").read_bytes()
     ).hexdigest()
     effective_env_keys = (
-        "AUTOVIDEO_CANDIDATE_ID",
+        "AUTOVIDEO_TRANSFEAT_ID",
         "DIFFUSERS_ATTN_BACKEND",
         "LINGBOT_ATTN_KERNEL",
         "LINGBOT_BATCH_CFG",

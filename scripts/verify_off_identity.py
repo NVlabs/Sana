@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Verify the OFF==baseline frame identity invariant for a candidate run.
+"""Verify the OFF==baseline frame identity invariant for a transfeat run.
 
-A candidate that has no acceleration env (the OFF-identity check) must produce
+A transfeat that has no acceleration env (the OFF-identity check) must produce
 frames byte/numerically-identical to the model baseline -- this is the framework
 guarantee compose() rests on (an inactive technique is a no-op). PNG bytes can
 differ if encoding metadata varies, so we compare RGB pixel arrays (exact equal
 + max-abs-diff on uint8).
 
 Usage:
-  python scripts/verify_off_identity.py <candidate_run_dir> <baseline_run_dir>
+  python scripts/verify_off_identity.py <transfeat_run_dir> <baseline_run_dir>
 """
 from __future__ import annotations
 
@@ -31,14 +31,14 @@ def main() -> int:
     cand_frames = sorted((cand_dir / "outputs/frames").glob("*.png"))
     base_frames = sorted((base_dir / "outputs/frames").glob("*.png"))
     if not cand_frames:
-        print(f"FAIL: no candidate frames under {cand_dir}/outputs/frames", file=sys.stderr)
+        print(f"FAIL: no transfeat frames under {cand_dir}/outputs/frames", file=sys.stderr)
         return 1
     if not base_frames:
         print(f"FAIL: no baseline frames under {base_dir}/outputs/frames", file=sys.stderr)
         return 1
     if len(cand_frames) != len(base_frames):
         print(
-            f"WARN: frame count differs: {len(cand_frames)} candidate vs "
+            f"WARN: frame count differs: {len(cand_frames)} transfeat vs "
             f"{len(base_frames)} baseline",
             file=sys.stderr,
         )

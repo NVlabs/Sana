@@ -138,16 +138,16 @@ class WanKernelRuntime:
         unknown = sorted(set(self.stack) - KNOWN_METHODS)
         if unknown:
             raise RuntimeError(f"Unknown WAN22 kernel methods: {unknown}")
-        self.active_candidate = os.environ.get("WAN22_KERNEL_ACTIVE_CANDIDATE", "").strip()
+        self.active_transfeat = os.environ.get("WAN22_KERNEL_ACTIVE_CANDIDATE", "").strip()
         self.ledger_enabled = _enabled("WAN22_KERNEL_LEDGER") or bool(self.stack)
-        self.pair_enabled = _enabled("WAN22_KERNEL_PAIR_BENCH") and bool(self.active_candidate)
+        self.pair_enabled = _enabled("WAN22_KERNEL_PAIR_BENCH") and bool(self.active_transfeat)
         self.cudagraph_mark_step = _enabled("WAN22_CUDAGRAPH_MARK_STEP")
         self.current_pass: dict[str, Any] | None = None
         self.completed_passes: list[dict[str, Any]] = []
         self.last_inputs: dict[str, Any] | None = None
         self.activation: dict[str, Any] = {
             "stack": list(self.stack),
-            "active_candidate": self.active_candidate or None,
+            "active_transfeat": self.active_transfeat or None,
             "methods": [],
             "initialization_s": 0.0,
         }
@@ -821,14 +821,14 @@ class WanKernelRuntime:
         self._write("dit_call_ledger.json", self.summary())
         return summary
 
-    def _set_active_candidate(self, enabled: bool) -> None:
-        if self.active_candidate == "regional_compile":
+    def _set_active_transfeat(self, enabled: bool) -> None:
+        if self.active_transfeat == "regional_compile":
             if not self._compiled_impls:
                 raise RuntimeError("regional_compile pair requested without compiled block callables")
             for block, compiled in zip(self.model.blocks, self._compiled_impls):
                 block._compiled_call_impl = compiled if enabled else None
             return
-        if self.active_candidate == "qkv_fusion":
+        if self.active_transfeat == "qkv_fusion":
             # Keep packed modules resident so the ON compiled graph retains the
             # same module/parameter identities. OFF selects the original Q/K/V
             # paths and disables every compiled block; ON reselects packed
@@ -851,22 +851,22 @@ class WanKernelRuntime:
                 for block, compiled in zip(self.model.blocks, self._compiled_impls):
                     block._compiled_call_impl = compiled
             return
-        if self.active_candidate in {"invariant_cache", "invariant_cache_v2"}:
+        if self.active_transfeat in {"invariant_cache", "invariant_cache_v2"}:
             self.invariant_cache_enabled = enabled
             return
-        if self.active_candidate == "cross_kv_cache":
+        if self.active_transfeat == "cross_kv_cache":
             self.cross_kv_cache_enabled = enabled
             return
-        if self.active_candidate == "bf16_output_glue":
+        if self.active_transfeat == "bf16_output_glue":
             self._set_bf16_output_glue(enabled)
             return
-        if self.active_candidate == "native_cudnn_attention":
+        if self.active_transfeat == "native_cudnn_attention":
             self._set_native_cudnn_attention(enabled)
             return
-        if self.active_candidate == "native_flash_attention":
+        if self.active_transfeat == "native_flash_attention":
             self._set_native_flash_attention(enabled)
             return
-        raise RuntimeError(f"No paired toggle for active candidate {self.active_candidate!r}")
+        raise RuntimeError(f"No paired toggle for active transfeat {self.active_transfeat!r}")
 
     def set_composed_stack(self, enabled: bool) -> None:
         """Toggle every retained method for a full-generation integration pair."""
@@ -931,9 +931,9 @@ class WanKernelRuntime:
             return None
         # One warm call for each state is excluded. Compilation itself has
         # already occurred in the two full generation warmups.
-        self._set_active_candidate(False)
+        self._set_active_transfeat(False)
         self._time_direct_dit()
-        self._set_active_candidate(True)
+        self._set_active_transfeat(True)
         self._time_direct_dit()
 
         off: list[float] = []
@@ -941,21 +941,21 @@ class WanKernelRuntime:
         orders = ((False, True), (True, False), (False, True), (True, False))
         for order in orders:
             for enabled in order:
-                self._set_active_candidate(enabled)
+                self._set_active_transfeat(enabled)
                 value = self._time_direct_dit()
                 (on if enabled else off).append(value)
-        self._set_active_candidate(True)
+        self._set_active_transfeat(True)
         off_stats = timing_stats(off)
         on_stats = timing_stats(on)
         speedup = off_stats["median_ms"] / on_stats["median_ms"]
         payload = {
             "schema_version": 1,
-            "candidate": self.active_candidate,
+            "transfeat": self.active_transfeat,
             "stack": list(self.stack),
             "comparison_scope": (
                 "full_composed_stack_OFF_eager_unpacked_vs_ON_compiled_packed"
-                if self.active_candidate == "qkv_fusion" and self._compiled_impls
-                else "active_candidate_OFF_ON"
+                if self.active_transfeat == "qkv_fusion" and self._compiled_impls
+                else "active_transfeat_OFF_ON"
             ),
             "timing_scope": "one_complete_DiT_forward_on_captured_official_shape_inputs",
             "warmup_policy": "two full generation warmups, then one excluded direct-DiT warmup in each state",
@@ -983,7 +983,7 @@ class WanKernelRuntime:
     def summary(self) -> dict[str, Any]:
         return {
             "stack": list(self.stack),
-            "active_candidate": self.active_candidate or None,
+            "active_transfeat": self.active_transfeat or None,
             "activation": self.activation,
             "cudagraph_mark_step_before_each_dit": self.cudagraph_mark_step,
             "invariant_cache_stats": self.invariant_cache_stats,

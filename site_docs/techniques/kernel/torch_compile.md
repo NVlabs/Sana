@@ -7,7 +7,7 @@
 | Pipeline | Scope | Role |
 |---|---|---|
 | SANA-Video | compiled denoising path | part of the 2.77x full optimization stack |
-| LTX-2.3 | selected graph regions | candidate when stable under target shapes |
+| LTX-2.3 | selected graph regions | transfeat when stable under target shapes |
 
 ## Practical notes
 

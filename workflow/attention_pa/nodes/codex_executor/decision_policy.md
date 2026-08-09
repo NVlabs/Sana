@@ -3,7 +3,7 @@
 This workflow has one decision-making Codex agent: the executor. A separate
 blind Codex visual reviewer is an evidence-only graph node: it sees attached
 images without method identity and cannot retain, discard, tune, or complete a
-recipe. You own implementation, retry, refinement, candidate disposition,
+recipe. You own implementation, retry, refinement, transfeat disposition,
 recipe selection, and final completion.
 
 Never classify infrastructure or incomplete assessment as method evidence.

@@ -105,7 +105,7 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
                 {
                     "dimension": dim_id,
                     "technique": name,
-                    "candidates": len(cfgs),
+                    "transfeat": len(cfgs),
                     "composable": ok,
                     "rejected": rej,
                     "eligible": True,
@@ -128,10 +128,10 @@ def search(model_id: str, verbose: bool = True) -> list[dict]:
             mark = "RUN " if r["eligible"] else "skip"
             extra = f"  ({r['rejected']} rejected: {r['reason']})" if r["rejected"] else ""
             print(f"  [{mark}] {r['dimension']}/{r['technique']}: "
-                  f"{r['composable']}/{r['candidates']} compose-diagnostic{extra}")
+                  f"{r['composable']}/{r['transfeat']} compose-diagnostic{extra}")
         elig = [r for r in results if r["eligible"]]
         print(f"# {len(elig)} launchable technique-dimensions, "
-              f"{sum(r['composable'] for r in elig)} composable candidates "
+              f"{sum(r['composable'] for r in elig)} composable transfeat "
               f"(compose is diagnostic; eval+speed-target selection = GPU stage, stubbed)")
         # each dimension is a fixed-budget frontier loop; tiers are selected after fan-out
         print("# search loop (per dimension):")
@@ -161,10 +161,10 @@ def plan_eval(model_id: str):  # noqa: D401
     real blocker or explicit orchestrator release applies. Structured-negative
     proposals are logged but do not stop the default fixed-budget loop. Each
     iteration picks a hypothesis from search_space/ plus model traces/code,
-    records it in a candidate manifest, renders a run bundle from the model
-    profile + cfg, launches via scripts/launch_candidate.py, collects
+    records it in a transfeat manifest, renders a run bundle from the model
+    profile + cfg, launches via scripts/launch_transfeat.py, collects
     benchmark.json/quality.json, and compares latency + peak_mem + quality vs the
-    profile [baseline]. A candidate is retained when quality improves OR
+    profile [baseline]. A transfeat is retained when quality improves OR
     speed/memory improves; it is discarded only when neither quality nor
     speed/memory improves. After the budget closes, the main agent selects low/medium/high
     speed-target winners from the retained frontier by joint Gemini+LPIPS quality

@@ -271,8 +271,8 @@ def _forward_ptr(
             -float("inf"),
         )
         safe_scores = tl.where(has_approximate, approximate_scores, 0.0)
-        candidate_max = tl.maximum(row_max, tl.max(safe_scores, axis=1))
-        new_max = tl.where(has_approximate, candidate_max, row_max)
+        transfeat_max = tl.maximum(row_max, tl.max(safe_scores, axis=1))
+        new_max = tl.where(has_approximate, transfeat_max, row_max)
         alpha = tl.math.exp2(
             tl.where(has_approximate, row_max - new_max, 0.0)
         )

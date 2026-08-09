@@ -1,11 +1,11 @@
-"""Lossless gate: compare a candidate's refined video against the golden reference.
+"""Lossless gate: compare a transfeat's refined video against the golden reference.
 
 Parallelization changes only the ORDER of floating-point reductions, so frames must be
 near-identical. We require mean PSNR >= threshold (default 45 dB). Prints a machine-readable
 verdict line the agent can grep: `LOSSLESS_VERDICT PASS|FAIL psnr=<db> ...`.
 
 Usage:
-  python agent_opt/verify_lossless.py <golden.mp4> <candidate.mp4> [--min-psnr 45]
+  python agent_opt/verify_lossless.py <golden.mp4> <transfeat.mp4> [--min-psnr 45]
 Exit code 0 = PASS, 1 = FAIL, 2 = error.
 """
 import argparse
@@ -32,25 +32,25 @@ def psnr(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("golden")
-    ap.add_argument("candidate")
+    ap.add_argument("transfeat")
     ap.add_argument("--min-psnr", type=float, default=45.0)
     args = ap.parse_args()
 
     try:
         g = read_frames(args.golden)
-        c = read_frames(args.candidate)
+        c = read_frames(args.transfeat)
     except Exception as e:  # noqa: BLE001
         print(f"LOSSLESS_VERDICT ERROR reason=read_failed detail={e!r}")
         return 2
 
     if len(g) != len(c):
-        print(f"LOSSLESS_VERDICT FAIL reason=frame_count golden={len(g)} candidate={len(c)}")
+        print(f"LOSSLESS_VERDICT FAIL reason=frame_count golden={len(g)} transfeat={len(c)}")
         return 1
     if not g:
         print("LOSSLESS_VERDICT ERROR reason=empty")
         return 2
     if g[0].shape != c[0].shape:
-        print(f"LOSSLESS_VERDICT FAIL reason=shape golden={g[0].shape} candidate={c[0].shape}")
+        print(f"LOSSLESS_VERDICT FAIL reason=shape golden={g[0].shape} transfeat={c[0].shape}")
         return 1
 
     per = [psnr(gf, cf) for gf, cf in zip(g, c)]

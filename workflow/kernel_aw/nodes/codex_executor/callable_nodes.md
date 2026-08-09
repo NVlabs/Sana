@@ -1,14 +1,14 @@
 ## Workflow-Local Callable Nodes
 
 You may use workflow-local callable node contracts when deciding how to test a
-target-model transformer-kernel candidate. Callable nodes are not global shared code;
+target-model transformer-kernel transfeat. Callable nodes are not global shared code;
 use only the copies under `workflow/kernel_aw/nodes/callable/`.
 
 - `kernel_microbench`: use as the ordinary loop evaluation for a concrete
-  target-model transformer-kernel candidate. Module-level evidence is a screening gate; a
+  target-model transformer-kernel transfeat. Module-level evidence is a screening gate; a
   retained component must later be measured through the cumulative full-DiT
   path.
-- `dit_profile`: use before the first novel candidate and at composition
+- `dit_profile`: use before the first novel transfeat and at composition
   checkpoints. It profiles and benchmarks the registry-resolved full target-model DiT
   for one diffusion step without launching full diffusion or video generation.
 - `full_diffusion_eval`: do not use during the ordinary executor/eval/reviewer
@@ -22,8 +22,8 @@ Do not treat a self-reported completion message as workflow completion. Durable
 JSON artifacts and `AGENT-STATUS.json` are the source of truth.
 
 `AGENT-STATUS.json` must identify the current invocation's
-`active_candidate_id` and `active_gate`. The workflow evaluator must not reuse a
-smooth gate from an older candidate.
+`active_transfeat_id` and `active_gate`. The workflow evaluator must not reuse a
+smooth gate from an older transfeat.
 
 Callable node outcomes are not final discard decisions. A failed DiT-level gate,
 cancelled terminal full run, no-output Slurm allocation, missing assess file,

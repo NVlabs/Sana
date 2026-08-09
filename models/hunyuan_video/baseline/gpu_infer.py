@@ -7,7 +7,7 @@ stock diffusers ``HunyuanVideoPipeline`` once and emits exactly the artifacts th
 auto-video harness consumes. The TeaCache acceleration seam
 (``step_cache_runtime.py``) is added on top of this later — see README.md.
 
-Interface (set by launch_candidate.py -> launch.sh, all via the environment):
+Interface (set by launch_transfeat.py -> launch.sh, all via the environment):
   OUT_DIR                      destination for artifacts (required)
   MODEL_REPO                   HF repo id (default hunyuanvideo-community/HunyuanVideo)
   HUNYUAN_HEIGHT/WIDTH/NUM_FRAMES/FPS/NUM_INFERENCE_STEPS
@@ -130,7 +130,7 @@ def main() -> int:
     placement_s = time.perf_counter() - t
 
     # Optional acceleration seam (TeaCache). No-op unless SGLANG_HQ_TEACACHE_* is
-    # set, so the baseline candidate (which sets no such env) stays byte-identical.
+    # set, so the baseline transfeat (which sets no such env) stays byte-identical.
     seam_diag = None
     try:
         import step_cache_runtime

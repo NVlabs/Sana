@@ -4,7 +4,7 @@ Sparse VideoGen2 improves sparse-token identification and GPU layout through sem
 
 ## Role in Sol-Engine
 
-It is a candidate sparse backend when semantic grouping can make sparse execution more efficient or more stable than a purely geometric block pattern.
+It is a transfeat sparse backend when semantic grouping can make sparse execution more efficient or more stable than a purely geometric block pattern.
 
 ## Search knobs
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Prepare and optionally launch an autovideo candidate.
+"""Prepare and optionally launch an autovideo transfeat.
 
 The script is intentionally small and dependency-free. It reads a TOML
-candidate manifest, creates a run bundle under runs/, writes the exact launch
+transfeat manifest, creates a run bundle under runs/, writes the exact launch
 shell script, and either stops at dry-run, executes locally, or submits Slurm.
 """
 
@@ -29,7 +29,7 @@ REPO_FOR_IMPORT = Path(__file__).resolve().parents[1]
 if str(REPO_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(REPO_FOR_IMPORT))
 
-from techniques.candidate_manifest import (  # noqa: E402
+from techniques.transfeat_manifest import (  # noqa: E402
     dry_run_manifest,
     load_model_profile as load_efficiency_model_profile,
     manifest_id,
@@ -71,7 +71,7 @@ COSMOS3_UNSUPPORTED_GPU_REASONS = {
     "env_flag_kwl_bundle": (
         "Cosmos3 already uses several pure KWL-style kernels as baseline, while "
         "LTX2-only KWL flags such as audio/VAE/guidance sharing do not map to "
-        "Cosmos3; this bundle does not create an isolated candidate delta"
+        "Cosmos3; this bundle does not create an isolated transfeat delta"
     ),
     "gemm_epilogue_fusion": (
         "Cosmos3 already fuses gate/up projection and SiluAndMul in its MLP, "
@@ -90,7 +90,7 @@ COSMOS3_UNSUPPORTED_GPU_REASONS = {
         "those replay flags are disabled in the manifest"
     ),
 }
-COSMOS3_DYNAMIC_GPU_READINESS_CANDIDATES = {
+COSMOS3_DYNAMIC_GPU_READINESS_TRANSFEAT = {
     "semantic_permutation",
 }
 SEMANTIC_PERMUTATION_REQUIRED_MODULES = ("svg", "flashinfer", "cuvs")
@@ -105,13 +105,13 @@ def load_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(f)
 
 
-def candidate_id(data: dict[str, Any]) -> str:
-    return manifest_id(data) or "candidate"
+def transfeat_id(data: dict[str, Any]) -> str:
+    return manifest_id(data) or "transfeat"
 
 
 def sanitize_id(value: str) -> str:
     cleaned = VALID_ID.sub("-", value.strip())
-    return cleaned.strip("-") or "candidate"
+    return cleaned.strip("-") or "transfeat"
 
 
 def default_slurm(data: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
@@ -124,7 +124,7 @@ def default_slurm(data: dict[str, Any], profile: dict[str, Any]) -> dict[str, An
         "cpus_per_task": 64,
         "mem": "0",
         "time": "04:00:00",
-        "job_name": f"autovideo-{sanitize_id(candidate_id(data))}",
+        "job_name": f"autovideo-{sanitize_id(transfeat_id(data))}",
         "exclusive": True,
     }
 
@@ -155,7 +155,7 @@ def merge_model_profile(data: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def is_cosmos3_candidate(data: dict[str, Any]) -> bool:
+def is_cosmos3_transfeat(data: dict[str, Any]) -> bool:
     try:
         spec = model_spec_key(data, repo_root())
     except Exception:
@@ -172,20 +172,20 @@ def is_cosmos3_candidate(data: dict[str, Any]) -> bool:
 def cosmos3_gpu_readiness_blocker(data: dict[str, Any], mode: str) -> str | None:
     if mode == "dry-run":
         return None
-    if not is_cosmos3_candidate(data):
+    if not is_cosmos3_transfeat(data):
         return None
 
-    reason = COSMOS3_UNSUPPORTED_GPU_REASONS.get(candidate_id(data))
+    reason = COSMOS3_UNSUPPORTED_GPU_REASONS.get(transfeat_id(data))
     if reason:
         return (
-            f"Refusing to run unsupported Cosmos3 GPU candidate {candidate_id(data)!r}: "
-            f"{reason}. The candidate remains valid for manifest/dry-run/public-alignment "
+            f"Refusing to run unsupported Cosmos3 GPU transfeat {transfeat_id(data)!r}: "
+            f"{reason}. The transfeat remains valid for manifest/dry-run/public-alignment "
             "audits, but a Cosmos3 GPU job would not prove the intended public-reference "
             "technique. Pass --allow-unsupported-gpu only for an explicit diagnostic "
             "env/export run."
         )
 
-    if candidate_id(data) == "semantic_permutation":
+    if transfeat_id(data) == "semantic_permutation":
         env = data.get("env", {}) if isinstance(data.get("env"), dict) else {}
         runtime_python = resolve_runtime_python(data, env)
         missing = missing_python_modules(
@@ -195,7 +195,7 @@ def cosmos3_gpu_readiness_blocker(data: dict[str, Any], mode: str) -> str | None
         )
         if missing:
             return (
-                "Refusing to run Cosmos3 GPU candidate 'semantic_permutation': "
+                "Refusing to run Cosmos3 GPU transfeat 'semantic_permutation': "
                 f"the Sparse VideoGen2/SAP consumer is wired, but runtime python "
                 f"{runtime_python!r} is missing required module(s): "
                 f"{', '.join(missing)}. Install Sparse-VideoGen plus its "
@@ -207,20 +207,20 @@ def cosmos3_gpu_readiness_blocker(data: dict[str, Any], mode: str) -> str | None
     return None
 
 
-def cosmos3_blocked_candidate_ids() -> set[str]:
+def cosmos3_blocked_transfeat_ids() -> set[str]:
     blocked = set(COSMOS3_UNSUPPORTED_GPU_REASONS)
-    candidates_root = repo_root() / "candidates"
+    transfeat_root = repo_root() / "transfeat"
     try:
-        paths = sorted(candidates_root.glob("*/*.toml"))
+        paths = sorted(transfeat_root.glob("*/*.toml"))
         for path in paths:
             data = merge_model_profile(load_toml(path))
-            cid = candidate_id(data)
-            if cid not in COSMOS3_DYNAMIC_GPU_READINESS_CANDIDATES:
+            cid = transfeat_id(data)
+            if cid not in COSMOS3_DYNAMIC_GPU_READINESS_TRANSFEAT:
                 continue
             if cosmos3_gpu_readiness_blocker(data, "local"):
                 blocked.add(cid)
     except Exception:
-        blocked.update(COSMOS3_DYNAMIC_GPU_READINESS_CANDIDATES)
+        blocked.update(COSMOS3_DYNAMIC_GPU_READINESS_TRANSFEAT)
     return blocked
 
 
@@ -380,13 +380,13 @@ def redact_resolved_env(env: dict[str, Any]) -> dict[str, Any]:
 
 
 def write_resolved_manifest(
-    candidate_path: Path,
+    transfeat_path: Path,
     run_dir: Path,
     data: dict[str, Any],
     resolved: dict[str, Any],
     effective_env: dict[str, Any],
 ) -> None:
-    original = candidate_path.read_text()
+    original = transfeat_path.read_text()
     lines = [original.rstrip(), "", "[resolved]"]
     for key, value in resolved.items():
         lines.append(f"{key} = {toml_string(value)}")
@@ -490,7 +490,7 @@ def write_sbatch_script(run_dir: Path, launch_script: Path, slurm: dict[str, Any
 
 def write_metadata(
     run_dir: Path,
-    candidate_path: Path,
+    transfeat_path: Path,
     data: dict[str, Any],
     mode: str,
     source_root: Path,
@@ -502,16 +502,16 @@ def write_metadata(
     job_script: Path,
     artifact_paths: dict[str, str],
     runtime_python: str,
-    candidate_dry_run: dict[str, Any] | None = None,
+    transfeat_dry_run: dict[str, Any] | None = None,
 ) -> None:
     now = datetime.now(timezone.utc).isoformat()
     metadata = {
-        "candidate_id": candidate_id(data),
+        "transfeat_id": transfeat_id(data),
         "kind": data.get("kind"),
-        "purpose": candidate_purpose(data),
+        "purpose": transfeat_purpose(data),
         "mode": mode,
         "created_at_utc": now,
-        "candidate_manifest": str(candidate_path),
+        "transfeat_manifest": str(transfeat_path),
         "run_dir": str(run_dir),
         "submodule": str(source_root),
         "runtime_root": str(runtime_root),
@@ -528,8 +528,8 @@ def write_metadata(
         "status": "prepared",
         "status_history": [{"status": "prepared", "at_utc": now, "reason": "bundle_created"}],
     }
-    if candidate_dry_run is not None:
-        metadata["candidate_dry_run"] = candidate_dry_run
+    if transfeat_dry_run is not None:
+        metadata["transfeat_dry_run"] = transfeat_dry_run
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
 
@@ -559,7 +559,7 @@ def parse_sbatch_job_id(stdout: str) -> str | None:
     return match.group(1)
 
 
-def is_scored_candidate(data: dict[str, Any]) -> bool:
+def is_scored_transfeat(data: dict[str, Any]) -> bool:
     purpose = str(data.get("purpose", "")).lower()
     if purpose in {"control", "evidence", "blocker_probe", "unsafe_probe"}:
         return False
@@ -569,7 +569,7 @@ def is_scored_candidate(data: dict[str, Any]) -> bool:
 
     slurm = data.get("slurm", {})
     job_name = slurm.get("job_name", "") if isinstance(slurm, dict) else ""
-    label = f"{candidate_id(data)} {job_name}".lower()
+    label = f"{transfeat_id(data)} {job_name}".lower()
     non_scored_markers = (
         "baseline_off",
         "trace_off",
@@ -592,10 +592,10 @@ def recorded_run_dirs(root: Path, status_path: Path) -> set[Path]:
 
     recorded: set[Path] = set()
     for collection in (
-        "candidates",
-        "frontier_candidates",
-        "discarded_candidates",
-        "rejected_candidates",
+        "transfeat",
+        "frontier_transfeat",
+        "discarded_transfeat",
+        "rejected_transfeat",
     ):
         for record in status.get(collection, []):
             if not isinstance(record, dict) or not record.get("run_dir"):
@@ -606,26 +606,26 @@ def recorded_run_dirs(root: Path, status_path: Path) -> set[Path]:
 
 
 def load_manifest_for_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
-    manifest = metadata.get("candidate_manifest")
+    manifest = metadata.get("transfeat_manifest")
     if manifest:
         manifest_path = Path(str(manifest))
         if manifest_path.exists():
             return load_toml(manifest_path)
     return {
-        "id": metadata.get("candidate_id", ""),
+        "id": metadata.get("transfeat_id", ""),
         "kind": metadata.get("kind", ""),
         "purpose": metadata.get("purpose", ""),
     }
 
 
-def candidate_purpose(data: dict[str, Any]) -> str:
+def transfeat_purpose(data: dict[str, Any]) -> str:
     raw = str(data.get("purpose") or "").strip().lower()
     if raw:
         return raw
     kind = str(data.get("kind", "")).lower()
     if kind == "baseline":
         return "control"
-    label = f"{candidate_id(data)} {data.get('description', '')}".lower()
+    label = f"{transfeat_id(data)} {data.get('description', '')}".lower()
     if "upper-bound" in label or "upper_bound" in label:
         return "blocker_probe"
     return "delivery"
@@ -671,8 +671,8 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
         return
 
     recorded = recorded_run_dirs(root, status_path)
-    current_candidate_id = candidate_id(data)
-    current_is_scored = is_scored_candidate(data)
+    current_transfeat_id = transfeat_id(data)
+    current_is_scored = is_scored_transfeat(data)
     blockers: list[str] = []
     for metadata_path in sorted(runs_root.glob("*/metadata.json")):
         try:
@@ -686,15 +686,15 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
         if metadata.get("status") in NONBLOCKING_RUN_STATUSES:
             continue
         existing_data = load_manifest_for_metadata(metadata)
-        existing_candidate_id = candidate_id(existing_data) or str(
-            metadata.get("candidate_id", "")
+        existing_transfeat_id = transfeat_id(existing_data) or str(
+            metadata.get("transfeat_id", "")
         )
-        if existing_candidate_id == current_candidate_id:
+        if existing_transfeat_id == current_transfeat_id:
             blockers.append(
                 f"{run_dir} status={metadata.get('status')} job={metadata.get('slurm_job_id')}"
             )
             continue
-        if current_is_scored and is_scored_candidate(existing_data):
+        if current_is_scored and is_scored_transfeat(existing_data):
             blockers.append(
                 f"{run_dir} status={metadata.get('status')} job={metadata.get('slurm_job_id')}"
             )
@@ -705,7 +705,7 @@ def enforce_single_flight_or_exit(args: argparse.Namespace, data: dict[str, Any]
             "unrecorded run(s) that would violate single-flight launch control. "
             "Gate and record scored runs with "
             "tools/symposium/loop_control.py before launching another scored "
-            "candidate; do not duplicate controls. Set "
+            "transfeat; do not duplicate controls. Set "
             "AUTO_VIDEO_DISABLE_SINGLE_FLIGHT_GUARD=1 only for an explicit "
             "orchestrator-approved override.\n- "
             + "\n- ".join(blockers)
@@ -718,23 +718,23 @@ def prepare_run(
     """Render one run bundle.
 
     `data` lets a caller supply an already-assembled manifest instead of having
-    one read from `args.candidate`. scripts/run.py uses it to translate a flat
+    one read from `args.transfeat`. scripts/run.py uses it to translate a flat
     single-file config into this shape, so both config dialects produce the same
     bundle from the same code rather than from two parallel implementations.
     """
     root = repo_root()
-    candidate_path = Path(args.candidate).resolve()
+    transfeat_path = Path(args.transfeat).resolve()
     if data is None:
-        data = merge_model_profile(load_toml(candidate_path))
+        data = merge_model_profile(load_toml(transfeat_path))
 
     for field in ("id", "kind", "submodule", "run_script"):
         if field not in data:
             raise SystemExit(f"Missing required field: {field}")
 
-    safe_candidate_id = sanitize_id(candidate_id(data))
+    safe_transfeat_id = sanitize_id(transfeat_id(data))
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     suffix = f"-{sanitize_id(args.name_suffix)}" if args.name_suffix else ""
-    run_dir = (root / args.run_root / f"{stamp}-{safe_candidate_id}{suffix}").resolve()
+    run_dir = (root / args.run_root / f"{stamp}-{safe_transfeat_id}{suffix}").resolve()
     run_dir.mkdir(parents=True, exist_ok=False)
 
     source_root = (root / str(data["submodule"])).resolve()
@@ -768,15 +768,15 @@ def prepare_run(
         for key, default in CANONICAL_ARTIFACT_DEFAULTS.items()
     }
 
-    candidate_dry_run = None
+    transfeat_dry_run = None
     try:
-        candidate_dry_run = dry_run_manifest(data, root)
+        transfeat_dry_run = dry_run_manifest(data, root)
     except Exception as exc:
-        raise SystemExit(f"Candidate dry-run validation failed: {exc}") from exc
+        raise SystemExit(f"Transfeat dry-run validation failed: {exc}") from exc
 
     env = {}
-    if candidate_dry_run:
-        env.update(candidate_dry_run.get("env_preview", {}))
+    if transfeat_dry_run:
+        env.update(transfeat_dry_run.get("env_preview", {}))
     env.update(data.get("env", {}))
     env.setdefault("AUTOVIDEO_REPO_ROOT", str(root))
     env.setdefault("AUTOVIDEO_RUNTIME_ROOT", str(runtime_root))
@@ -785,10 +785,10 @@ def prepare_run(
             raise SystemExit(f"--env expects KEY=VALUE, got: {item}")
         key, value = item.split("=", 1)
         env[key] = value
-    # Immutable run identity: candidate-specific wrappers may use this to reject
+    # Immutable run identity: transfeat-specific wrappers may use this to reject
     # CLI env overrides that would otherwise execute a different topology under
-    # the same candidate label.
-    env["AUTOVIDEO_CANDIDATE_ID"] = candidate_id(data)
+    # the same transfeat label.
+    env["AUTOVIDEO_TRANSFEAT_ID"] = transfeat_id(data)
     runtime_python = resolve_runtime_python(data, env)
     validate_runtime_python(runtime_python, args.mode)
 
@@ -818,12 +818,12 @@ def prepare_run(
         "runtime_commit": runtime_commit or "",
         "current_commit": current_commit or "",
     }
-    write_resolved_manifest(candidate_path, run_dir, data, resolved, env)
+    write_resolved_manifest(transfeat_path, run_dir, data, resolved, env)
     launch_script = write_launch_script(run_dir, runtime_root, run_script, env, output_dir)
     job_script = write_sbatch_script(run_dir, launch_script, data.get("slurm", {}))
     write_metadata(
         run_dir,
-        candidate_path,
+        transfeat_path,
         data,
         args.mode,
         source_root,
@@ -835,15 +835,15 @@ def prepare_run(
         job_script,
         artifact_paths,
         runtime_python,
-        candidate_dry_run,
+        transfeat_dry_run,
     )
-    write_dry_run(run_dir / "candidate_dry_run.json", candidate_dry_run)
+    write_dry_run(run_dir / "transfeat_dry_run.json", transfeat_dry_run)
     return run_dir, launch_script, job_script, data
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("candidate", help="Path to a candidate TOML manifest")
+    parser.add_argument("transfeat", help="Path to a transfeat TOML manifest")
     parser.add_argument(
         "--mode",
         choices=("dry-run", "local", "sbatch", "slurm"),
@@ -875,7 +875,7 @@ def main() -> int:
         "--allow-unsupported-gpu",
         action="store_true",
         help=(
-            "Allow local/sbatch launch for a Cosmos3 candidate whose current runtime "
+            "Allow local/sbatch launch for a Cosmos3 transfeat whose current runtime "
             "does not consume the advertised optimization. Use only for explicit "
             "diagnostic env/export checks."
         ),
@@ -884,12 +884,12 @@ def main() -> int:
     if args.mode == "slurm":
         args.mode = "sbatch"
 
-    candidate_data = merge_model_profile(load_toml(Path(args.candidate).resolve()))
-    enforce_gpu_readiness_or_exit(args, candidate_data)
-    enforce_single_flight_or_exit(args, candidate_data)
+    transfeat_data = merge_model_profile(load_toml(Path(args.transfeat).resolve()))
+    enforce_gpu_readiness_or_exit(args, transfeat_data)
+    enforce_single_flight_or_exit(args, transfeat_data)
 
     run_dir, launch_script, job_script, data = prepare_run(args)
-    print(f"candidate: {candidate_id(data)}")
+    print(f"transfeat: {transfeat_id(data)}")
     print(f"run_dir: {run_dir}")
     print(f"launch_script: {launch_script}")
     print(f"job_script: {job_script}")

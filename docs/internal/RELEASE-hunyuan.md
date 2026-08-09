@@ -54,4 +54,4 @@ denoise path exactly (OFF identity). Rollback = run with TeaCache disabled.
 - HIGH (maxhits3): `.../integration/runs/20260621-013714-hunyuan_teacache_high_delivery/`
 - HIGH (maxhits4 alt): `.../step_cache/runs/20260621-011511-hunyuan_teacache_temb_start3_maxhits4/`
   (fan-out gate + `assess_verdict_orchestrator.json` hardened-gate re-confirm)
-- Fan-out: 76 candidates gated across 5 dimensions; step_cache swept all tiers.
+- Fan-out: 76 transfeat gated across 5 dimensions; step_cache swept all tiers.

@@ -39,28 +39,28 @@ def test_create_model_experiment_copies_baseline_closure_only(tmp_path: Path) ->
     assert (worktree / "runtime/hunyuan_diffusers_baseline/gpu_infer.py").exists()
     assert (worktree / "runtime/hunyuan_diffusers_baseline/scripts/run_hunyuan_diffusers_gpu.sh").exists()
     assert not (worktree / "runtime/hunyuan_diffusers_baseline/step_cache_runtime.py").exists()
-    assert (worktree / "candidates/hunyuan_diffusers_baseline.toml").exists()
+    assert (worktree / "transfeat/hunyuan_diffusers_baseline.toml").exists()
     assert (worktree / "models/hunyuan_diffusers.toml").exists()
     assert (worktree / "models/hunyuan_diffusers/model.toml").exists()
-    assert (worktree / "scripts/launch_candidate.py").exists()
+    assert (worktree / "scripts/launch_transfeat.py").exists()
     assert (worktree / "scripts/collect_run.py").exists()
     assert (worktree / "search/plan_eval.py").exists()
     assert (worktree / "tools/vision/nvidia_gemini_judge.py").exists()
-    assert (worktree / "efficiency/candidate_manifest.py").exists()
+    assert (worktree / "efficiency/transfeat_manifest.py").exists()
     assert (worktree / "goals/kernel_aw/goal.md").exists()
     assert (worktree / "goals/kernel_aw/context.json").exists()
 
     assert not (worktree / "efficiency/techniques").exists()
     assert not (worktree / "efficiency/transforms").exists()
-    assert not (worktree / "candidates/kwl_fusion").exists()
-    assert not (worktree / "candidates/step_cache").exists()
+    assert not (worktree / "transfeat/kwl_fusion").exists()
+    assert not (worktree / "transfeat/step_cache").exists()
     assert not (worktree / "search_space").exists()
     assert not (worktree / "workflow").exists()
     assert not any("__pycache__" in path.parts for path in worktree.rglob("*"))
 
     manifest = json.loads((worktree / "state/baseline_copy_manifest.json").read_text())
     assert manifest["copy_mode"] == "allowlist_minimal_runnable_closure"
-    assert "candidates/hunyuan_diffusers_baseline.toml" in manifest["copied_paths"]
+    assert "transfeat/hunyuan_diffusers_baseline.toml" in manifest["copied_paths"]
     assert all("__pycache__" not in rel for rel in manifest["copied_paths"])
     context = json.loads((worktree / "goals/kernel_aw/context.json").read_text())
     assert context["model_uid"] == "hunyuan_diffusers"
@@ -69,8 +69,8 @@ def test_create_model_experiment_copies_baseline_closure_only(tmp_path: Path) ->
     dry_run = subprocess.run(
         [
             sys.executable,
-            "scripts/launch_candidate.py",
-            "candidates/hunyuan_diffusers_baseline.toml",
+            "scripts/launch_transfeat.py",
+            "transfeat/hunyuan_diffusers_baseline.toml",
             "--mode",
             "dry-run",
         ],

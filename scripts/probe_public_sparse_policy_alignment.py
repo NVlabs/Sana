@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Pin public boundaries for local pure sparse-attention policy candidates.
+"""Pin public boundaries for local pure sparse-attention policy transfeat.
 
-The seven candidates covered here are intentionally model-agnostic policy
+The seven transfeat covered here are intentionally model-agnostic policy
 baselines consumed by the Cosmos3 ``piecewise_attn`` adapter in runtime probes.
 They cite SpargeAttn, Sparse-VideoGen/AdaSpa, and HASTE-style method families,
 but they are not line-for-line public kernel ports. This checker separates that
@@ -33,7 +33,7 @@ PUBLIC_MINFERENCE_FORWARD = PUBLIC_MINFERENCE / "minference" / "modules" / "minf
 PUBLIC_MINFERENCE_PIT = PUBLIC_MINFERENCE / "minference" / "ops" / "pit_sparse_flash_attention.py"
 LOCAL_POLICY = ROOT / "efficiency" / "sparse_attention_policies.py"
 
-POLICY_CANDIDATES = {
+POLICY_TRANSFEAT = {
     "spatial_temporal_head_routing": {
         "public_family": "Sparse-VideoGen/AdaSpa spatial-temporal head routing",
         "local_policy": (
@@ -147,7 +147,7 @@ def source_checks() -> dict[str, bool]:
         "minference_has_vertical_slash_mask_builder": "make_finegrained_mask" in minference_pit
         and "vertical_indexes" in minference_pit
         and "slash_indexes" in minference_pit,
-        "local_has_all_policy_modes": all(mode in local for mode in POLICY_CANDIDATES),
+        "local_has_all_policy_modes": all(mode in local for mode in POLICY_TRANSFEAT),
         "local_uses_pure_policy_mask_builder": "def build_sparse_route_mask" in local
         and "mask_to_block_indices" in local,
         "local_has_spargeattn_mean_similarity_core": "def spargeattn_mean_similarity_block_map" in local
@@ -254,7 +254,7 @@ def behavior_probe() -> dict[str, Any]:
         svg_head_matches.append(bool(torch.equal(svg_routed["mask"][0, head], expected)))
 
     rows: dict[str, Any] = {}
-    for idx, (cid, meta) in enumerate(POLICY_CANDIDATES.items()):
+    for idx, (cid, meta) in enumerate(POLICY_TRANSFEAT.items()):
         result = build_sparse_route_mask(
             cid,
             qc,
@@ -388,7 +388,7 @@ def behavior_probe() -> dict[str, Any]:
             and svg_routed["selected_mode"] == "svg_sample_mse_head_selection"
         )
         rows[cid] = {
-            "manifest": str(ROOT / "candidates" / "sparse_attention" / f"{cid}.toml"),
+            "manifest": str(ROOT / "transfeat" / "sparse_attention" / f"{cid}.toml"),
             "public_family": meta["public_family"],
             "local_policy": meta["local_policy"],
             "mode": result["mode"],
@@ -468,7 +468,7 @@ def behavior_probe() -> dict[str, Any]:
         to_token_major=False,
     )
     return {
-        "candidate_manifest_alignment": rows,
+        "transfeat_manifest_alignment": rows,
         "sparse_videogen_sample_mse_core": {
             "matches_public_core": bool(all(svg_head_matches)),
             "selected_mode": svg_routed["selected_mode"],

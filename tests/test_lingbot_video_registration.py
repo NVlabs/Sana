@@ -27,13 +27,13 @@ def load_adapter_module():
     return module
 
 
-def test_lingbot_profile_and_candidates_share_fixed_workload() -> None:
+def test_lingbot_profile_and_transfeat_share_fixed_workload() -> None:
     profile = load_toml("models/lingbot_video.toml")
     eval_profile = load_toml("evals/profiles/official_video_t2v_lingbot_video.toml")
-    baseline = load_toml("candidates/lingbot_video_baseline.toml")
-    optimized = load_toml("candidates/lingbot_video_cudnn_optimized.toml")
-    optimized_off = load_toml("candidates/lingbot_video_cudnn_off.toml")
-    fsdp_reference = load_toml("candidates/lingbot_video_fsdp4_reference.toml")
+    baseline = load_toml("transfeat/lingbot_video/baseline.toml")
+    optimized = load_toml("transfeat/lingbot_video_cudnn_optimized.toml")
+    optimized_off = load_toml("transfeat/lingbot_video_cudnn_off.toml")
+    fsdp_reference = load_toml("transfeat/lingbot_video_fsdp4_reference.toml")
 
     assert profile["official_config"] == eval_profile["official_config"]
     assert profile["official_config"]["num_gpus"] == 4
@@ -57,7 +57,7 @@ def test_lingbot_baseline_contract_does_not_copy_optimized_runtime() -> None:
     assert "runtime/lingbot_video_baseline/**" in includes
     assert not any("lingbot_video_optimized" in item for item in includes)
     assert not any("lingbot_video_optimized" in item for item in excludes)
-    assert contract["baseline"]["manifest"] == "candidates/lingbot_video_baseline.toml"
+    assert contract["baseline"]["manifest"] == "transfeat/lingbot_video/baseline.toml"
 
 
 def test_lingbot_baseline_and_optimized_sources_are_physically_isolated() -> None:
@@ -142,8 +142,8 @@ def test_lingbot_dry_run_persists_merged_profile_and_snapshot_identity() -> None
             subprocess.run(
                 [
                     sys.executable,
-                    "scripts/launch_candidate.py",
-                    f"candidates/{filename}",
+                    "scripts/launch_transfeat.py",
+                    f"transfeat/{filename}",
                     "--mode",
                     "dry-run",
                     "--strict-commit",
@@ -160,7 +160,7 @@ def test_lingbot_dry_run_persists_merged_profile_and_snapshot_identity() -> None
         for run_dir in run_root.iterdir():
             metadata = json.loads((run_dir / "metadata.json").read_text())
             manifest = tomllib.loads((run_dir / "manifest.resolved.toml").read_text())
-            filename = Path(metadata["candidate_manifest"]).name
+            filename = Path(metadata["transfeat_manifest"]).name
             cp_degree, kernel, eval_name = expected[filename]
             resolved_profile = manifest["resolved_profile"]
             assert resolved_profile["official_config"]["context_parallel_degree"] == cp_degree

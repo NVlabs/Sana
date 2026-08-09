@@ -7,32 +7,32 @@ speed-targeted (low/mid/high) configs — without any dimension knowing which mo
 ## How it stays model-agnostic
 - **Dimensions** (`loops/<dim>/dimension.toml`) declare techniques, search axes,
   and optional `[[method_baseline]]` entries that classify method-family starting
-  points as `wired`, `candidate_wired`, `runtime_patch`, or
+  points as `wired`, `transfeat_wired`, `runtime_patch`, or
   `upper_bound_probe`. They never name a model.
 - **Model** (`models/<id>.toml` + runtime code under `Sol-LTX-Infer/`) is the
-  model-specific surface. Candidate manifests declare required capabilities.
+  model-specific surface. Transfeat manifests declare required capabilities.
 - `search.py` gives the main agent a CPU-only diagnostic view. It can still run
   compose checks and print the method-baseline catalog, but those checks do not
   gate subagent launch; subagents inspect and edit inference code directly.
 
 ## Run
 ```bash
-# CPU (needs torch): enumerate eligible dimensions + composable candidate space
+# CPU (needs torch): enumerate eligible dimensions + composable transfeat space
 ~/lustre/miniconda3/envs/sana/bin/python search/search.py --model cosmos3
 ~/lustre/miniconda3/envs/sana/bin/python search/test_search.py
 ```
 
 ## Pipeline (this skeleton = the CPU half)
 ```
-load model profile + candidate capability contract
+load model profile + transfeat capability contract
   -> for each method family the main agent decides to wake:
        start from search_space + loops/<dim>/exploration.md
        run the bounded fan-out loop:
-         observe current-experiment results -> hypothesize -> implement one candidate
+         observe current-experiment results -> hypothesize -> implement one transfeat
          -> preflight -> launch -> authoritative gate -> retain/discard/reject and loop
        compose([technique(cfg)], manifest-derived spec)  # diagnostic, not driver
   -> [GPU stage, stubbed — plan_eval()]:
-       render run bundle from profile + cfg -> scripts/launch_candidate.py
+       render run bundle from profile + cfg -> scripts/launch_transfeat.py
        collect benchmark.json/quality.json -> authoritative aligned assess
        -> compare vs profile baseline
        bin into 1.5x/2.0x/3.0x speed targets per evals/tiers.toml
@@ -41,8 +41,8 @@ The enumerate+compose half runs here and is tested. The eval+tiering half is the
 GPU stage (`plan_eval()` stub) — it reuses the existing launcher/collector + eval
 profile, so the search produces the plan's `final_matrix` of tiered configs.
 
-Candidate failure rejects/logs that candidate and returns to the loop; candidate
-success retains the candidate in the frontier only when quality or speed/memory
+Transfeat failure rejects/logs that transfeat and returns to the loop; transfeat
+success retains the transfeat in the frontier only when quality or speed/memory
 improves, then also returns to the loop. Stop only at max_iters, real blocker,
 or explicit orchestrator release; structured-negative is logged as a proposal,
 not a dimension-agent stop. Default fan-out

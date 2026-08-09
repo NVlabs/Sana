@@ -107,7 +107,7 @@ def expand_include(root: Path, pattern: str) -> list[Path]:
         if path.is_file():
             matches = [path]
         elif path.is_dir():
-            matches = [candidate for candidate in path.rglob("*") if candidate.is_file()]
+            matches = [transfeat for transfeat in path.rglob("*") if transfeat.is_file()]
         else:
             matches = []
     if not matches:
@@ -411,7 +411,7 @@ This worktree was created from model contract
 
 It contains the baseline runnable closure for model `{metadata["model_uid"]}`
 and is owned by workflow `{metadata["workflow_uid"]}`. It intentionally does
-not contain historical runs, generated candidates, or other workflow search
+not contain historical runs, generated transfeat, or other workflow search
 spaces unless a workflow creates them inside this experiment.
 """
     (worktree / "README.md").write_text(text)

@@ -3,10 +3,10 @@
 **Scope**: Explore low-precision linear-layer paths for the target model using
 NVIDIA Transformer Engine NVFP4 or a model-specific FP4 equivalent. Start from
 profiling and code inspection, not a fixed grid. The goal is to find retained
-frontier candidates that improve quality or speed/memory, then let the main
+frontier transfeat that improve quality or speed/memory, then let the main
 agent select final low/medium/high winners after the 40-iteration budget.
 
-This dimension is hardware-sensitive. A candidate that cannot exercise real FP4
+This dimension is hardware-sensitive. A transfeat that cannot exercise real FP4
 hardware or a validated fallback should be recorded as a blocker or diagnostic,
 not as a speed result.
 
@@ -20,7 +20,7 @@ a global tensor scale. Current TE docs describe 2D weight quantization, random
 Hadamard transforms (RHT), stochastic rounding, and row-scaled activation as
 recipe-level choices. The current target runtime already consumes the three
 disable flags for RHT, stochastic rounding, and 2D quantization; other axes may
-require candidate-side loader wiring.
+require transfeat-side loader wiring.
 
 Primary references:
 
@@ -32,7 +32,7 @@ Primary references:
 
 ## Required Hardware And Runtime Preflight
 
-Run this before candidate iterations consume GPU budget:
+Run this before transfeat iterations consume GPU budget:
 
 - GPU architecture: confirm Blackwell/SM100 or later for native NVFP4.
 - CUDA, cuDNN, FlashInfer, and TransformerEngine versions.
@@ -42,7 +42,7 @@ Run this before candidate iterations consume GPU budget:
 - FP4 GEMM backend availability, for example auto, cutlass, cudnn, trtllm, or
   target-supported FlashInfer backends.
 - OFF path identity: disabled NVFP4 must recover the baseline path.
-- Env consumption: prove that every env var used by the candidate is read by the
+- Env consumption: prove that every env var used by the transfeat is read by the
   target loader, or mark it metadata-only.
 
 If this preflight fails because hardware or libraries are unavailable, report a
@@ -95,7 +95,7 @@ Useful axes:
 - Weight-only vs weight+activation FP4 when the runtime exposes that distinction.
 
 Record which axes are already consumed by the runtime and which were newly wired
-by the candidate.
+by the transfeat.
 
 ### 4. Dense Guard Policies
 
@@ -137,12 +137,12 @@ Useful axes:
 
 ---
 
-## Candidate Loop Template
+## Transfeat Loop Template
 
 Each iteration should write a hypothesis like:
 
 ```text
-Candidate <id>:
+Transfeat <id>:
 - module scope:
 - TE recipe:
 - backend/padding:
@@ -154,7 +154,7 @@ Candidate <id>:
 - rejection evidence:
 ```
 
-Then launch exactly one candidate, run the authoritative gate, and record one of:
+Then launch exactly one transfeat, run the authoritative gate, and record one of:
 
 - `quality_improved`
 - `speed_improved`
@@ -164,7 +164,7 @@ Then launch exactly one candidate, run the authoritative gate, and record one of
 - `blocked`
 - `structured_negative`
 
-Do not treat "failed tier budget" as loop completion. Retain a candidate when
+Do not treat "failed tier budget" as loop completion. Retain a transfeat when
 quality improves or speed/memory improves; discard it only when neither quality
 nor speed/memory improves.
 
@@ -178,7 +178,7 @@ Common failure signatures:
 - Texture shimmer, static, snow, or flicker.
 - Detail loss in text, faces, hands, or high-frequency structure.
 - OFF identity break because disabled env still changes loader state.
-- No-op candidate where env is set but target loader never consumes it.
+- No-op transfeat where env is set but target loader never consumes it.
 - Speed regression due to quantization overhead, padding, fallback, or compile
   state.
 - Inconclusive result because the run used non-Blackwell hardware or missing TE
@@ -192,9 +192,9 @@ with aligned artifacts.
 
 ## Retained Frontier Record
 
-For every retained candidate, record:
+For every retained transfeat, record:
 
-- candidate id and manifest;
+- transfeat id and manifest;
 - changed files and exact env vars;
 - quantized module list;
 - TE recipe flags and backend;
@@ -202,7 +202,7 @@ For every retained candidate, record:
 - hardware, CUDA, cuDNN, FlashInfer, TransformerEngine versions;
 - warm/cold compile state;
 - run dir, benchmark, peak memory, side-by-side video, LPIPS, pairwise Gemini;
-- whether the candidate improved quality, speed/memory, or both.
+- whether the transfeat improved quality, speed/memory, or both.
 
 ---
 

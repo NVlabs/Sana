@@ -130,21 +130,21 @@ from job 5813128. Same peak memory to the byte, same eval count, 0.7% on latency
 
 ```bash
 python3 scripts/run.py models/minimax_h3/GB200/dense.toml        # flat, one file
-python3 scripts/run.py candidates/minimax_h3_h100_dense.toml     # candidate + profile
+python3 scripts/run.py transfeat/minimax_h3/h100_dense.toml     # transfeat + profile
 ```
 
-It tells them apart by shape -- a candidate declares `model_profile` or a
+It tells them apart by shape -- a transfeat declares `model_profile` or a
 `[runtime]` table, a flat config carries `runtime` as a plain string -- and hands
 both to the same `prepare_run`, so `runs/<stamp>-<id>/` contains `launch.sh`,
 `job.sbatch`, `manifest.resolved.toml`, `metadata.json` and `outputs/` either
 way. `collect_run.py` reads either.
 
 Use whichever the job calls for. A flat config is one self-contained file, good
-for running one arm and for sites outside this cluster. A candidate shares a
+for running one arm and for sites outside this cluster. A transfeat shares a
 model profile across variants -- `minimax_h3` has 23 of them over one profile --
 and carries `kind`, `purpose` and `[requires].capabilities`, which is what drives
 the conflict check and the promotion gates.
 
-`scripts/launch_candidate.py` is still there and is what actually renders the
+`scripts/launch_transfeat.py` is still there and is what actually renders the
 bundle. Call it directly when you want the scheduler: it is the only one of the
 two that submits with `--mode sbatch --confirm-submit`.

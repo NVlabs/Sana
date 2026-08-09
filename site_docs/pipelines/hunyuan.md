@@ -14,13 +14,13 @@ configuration; a fresh same-config benchmark is pending.
 
 ```bash
 # baseline (vanilla diffusers HunyuanVideoPipeline, single GPU)
-python3 scripts/launch_candidate.py candidates/hunyuan_video_baseline.toml --mode sbatch --confirm-submit
+python3 scripts/launch_transfeat.py transfeat/hunyuan_video/baseline.toml --mode sbatch --confirm-submit
 
 # optimized release stack
-python3 scripts/launch_candidate.py candidates/hunyuan_video_full.toml --mode sbatch --confirm-submit
+python3 scripts/launch_transfeat.py transfeat/hunyuan_video/full.toml --mode sbatch --confirm-submit
 ```
 
-The optimized candidate enables torch.compile, TeaCache, and SOL Attention
+The optimized transfeat enables torch.compile, TeaCache, and SOL Attention
 together; every technique is env-gated (all flags off = byte-identical baseline).
 
 ## Techniques

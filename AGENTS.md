@@ -113,7 +113,7 @@ $PY scripts/sana/sana_video_sglang_run.py \
 ### Wan2.2 TI2V-5B (1 GPU) · Wan2.2-A14B (1 GPU) · LingBot-Video (4 GPU)
 
 > These three run through the **Sol-LTX-Infer optimization repo** (diffusers +
-> `launch_candidate`), not the SGLang runtime. Clone it and point `SOL_LTX_INFER` at it;
+> `launch_transfeat`), not the SGLang runtime. Clone it and point `SOL_LTX_INFER` at it;
 > the wrappers below carry the acceleration line and submit the run.
 
 ```bash

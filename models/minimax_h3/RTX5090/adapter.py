@@ -344,7 +344,7 @@ def _real_qkv_gate(
     # Release inactive allocator blocks before Triton's first autotune sweep.
     torch.cuda.synchronize(q.device)
     torch.cuda.empty_cache()
-    candidate = sol_attn(
+    transfeat = sol_attn(
         q_gate,
         k_gate,
         v_gate,
@@ -361,7 +361,7 @@ def _real_qkv_gate(
         scale=scale,
     ).transpose(1, 2)
     torch.cuda.synchronize(q.device)
-    stats = _error_stats(candidate, reference)
+    stats = _error_stats(transfeat, reference)
     limits = {
         "max_abs": float(
             os.getenv(

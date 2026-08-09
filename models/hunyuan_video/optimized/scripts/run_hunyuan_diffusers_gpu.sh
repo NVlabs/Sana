@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reconstructed vanilla HunyuanVideo (diffusers) baseline launcher.
 #
-# Invoked by scripts/launch_candidate.py's generated launch.sh, which has already:
+# Invoked by scripts/launch_transfeat.py's generated launch.sh, which has already:
 #   - cd'd into the runtime root (this dir's parent),
 #   - exported the model profile [env] (MODEL_REPO, HUNYUAN_*, HF_*, PYTHON_BIN, SEED, ...),
 #   - exported OUT_DIR (the run's outputs/ dir).

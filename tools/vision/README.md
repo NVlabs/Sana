@@ -25,7 +25,7 @@ Do not write API keys into this repo, reports, shell history, or committed code.
 ```bash
 python3 tools/vision/nvidia_gemini_judge.py \
   --baseline-frame /abs/baseline.png \
-  --candidate-frame /abs/candidate.png \
+  --transfeat-frame /abs/transfeat.png \
   --out /tmp/visual_judge.json \
   --dry-run
 ```
@@ -52,7 +52,7 @@ working.
 ## LPIPS Judge
 
 `lpips_judge.py` computes a learned perceptual distance between baseline and
-candidate frames. Lower scores are better. The CLI is self-contained and imports
+transfeat frames. Lower scores are better. The CLI is self-contained and imports
 the optional `lpips` and `torch` dependencies only when scoring, so `--help` and
 offline collector probes keep working without those packages installed.
 
@@ -61,7 +61,7 @@ Stable frame contract:
 ```bash
 python3 tools/vision/lpips_judge.py \
   --baseline-frame A.png \
-  --candidate-frame B.png \
+  --transfeat-frame B.png \
   --out OUT.json
 ```
 
@@ -70,17 +70,17 @@ Frame arguments are repeatable and paired by order:
 ```bash
 python3 tools/vision/lpips_judge.py \
   --baseline-frame baseline_0001.png \
-  --candidate-frame candidate_0001.png \
+  --transfeat-frame transfeat_0001.png \
   --baseline-frame baseline_0002.png \
-  --candidate-frame candidate_0002.png
+  --transfeat-frame transfeat_0002.png
 ```
 
-The tool can also sample a baseline/candidate video pair before scoring:
+The tool can also sample a baseline/transfeat video pair before scoring:
 
 ```bash
 python3 tools/vision/lpips_judge.py \
   --baseline-video baseline.mp4 \
-  --candidate-video candidate.mp4 \
+  --transfeat-video transfeat.mp4 \
   --sample-fps 1 \
   --out lpips.json
 ```
@@ -120,7 +120,7 @@ Successful output schema:
   chronological pairs plus worst-case pixel-drift pairs;
 - Gemini verdict JSON must be present in `quality.json` or the assessment
   verdict, not only in prose logs. Gemini receives stratified + worst-case
-  frame pairs and, when available, baseline/candidate/side-by-side video inputs
+  frame pairs and, when available, baseline/transfeat/side-by-side video inputs
   to catch flicker, patch-level discontinuity, motion breakage, blur, ghosting,
   snow/static, and severe temporal degradation.
 

@@ -225,7 +225,7 @@ def main():
     if kernel_runtime.active:
         log(
             "kernel runtime active "
-            f"stack={list(kernel_runtime.stack)} active_candidate={kernel_runtime.active_candidate or None} "
+            f"stack={list(kernel_runtime.stack)} active_transfeat={kernel_runtime.active_transfeat or None} "
             f"initialization={kernel_runtime.activation['initialization_s']:.3f}s"
         )
 
@@ -439,7 +439,7 @@ def main():
     paired_dit = kernel_runtime.run_paired_dit_benchmark()
     if paired_dit is not None:
         log(
-            f"paired DiT {paired_dit['candidate']} OFF={paired_dit['off']['median_ms']:.3f}ms "
+            f"paired DiT {paired_dit['transfeat']} OFF={paired_dit['off']['median_ms']:.3f}ms "
             f"ON={paired_dit['on']['median_ms']:.3f}ms "
             f"speedup={paired_dit['median_speedup']:.4f}x"
         )
@@ -505,7 +505,7 @@ def main():
     }
     if profile_result is not None:
         bench["kernel_profile"] = "kernel_profile.json"
-        bench["profile_timing_warning"] = "Profiled timing includes Kineto overhead and is not a speed candidate."
+        bench["profile_timing_warning"] = "Profiled timing includes Kineto overhead and is not a speed transfeat."
     kernel_summary = kernel_runtime.finalize()
     cache_summary = cache_runtime.summary() if cache_runtime is not None else None
     bench["kernel_runtime"] = kernel_summary

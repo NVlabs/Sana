@@ -25,10 +25,10 @@
   ],
   "best_config": {
     "id": "c5_cudnn_attn",
-    "sbatch": "agent_opt/candidates/c5_cudnn_attn.sbatch",
+    "sbatch": "agent_opt/transfeat/c5_cudnn_attn.sbatch",
     "key_env": "LINGBOT_ATTN_KERNEL=cudnn (default fa2 preserved as OFF path)",
     "hot_total_s": 207.9,
-    "reproduce": "sbatch agent_opt/candidates/c5_cudnn_attn.sbatch"
+    "reproduce": "sbatch agent_opt/transfeat/c5_cudnn_attn.sbatch"
   },
   "search_closed_reason": "cuDNN attention cut refiner_denoise 2.12x (263->124s) and hot 1.81x (376->208s); refiner attention now near roofline; Ring/overlap cannot help (a2a is ~ms, negligible); EP/expert-TP predicted slower by prior RESULTS. No remaining hypothesis expected to beat c5.",
   "discarded_wrong_objective": [

@@ -33,17 +33,17 @@ def env_with_pythonpath(prefix: Path) -> dict[str, str]:
 
 def write_tiny_frames(directory: Path) -> tuple[Path, Path, bool]:
     baseline = directory / "baseline.png"
-    candidate = directory / "candidate.png"
+    transfeat = directory / "transfeat.png"
     try:
         from PIL import Image  # type: ignore
     except Exception:
         baseline.write_bytes(b"placeholder baseline")
-        candidate.write_bytes(b"placeholder candidate")
-        return baseline, candidate, False
+        transfeat.write_bytes(b"placeholder transfeat")
+        return baseline, transfeat, False
 
     Image.new("RGB", (2, 2), (0, 0, 0)).save(baseline)
-    Image.new("RGB", (2, 2), (1, 1, 1)).save(candidate)
-    return baseline, candidate, True
+    Image.new("RGB", (2, 2), (1, 1, 1)).save(transfeat)
+    return baseline, transfeat, True
 
 
 def run_cli(args: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -89,7 +89,7 @@ def test_import_is_lightweight() -> None:
 def test_cli_frame_pair_emits_valid_json() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        baseline, candidate, _used_pillow = write_tiny_frames(root)
+        baseline, transfeat, _used_pillow = write_tiny_frames(root)
         blocker = root / "blocker"
         write_blocking_module(blocker, "lpips")
         out = root / "lpips.json"
@@ -97,8 +97,8 @@ def test_cli_frame_pair_emits_valid_json() -> None:
             [
                 "--baseline-frame",
                 str(baseline),
-                "--candidate-frame",
-                str(candidate),
+                "--transfeat-frame",
+                str(transfeat),
                 "--out",
                 str(out),
             ],
@@ -113,15 +113,15 @@ def test_cli_frame_pair_emits_valid_json() -> None:
 def test_unavailable_fallback_exits_zero_and_writes_stdout_json() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        baseline, candidate, _used_pillow = write_tiny_frames(root)
+        baseline, transfeat, _used_pillow = write_tiny_frames(root)
         blocker = root / "blocker"
         write_blocking_module(blocker, "lpips")
         proc = run_cli(
             [
                 "--baseline-frame",
                 str(baseline),
-                "--candidate-frame",
-                str(candidate),
+                "--transfeat-frame",
+                str(transfeat),
             ],
             env=env_with_pythonpath(blocker),
         )

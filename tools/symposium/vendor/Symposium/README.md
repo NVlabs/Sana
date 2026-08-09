@@ -60,7 +60,7 @@ Evolve-step -> Ontology -> convergence
 
 - **Less guessing**: the agent cannot silently invent missing requirements.
 - **Better specs**: every vague request becomes a testable Seed.
-- **Human control**: blind-spot candidates are never auto-adopted.
+- **Human control**: blind-spot transfeat are never auto-adopted.
 - **Works with Codex and Claude**: one canonical skill source, two install targets.
 - **Small and hackable**: plain Markdown skills, no framework lock-in.
 

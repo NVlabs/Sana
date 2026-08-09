@@ -38,10 +38,10 @@ def make_run(root: Path, *, pending: bool = False) -> Path:
             "iters_used": 1,
             "max_iters": 4,
             "agent_recommendation": "stop",
-            "frontier_candidates": [],
-            "candidates": [
+            "frontier_transfeat": [],
+            "transfeat": [
                 {
-                    "candidate_id": "c1",
+                    "transfeat_id": "c1",
                     "decision": "speed_improved",
                     "purpose": "delivery",
                     "run_dir": "runs/c1",
@@ -52,7 +52,7 @@ def make_run(root: Path, *, pending: bool = False) -> Path:
             ],
             "best_per_tier": {
                 "low": {
-                    "candidate_id": "c1",
+                    "transfeat_id": "c1",
                     "decision": "speed_improved",
                     "purpose": "delivery",
                     "run_dir": "runs/c1",
@@ -69,7 +69,7 @@ def make_run(root: Path, *, pending: bool = False) -> Path:
         "| tier | status |\n|---|---|\n| low | " + status + " |\n",
     )
     write(
-        integration / "candidates/c1.toml",
+        integration / "transfeat/c1.toml",
         'id = "c1"\n[composition]\nsource_runs = ["../step_cache/runs/source"]\n',
     )
     write_json(

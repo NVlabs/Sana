@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-contained tests for launch_candidate single-flight guards."""
+"""Self-contained tests for launch_transfeat single-flight guards."""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "scripts/launch_candidate.py"
+MODULE_PATH = ROOT / "scripts/launch_transfeat.py"
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("launch_candidate", MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("launch_transfeat", MODULE_PATH)
     if spec is None or spec.loader is None:
         raise AssertionError(f"Cannot load {MODULE_PATH}")
     module = importlib.util.module_from_spec(spec)
@@ -47,17 +47,17 @@ def expect_block(fn, needle: str) -> None:
     raise AssertionError("Expected SystemExit")
 
 
-def test_scored_candidate_blocks_on_unrecorded_scored_run(module) -> None:
+def test_scored_transfeat_blocks_on_unrecorded_scored_run(module) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         module.repo_root = lambda: root
-        write_json(root / "AGENT-STATUS.json", {"candidates": []})
+        write_json(root / "AGENT-STATUS.json", {"transfeat": []})
 
         run_dir = root / "runs/c1"
         write_json(
             run_dir / "metadata.json",
             {
-                "candidate_id": "c1",
+                "transfeat_id": "c1",
                 "kind": "methodology",
                 "status": "completed",
                 "run_dir": str(run_dir),
@@ -77,13 +77,13 @@ def test_duplicate_control_blocks(module) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         module.repo_root = lambda: root
-        write_json(root / "AGENT-STATUS.json", {"candidates": []})
+        write_json(root / "AGENT-STATUS.json", {"transfeat": []})
 
         run_dir = root / "runs/warm"
         write_json(
             run_dir / "metadata.json",
             {
-                "candidate_id": "warm-control",
+                "transfeat_id": "warm-control",
                 "kind": "env_only",
                 "status": "submitted",
                 "run_dir": str(run_dir),
@@ -108,13 +108,13 @@ def test_baseline_does_not_block_on_scored_run(module) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         module.repo_root = lambda: root
-        write_json(root / "AGENT-STATUS.json", {"candidates": []})
+        write_json(root / "AGENT-STATUS.json", {"transfeat": []})
 
         run_dir = root / "runs/c1"
         write_json(
             run_dir / "metadata.json",
             {
-                "candidate_id": "c1",
+                "transfeat_id": "c1",
                 "kind": "methodology",
                 "status": "submitted",
                 "run_dir": str(run_dir),
@@ -127,17 +127,17 @@ def test_baseline_does_not_block_on_scored_run(module) -> None:
         )
 
 
-def test_profile_does_not_block_scored_candidate(module) -> None:
+def test_profile_does_not_block_scored_transfeat(module) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         module.repo_root = lambda: root
-        write_json(root / "AGENT-STATUS.json", {"candidates": []})
+        write_json(root / "AGENT-STATUS.json", {"transfeat": []})
 
         run_dir = root / "runs/profile"
         write_json(
             run_dir / "metadata.json",
             {
-                "candidate_id": "cosmos3_kwl_profile",
+                "transfeat_id": "cosmos3_kwl_profile",
                 "kind": "patch",
                 "status": "completed",
                 "run_dir": str(run_dir),
@@ -146,7 +146,7 @@ def test_profile_does_not_block_scored_candidate(module) -> None:
         )
 
         module.enforce_single_flight_or_exit(
-            args(), {"id": "kwl-next-candidate", "kind": "patch"}
+            args(), {"id": "kwl-next-transfeat", "kind": "patch"}
         )
 
 
@@ -180,7 +180,7 @@ def test_update_metadata_appends_status_history(module) -> None:
         assert metadata["status_history"][-1]["reason"] == "unit"
 
 
-def test_unsupported_cosmos3_candidate_blocks_gpu_launch(module) -> None:
+def test_unsupported_cosmos3_transfeat_blocks_gpu_launch(module) -> None:
     data = {
         "id": {"name": "te_recipe_variant"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -189,11 +189,11 @@ def test_unsupported_cosmos3_candidate_blocks_gpu_launch(module) -> None:
 
     expect_block(
         lambda: module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data),
-        "unsupported Cosmos3 GPU candidate",
+        "unsupported Cosmos3 GPU transfeat",
     )
 
 
-def test_route_label_candidate_blocks_gpu_launch(module) -> None:
+def test_route_label_transfeat_blocks_gpu_launch(module) -> None:
     data = {
         "id": {"name": "semantic_permutation"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -206,7 +206,7 @@ def test_route_label_candidate_blocks_gpu_launch(module) -> None:
     )
 
 
-def test_payload_cache_candidate_allows_gpu_launch_after_consumer_wiring(module) -> None:
+def test_payload_cache_transfeat_allows_gpu_launch_after_consumer_wiring(module) -> None:
     data = {
         "id": {"name": "attention_broadcast"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -216,7 +216,7 @@ def test_payload_cache_candidate_allows_gpu_launch_after_consumer_wiring(module)
     module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data)
 
 
-def test_nvfp4_candidate_allows_gpu_launch_after_online_quantizer_wiring(module) -> None:
+def test_nvfp4_transfeat_allows_gpu_launch_after_online_quantizer_wiring(module) -> None:
     data = {
         "id": {"name": "conservative_ffn_nvfp4"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -226,7 +226,7 @@ def test_nvfp4_candidate_allows_gpu_launch_after_online_quantizer_wiring(module)
     module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data)
 
 
-def test_sparse_policy_candidate_allows_gpu_launch_after_runtime_consumer(module) -> None:
+def test_sparse_policy_transfeat_allows_gpu_launch_after_runtime_consumer(module) -> None:
     data = {
         "id": {"name": "spatial_temporal_head_routing"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -236,7 +236,7 @@ def test_sparse_policy_candidate_allows_gpu_launch_after_runtime_consumer(module
     module.enforce_gpu_readiness_or_exit(readiness_args("sbatch"), data)
 
 
-def test_unsupported_cosmos3_candidate_allows_dry_run(module) -> None:
+def test_unsupported_cosmos3_transfeat_allows_dry_run(module) -> None:
     data = {
         "id": {"name": "te_recipe_variant"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -246,7 +246,7 @@ def test_unsupported_cosmos3_candidate_allows_dry_run(module) -> None:
     module.enforce_gpu_readiness_or_exit(readiness_args("dry-run"), data)
 
 
-def test_unsupported_cosmos3_candidate_allows_explicit_override(module) -> None:
+def test_unsupported_cosmos3_transfeat_allows_explicit_override(module) -> None:
     data = {
         "id": {"name": "semantic_permutation"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -258,7 +258,7 @@ def test_unsupported_cosmos3_candidate_allows_explicit_override(module) -> None:
     )
 
 
-def test_wired_cosmos3_candidate_allows_gpu_launch(module) -> None:
+def test_wired_cosmos3_transfeat_allows_gpu_launch(module) -> None:
     data = {
         "id": {"name": "piecewise_pisa_env"},
         "run_script": "scripts/run_cosmos3_sglang.sh",
@@ -271,20 +271,20 @@ def test_wired_cosmos3_candidate_allows_gpu_launch(module) -> None:
 def main() -> int:
     module = load_module()
     tests = [
-        test_scored_candidate_blocks_on_unrecorded_scored_run,
+        test_scored_transfeat_blocks_on_unrecorded_scored_run,
         test_duplicate_control_blocks,
         test_baseline_does_not_block_on_scored_run,
-        test_profile_does_not_block_scored_candidate,
+        test_profile_does_not_block_scored_transfeat,
         test_sbatch_wrapper_forces_bash,
         test_update_metadata_appends_status_history,
-        test_unsupported_cosmos3_candidate_blocks_gpu_launch,
-        test_route_label_candidate_blocks_gpu_launch,
-        test_payload_cache_candidate_allows_gpu_launch_after_consumer_wiring,
-        test_nvfp4_candidate_allows_gpu_launch_after_online_quantizer_wiring,
-        test_sparse_policy_candidate_allows_gpu_launch_after_runtime_consumer,
-        test_unsupported_cosmos3_candidate_allows_dry_run,
-        test_unsupported_cosmos3_candidate_allows_explicit_override,
-        test_wired_cosmos3_candidate_allows_gpu_launch,
+        test_unsupported_cosmos3_transfeat_blocks_gpu_launch,
+        test_route_label_transfeat_blocks_gpu_launch,
+        test_payload_cache_transfeat_allows_gpu_launch_after_consumer_wiring,
+        test_nvfp4_transfeat_allows_gpu_launch_after_online_quantizer_wiring,
+        test_sparse_policy_transfeat_allows_gpu_launch_after_runtime_consumer,
+        test_unsupported_cosmos3_transfeat_allows_dry_run,
+        test_unsupported_cosmos3_transfeat_allows_explicit_override,
+        test_wired_cosmos3_transfeat_allows_gpu_launch,
     ]
     for test in tests:
         test(module)

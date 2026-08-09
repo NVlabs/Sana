@@ -1,6 +1,6 @@
 # Optimization Journal — Lossless 4-GPU parallelism
 
-Append one entry per candidate. Newest at the bottom. The frontier is the set of
+Append one entry per transfeat. Newest at the bottom. The frontier is the set of
 non-dominated (faster or less memory, and lossless-PASS) configs.
 
 ## Frontier (seed from RESULTS.md — all 4×GB200, e2e wall-clock)
@@ -29,7 +29,7 @@ non-dominated (faster or less memory, and lossless-PASS) configs.
 ### Iter 1 — profiling (LINGBOT_PHASE_TIMING) — job 4495666
 - Hypothesis: before spending budget on the attention bottleneck, measure where the 237s
   overhead actually is. Added pure-logging `_phase()` markers in runner.py (OFF unless
-  LINGBOT_PHASE_TIMING=1 → lossless no-op path). Candidate = golden config + timing.
+  LINGBOT_PHASE_TIMING=1 → lossless no-op path). Transfeat = golden config + timing.
 - Expect: PHASE lines giving load/base-denoise/vae/refiner-load/refiner-denoise/vae split.
 
 ### Policy update (orchestrator, mid-iter1)
@@ -56,7 +56,7 @@ non-dominated (faster or less memory, and lossless-PASS) configs.
 - Output byte-identical to golden (1104039 B) → instrumentation is a harmless no-op.
 - **Model loading = 234s = the ENTIRE non-denoise overhead** (base 126 + refiner 108).
   This + refiner denoise (263) are the only two big levers. FFN/EP irrelevant (RESULTS).
-- Node variance ~7%; compare candidates on PHASE deltas, not just raw wall clock.
+- Node variance ~7%; compare transfeat on PHASE deltas, not just raw wall clock.
 
 ### Iter 2 — overlap refiner load with base denoise (job 4497566)
 - Hypothesis: refiner load (108s IO/CPU) runs serially BEFORE base denoise (89s pure-GPU),

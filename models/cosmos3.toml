@@ -1,6 +1,6 @@
 # Model profile for Cosmos3 runtime defaults.
 #
-# Candidate manifests declare required capabilities; dry-run validation creates
+# Transfeat manifests declare required capabilities; dry-run validation creates
 # a minimal manifest-derived ModelSpec rather than importing a built-in
 # per-model spec file. Runtime-specific glue stays in Sol-LTX-Infer.
 
@@ -9,15 +9,15 @@ spec = "Cosmos3"                 # descriptive target label in generated metadat
 display_name = "nvidia/Cosmos3-Super"
 family = "video_t2v"
 # submodule is the vendored runtime dir, and run_script is resolved relative to
-# the candidate's [runtime].root -- NOT repo-relative. Both arms name their shim
+# the transfeat's [runtime].root -- NOT repo-relative. Both arms name their shim
 # identically, so the same run_script value selects baseline or optimized purely
-# by which [runtime].root the candidate points at. There is no separate
+# by which [runtime].root the transfeat points at. There is no separate
 # "optimized_run_script" key; nothing reads one.
 submodule = "models/cosmos3/baseline"
 run_script = "scripts/run_cosmos3_gpu.sh"
 eval_profile = "evals/profiles/official_video_t2v_cosmos3.toml"
 model_contract = "models/cosmos3/model.toml"
-# No base_commit: launch_candidate.py compares it against the *submodule's* git
+# No base_commit: launch_transfeat.py compares it against the *submodule's* git
 # commit, and the submodule is this repo's vendored arm. The Sol-LTX-Infer pin
 # lives in models/cosmos3/model.toml as [[baseline.reference_only]].commit.
 #
@@ -66,7 +66,7 @@ SEED = "42"
 PROMPT_FILE = "models/cosmos3/prompts/default.txt"
 NEGATIVE_PROMPT_FILE = "models/cosmos3/prompts/negative.txt"
 
-# Per-seam wiring status. Candidate dry-run checks use manifest-declared
+# Per-seam wiring status. Transfeat dry-run checks use manifest-declared
 # capabilities; real GPU usefulness still depends on the runtime consuming the
 # corresponding env/config/path in Cosmos3 code.
 [seam_status]

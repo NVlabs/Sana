@@ -290,8 +290,10 @@ def test_model_callers_use_the_release_configuration() -> None:
     assert all(token not in combined for token in forbidden)
     assert "make_mmdit_sol_attn_dispatch" in paths[0].read_text()
 
-    sol_candidates = []
-    for path in sorted((ROOT / "candidates").glob("*.toml")):
+    sol_transfeat = []
+    # rglob, not glob: transfeat manifests live one directory deeper now,
+    # under transfeat/<model>/ and transfeat/<technique>/.
+    for path in sorted((ROOT / "transfeat").rglob("*.toml")):
         with path.open("rb") as handle:
             payload = tomllib.load(handle)
         env = payload.get("env", {})
@@ -299,10 +301,10 @@ def test_model_callers_use_the_release_configuration() -> None:
             assert env["HUNYUAN_SOL_TAU"] == "1.0"
             assert env["HUNYUAN_SOL_THRESH_TYPE"] == "diag"
             assert env["HUNYUAN_SOL_KV_SPLITS"] == "auto"
-            sol_candidates.append(path)
+            sol_transfeat.append(path)
         if env.get("WAN22_SOL_ATTN") == "1":
             assert env["WAN22_SOL_TAU"] == "1.0"
             assert env["WAN22_SOL_THRESH_TYPE"] == "diag"
             assert env["WAN22_SOL_KV_SPLITS"] == "auto"
-            sol_candidates.append(path)
-    assert sol_candidates
+            sol_transfeat.append(path)
+    assert sol_transfeat

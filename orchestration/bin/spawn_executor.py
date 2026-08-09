@@ -180,7 +180,7 @@ def main() -> int:
         worktree, baseline_meta.get("runtime_root"), label="baseline runtime_root"
     )
     launcher_path = owned_worktree_path(
-        worktree, "scripts/launch_candidate.py", label="candidate launcher"
+        worktree, "scripts/launch_transfeat.py", label="transfeat launcher"
     )
     context_path = owned_worktree_path(
         worktree,

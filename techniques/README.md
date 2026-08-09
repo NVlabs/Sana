@@ -1,6 +1,6 @@
 # `efficiency/`
 
-Model-agnostic efficiency candidate code for video-generation inference.
+Model-agnostic efficiency transfeat code for video-generation inference.
 
 The package owns the reusable algorithm/policy layer. A model adapter supplies
 the runtime seams: denoise-step loop, transformer-block loop, token layout,
@@ -10,9 +10,9 @@ prefix details.
 ## Entry Flow
 
 ```text
-candidates/<dimension>/<candidate>.toml
-  -> scripts/launch_candidate.py --mode dry-run
-  -> efficiency.candidate_manifest.dry_run_manifest()
+transfeat/<dimension>/<transfeat>.toml
+  -> scripts/launch_transfeat.py --mode dry-run
+  -> efficiency.transfeat_manifest.dry_run_manifest()
   -> registry.build_technique/build_transform()
   -> compose(items, manifest-derived ModelSpec)
   -> transform env preview or runtime Technique plan
@@ -32,7 +32,7 @@ not required repo state.
 - `schedule.py`: step/stage schedule DSL.
 - `registry.py`: technique/transform registration plus optional external
   model-spec registration.
-- `candidate_manifest.py`: TOML schema checks, capability resolution, and
+- `transfeat_manifest.py`: TOML schema checks, capability resolution, and
   manifest-derived dry-run specs.
 
 ## Runtime Techniques
@@ -57,7 +57,7 @@ not required repo state.
 
 ## Model Capability Contract
 
-This repo no longer ships built-in per-model spec files. Candidate dry-runs
+This repo no longer ships built-in per-model spec files. Transfeat dry-runs
 synthesize a minimal `ModelSpec` from `[requirements].capabilities` in the
 manifest, then `compose()` checks the selected technique or transform against
 that contract. The concrete model adapter remains in the runtime code under
@@ -66,8 +66,8 @@ that contract. The concrete model adapter remains in the runtime code under
 ## Verify
 
 ```bash
-PYTHONNOUSERSITE=1 python3 scripts/test_candidate_manifests.py
-PYTHONNOUSERSITE=1 python3 scripts/audit_candidate_soundness.py
+PYTHONNOUSERSITE=1 python3 scripts/test_transfeat_manifests.py
+PYTHONNOUSERSITE=1 python3 scripts/audit_transfeat_soundness.py
 PYTHONNOUSERSITE=1 python3 scripts/test_public_reference_alignment.py
 PYTHONNOUSERSITE=1 /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python efficiency/selftest.py
 ```

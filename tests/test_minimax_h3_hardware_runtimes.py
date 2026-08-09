@@ -19,7 +19,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 # id -> directory. Deliberately not the same string: the directory is a path and
 # uses the vendor's capitalisation (H100), while the id is a data value that
-# already appears in candidate filenames and in each SOURCE_SNAPSHOT's "variant"
+# already appears in transfeat filenames and in each SOURCE_SNAPSHOT's "variant"
 # field. Renaming those would rewrite recorded metadata to match what is a
 # cosmetic change to a path.
 RUNTIME_DIRS = {
@@ -27,12 +27,12 @@ RUNTIME_DIRS = {
     "a100": "A100",
 }
 RUNTIMES = {hid: ROOT / "models/minimax_h3" / d for hid, d in RUNTIME_DIRS.items()}
-CANDIDATES = ROOT / "candidates"
+TRANSFEAT = ROOT / "transfeat"
 PINNED_IMAGE = "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86"
 
 
-def _candidate(hardware: str, profile: str) -> dict:
-    path = CANDIDATES / f"minimax_h3_{hardware}_{profile}.toml"
+def _transfeat(hardware: str, profile: str) -> dict:
+    path = TRANSFEAT / "minimax_h3" / f"{hardware}_{profile}.toml"
     with path.open("rb") as handle:
         return tomllib.load(handle)
 
@@ -63,21 +63,21 @@ def test_hardware_runtimes_are_self_contained() -> None:
                 assert f"models.minimax_h3.{RUNTIME_DIRS[other]}" not in source
 
 
-def test_candidates_point_directly_to_one_hardware_runtime() -> None:
+def test_transfeat_point_directly_to_one_hardware_runtime() -> None:
     profiles = ("dense", "quality", "balanced", "aggressive", "fullopt_exact")
     for hardware in RUNTIMES:
         expected_root = f"models/minimax_h3/{RUNTIME_DIRS[hardware]}"
         for profile in profiles:
-            candidate = _candidate(hardware, profile)
-            assert candidate["submodule"] == expected_root
-            assert candidate["runtime"]["root"] == expected_root
-            assert "H3_HARDWARE" not in candidate["env"]
-            assert candidate["env"]["H3_SOL_PROFILE"] == profile
-            assert candidate["env"]["H3_CONTAINER_IMAGE"] == PINNED_IMAGE
-            assert not candidate["inherit_profile_env"]
-            assert candidate["official_config"]["num_gpus"] == 4
-            assert candidate["official_config"]["context_parallel_degree"] == 4
-            assert candidate["artifacts"] == {
+            transfeat = _transfeat(hardware, profile)
+            assert transfeat["submodule"] == expected_root
+            assert transfeat["runtime"]["root"] == expected_root
+            assert "H3_HARDWARE" not in transfeat["env"]
+            assert transfeat["env"]["H3_SOL_PROFILE"] == profile
+            assert transfeat["env"]["H3_CONTAINER_IMAGE"] == PINNED_IMAGE
+            assert not transfeat["inherit_profile_env"]
+            assert transfeat["official_config"]["num_gpus"] == 4
+            assert transfeat["official_config"]["context_parallel_degree"] == 4
+            assert transfeat["artifacts"] == {
                 "output_dir": "outputs",
                 "video": "out.mp4",
                 "log": "run.log",
@@ -128,11 +128,11 @@ def test_hardware_and_policy_overrides_fail_closed() -> None:
                 module.configure_runtime()
 
 
-def test_candidates_do_not_inherit_the_legacy_diffusers_environment() -> None:
-    namespace = runpy.run_path(str(ROOT / "scripts/launch_candidate.py"))
+def test_transfeat_do_not_inherit_the_legacy_diffusers_environment() -> None:
+    namespace = runpy.run_path(str(ROOT / "scripts/launch_transfeat.py"))
     merge = namespace["merge_model_profile"]
     for hardware in RUNTIMES:
-        merged = merge(_candidate(hardware, "fullopt_exact"))
+        merged = merge(_transfeat(hardware, "fullopt_exact"))
         assert "H3_CONDA_ROOT" not in merged["env"]
         assert "H3_CONDA_ENV" not in merged["env"]
         assert "PYTHON_BIN" not in merged["env"]

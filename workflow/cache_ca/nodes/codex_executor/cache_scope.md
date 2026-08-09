@@ -2,7 +2,7 @@
 
 Optimize the target model by caching repeated denoising, transformer, attention,
 block, residual, feature, or forecast work across denoising steps. This workflow
-is for cache methods only; do not spend candidate work on kernel fusion,
+is for cache methods only; do not spend transfeat work on kernel fusion,
 quantization, token pruning, VAE decode, text encoders, scheduler changes,
 prompt changes, or benchmark shape changes.
 
@@ -13,7 +13,7 @@ VAE, Hugging Face cache, or baseline run.
 
 ## Fixed Evaluation Contract
 
-Every cache candidate must be judged by a full target-model run and aligned
+Every cache transfeat must be judged by a full target-model run and aligned
 quality assessment. Microbench, single-DiT, or module-only evidence may be used
 for debugging, but it is never sufficient for workflow progress or method
 judgment.
@@ -38,7 +38,7 @@ reviewer's verdict or call Gemini itself.
 
 The workflow gate accepts only durable `assess_verdict.json` evidence merged by
 that reviewer node with
-numeric `baseline_total_s`, `candidate_total_s`, `speedup`, numeric
+numeric `baseline_total_s`, `transfeat_total_s`, `speedup`, numeric
 `lpips_max`, `visual_provider=codex`, a complete pass-or-fail
 `codex_visual_overall`, a valid `codex_visual_verdict.json`, no infrastructure
 blockers, and a matching full-run config. A complete visual fail is usable
@@ -47,7 +47,7 @@ method failure.
 
 ## Closed Method Scope
 
-The candidate set for this workflow is closed and contains exactly three cache
+The transfeat set for this workflow is closed and contains exactly three cache
 families:
 
 1. TeaCache
@@ -56,12 +56,12 @@ families:
 
 Implement, compare, and tune only these three families. Do not introduce PAB,
 DeepCache, FasterCache, Cache-DiT, generic fixed-step reuse, attention
-broadcast, token pruning, or another cache family as a candidate. The
-cache-disabled target-model run is the control, not a fourth candidate. A fixed
+broadcast, token pruning, or another cache family as a transfeat. The
+cache-disabled target-model run is the control, not a fourth transfeat. A fixed
 call-index reuse schedule may be used briefly to debug integration or calibrate
 timing, but it cannot be retained, ranked, or presented as a workflow result.
 
-Every measured candidate must belong to exactly one of the three families.
+Every measured transfeat must belong to exactly one of the three families.
 Cross-family hybrids are outside this workflow because they make attribution
 and matched-time comparison ambiguous. Implementation work within a family is
 allowed and expected: faithfully integrate the method into the target model, remove its
@@ -81,9 +81,9 @@ parameters for each useful shared time budget.
 Use full-run end-to-end wall time from the fixed evaluation contract:
 
 ```text
-time_ratio = candidate_total_s / baseline_total_s
+time_ratio = transfeat_total_s / baseline_total_s
 time_compression = 1 - time_ratio
-speedup = baseline_total_s / candidate_total_s
+speedup = baseline_total_s / transfeat_total_s
 ```
 
 All runs in one comparison must use the same baseline, hardware/job shape, and
@@ -115,15 +115,15 @@ The repo already has cache-method search material:
   TeaCache-style timestep-aware reuse, EasyCache-style runtime-adaptive
   transform-vector reuse, and Taylor-style forecasting material is in scope.
   Ignore the other families in that document for this workflow.
-- `candidates/step_cache/` contains existing cache family manifests such as
+- `transfeat/step_cache/` contains existing cache family manifests such as
   TeaCache-style signal reuse and several out-of-scope methods. Existing code
-  is reference material only and does not expand the closed candidate set.
+  is reference material only and does not expand the closed transfeat set.
 - Historical Hunyuan/Cosmos artifacts contain a generic TeaCache controller and
   prior quality-gated runs, but those are references only. Adapt the idea to
   the target model's actual denoising/transformer path instead of copying a
   different model adapter blindly.
 
-For each candidate, record the signal source, reuse payload, refresh rule,
+For each transfeat, record the signal source, reuse payload, refresh rule,
 hit/recompute pattern, OFF path, full-run runtime, normalized `time_ratio`,
 LPIPS, Codex visual verdict, and failure mode. Also record the complete method
 parameter point, its parent trial, target time budget, and why the previous
@@ -132,4 +132,4 @@ proven by speed alone, and a quality winner is not proven at unmatched speed.
 
 ## Execution round limit
 
-You have a hard budget of **20 optimization rounds** (candidate attempts) for this workflow. This is an execution-round limit, not a suggestion: pace your search so that by round 20 you have finalized and delivered your best retained frontier. Do not plan for more than 20 rounds. One round = one candidate implemented, launched, evaluated, and gated.
+You have a hard budget of **20 optimization rounds** (transfeat attempts) for this workflow. This is an execution-round limit, not a suggestion: pace your search so that by round 20 you have finalized and delivered your best retained frontier. Do not plan for more than 20 rounds. One round = one transfeat implemented, launched, evaluated, and gated.

@@ -12,7 +12,7 @@ Diffusion post-training quantization methods study how to reduce precision while
 
 ## Role in Sol-Engine
 
-These methods define the broader quantization search space. The reported Sol-Engine stacks use selective NVFP4 rather than a uniform PTQ conversion, but the same agent framework can evaluate diffusion PTQ candidates per deployment.
+These methods define the broader quantization search space. The reported Sol-Engine stacks use selective NVFP4 rather than a uniform PTQ conversion, but the same agent framework can evaluate diffusion PTQ transfeat per deployment.
 
 ## Search knobs
 

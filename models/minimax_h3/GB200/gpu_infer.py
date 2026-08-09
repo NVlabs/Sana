@@ -22,7 +22,7 @@ The acceleration line, in the order the switches compose:
     H3_SHARD_VAE        the video VAE decode split across the ranks, batched, optionally compiled.
 
 Every switch is independent, so `benchmark.json` from two runs that differ in one variable is a
-clean A/B. The candidate manifests in `candidates/minimax_h3_*.toml` pin the combinations that
+clean A/B. The transfeat manifests in `transfeat/minimax_h3_*.toml` pin the combinations that
 were measured.
 """
 

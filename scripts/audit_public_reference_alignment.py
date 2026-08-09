@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Audit public-reference alignment claims for efficiency candidates.
+"""Audit public-reference alignment claims for efficiency transfeat.
 
 This is deliberately stricter than a URL liveness check. It records what each
-candidate claims relative to its public/canonical references and prevents
+transfeat claims relative to its public/canonical references and prevents
 launcher-ready probes from being mistaken for full public-reference ports.
 """
 
@@ -463,7 +463,7 @@ def extract_urls(value: str) -> list[str]:
     return [part.strip(".,)") for part in value.split() if is_url(part.strip(".,)"))]
 
 
-def candidate_text(data: dict[str, Any]) -> str:
+def transfeat_text(data: dict[str, Any]) -> str:
     refs = data.get("references", {})
     external = refs.get("external", {}) if isinstance(refs, dict) else {}
     parts = [
@@ -534,7 +534,7 @@ def adapter_probe_reference_note_problems(path: Path, notes: str) -> list[str]:
 
 
 def cosmos3_baseline_or_ltx2_note_problems(path: Path, notes: str) -> list[str]:
-    """Rows with no new Cosmos3 delta must say why they are probes, not candidates."""
+    """Rows with no new Cosmos3 delta must say why they are probes, not transfeat."""
     problems: list[str] = []
     note = notes.lower()
     if "cosmos3" not in note:
@@ -622,14 +622,14 @@ def cosmos3_consumes_dimension(runtime_text: str, dimension: str) -> bool:
 
 
 def launcher_cosmos3_blocklist() -> set[str]:
-    module_path = ROOT / "scripts" / "launch_candidate.py"
-    spec = importlib.util.spec_from_file_location("launch_candidate_for_audit", module_path)
+    module_path = ROOT / "scripts" / "launch_transfeat.py"
+    spec = importlib.util.spec_from_file_location("launch_transfeat_for_audit", module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot import {module_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    if hasattr(module, "cosmos3_blocked_candidate_ids"):
-        return set(module.cosmos3_blocked_candidate_ids())
+    if hasattr(module, "cosmos3_blocked_transfeat_ids"):
+        return set(module.cosmos3_blocked_transfeat_ids())
     return set(module.COSMOS3_UNSUPPORTED_GPU_REASONS)
 
 
@@ -670,9 +670,9 @@ def validate_pab_public_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     expected_job = "3452366" if cid == "attention_broadcast" else "3452365"
     if metadata.get("slurm_job_id") != expected_job:
@@ -758,9 +758,9 @@ def validate_sparse_policy_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if not metadata.get("slurm_job_id"):
         errors.append(f"{cid}: diagnostic metadata is missing slurm_job_id")
@@ -825,15 +825,15 @@ def validate_svg_sample_mse_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3455836":
         errors.append(
             f"{cid}: expected slurm_job_id='3455836', got {metadata.get('slurm_job_id')!r}"
         )
-    env_preview = ((metadata.get("candidate_dry_run") or {}).get("env_preview") or {})
+    env_preview = ((metadata.get("transfeat_dry_run") or {}).get("env_preview") or {})
     backend_config = str(env_preview.get("SGLANG_HQ_ATTENTION_BACKEND_CONFIG", ""))
     if "piecewise_frame_size=2" not in backend_config:
         errors.append(f"{cid}: diagnostic launch did not carry piecewise_frame_size=2")
@@ -927,15 +927,15 @@ def validate_svg_temporal_anchor_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3459306":
         errors.append(
             f"{cid}: expected slurm_job_id='3459306', got {metadata.get('slurm_job_id')!r}"
         )
-    env_preview = ((metadata.get("candidate_dry_run") or {}).get("env_preview") or {})
+    env_preview = ((metadata.get("transfeat_dry_run") or {}).get("env_preview") or {})
     backend_config = str(env_preview.get("SGLANG_HQ_ATTENTION_BACKEND_CONFIG", ""))
     if "piecewise_frame_size=2" not in backend_config:
         errors.append(f"{cid}: diagnostic launch did not carry piecewise_frame_size=2")
@@ -1029,9 +1029,9 @@ def validate_sparge_core_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3454721":
         errors.append(
@@ -1110,9 +1110,9 @@ def validate_sparge_proxy_core_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3457934":
         errors.append(
@@ -1210,9 +1210,9 @@ def validate_sparge_qk_core_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3458125":
         errors.append(
@@ -1304,9 +1304,9 @@ def validate_sparge_headwise_core_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3458697":
         errors.append(
@@ -1398,9 +1398,9 @@ def validate_minference_dynamic_core_short_gpu_diagnostic(cid: str) -> list[str]
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3459048":
         errors.append(
@@ -1500,9 +1500,9 @@ def validate_piecewise_pisa_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3459457":
         errors.append(
@@ -1597,9 +1597,9 @@ def validate_tome_public_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3446886":
         errors.append(
@@ -1660,9 +1660,9 @@ def validate_tomesd_random2d_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3458395":
         errors.append(
@@ -1737,15 +1737,15 @@ def validate_cat_public_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3453096":
         errors.append(
             f"{cid}: expected slurm_job_id='3453096', got {metadata.get('slurm_job_id')!r}"
         )
-    params = ((metadata.get("candidate_dry_run") or {}).get("runtime_config") or {}).get("params") or {}
+    params = ((metadata.get("transfeat_dry_run") or {}).get("runtime_config") or {}).get("params") or {}
     if params.get("method") != "cat_convergence_stale_cpp":
         errors.append(f"{cid}: expected CAT selector method in metadata, got {params.get('method')!r}")
     if params.get("keep_ratio") != 0.3:
@@ -1816,9 +1816,9 @@ def validate_teacache_public_short_gpu_diagnostic(cid: str) -> list[str]:
             errors.append(f"{cid}: empty short GPU diagnostic artifact {path.relative_to(ROOT)}")
 
     metadata = load_json(run_dir / "metadata.json")
-    if metadata.get("candidate_id") != cid:
+    if metadata.get("transfeat_id") != cid:
         errors.append(
-            f"{cid}: diagnostic metadata candidate_id={metadata.get('candidate_id')!r}"
+            f"{cid}: diagnostic metadata transfeat_id={metadata.get('transfeat_id')!r}"
         )
     if metadata.get("slurm_job_id") != "3451216":
         errors.append(
@@ -1981,7 +1981,7 @@ def check_teacache_public_controller_profile(
         ROOT / "scripts/probe_public_teacache_alignment.py",
         "probe_public_teacache_alignment_audit",
     ).probe()
-    profile = probe["candidate_manifest_alignment"]
+    profile = probe["transfeat_manifest_alignment"]
     if not profile["matches_public_cosmos_profile"]:
         problems.append(
             f"{path.relative_to(ROOT)}: TeaCache profile mismatches public Cosmos profile: "
@@ -2017,13 +2017,13 @@ def check_pab_public_controller_profile(
         return
     if params.get("mode") != "pab" or env.get("SGLANG_HQ_PAYLOAD_CACHE_MODE") != "pab":
         problems.append(
-            f"{path.relative_to(ROOT)}: public PAB payload-cache candidates must run with mode='pab'"
+            f"{path.relative_to(ROOT)}: public PAB payload-cache transfeat must run with mode='pab'"
         )
     probe = load_module(
         ROOT / "scripts/probe_public_pab_alignment.py",
         "probe_public_pab_alignment_audit",
     ).probe()
-    alignment = probe["candidate_manifest_alignment"][cid]
+    alignment = probe["transfeat_manifest_alignment"][cid]
     if not alignment.get("matches_public_pab_controller"):
         problems.append(
             f"{path.relative_to(ROOT)}: local PAB controller no longer matches the public VideoSys PAB behavior probe"
@@ -2141,11 +2141,11 @@ def next_required_proof(alignment: Alignment) -> str:
     if gap == "pure_algorithm_adapter_missing":
         return (
             "implement the pure algorithm as a small Cosmos3 adapter with explicit "
-            "fallback, then prove the candidate changes execution in a GPU smoke run"
+            "fallback, then prove the transfeat changes execution in a GPU smoke run"
         )
     if gap == "already_in_cosmos3_baseline_or_ltx2_specific_not_applicable":
         return (
-            "do not submit a candidate GPU job as optimization evidence; either keep "
+            "do not submit a transfeat GPU job as optimization evidence; either keep "
             "the pure baseline code, or define a new Cosmos3-specific algorithmic delta"
         )
     if gap == "te_recipe_model_specific_adapter_semantics_mismatch":
@@ -2153,7 +2153,7 @@ def next_required_proof(alignment: Alignment) -> str:
             "keep the pure ModelOpt/CUTLASS FP4 linear consumer, and only add a "
             "Cosmos3 TE fused-epilogue adapter if it preserves Cosmos3's "
             "bias-free SwiGLU semantics; the LTX2 GELU/bias-gate fused flags "
-            "are disabled in the manifest and must remain out of the candidate "
+            "are disabled in the manifest and must remain out of the transfeat "
             "claim until such an adapter exists; generic TE recipe env is "
             "already separated from explicit LTX2 adapter env; repair the "
             "current TransformerEngine/CUDNN runtime dependency before any TE "
@@ -2172,7 +2172,7 @@ def next_required_proof(alignment: Alignment) -> str:
     if gap == "probe_requires_concrete_backend_policy":
         return (
             "choose a concrete Cosmos3 backend policy with dense fallback and quality "
-            "criteria before treating GPU runtime as candidate evidence"
+            "criteria before treating GPU runtime as transfeat evidence"
         )
     if gap == "public_algorithm_not_implemented":
         return (
@@ -2490,7 +2490,7 @@ def audit() -> tuple[list[dict[str, str]], list[str]]:
     rows: list[dict[str, str]] = []
     problems: list[str] = []
     effective: dict[str, Alignment] = {}
-    paths = sorted((ROOT / "candidates").glob("*/*.toml"))
+    paths = sorted((ROOT / "transfeat").glob("*/*.toml"))
     seen: set[str] = set()
     runtime_text = cosmos3_runtime_text()
     try:
@@ -2518,7 +2518,7 @@ def audit() -> tuple[list[dict[str, str]], list[str]]:
         if not urls:
             problems.append(f"{path.relative_to(ROOT)}: external references have no URL")
 
-        text = candidate_text(data)
+        text = transfeat_text(data)
         for phrase in OVERCLAIM_PHRASES:
             if contains_unnegated_phrase(text, phrase):
                 problems.append(
@@ -2615,7 +2615,7 @@ def audit() -> tuple[list[dict[str, str]], list[str]]:
             )
         if alignment.cosmos3_status.endswith("route_label_only") and purpose == "delivery":
             problems.append(
-                f"{path.relative_to(ROOT)}: purpose=delivery but candidate is route-label-only"
+                f"{path.relative_to(ROOT)}: purpose=delivery but transfeat is route-label-only"
             )
         if validate_historical_gpu:
             if alignment.cosmos3_status == SPARSE_POLICY_SHORT_GPU_STATUS:
@@ -2663,7 +2663,7 @@ def audit() -> tuple[list[dict[str, str]], list[str]]:
 
         rows.append(
             {
-                "candidate": cid,
+                "transfeat": cid,
                 "dimension": path.parent.name,
                 "purpose": purpose,
                 "scope": alignment.scope,
@@ -2682,7 +2682,7 @@ def audit() -> tuple[list[dict[str, str]], list[str]]:
 
     missing = sorted(set(ALIGNMENT) - seen)
     if missing:
-        problems.append(f"alignment entries without candidate manifests: {missing}")
+        problems.append(f"alignment entries without transfeat manifests: {missing}")
 
     expected_blocked = {
         cid
@@ -2693,11 +2693,11 @@ def audit() -> tuple[list[dict[str, str]], list[str]]:
     extra_blocks = sorted(launcher_blocked - expected_blocked)
     if missing_blocks:
         problems.append(
-            f"launcher does not block unsupported Cosmos3 GPU candidates: {missing_blocks}"
+            f"launcher does not block unsupported Cosmos3 GPU transfeat: {missing_blocks}"
         )
     if extra_blocks:
         problems.append(
-            f"launcher blocks candidates not marked unsupported by public alignment: {extra_blocks}"
+            f"launcher blocks transfeat not marked unsupported by public alignment: {extra_blocks}"
         )
 
     return rows, problems
@@ -2711,7 +2711,7 @@ def write_markdown(path: Path, rows: list[dict[str, str]], problems: list[str]) 
         "",
         "This audit distinguishes public-reference provenance from full public",
         "implementation equivalence. Unless a row explicitly says otherwise, the",
-        "candidate is a model-agnostic baseline, local pure policy, runtime",
+        "transfeat is a model-agnostic baseline, local pure policy, runtime",
         "adapter, or probe, not a line-for-line port of the public implementation.",
         "",
         f"Status: {'pass' if not problems else 'fail'}",
@@ -2729,7 +2729,7 @@ def write_markdown(path: Path, rows: list[dict[str, str]], problems: list[str]) 
         "- Model-specific reproduction glue may be used as temporary test wiring,",
         "  but must not be promoted into the model-agnostic algorithm claim.",
         "- Any Cosmos3 status outside `consumer_wired_*` means a GPU job would not",
-        "  yet prove the intended optimization as candidate evidence.",
+        "  yet prove the intended optimization as transfeat evidence.",
         "- KWL/NVFP4 rows distinguish pure algorithm gaps from Cosmos3-baseline",
         "  fused pieces, LTX2-only replay flags, and NVFP4 backend/recipe evidence gaps.",
         "- Rows whose Cosmos3 status is not meaningful GPU evidence are cross-checked",
@@ -2742,14 +2742,14 @@ def write_markdown(path: Path, rows: list[dict[str, str]], problems: list[str]) 
         "  until the full public runtime assumptions and quality/performance proof",
         "  are also established.",
         "",
-        "## Candidate Matrix",
+        "## Transfeat Matrix",
         "",
-        "| Candidate | Dimension | Purpose | Scope | Equivalence Claim | Public Equivalence Gap | Algorithm Boundary | True Blocker | Glue Policy | Next Required Proof | Public Role | Cosmos3 Status | Local Claim | Residual Risk |",
+        "| Transfeat | Dimension | Purpose | Scope | Equivalence Claim | Public Equivalence Gap | Algorithm Boundary | True Blocker | Glue Policy | Next Required Proof | Public Role | Cosmos3 Status | Local Claim | Residual Risk |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in rows:
         lines.append(
-            "| {candidate} | {dimension} | {purpose} | {scope} | {equivalence_claim} | {public_equivalence_gap} | {algorithm_boundary} | {true_blocker} | {model_specific_glue_policy} | {next_required_proof} | {public_role} | {cosmos3_status} | {local_claim} | {residual_risk} |".format(
+            "| {transfeat} | {dimension} | {purpose} | {scope} | {equivalence_claim} | {public_equivalence_gap} | {algorithm_boundary} | {true_blocker} | {model_specific_glue_policy} | {next_required_proof} | {public_role} | {cosmos3_status} | {local_claim} | {residual_risk} |".format(
                 **{k: v.replace("|", "\\|") for k, v in row.items()}
             )
         )
@@ -2770,7 +2770,7 @@ def main() -> int:
 
     rows, problems = audit()
     report = {
-        "candidate_count": len(rows),
+        "transfeat_count": len(rows),
         "problems": problems,
         "rows": rows,
         "status": "pass" if not problems else "fail",
@@ -2782,10 +2782,10 @@ def main() -> int:
 
     for row in rows:
         print(
-            ("PASS" if not any(row["candidate"] in p for p in problems) else "FAIL")
-            + f" {row['dimension']}/{row['candidate']} {row['scope']} {row['cosmos3_status']}"
+            ("PASS" if not any(row["transfeat"] in p for p in problems) else "FAIL")
+            + f" {row['dimension']}/{row['transfeat']} {row['scope']} {row['cosmos3_status']}"
         )
-    print(f"\n=== public reference alignment: {report['status']} ({len(rows)} candidates) ===")
+    print(f"\n=== public reference alignment: {report['status']} ({len(rows)} transfeat) ===")
     if problems:
         for problem in problems:
             print(f"  - {problem}")

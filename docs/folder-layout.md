@@ -8,7 +8,7 @@ autovideo/
   Sol-LTX-Infer/
   agents/
     launch-agent.md
-  candidates/
+  transfeat/
     README.md
     schema.md
     baseline.toml
@@ -30,7 +30,7 @@ autovideo/
     folder-layout.md
     orchestration.md
   scripts/
-    launch_candidate.py
+    launch_transfeat.py
   tools/
     vision/
       README.md
@@ -56,7 +56,7 @@ autovideo/
 - launch orchestration
 - artifact conventions
 - top-level agent instructions
-- cross-candidate reports
+- cross-transfeat reports
 - eval profiles and promotion gates
 - independent sub-loop folders
 - search-space method-family docs
@@ -74,7 +74,7 @@ autovideo/
 Each launch creates:
 
 ```text
-runs/<timestamp>-<candidate-id>/
+runs/<timestamp>-<transfeat-id>/
   metadata.json
   manifest.resolved.toml
   launch.sh
@@ -92,7 +92,7 @@ runs/<timestamp>-<candidate-id>/
 
 Only `runs/README.md` is tracked. Everything else is generated.
 
-## Candidate Naming
+## Transfeat Naming
 
 Use stable, searchable IDs:
 
@@ -103,6 +103,6 @@ Use stable, searchable IDs:
 - `kwl_qk_rope_ffn`
 - `nvfp4_ffn`
 
-Keep one manifest per candidate. Do not pack multiple ablations into one file;
-the launcher and reports should be able to reason about a candidate as a single
+Keep one manifest per transfeat. Do not pack multiple ablations into one file;
+the launcher and reports should be able to reason about a transfeat as a single
 unit.

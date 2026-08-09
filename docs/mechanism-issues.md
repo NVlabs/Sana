@@ -31,7 +31,7 @@ wall).
   saved an immutable `outputs/benchmark.runner.json` backup.
 
 ## MI-2 — plan_eval base_total was null (no profile [baseline])
-- Symptom: `speedup=None` for every candidate.
+- Symptom: `speedup=None` for every transfeat.
 - Cause: `models/hunyuan_diffusers.toml` had no `[baseline]` table;
   `plan_eval.assess` reads `base_total = profile["baseline"]["total_s"]`.
 - Fix: added `[baseline]` (generation `total_s=881.85`, plus `generate_s`,
@@ -47,7 +47,7 @@ wall).
   override wins, `DEFAULT_FRAME_COUNT` only as last resort. Extraction replaced
   with a single-pass `-vsync 0` passthrough decode that yields exactly the native
   frame count (129), with even subsample only when a smaller cap is requested.
-  Baseline and every candidate use the identical policy, keeping pairs aligned.
+  Baseline and every transfeat use the identical policy, keeping pairs aligned.
 
 ## MI-4 — Cosmos3DenoisingStage stage label drift
 - Symptom: Hunyuan benchmarks labeled `stage_seconds["Cosmos3DenoisingStage"]`.
@@ -68,27 +68,27 @@ wall).
 ## Verification — baseline-vs-baseline self-gate (129 frames)
 `search/plan_eval.py --assess <baseline_run> --baseline-frames <baseline frames>
 --model hunyuan_diffusers`:
-`baseline_total_s=881.85, candidate_total_s=881.85, speedup=1.0,
+`baseline_total_s=881.85, transfeat_total_s=881.85, speedup=1.0,
 gemini_overall=pass, max_artifact_severity=none, lpips_max=0.0,
 quality_blockers=[]`. Non-null timing, identity LPIPS, reachable Gemini pass.
 
 ## MI-6 — aligned pairwise Gemini hallucinates false-fails on near-identical frames
-- Observed during fan-out (run fanout_hunyuan_20260620T183315Z): kwl candidate
+- Observed during fan-out (run fanout_hunyuan_20260620T183315Z): kwl transfeat
   `native_cudnn_attention` had LPIPS `max=0.0, mean=0.0` (frames numerically
   identical to baseline) and collector `quality.json` Gemini = pass/promote/0
   artifacts, yet the aligned pairwise `quality_pairwise.json` returned
-  fail/reject with a hallucinated artifact ("candidate shows an entirely
+  fail/reject with a hallucinated artifact ("transfeat shows an entirely
   different sunset/sunrise dock scene ... deviates from the baseline's forest").
   Identical frames cannot be a different scene → the pairwise judge confabulated.
 - Mechanism: `plan_eval.conservative_gemini_verdict()` takes the WORSE of the
   pairwise + collector Gemini, so one hallucinated pairwise fail dominates and
   sets `quality_blockers=[nvidia_gemini:fail:high]`, `tier=null`.
-- Observed false-fail rate ~2/8 early candidates, all on near-identical
+- Observed false-fail rate ~2/8 early transfeat, all on near-identical
   (LPIPS<=~0.02) runs; the judge still correctly fails real cliffs (LPIPS ~0.95)
-  and passes other low-LPIPS candidates. So it is a reliability caveat, not a
+  and passes other low-LPIPS transfeat. So it is a reliability caveat, not a
   total failure.
 - Impact: speed numbers unaffected; mid-fan-out no winner is lost (agents retain
-  on speed). Real risk is at FINAL selection — a genuinely good fast candidate
+  on speed). Real risk is at FINAL selection — a genuinely good fast transfeat
   could be excluded by a flaked pairwise fail.
 - Cannot fix the running agents' gate (each uses its worktree's frozen
   `plan_eval`). Mitigation: (1) at tier selection / integration (run from the

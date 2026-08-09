@@ -9,7 +9,7 @@ head policies, and env vars must be discovered from target-model inference code,
 attention traces, and reproduction artifacts.
 
 Training-free means no weight update, no finetune, and no distillation. Offline
-profiling and online mask search are allowed when they are candidate artifacts
+profiling and online mask search are allowed when they are transfeat artifacts
 and can be reproduced.
 
 ---
@@ -77,11 +77,11 @@ and adds online softmax-aware filtering. Abstract this as:
 
 - compress each query/key block to a proxy token only when the block is internally
   coherent;
-- predict candidate sparse blocks from proxy attention;
+- predict transfeat sparse blocks from proxy attention;
 - use softmax-aware filtering to skip low-contribution products;
 - keep dense fallback when proxy prediction is uncertain;
 - optionally combine with lower-precision attention kernels only as a separate
-  interaction candidate.
+  interaction transfeat.
 
 ### 6. LVSA-Style Rotating Anchors And Long-Video Windows
 
@@ -163,7 +163,7 @@ patterns are useful as probes when target attention maps show similar structure:
 - Inspect target-model attention implementations before choosing any backend or
   routing policy.
 - Treat self-attention, cross-attention, and joint/GEN attention as separate
-  candidates unless evidence says they can share a policy.
+  transfeat unless evidence says they can share a policy.
 - Run an attention preflight: identify sequence length, frame/tile layout,
   head count, attention call timing, backend selection path, and whether a real
   sparse kernel or only a masking wrapper is used.
@@ -182,16 +182,16 @@ patterns are useful as probes when target attention maps show similar structure:
 
 Use the same frontier rule as step cache and token pruning:
 
-- Retain a candidate when quality improves or speed/memory improves.
-- Discard a candidate only when neither quality nor speed/memory improves.
-- Reject hard-invalid candidates such as broken OFF identity, missing artifacts,
+- Retain a transfeat when quality improves or speed/memory improves.
+- Discard a transfeat only when neither quality nor speed/memory improves.
+- Reject hard-invalid transfeat such as broken OFF identity, missing artifacts,
   metadata-only env with claimed runtime behavior, or non-reproducible masks.
 - Continue until max_iters, real blocker, or orchestrator release. A
   structured-negative proposal is logged as evidence but does not stop the
   default fixed-budget loop by itself. Do not stop merely because one sparse
   pattern fails a tier gate.
 
-For retained candidates, record:
+For retained transfeat, record:
 
 - method family and pattern;
 - attention path and component;
@@ -200,7 +200,7 @@ For retained candidates, record:
 - mask source, refresh policy, and search overhead;
 - backend/kernel path and layout transform;
 - speedup, peak memory, LPIPS, pairwise Gemini, and video artifacts;
-- whether the candidate improved quality, speed/memory, or both.
+- whether the transfeat improved quality, speed/memory, or both.
 
 ---
 
@@ -213,7 +213,7 @@ Do not declare structured negative until the summary covers:
 - best speed/memory point and its quality failure;
 - best quality point and its speed/memory failure;
 - mask-search/permutation overhead;
-- common failure signatures across rejected candidates;
+- common failure signatures across rejected transfeat;
 - why remaining pattern families are redundant, unsupported, or lower value.
 
 ---

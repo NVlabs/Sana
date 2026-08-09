@@ -13,19 +13,19 @@ description: |
 
 Refine takes the active cycle's `### Reflect` comparisons and asks the user to merge the useful parts into one shared meaning.
 
-Ask for one candidate shared meaning at a time. If the user does not approve it, keep asking; do not write a consensus sentence by guesswork.
+Ask for one transfeat shared meaning at a time. If the user does not approve it, keep asking; do not write a consensus sentence by guesswork.
 
 ## Question Style
 
-Prefer offering two or three candidate shared meanings, plus an edit option. Choices are draft language only; the shared meaning must be user-approved.
+Prefer offering two or three transfeat shared meanings, plus an edit option. Choices are draft language only; the shared meaning must be user-approved.
 
 Use this shape:
 
 ```markdown
 Which shared meaning should we keep?
-A. <shared meaning candidate>
-B. <shared meaning candidate>
-C. <shared meaning candidate>
+A. <shared meaning transfeat>
+B. <shared meaning transfeat>
+C. <shared meaning transfeat>
 D. Other / rewrite it in your own words
 ```
 

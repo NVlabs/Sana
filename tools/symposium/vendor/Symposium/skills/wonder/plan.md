@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Expand a vague request into at least three explicit meaning candidates.
+Expand a vague request into at least three explicit meaning transfeat.
 
 ## Success Criteria
 
 - Asks one user question at a time.
-- Produces at least three meaning candidates.
+- Produces at least three meaning transfeat.
 - Writes only the active cycle's `### Wonder` section.
 - Does not invent meanings without user input.
 

@@ -154,9 +154,9 @@ def _cat_kmeans_labels(features, num_clusters: int):
         return _cat_torch_kmeans_labels(features, num_clusters)
 
 
-def _cat_append_unique(selected: list[int], candidates, limit: int) -> None:
+def _cat_append_unique(selected: list[int], transfeat, limit: int) -> None:
     seen = set(selected)
-    for item in candidates.detach().flatten().tolist():
+    for item in transfeat.detach().flatten().tolist():
         value = int(item)
         if value not in seen:
             selected.append(value)

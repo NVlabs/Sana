@@ -23,7 +23,7 @@ sbatch scripts, and run GPU jobs. You own the search loop end to end.
 - **MODEL LOADING / COLD-START IS OUT OF SCOPE.** Do NOT optimize checkpoint loading,
   rank-0 broadcast, sharded load, or stage-transition load overlap — those only help
   cold start, which we do not care about. Assume the model is loaded once and stays hot.
-  (The earlier c2/c3/c4 load-overlap candidates are discarded for this objective.)
+  (The earlier c2/c3/c4 load-overlap transfeat are discarded for this objective.)
 - **What you optimize: the COMBINATION of parallelism / communication for MoE (FFN)
   and Attention that reduces the HOT denoise/VAE compute — primarily the refiner
   attention bottleneck.** You decide the combination; keep total GPUs = 4.
@@ -52,12 +52,12 @@ resolution/step/scheduler/seed changes.
   FSDP (`_apply_fsdp_inference_if_requested`), base offload hook.
 - `slurm/env.sh` — the run environment (conda `lingbot-fa2`: py3.11, torch2.10+cu130,
   FA2 reused via `slurm/shims/flash_attn_interface.py`; decord shim; Qwen attn=sdpa).
-- Existing candidate sbatch templates: `slurm/accel_cp4_refiner.sbatch` (CP4+FSDP,
+- Existing transfeat sbatch templates: `slurm/accel_cp4_refiner.sbatch` (CP4+FSDP,
   the current best, 9:32), `slurm/accel_cp4_ep4_refiner.sbatch`,
   `slurm/accel_cp4_replicate_offload.sbatch`. Clone/adapt these — do not start from scratch.
 
 ## The metric (measure it this way)
-Run every candidate with `LINGBOT_PHASE_TIMING=1` (the pure-logging phase markers already
+Run every transfeat with `LINGBOT_PHASE_TIMING=1` (the pure-logging phase markers already
 in runner.py — a lossless no-op). The HOT-INFERENCE number is the sum of the compute phases
 only: `base_denoise + refiner_vae_encode + refiner_denoise + vae_decode`. **Ignore
 `base_load` and `refiner_load` entirely** (they are cold-start). Report per-step times too
@@ -70,26 +70,26 @@ only: `base_denoise + refiner_vae_encode + refiner_denoise + vae_decode`. **Igno
    reference config (CP4 + FSDP + batch_cfg = `slurm/accel_cp4_refiner.sbatch`) and
    copy its `t2v_refined.mp4` to `agent_opt/baseline/golden_refined.mp4`. Record its
    timing/mem as the frontier seed. This is the GOLDEN OUTPUT.
-2. Correctness for each candidate is established by (a) an **implementation audit from
+2. Correctness for each transfeat is established by (a) an **implementation audit from
    first principles** — the parallel math is sound (correct routing/dispatch/combine, no
    dropped or duplicated tokens, correct rank/group wiring, no silent fallback to a slower
    path), and (b) a **sanity check** that the run completes and produces a valid,
    non-degenerate video (correct shape/frame-count, not blank/NaN/noise). `verify_lossless.py`
    is OPTIONAL telemetry (report the PSNR if convenient) — it is NOT a hard gate. Numerical
-   drift vs golden is acceptable. A candidate is a **reject** only if it crashes, is
+   drift vs golden is acceptable. A transfeat is a **reject** only if it crashes, is
    implementationally wrong, or produces a degenerate/invalid video.
-3. A candidate is **retained** if it is a correct implementation AND improves end-to-end
+3. A transfeat is **retained** if it is a correct implementation AND improves end-to-end
    wall-clock (primary) or peak memory vs the current frontier. Speed is the objective.
 
 ## The loop (bounded search — follow this state machine)
-Budget: **max_iters = 8** candidates (each candidate = one GB200 job). Do not exceed.
+Budget: **max_iters = 8** transfeat (each transfeat = one GB200 job). Do not exceed.
 Per iteration:
 1. **Observe**: read `agent_opt/JOURNAL.md` (frontier + discarded/rejected signatures),
    `slurm/RESULTS.md`, and the current best config.
 2. **Propose ONE hypothesis**: a specific parallelism combination expected to beat the
    frontier, with a one-line rationale grounded in the prior results. Pick from / combine
    `agent_opt/search_space.md`. Prefer attacking the refiner attention bottleneck.
-3. **Implement exactly one candidate**: adapt an sbatch template (and, if the technique
+3. **Implement exactly one transfeat**: adapt an sbatch template (and, if the technique
    needs code, edit `lingbot_video/` — e.g. add a Ring/Ulysses-hybrid path, expert-TP, or
    overlapped offload). Keep an untouched OFF path.
 4. **Preflight**: if you added/changed distributed code, run a small correctness unit
@@ -104,7 +104,7 @@ Per iteration:
 9. Loop until max_iters, a real blocker (record it + the external dependency), or you
    have a clearly dominant config with no promising hypothesis left.
 
-A single candidate failure does NOT end the loop — log the signature and propose a
+A single transfeat failure does NOT end the loop — log the signature and propose a
 meaningfully different next hypothesis.
 
 ## Guardrails
@@ -112,7 +112,7 @@ meaningfully different next hypothesis.
   a sanity check that the video is valid/non-degenerate — NOT by numerical match to the
   baseline. Numerical drift is fine; all correct implementations are equal. Never report a
   speedup for a config that crashes, is implementationally wrong, or yields a degenerate video.
-- **4 GPUs, always.** Every candidate uses `--gres=gpu:4` and `nproc_per_node` consistent
+- **4 GPUs, always.** Every transfeat uses `--gres=gpu:4` and `nproc_per_node` consistent
   with a 4-GPU factorization (CP×EP×TP× ... = 4). Do not silently change GPU count.
 - **Only parallelism/scheduling.** Do NOT touch steps, resolution, scheduler, seed,
   guidance, dtype-for-quality, or add caching/pruning/quantization. Those are lossy.

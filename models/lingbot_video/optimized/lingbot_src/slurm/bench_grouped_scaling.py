@@ -57,4 +57,4 @@ for name, S in S_TOTAL.items():
           f"{r[16][0]:>6} {r[16][1]:>7.2f} | {su_48:>8.2f}x | {su_816:>8.2f}x")
 print()
 print("FFN speedup 4->8 = 2 * ns/token(4card)/ns/token(8card). If <2x, FFN under-saturated at 8 cards.")
-print("(This is grouped_mm compute only; ignores the all-to-all a candidate hybrid would add.)")
+print("(This is grouped_mm compute only; ignores the all-to-all a transfeat hybrid would add.)")

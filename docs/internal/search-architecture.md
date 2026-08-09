@@ -25,7 +25,7 @@ MODEL/RUNTIME:
 Why this shape: goal agents should not wait for a pre-exposed interface before
 trying an acceleration idea. The dimensions describe method families and quality
 contracts; each subagent reads the live inference code and implements a
-model-specific candidate directly. The `efficiency` engine and `ModelSpec`
+model-specific transfeat directly. The `efficiency` engine and `ModelSpec`
 remain useful for smoke tests and merge diagnostics, but they do not gate launch.
 
 ## Launchability Is Main-Agent Policy
@@ -40,11 +40,11 @@ should happen directly in `Sol-LTX-Infer/` before being normalized.
    from `search_space/` plus `loops/<dim>/exploration.md` and
    `docs/fanout-loop-contract.md`.
 3. The subagent runs the bounded dimension loop: observe current-experiment
-   results, propose a new hypothesis, implement exactly one candidate,
+   results, propose a new hypothesis, implement exactly one transfeat,
    preflight, launch, gate, then retain/discard/reject and loop. Compose checks
    are optional diagnostics.
 4. **(GPU stage)** Render a run bundle from the profile + cfg → existing
-   `scripts/launch_candidate.py` → `scripts/collect_run.py` → `benchmark.json`/
+   `scripts/launch_transfeat.py` → `scripts/collect_run.py` → `benchmark.json`/
    `quality.json` plus aligned gate artifacts → compare vs the profile
    `[baseline]` → bin into 1.5x/2.0x/3.0x speed targets per `evals/tiers.toml`.
 5. Emit the delivery `final_matrix` (low/medium/high speed targets).
@@ -63,9 +63,9 @@ CPU observation and compose diagnostics are implemented + tested
 (`search/test_search.py`). GPU half (eval + tiering) is `plan_eval()` — wires the
 existing launcher/collector/eval-profile.
 
-## Quality eval pipeline (per candidate) — what ranks a config
+## Quality eval pipeline (per transfeat) — what ranks a config
 
-Each search-loop iteration runs a candidate and assesses quality through THREE
+Each search-loop iteration runs a transfeat and assesses quality through THREE
 authoritative stages; the verdict (plus latency + peak_mem) decides whether it
 is retained during fan-out and how it is ranked after the budget closes
 (`evals/tiers.toml`):
@@ -91,23 +91,23 @@ artifact severity/status first, aligned LPIPS second, then higher speed as a
 tie-breaker. LPIPS alone is not the selector.
 
 The combined verdict (all three stages) plus speed/memory evidence determines
-whether a candidate is retained during fan-out and how it can be selected later.
+whether a transfeat is retained during fan-out and how it can be selected later.
 During the per-dimension loop, quality is not a hard per-tier retention gate:
-retain candidates that improve quality or speed/memory, and discard candidates
+retain transfeat that improve quality or speed/memory, and discard transfeat
 where quality does not improve and speed/memory does not improve or regresses.
 The source of truth is structured JSON from the authoritative gate, never prose
 logs or release notes. After the fixed budget closes, the main agent selects the
-best-quality retained frontier candidate for each speed target:
+best-quality retained frontier transfeat for each speed target:
 low >= 1.5x, medium >= 2.0x, high >= 3.0x.
 Integration then stacks selected winners. Integration is a mandatory fan-in loop:
 composed profiles must be generated and gated themselves, and a tier with no
 eligible composition must be recorded as an explicit blocker.
 
-## Loop control and failed candidates
+## Loop control and failed transfeat
 
-A native goal dimension is not complete when one candidate fails. Failed
-candidates must be rejected or discarded, logged with a failure signature or
-reason, and used to choose the next hypothesis. Retained candidates update the
+A native goal dimension is not complete when one transfeat fails. Failed
+transfeat must be rejected or discarded, logged with a failure signature or
+reason, and used to choose the next hypothesis. Retained transfeat update the
 frontier, then the dimension keeps searching for a better point. A dimension
 stops only at:
 
@@ -132,4 +132,4 @@ See `docs/fanout-loop-contract.md` for the exact state machine and required
 (`gcp/google/gemini-3.5-flash`, `NVIDIA_API_KEY`); a self-vs-self baseline check
 returned `overall=pass`, `new_artifacts=[]`, `recommendation=promote`. The judge
 helper is stdlib-only (urllib + ffmpeg frame sampling), so it runs anywhere. The
-eval stage itself (real candidate runs) is GPU-side — `search.plan_eval` (stub).
+eval stage itself (real transfeat runs) is GPU-side — `search.plan_eval` (stub).

@@ -1,10 +1,10 @@
 ## Workflow-Local Callable Nodes
 
 You may use workflow-local callable node contracts when deciding how to test a
-target-model cache candidate. Callable nodes are not global shared code; use only the
+target-model cache transfeat. Callable nodes are not global shared code; use only the
 copies under `workflow/cache_ca/nodes/callable/`.
 
-- `full_diffusion_eval`: use for every cache candidate as the ordinary loop
+- `full_diffusion_eval`: use for every cache transfeat as the ordinary loop
   evaluation. It must produce a completed full target-model run with
   `outputs/benchmark.json`, frames or `out.mp4`, and the fixed prompt/config at
   the model's official eval profile.

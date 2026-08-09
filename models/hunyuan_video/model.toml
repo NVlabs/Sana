@@ -5,24 +5,24 @@ legacy_profile = "models/hunyuan_video.toml"
 contract_kind = "model_baseline_minimal_copy"
 
 [baseline]
-manifest = "candidates/hunyuan_video_baseline.toml"
+manifest = "transfeat/hunyuan_video/baseline.toml"
 runtime_root = "models/hunyuan_video/baseline"
 eval_profile = "evals/profiles/official_video_t2v_hunyuanvideo_13b.toml"
-description = "HunyuanVideo-13B t2v baseline (pristine diffusers HunyuanVideoPipeline: dense attention, no cache, no compile). Runnable code is vendored in models/hunyuan_video/baseline; weights are referenced read-only through MODEL_REPO. The optimized candidate adds TeaCache, torch.compile, and the released Sol-Attn SM90/SM100 kernel with exact text KV sink and dense text queries."
+description = "HunyuanVideo-13B t2v baseline (pristine diffusers HunyuanVideoPipeline: dense attention, no cache, no compile). Runnable code is vendored in models/hunyuan_video/baseline; weights are referenced read-only through MODEL_REPO. The optimized transfeat adds TeaCache, torch.compile, and the released Sol-Attn SM90/SM100 kernel with exact text KV sink and dense text queries."
 
 [baseline.copy]
 paths_are_repo_relative = true
 include = [
   "models/hunyuan_video.toml",
   "models/hunyuan_video/**",
-  "candidates/hunyuan_video_baseline.toml",
-  "candidates/schema.md",
+  "transfeat/hunyuan_video/baseline.toml",
+  "transfeat/schema.md",
   "evals/profiles/official_video_t2v_hunyuanvideo_13b.toml",
   "evals/tiers.toml",
-  "scripts/launch_candidate.py",
+  "scripts/launch_transfeat.py",
   "scripts/collect_run.py",
   "search/plan_eval.py",
-  "techniques/candidate_manifest.py",
+  "techniques/transfeat_manifest.py",
 ]
 exclude = [
   ".git/**",

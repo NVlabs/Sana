@@ -5,7 +5,7 @@ legacy_profile = "models/cosmos3.toml"
 contract_kind = "model_baseline_minimal_copy"
 
 [baseline]
-manifest = "candidates/cosmos3_baseline.toml"
+manifest = "transfeat/cosmos3/baseline.toml"
 runtime_root = "models/cosmos3/baseline"
 eval_profile = "evals/profiles/official_video_t2v_cosmos3.toml"
 description = "Cosmos3-Super official 64B 4-GPU sequence-parallel baseline with every acceleration seam explicitly off. Runnable code (variant env.sh + shared launch body + run shim) is vendored under models/cosmos3; the 64B runtime, weights and the .conda/ltx23 interpreter are referenced read-only by absolute path via SOL_LTX_INFER_ROOT."
@@ -19,14 +19,14 @@ include = [
   "models/cosmos3/run_cosmos3_common.sh",
   "models/cosmos3/prompts/**",
   "models/cosmos3/baseline/**",
-  "candidates/cosmos3_baseline.toml",
-  "candidates/schema.md",
+  "transfeat/cosmos3/baseline.toml",
+  "transfeat/schema.md",
   "evals/profiles/official_video_t2v_cosmos3.toml",
   "evals/tiers.toml",
-  "scripts/launch_candidate.py",
+  "scripts/launch_transfeat.py",
   "scripts/collect_run.py",
   "search/plan_eval.py",
-  "techniques/candidate_manifest.py",
+  "techniques/transfeat_manifest.py",
 ]
 exclude = [
   ".git/**",

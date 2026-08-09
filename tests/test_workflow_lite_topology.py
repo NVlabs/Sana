@@ -158,13 +158,13 @@ def test_topology_verification_contract() -> None:
     with tempfile.TemporaryDirectory() as raw:
         run_dir = Path(raw)
         run_id = run_dir.name
-        candidate_id = "topology_candidate"
+        transfeat_id = "topology_transfeat"
         point = {
-            "candidate_id": candidate_id,
+            "transfeat_id": transfeat_id,
             "performance": {
                 "frontier_axis": "latency",
                 "baseline_total_s": 100.0,
-                "candidate_total_s": 80.0,
+                "transfeat_total_s": 80.0,
                 "speedup": 1.25,
             },
         }
@@ -181,12 +181,12 @@ def test_topology_verification_contract() -> None:
             "collectives": [{"kind": "all_to_all", "calls": 96}],
         }
         evidence = {
-            "candidate_id": candidate_id,
+            "transfeat_id": transfeat_id,
             "run_id": run_id,
             "baseline_steps": 48,
-            "candidate_steps": 48,
+            "transfeat_steps": 48,
             "baseline_dit_calls": 48,
-            "candidate_dit_calls": 48,
+            "transfeat_dit_calls": 48,
             "method_argument": "The rank partition and collectives compute the same global function.",
             "topology": topology_evidence,
         }
@@ -198,7 +198,7 @@ def test_topology_verification_contract() -> None:
         (outputs / "topology_preflight.json").write_text(
             json.dumps(
                 {
-                    "candidate_id": candidate_id,
+                    "transfeat_id": transfeat_id,
                     "run_id": run_id,
                     "status": "pass",
                     "world_size": 4,
@@ -209,7 +209,7 @@ def test_topology_verification_contract() -> None:
         (outputs / "topology_manifest.json").write_text(
             json.dumps(
                 {
-                    "candidate_id": candidate_id,
+                    "transfeat_id": transfeat_id,
                     "run_id": run_id,
                     "world_size": 4,
                     **{
@@ -223,7 +223,7 @@ def test_topology_verification_contract() -> None:
         (outputs / "topology_trace.json").write_text(
             json.dumps(
                 {
-                    "candidate_id": candidate_id,
+                    "transfeat_id": transfeat_id,
                     "run_id": run_id,
                     "world_size": 4,
                     "active_ranks": [0, 1, 2, 3],
@@ -297,7 +297,7 @@ def test_topology_verification_contract() -> None:
             require_complete=True,
             require_improvement=True,
         )
-        assert "candidate_timing_scope_mismatch" in timing_issues
+        assert "transfeat_timing_scope_mismatch" in timing_issues
         benchmark["timing_scope"] = "frozen_request_scope"
         benchmark_path.write_text(json.dumps(benchmark))
 
@@ -305,7 +305,7 @@ def test_topology_verification_contract() -> None:
         memory_point["performance"] = {
             "frontier_axis": "peak_memory",
             "baseline_total_s": 100.0,
-            "candidate_total_s": 105.0,
+            "transfeat_total_s": 105.0,
             "speedup": 100.0 / 105.0,
         }
         benchmark["total_s"] = 105.0
@@ -385,13 +385,13 @@ def test_topology_verification_contract() -> None:
         equivalence_path.write_text(json.dumps(equivalence_doc))
         manifest_path.write_text(json.dumps(manifest_doc))
 
-        manifest_doc["candidate_id"] = "stale_candidate"
+        manifest_doc["transfeat_id"] = "stale_transfeat"
         manifest_path.write_text(json.dumps(manifest_doc))
         identity_issues, _ = verifier.check_topology_evidence(
             point, run_dir, expected_world=4
         )
-        assert "topology_manifest_candidate_id_mismatch" in identity_issues
-        manifest_doc["candidate_id"] = candidate_id
+        assert "topology_manifest_transfeat_id_mismatch" in identity_issues
+        manifest_doc["transfeat_id"] = transfeat_id
         manifest_path.write_text(json.dumps(manifest_doc))
 
         trace_path = outputs / "topology_trace.json"
@@ -408,7 +408,7 @@ def test_topology_verification_contract() -> None:
         (outputs / "topology_preflight.json").write_text(
             json.dumps(
                 {
-                    "candidate_id": candidate_id,
+                    "transfeat_id": transfeat_id,
                     "run_id": run_id,
                     "status": "pass",
                     "world_size": 4,
@@ -428,7 +428,7 @@ def test_topology_verification_contract() -> None:
         (outputs / "topology_preflight.json").write_text(
             json.dumps(
                 {
-                    "candidate_id": candidate_id,
+                    "transfeat_id": transfeat_id,
                     "run_id": run_id,
                     "status": "pass",
                     "world_size": 4,
@@ -459,7 +459,7 @@ def test_topology_verification_contract() -> None:
         topology_issues, _ = verifier.check_topology_evidence(point, run_dir, expected_world=4)
         assert "topology_no_fallback_unproven" in topology_issues
 
-        del evidence["candidate_dit_calls"]
+        del evidence["transfeat_dit_calls"]
         (outputs / "equivalence.json").write_text(json.dumps(evidence))
         correctness_issues, _ = verifier.check_correctness(point, run_dir)
         assert "dit_call_count_evidence_missing" in correctness_issues
@@ -561,7 +561,7 @@ def test_spawn_topology_materializes_lingbot_prompt() -> None:
 
         metadata["worktree"] = str(worktree)
         metadata["baseline"]["manifest"] = str(
-            ROOT / "candidates/lingbot_video_baseline.toml"
+            ROOT / "transfeat/lingbot_video/baseline.toml"
         )
         metadata_path.write_text(json.dumps(metadata))
         escaped_baseline = subprocess.run(
@@ -574,9 +574,9 @@ def test_spawn_topology_materializes_lingbot_prompt() -> None:
         assert escaped_baseline.returncode != 0
         assert "refusing mismatched baseline metadata" in escaped_baseline.stderr
 
-        metadata["baseline"]["manifest"] = "candidates/lingbot_video_baseline.toml"
+        metadata["baseline"]["manifest"] = "transfeat/lingbot_video/baseline.toml"
         metadata_path.write_text(json.dumps(metadata))
-        launcher = worktree / "scripts/launch_candidate.py"
+        launcher = worktree / "scripts/launch_transfeat.py"
         launcher.unlink()
         launcher.mkdir()
         launcher_directory = subprocess.run(
@@ -606,7 +606,7 @@ def test_verifier_rejects_unowned_delivery_paths_and_unknown_tech() -> None:
                     "status": "complete",
                     "model_id": "lingbot_video",
                     "frontier_points": [
-                        {"candidate_id": "stale", "run_dir": str(tmp / "outside-run")}
+                        {"transfeat_id": "stale", "run_dir": str(tmp / "outside-run")}
                     ],
                 }
             )

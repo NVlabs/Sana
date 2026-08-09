@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Registered MiniMax-H3 *gb10* runtime entrypoint — one GB10, FP8, no context parallelism.
 
-Same contract as the baseline and optimized entrypoints: the candidate manifest sets OUT_DIR
+Same contract as the baseline and optimized entrypoints: the transfeat manifest sets OUT_DIR
 and the H3_* switches, this builds the pipeline and writes `benchmark.json` and `out.mp4` into
 it. Every acceleration is env-gated, so `run_minimax_h3_gpu.sh` is identical for every
-candidate in `candidates/minimax_h3_gb10_*.toml`.
+transfeat in `transfeat/minimax_h3_gb10_*.toml`.
 
 What this variant is
 --------------------
@@ -212,7 +212,7 @@ def build_pipeline(args, **transformer_options):
 
 
 # Every acceleration is opt-in through the environment, so one entrypoint serves every
-# candidate in `candidates/minimax_h3_gb10_*.toml` and the run script is identical for all of
+# transfeat in `transfeat/minimax_h3_gb10_*.toml` and the run script is identical for all of
 # them. This mirrors `optimized/gpu_infer.py`, which gates its Ulysses and cache line the same
 # way; what differs is only which techniques exist on a single card.
 def _flag(name: str, default: str = "0") -> bool:

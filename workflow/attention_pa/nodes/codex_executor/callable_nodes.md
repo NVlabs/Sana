@@ -5,7 +5,7 @@ Use only callable-node contracts owned by `workflow/attention_pa`.
 - `pisa_preflight`: map the real target model attention paths and prove that the
   backend executes both PISA exact and approximate phases before GPU recipe
   search.
-- `full_diffusion_eval`: run every PISA candidate that may influence a recipe.
+- `full_diffusion_eval`: run every PISA transfeat that may influence a recipe.
   It produces the complete fixed five-prompt workload at the target model's
   official eval profile.
 

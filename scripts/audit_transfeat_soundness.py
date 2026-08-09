@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Strict soundness audit for model-agnostic efficiency candidates.
+"""Strict soundness audit for model-agnostic efficiency transfeat.
 
-This is the CPU/static gate before GPU fanout. It proves that each candidate has
+This is the CPU/static gate before GPU fanout. It proves that each transfeat has
 the required provenance chain, composes against the selected ModelSpec, has an
 inspectable launch configuration, and does not accidentally collapse the
 model-agnostic boundary into the Cosmos3 runtime.
@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from techniques.candidate_manifest import (  # noqa: E402
+from techniques.transfeat_manifest import (  # noqa: E402
     dry_run_manifest,
     load_toml,
     manifest_dimension,
@@ -116,7 +116,7 @@ def read_text(path: Path) -> str:
     return path.read_text(errors="ignore")
 
 
-def audit_candidate(
+def audit_transfeat(
     path: Path, *, check_urls: bool, timeout: float
 ) -> tuple[str, list[str], list[str]]:
     problems: list[str] = []
@@ -127,7 +127,7 @@ def audit_candidate(
     family = manifest_family(data)
 
     if not cid:
-        fail(problems, path, "missing candidate id")
+        fail(problems, path, "missing transfeat id")
     if path.parent.name != dim:
         fail(problems, path, f"directory dimension {path.parent.name!r} != manifest dimension {dim!r}")
     if not family:
@@ -201,7 +201,7 @@ def audit_candidate(
                 fail(
                     problems,
                     path,
-                    "payload-cache candidate must compose as payload_cache, not whole-step step_cache",
+                    "payload-cache transfeat must compose as payload_cache, not whole-step step_cache",
                 )
             if params.get("scope") != expected_scope:
                 fail(problems, path, f"payload-cache scope must be {expected_scope!r}")
@@ -210,7 +210,7 @@ def audit_candidate(
             payload_mode = str(params.get("mode", env.get("SGLANG_HQ_PAYLOAD_CACHE_MODE", "scheduled")))
             if payload_mode == "pab":
                 if env.get("SGLANG_HQ_PAYLOAD_CACHE_MODE") != "pab":
-                    fail(problems, path, "PAB payload-cache candidates must export SGLANG_HQ_PAYLOAD_CACHE_MODE=pab")
+                    fail(problems, path, "PAB payload-cache transfeat must export SGLANG_HQ_PAYLOAD_CACHE_MODE=pab")
                 if cid == "attention_broadcast":
                     if params.get("attention_kind") != "cross":
                         fail(problems, path, "attention_broadcast must use the public PAB cross-attention controller")
@@ -222,7 +222,7 @@ def audit_candidate(
                     if not params.get("mlp_spatial_broadcast_config"):
                         fail(problems, path, "block_layer_feature_cache must declare public PAB MLP block/skip config")
             elif not env.get("SGLANG_HQ_PAYLOAD_CACHE_SKIP"):
-                fail(problems, path, "scheduled payload-cache candidates must expose SGLANG_HQ_PAYLOAD_CACHE_SKIP")
+                fail(problems, path, "scheduled payload-cache transfeat must expose SGLANG_HQ_PAYLOAD_CACHE_SKIP")
             cosmos_stage = (
                 ROOT
                 / "Sol-LTX-Infer/python/sglang/multimodal_gen/runtime/pipelines_core/stages/model_specific_stages/cosmos3.py"
@@ -236,7 +236,7 @@ def audit_candidate(
                 fail(
                     problems,
                     path,
-                    "Cosmos3 builder must record scheduled/PAB payload-cache candidates in the efficiency Plan",
+                    "Cosmos3 builder must record scheduled/PAB payload-cache transfeat in the efficiency Plan",
                 )
             if payload.get("model_spec") == "Cosmos3":
                 warnings.append(
@@ -250,7 +250,7 @@ def audit_candidate(
                 fail(
                     problems,
                     path,
-                    "token_prune candidate will not install in Cosmos3 without SGLANG_HQ_TOKEN_PRUNE_STEPS",
+                    "token_prune transfeat will not install in Cosmos3 without SGLANG_HQ_TOKEN_PRUNE_STEPS",
                 )
             method = (
                 data.get("efficiency", {})
@@ -491,13 +491,13 @@ def audit_candidate(
                 fail(
                     problems,
                     path,
-                    "TeaCache candidate must use teacache_residual rather than whole-step teacache",
+                    "TeaCache transfeat must use teacache_residual rather than whole-step teacache",
                 )
             if data.get("env", {}).get("SGLANG_HQ_TEACACHE_REPLAY") != "block_residual":
                 fail(
                     problems,
                     path,
-                    "TeaCache candidate must export SGLANG_HQ_TEACACHE_REPLAY=block_residual",
+                    "TeaCache transfeat must export SGLANG_HQ_TEACACHE_REPLAY=block_residual",
                 )
             if "SGLANG_HQ_TEACACHE_PERIODIC_RECOMPUTE" not in stage_text:
                 fail(
@@ -712,7 +712,7 @@ def audit_candidate(
 
     verification = data.get("verification", {})
     if verification.get("mode") != "gpu":
-        fail(problems, path, "verification.mode must be gpu for candidate baselines")
+        fail(problems, path, "verification.mode must be gpu for transfeat baselines")
     if dim in {"nvfp4_ffn", "kwl_fusion"} and verification.get("allow_non_bit_exact") is not True:
         fail(problems, path, "non-bit-exact dimension must explicitly allow non-bit-exact verification")
 
@@ -726,29 +726,29 @@ def main() -> int:
     parser.add_argument("--json-out", type=Path, help="optional audit report path")
     args = parser.parse_args()
 
-    paths = sorted((ROOT / "candidates").glob("*/*.toml"))
+    paths = sorted((ROOT / "transfeat").glob("*/*.toml"))
     problems: list[str] = []
     warnings: list[str] = []
     seen: Counter[str] = Counter()
     by_dim: dict[str, set[str]] = {}
 
     for path in paths:
-        cid, candidate_problems, candidate_warnings = audit_candidate(
+        cid, transfeat_problems, transfeat_warnings = audit_transfeat(
             path, check_urls=args.check_urls, timeout=args.timeout
         )
         seen[cid] += 1
         by_dim.setdefault(path.parent.name, set()).add(cid)
-        problems.extend(candidate_problems)
-        warnings.extend(candidate_warnings)
-        print(("FAIL" if candidate_problems else "PASS") + f" {path.relative_to(ROOT)}")
-        for problem in candidate_problems:
+        problems.extend(transfeat_problems)
+        warnings.extend(transfeat_warnings)
+        print(("FAIL" if transfeat_problems else "PASS") + f" {path.relative_to(ROOT)}")
+        for problem in transfeat_problems:
             print(f"  - {problem}")
-        for warning in candidate_warnings:
+        for warning in transfeat_warnings:
             print(f"  ! {warning}")
 
     for cid, count in sorted(seen.items()):
         if count > 1:
-            problems.append(f"duplicate candidate id {cid!r}: {count} files")
+            problems.append(f"duplicate transfeat id {cid!r}: {count} files")
 
     for dim, expected_ids in EXPECTED.items():
         actual = by_dim.get(dim, set())
@@ -758,7 +758,7 @@ def main() -> int:
             )
 
     report = {
-        "candidate_count": len(paths),
+        "transfeat_count": len(paths),
         "counts_by_dimension": {dim: len(ids) for dim, ids in sorted(by_dim.items())},
         "problems": problems,
         "warnings": warnings,
@@ -767,7 +767,7 @@ def main() -> int:
     if args.json_out:
         args.json_out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
-    print(f"\n=== candidate soundness audit: {report['status']} ({len(paths)} candidates) ===")
+    print(f"\n=== transfeat soundness audit: {report['status']} ({len(paths)} transfeat) ===")
     if problems:
         print(f"{len(problems)} problem(s)")
         return 1

@@ -1,8 +1,8 @@
 # Evals
 
-This directory defines how acceleration candidates are accepted or rejected.
+This directory defines how acceleration transfeat are accepted or rejected.
 
-The design is intentionally small: every candidate points at one eval profile,
+The design is intentionally small: every transfeat points at one eval profile,
 and every collector/report should speak the same vocabulary.
 
 ## Core Gates
@@ -11,14 +11,14 @@ and every collector/report should speak the same vocabulary.
 | --- | --- | --- |
 | `artifact` | Did the run produce the expected files? | yes |
 | `official_config` | Did it use the comparable target-model settings? | yes |
-| `performance` | Is it faster than the selected baseline? | yes, threshold is candidate-specific |
-| `off_identity` | Does disabling the technique recover baseline behavior? | yes for code/patch candidates |
+| `performance` | Is it faster than the selected baseline? | yes, threshold is transfeat-specific |
+| `off_identity` | Does disabling the technique recover baseline behavior? | yes for code/patch transfeat |
 | `quantitative_quality` | Are simple video metrics within tolerance? | yes when available |
 | `visual_artifact` | Does a vision judge see new artifacts? | yes |
 
 ## Minimal Promotion Rule
 
-A candidate may be promoted only when:
+A transfeat may be promoted only when:
 
 ```text
 artifact == pass

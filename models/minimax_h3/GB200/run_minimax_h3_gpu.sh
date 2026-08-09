@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Registered MiniMax-H3 *optimized* runtime entrypoint.
 #
-# Same contract as the baseline entrypoint: the candidate manifest sets OUT_DIR and the H3_* switches,
+# Same contract as the baseline entrypoint: the transfeat manifest sets OUT_DIR and the H3_* switches,
 # this resolves the vendored deps and launches the driver under torchrun. The acceleration line is
-# entirely env-gated (see `optimized/gpu_infer.py`), so this script is identical for every candidate
-# in `candidates/minimax_h3_*.toml`.
+# entirely env-gated (see `optimized/gpu_infer.py`), so this script is identical for every transfeat
+# in `transfeat/minimax_h3_*.toml`.
 set -euo pipefail
 
-: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_candidate.py}"
+: "${OUT_DIR:?OUT_DIR must be set by scripts/launch_transfeat.py}"
 : "${H3_MODEL_PATH:?H3_MODEL_PATH must point to the converted diffusers checkpoint}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# H3_PROMPT_FILE may arrive repo-relative (that is how every candidate and config
+# H3_PROMPT_FILE may arrive repo-relative (that is how every transfeat and config
 # writes it). Whether that resolves depends on who launched us -- scripts/run.py
-# uses the repo root as cwd, launch_candidate.py cds to the runtime dir first --
+# uses the repo root as cwd, launch_transfeat.py cds to the runtime dir first --
 # so pin it to the repo root here rather than leaving it to the caller. h100 and
 # a100 already do this; gb10 and gb200 did not, which made the same config value
 # work under one launcher and not the other.

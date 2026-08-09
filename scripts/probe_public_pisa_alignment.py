@@ -9,9 +9,9 @@ public default selector from the optional public bias form:
 * public optional bias: ``topk(qc @ kc * scale + log(bias))``
 
 The local ``piecewise_attn`` route now exposes ``piecewise_route_bias``. The
-``piecewise_pisa_env`` candidate sets it to ``false`` so the score selector
+``piecewise_pisa_env`` transfeat sets it to ``false`` so the score selector
 matches the public default top-k boundary. The bias form remains available for
-local diagnostics, but is no longer the claim for this public PISA candidate.
+local diagnostics, but is no longer the claim for this public PISA transfeat.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_ROOT = ROOT / "Sol-LTX-Infer" / "python"
 PUBLIC_PISA = Path("/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/.cache/autovideo/public_refs/piecewise-sparse-attention")
 PUBLIC_KERNEL = PUBLIC_PISA / "piecewise_attn" / "kernels" / "piecewise_sparse_attn_tma.py"
-MANIFEST = ROOT / "candidates" / "sparse_attention" / "piecewise_pisa_env.toml"
+MANIFEST = ROOT / "transfeat" / "sparse_attention" / "piecewise_pisa_env.toml"
 
 
 def _torch():

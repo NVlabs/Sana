@@ -2,7 +2,7 @@
 
 Sibling of `optimized/fusion_install.py`. Everything here is a patch rather than a structural
 change, which is what lets one loaded model serve every configuration in
-`candidates/minimax_h3_gb10_*.toml` — and, more importantly, what lets the benchmark interleave
+`transfeat/minimax_h3_gb10_*.toml` — and, more importantly, what lets the benchmark interleave
 configurations inside a single process. That matters: this machine's clocks drift up to 15%
 between processes, while three iterations inside one agree to 0.7%.
 

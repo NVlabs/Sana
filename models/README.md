@@ -7,8 +7,10 @@ This directory stores two related model artifacts:
 - directory-style model contracts such as `models/hunyuan_diffusers/model.toml`,
   used to materialize experiment-local baseline copies.
 
-The actual runtime adapter code lives under `runtime/`; reusable algorithm
-helpers live in `efficiency/`.
+The actual runtime adapter code lives under `models/<model_uid>/baseline/` and
+`models/<model_uid>/optimized/`; reusable algorithm helpers live in
+`techniques/`. (Both moved in the 2026-07-17 `efficiency/` -> `techniques/`
+reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 
 ## A model profile contains
 
@@ -18,8 +20,12 @@ helpers live in `efficiency/`.
 - human seam/status notes for what the current runtime consumes
 
 Candidate manifests declare their required capabilities. During dry-run,
-`efficiency.candidate_manifest` builds a minimal manifest-derived `ModelSpec`
+`techniques.candidate_manifest` builds a minimal manifest-derived `ModelSpec`
 and `compose()` checks the selected technique/transform against that contract.
+Because `scripts/launch_candidate.py` imports `techniques.candidate_manifest` at
+module scope, every contract's copy allowlist must include
+`techniques/candidate_manifest.py` — otherwise the copied worktree is created
+successfully and only fails later, on import.
 
 Current local profiles include:
 

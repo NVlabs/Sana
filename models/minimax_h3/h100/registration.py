@@ -1,4 +1,4 @@
-"""Register the H100/A100 MiniMax-H3 model without patching SGLang."""
+"""Register the H100 MiniMax-H3 model without patching SGLang."""
 
 from __future__ import annotations
 

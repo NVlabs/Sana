@@ -1,4 +1,4 @@
-"""Locked MiniMax-H3 profiles shared by H100 and A100."""
+"""Locked MiniMax-H3 profiles for four A100 GPUs."""
 
 from __future__ import annotations
 
@@ -38,20 +38,12 @@ class RuntimeProfile:
     easycache_max_hits: int = 0
 
 
-HARDWARE = {
-    "h100": HardwareProfile(
-        name="h100",
-        display_name="4x NVIDIA H100 80GB HBM3",
-        capability=(9, 0),
-        sol_backend="cute_sm90",
-    ),
-    "a100": HardwareProfile(
-        name="a100",
-        display_name="4x NVIDIA A100-SXM4-80GB",
-        capability=(8, 0),
-        sol_backend="triton",
-    ),
-}
+HARDWARE = HardwareProfile(
+    name="a100",
+    display_name="4x NVIDIA A100-SXM4-80GB",
+    capability=(8, 0),
+    sol_backend="triton",
+)
 
 
 PROFILES = {
@@ -127,12 +119,7 @@ def _locked_env(name: str, value: str) -> None:
 def configure_runtime() -> tuple[HardwareProfile, RuntimeProfile]:
     """Resolve one hardware/profile pair and lock its algorithm settings."""
 
-    hardware_name = os.environ.get("H3_HARDWARE", "h100").strip().lower()
     profile_name = os.environ.get("H3_SOL_PROFILE", "dense").strip().lower()
-    try:
-        hardware = HARDWARE[hardware_name]
-    except KeyError as exc:
-        raise ValueError("H3_HARDWARE must be h100 or a100") from exc
     try:
         profile = PROFILES[profile_name]
     except KeyError as exc:
@@ -142,6 +129,7 @@ def configure_runtime() -> tuple[HardwareProfile, RuntimeProfile]:
         ) from exc
 
     values = {
+        "H3_HARDWARE": HARDWARE.name,
         "H3_NUM_GPUS": "4",
         "H3_ULYSSES_DEGREE": "4",
         "H3_MODEL_REVISION": PINNED_MODEL_REVISION,
@@ -164,12 +152,12 @@ def configure_runtime() -> tuple[HardwareProfile, RuntimeProfile]:
         "H3_EASYCACHE_RETAIN_STEPS": str(profile.easycache_retain_steps),
         "H3_EASYCACHE_COOLDOWN_STEPS": str(profile.easycache_cooldown_steps),
         "H3_EASYCACHE_MAX_HITS": str(profile.easycache_max_hits),
-        "H3_EXPECTED_SOL_BACKEND": hardware.sol_backend,
+        "H3_EXPECTED_SOL_BACKEND": HARDWARE.sol_backend,
         "SOL_ATTN_STRICT": "1",
     }
     for name, value in values.items():
         _locked_env(name, value)
-    return hardware, profile
+    return HARDWARE, profile
 
 
 __all__ = [

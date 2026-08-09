@@ -53,7 +53,13 @@ measured = false
 
 [env]
 SOL_LTX_INFER_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer"
-PYTHON_BIN = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python"
+# PYTHON_BIN is deliberately absent: the launch body derives it as
+# $SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python. Pinning it here as well made the
+# pair separable, and they came apart -- on a cluster whose checkout is at a
+# different path, overriding SOL_LTX_INFER_ROOT alone left the interpreter
+# pointing into the old root and the run died in 19s on a missing python.
+# Override SOL_LTX_INFER_ROOT alone; set PYTHON_BIN only to use an interpreter
+# that is genuinely not the one inside that checkout.
 HF_HUB_OFFLINE = "1"
 CUDA_VISIBLE_DEVICES = "0"
 SEED = "42"

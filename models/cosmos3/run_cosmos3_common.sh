@@ -25,6 +25,22 @@ set -euo pipefail
 
 MODEL_DIR="${COSMOS3_MODEL_DIR:?COSMOS3_MODEL_DIR must be set by the variant shim}"
 
+# A relative *_FILE is rebased on the repository root, matching what the H100
+# and A100 shims do. launch.sh cd's to the runtime root, not the repo root, so
+# a repo-relative prompt path -- the obvious thing to write, and what
+# models/cosmos3.toml used to carry -- otherwise resolves under
+# models/cosmos3/<variant>/ and the run dies on `cat: No such file`.
+# AUTOVIDEO_REPO_ROOT is exported by launch.sh; MODEL_DIR is two levels up when
+# this is run by hand.
+REPO_ROOT="${AUTOVIDEO_REPO_ROOT:-$(cd "$MODEL_DIR/../.." && pwd)}"
+for _var in PROMPT_FILE NEGATIVE_PROMPT_FILE; do
+  _val="${!_var:-}"
+  if [[ -n "$_val" && "$_val" != /* ]]; then
+    printf -v "$_var" '%s' "$REPO_ROOT/$_val"
+    export "${_var?}"
+  fi
+done
+
 MODEL_REPO="${MODEL_REPO:-nvidia/Cosmos3-Super}"
 PYTHON_BIN="${PYTHON_BIN:-$SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python}"
 NUM_GPUS="${NUM_GPUS:-4}"

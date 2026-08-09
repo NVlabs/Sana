@@ -67,10 +67,17 @@ MODEL_REPO = "nvidia/Cosmos3-Super"
 NUM_GPUS = "4"
 SEED = "42"
 # Prompts are versioned as files rather than inlined here, so the two arms
-# cannot drift apart and a run's prompt is diffable. The former inline PROMPT
-# is now models/cosmos3/prompts/default.txt verbatim.
-PROMPT_FILE = "models/cosmos3/prompts/default.txt"
-NEGATIVE_PROMPT_FILE = "models/cosmos3/prompts/negative.txt"
+# cannot drift apart and a run's prompt is diffable. They are
+# models/cosmos3/prompts/{default,negative}.txt, and run_cosmos3_common.sh
+# reaches them as $COSMOS3_MODEL_DIR/prompts/..., an absolute path the variant
+# shim computes from its own location.
+#
+# PROMPT_FILE / NEGATIVE_PROMPT_FILE are deliberately not set here. They were,
+# spelled repo-relative -- but launch.sh cd's to the runtime root
+# (models/cosmos3/baseline) before calling the shim, so they resolved to
+# models/cosmos3/baseline/models/cosmos3/prompts/default.txt and the run died
+# on `cat: No such file`. ltx23 sets neither and never had the problem.
+# Set them only for a prompt outside the model directory, with an absolute path.
 
 # Per-seam wiring status. Config dry-run checks use manifest-declared
 # capabilities; real GPU usefulness still depends on the runtime consuming the

@@ -21,6 +21,22 @@ set -euo pipefail
 
 MODEL_DIR="${LTX23_MODEL_DIR:?LTX23_MODEL_DIR must be set by the variant shim}"
 
+# A relative *_FILE is rebased on the repository root, matching what the H100
+# and A100 shims do. launch.sh cd's to the runtime root, not the repo root, so
+# a repo-relative prompt path -- the obvious thing to write, and what
+# models/cosmos3.toml used to carry -- otherwise resolves under
+# models/cosmos3/<variant>/ and the run dies on `cat: No such file`.
+# AUTOVIDEO_REPO_ROOT is exported by launch.sh; MODEL_DIR is two levels up when
+# this is run by hand.
+REPO_ROOT="${AUTOVIDEO_REPO_ROOT:-$(cd "$MODEL_DIR/../.." && pwd)}"
+for _var in PROMPT_FILE NEGATIVE_PROMPT_FILE; do
+  _val="${!_var:-}"
+  if [[ -n "$_val" && "$_val" != /* ]]; then
+    printf -v "$_var" '%s' "$REPO_ROOT/$_val"
+    export "${_var?}"
+  fi
+done
+
 PYTHON_BIN="${PYTHON_BIN:-$SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python}"
 MODEL_PATH="${MODEL_PATH:-$SOL_LTX_INFER_ROOT/outputs/.cache/sgl_diffusion/materialized_models/Lightricks__LTX-2.3-c24cea94ab17c493}"
 OFFICIAL_MODEL_DIR="${OFFICIAL_MODEL_DIR:-$SOL_LTX_INFER_ROOT/outputs/LTX-2.3-official-files}"

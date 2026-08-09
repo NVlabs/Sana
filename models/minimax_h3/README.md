@@ -8,7 +8,7 @@ Sol-Attn, caching, and memory-efficient decoding.
 
 | Hardware | GPUs | Workload | End-to-end speedup | Full-opt candidate |
 |---|---:|---:|---:|---|
-| GB200 | 8 | 1344x768 @ 5 s | **~3.97x** | [`minimax_h3_fullopt.toml`](../../candidates/minimax_h3_fullopt.toml) |
+| GB200 | 8 | 1344x768 @ 5 s | **3.97x** | [`minimax_h3_fullopt.toml`](../../candidates/minimax_h3_fullopt.toml) |
 | GB10 (DGX Spark) | 1 | 832x480 @ 5 s | **3.92x** | [`minimax_h3_gb10_fullopt.toml`](../../candidates/minimax_h3_gb10_fullopt.toml) |
 | RTX 5090 | 1 | 1344x768 @ 5 s | **4.52x** | [`minimax_h3_rtx5090_fullopt.toml`](../../candidates/minimax_h3_rtx5090_fullopt.toml) |
 | H100 | 4 | 1344x768 @ 5 s | **3.56x** | [`minimax_h3_h100_fullopt_exact.toml`](../../candidates/minimax_h3_h100_fullopt_exact.toml) |
@@ -20,18 +20,16 @@ latency across GPUs.
 
 ## Usage
 
+### Generic
+
 Run the launcher from the repository root and select the full-opt candidate for your GPU from the
-table above.
-
-On a workstation:
+table above:
 
 ```bash
+# Workstation
 python scripts/launch_candidate.py <candidate> --mode local
-```
 
-On a Slurm cluster:
-
-```bash
+# Slurm cluster
 python scripts/launch_candidate.py <candidate> \
   --mode sbatch --confirm-submit
 ```
@@ -40,11 +38,25 @@ python scripts/launch_candidate.py <candidate> \
 without `--confirm-submit`, it only prepares the job bundle. The candidate selects the matching
 hardware runtime and enables its complete optimization stack.
 
-Each run is stored under `runs/` and includes:
+### Reproducible Example
 
-- `outputs/out.mp4`: generated video.
-- `outputs/benchmark.json`: timing and memory results.
-- `outputs/run.log`: complete runtime log.
+The following H100 command reproduces the released benchmark case:
+
+| Setting | Value |
+|---|---|
+| Prompt | [`t2va_example_1.json`](prompts/t2va_example_1.json) |
+| Seed | `0` |
+| Denoising steps | `50` |
+| Workload | 1344x768 @ 5 s |
+
+```bash
+python scripts/launch_candidate.py \
+  candidates/minimax_h3_h100_fullopt_exact.toml \
+  --mode sbatch --confirm-submit \
+  --env H3_STORAGE_ROOT="$PWD"
+```
+
+Each run is stored under `runs/` with the generated video, `benchmark.json`, and launch logs.
 
 ## Runtime Notes
 

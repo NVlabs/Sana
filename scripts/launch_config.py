@@ -307,17 +307,20 @@ def vendored_snapshot_identity(path: Path) -> str | None:
     except (OSError, json.JSONDecodeError) as exc:
         raise SystemExit(f"Invalid vendored source snapshot: {snapshot_path}: {exc}") from exc
     core_hashes = snapshot.get("core_sha256", {})
-    if not isinstance(core_hashes, dict) or not core_hashes:
-        # Two snapshot dialects live in this tree. The SGLang runtimes record
-        # core_sha256 for files they vendor and this function verifies them; the
-        # Diffusers runtimes record an upstream repo/commit pin instead, because
-        # what they vendor is a git checkout whose identity is its commit. A
-        # snapshot in the second dialect is not a broken one, so fall back to
-        # hashing the snapshot itself rather than refusing to launch.
-        if snapshot.get("upstream_commit") or snapshot.get("upstream_repo"):
-            digest = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
-            return f"snapshot:{digest}"
-        raise SystemExit(f"Vendored source snapshot has no core_sha256 entries: {snapshot_path}")
+    if not isinstance(core_hashes, dict):
+        raise SystemExit(f"Vendored source snapshot has a malformed core_sha256: {snapshot_path}")
+    if not core_hashes:
+        # No core_sha256 means there is nothing here to verify, not that the
+        # snapshot is broken. Three dialects are in this tree already: the SGLang
+        # runtimes list per-file hashes this function checks; GB200 pins an
+        # upstream repo/commit; GB10 pins a diffusers PR and a checkpoint set.
+        # Only the first is an integrity manifest -- the others are provenance
+        # records whose identity is the pin. Enumerating dialects here just meant
+        # the next one also failed to launch, so fall back on the snapshot's own
+        # hash and let a declared core_sha256 be the thing that opts into
+        # verification.
+        digest = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
+        return f"snapshot:{digest}"
     source_root = (path / str(snapshot.get("source_root", "lingbot_src"))).resolve()
     try:
         source_root.relative_to(path.resolve())

@@ -74,9 +74,17 @@ DEFAULT_ARTIFACTS = {
 
 
 def is_config_manifest(cfg: dict[str, object]) -> bool:
-    """A config declares a model_profile or a [runtime] table; a flat config
-    has neither and carries its runtime as a plain string."""
-    return "model_profile" in cfg or isinstance(cfg.get("runtime"), dict)
+    """Tell the two dialects apart.
+
+    Tested on the fields prepare_run actually requires, not on the two that are
+    merely common. config/cosmos3/sglang_baseline.toml is a manifest with
+    neither model_profile nor a [runtime] table -- it names its submodule and
+    run_script directly -- and a model_profile/runtime test called it a flat
+    config and then rejected every lowercase key it has.
+    """
+    if "model_profile" in cfg or isinstance(cfg.get("runtime"), dict):
+        return True
+    return "submodule" in cfg and "run_script" in cfg
 
 
 def to_manifest(

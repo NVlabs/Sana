@@ -83,10 +83,9 @@ note_encode = "encode_gpu_s is absent for this run: the timer wrapped text_encod
 note_load = "load_s is Lustre-bound and swings wildly — 39.7 s on job 5812989 versus 310.5 s here, same code and same files. It is excluded from request_s by construction."
 
 [env]
-PYTHON_BIN = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2/bin/python"
-H3_CONDA_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3"
-H3_CONDA_ENV = "lingbot-fa2"
-H3_MODEL_PATH = "/home/yitongl/code/models/MiniMax-H3-diffusers"
+# Model-wide facts only. What follows is true of MiniMax-H3 on any machine; the
+# interpreter, weights location and cache belong to the hardware cell that runs
+# them, and now live in each cell's own config.
 H3_PROMPT_FILE = "models/minimax_h3/demo_prompt.json"
 H3_HEIGHT = "768"
 H3_WIDTH = "1344"
@@ -97,8 +96,6 @@ H3_WARMUP = "1"
 H3_MEASURE = "1"
 H3_DIT_DEVICE = "0"
 H3_ENCODER_DEVICE = "0"
-HF_HUB_OFFLINE = "1"
-HF_HOME = "/home/yitongl/code/.cache/huggingface"
 TOKENIZERS_PARALLELISM = "false"
 
 [orchestration]

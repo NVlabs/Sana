@@ -22,6 +22,13 @@ transformer_dtype = "bf16"
 vae_dtype = "bf16"
 
 [env]
+# The shim requires H3_MODEL_PATH; stated here because the model profile no
+# longer carries one machine's checkout path. A repo id, resolved against
+# HF_HOME, is what the H100 and A100 cells use and what this cell was verified
+# with. Point it at a local directory to run offline.
+H3_MODEL_PATH = "MiniMaxAI/MiniMax-H3"
+H3_MODEL_REVISION = "bfc8ed0353f5a9733be73e6b2c98ec0948195b86"
+HF_HUB_OFFLINE = "0"
 H3_RTX5090_PROFILE = "fullopt"
 H3_CUDA_VISIBLE_DEVICES = "0"
 H3_PROMPT_FILE = "models/minimax_h3/demo_prompt.json"

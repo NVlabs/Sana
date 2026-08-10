@@ -10,6 +10,19 @@ run_script = "run_minimax_h3_gpu.sh"
 root = "models/minimax_h3/GB200"
 
 [env]
+# The interpreter, checkout and cache this cell runs against. They belong to the
+# GB200 cluster and are stated here, in the cell that uses them, rather than in
+# models/minimax_h3.toml -- which every hardware target inherits. Shared, they
+# were wrong for four of the five: GB10 had to have all three of PYTHON_BIN,
+# H3_CONDA_ROOT and H3_CONDA_ENV overridden on the command line, RTX5090 and the
+# container-based H100/A100 cells never use them at all, and RTX5090 inherited
+# HF_HUB_OFFLINE = "1" with a model path that exists on one machine.
+PYTHON_BIN = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3/envs/lingbot-fa2/bin/python"
+H3_CONDA_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/miniconda3"
+H3_CONDA_ENV = "lingbot-fa2"
+H3_MODEL_PATH = "/home/yitongl/code/models/MiniMax-H3-diffusers"
+HF_HUB_OFFLINE = "1"
+HF_HOME = "/home/yitongl/code/.cache/huggingface"
 H3_PROMPT_FILE = "models/minimax_h3/demo_prompt.json"
 H3_SOURCE_VARIANT = "baseline_pristine_plus_timing"
 H3_WARMUP = "1"

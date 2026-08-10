@@ -40,6 +40,10 @@ optimization_reports/artifacts/
 # Slurm job scripts: site-specific (account, partition, QoS) and of no use
 # to anyone outside this cluster. Kept locally, never tracked.
 *.sbatch
+# ...and one that is spelled .sh. An ignore rule cannot match on content,
+# so a job script named anything else needs naming here. `git add -A` will
+# otherwise re-add it the moment it is untracked, which is what happened.
+scripts/slurm_bench_sana_pisa_attention_backend.sh
 
 # MiniMax-H3 GB200 SGLang runtime: a second implementation of the same card,
 # kept locally for framework A/B work and not published. Spelled with the

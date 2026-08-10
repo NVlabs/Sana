@@ -6,17 +6,17 @@ Sol-Attn, caching, and memory-efficient decoding.
 
 ## Performance
 
-| Hardware | GPUs | Workload | End-to-end speedup | Full-opt config |
-|---|---:|---:|---:|---|
-| GB200 | 8 | 1344x768 @ 5 s | **3.97x** | [`minimax_h3_fullopt.toml`](../../config/minimax_h3/fullopt.toml) |
-| GB10 (DGX Spark) | 1 | 832x480 @ 5 s | **3.92x** | [`minimax_h3_gb10_fullopt.toml`](../../config/minimax_h3/gb10_fullopt.toml) |
-| RTX 5090 | 1 | 1344x768 @ 5 s | **4.52x** | [`minimax_h3_rtx5090_fullopt.toml`](../../config/minimax_h3/rtx5090_fullopt.toml) |
-| H100 | 4 | 1344x768 @ 5 s | **3.56x** | [`minimax_h3_h100_fullopt_exact.toml`](../../config/minimax_h3/h100_fullopt_exact.toml) |
-| A100 | 4 | 1344x768 @ 5 s | **3.55x** | [`minimax_h3_a100_fullopt_exact.toml`](../../config/minimax_h3/a100_fullopt_exact.toml) |
+| Hardware | GPUs | Workload | E2E latency | Speedup | Full-opt config |
+|---|---:|---:|---:|---:|---|
+| GB200 | 8 | 1344x768 @ 5 s | 27.21 s -> 6.88 s | **3.97x** | [`minimax_h3_fullopt.toml`](../../config/minimax_h3/fullopt.toml) |
+| GB10 (DGX Spark) | 1 | 832x480 @ 5 s | 710.6 s -> 181.3 s | **3.92x** | [`minimax_h3_gb10_fullopt.toml`](../../config/minimax_h3/gb10_fullopt.toml) |
+| RTX 5090 | 1 | 1344x768 @ 5 s | 1045.4 s -> 231.2 s | **4.52x** | [`minimax_h3_rtx5090_fullopt.toml`](../../config/minimax_h3/rtx5090_fullopt.toml) |
+| H100 | 4 | 1344x768 @ 5 s | 81.47 s -> 22.89 s | **3.56x** | [`minimax_h3_h100_fullopt_exact.toml`](../../config/minimax_h3/h100_fullopt_exact.toml) |
+| A100 | 4 | 1344x768 @ 5 s | 217.32 s -> 61.28 s | **3.55x** | [`minimax_h3_a100_fullopt_exact.toml`](../../config/minimax_h3/a100_fullopt_exact.toml) |
 
-Speedups are measured against the matching dense runtime on the same hardware. Each platform uses
-its validated release workload, so the table compares relative acceleration rather than absolute
-latency across GPUs.
+E2E latency is shown as dense -> full-opt. Speedups are measured against the matching dense runtime
+on the same hardware. Each platform uses its validated release workload, so the table compares
+relative acceleration rather than absolute latency across GPUs.
 
 ## Usage
 
@@ -52,6 +52,6 @@ Each run is stored under `runs/` with the generated video, `benchmark.json`, and
 ## Runtime Notes
 
 Platform-specific environment and implementation notes are available for
-[GB200](gb200/), [GB10](gb10/), [RTX 5090](rtx5090/), [H100](h100/), and [A100](a100/).
+[GB200](GB200/), [GB10](GB10/), [RTX 5090](RTX5090/), [H100](H100/), and [A100](A100/).
 Full-opt uses approximate caching and sparse attention; keep the released config unchanged when
 reproducing the reported performance and quality.

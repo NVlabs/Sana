@@ -8,11 +8,12 @@ the installed SGLang checkout.
 
 ## Performance
 
-| GPUs | Workload | E2E speedup |
-|---:|---|---:|
-| 4 | 1344x768 @ 5 s | **3.56x** |
+| GPUs | Workload | E2E latency | Speedup |
+|---:|---|---:|---:|
+| 4 | 1344x768 @ 5 s | 81.47 s -> 22.89 s | **3.56x** |
 
-The speedup is measured against the matching dense runtime. The released configuration is pinned by
+E2E latency is shown as dense -> full-opt. The speedup is measured against the matching dense
+runtime. The released configuration is pinned by
 [`minimax_h3_h100_fullopt_exact.toml`](../../../config/minimax_h3/h100_fullopt_exact.toml).
 
 ## Full-Opt

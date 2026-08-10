@@ -8,12 +8,13 @@ MiniMax-H3 FL2VA pipeline.
 
 ## Performance
 
-| GPUs | Workload | E2E speedup |
-|---:|---|---:|
-| 1 | 832x480 @ 5 s | **3.92x** |
+| GPUs | Workload | E2E latency | Speedup |
+|---:|---|---:|---:|
+| 1 | 832x480 @ 5 s | 710.6 s -> 181.3 s | **3.92x** |
 
-The speedup is measured against the matching unoptimized GB10 runtime. The released configuration
-is pinned by [`minimax_h3_gb10_fullopt.toml`](../../../config/minimax_h3/gb10_fullopt.toml).
+E2E latency is shown as dense -> full-opt. The speedup is measured against the matching unoptimized
+GB10 runtime. The released configuration is pinned by
+[`minimax_h3_gb10_fullopt.toml`](../../../config/minimax_h3/gb10_fullopt.toml).
 
 ## Full-Opt
 

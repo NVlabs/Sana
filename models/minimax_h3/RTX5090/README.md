@@ -8,12 +8,11 @@ the 32 GiB GPU.
 
 ## Performance
 
-| GPUs | Workload | E2E latency | Speedup |
-|---:|---|---:|---:|
-| 1 | 1344x768 @ 5 s | 1045.4 s -> 231.2 s | **4.52x** |
+| GPUs | Workload | Dense (s) | Full-opt (s) | Speedup |
+|---:|---|---:|---:|---:|
+| 1 | 768p@5s | 1045.4 | 231.2 | **4.52x** |
 
-E2E latency is shown as dense -> full-opt. The speedup is measured against the matching dense
-runtime. The released configuration is pinned by
+The speedup is measured against the matching dense runtime. The released configuration is pinned by
 [`minimax_h3_rtx5090_fullopt.toml`](../../../config/minimax_h3/rtx5090_fullopt.toml).
 
 ## Full-Opt

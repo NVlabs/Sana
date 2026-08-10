@@ -8,12 +8,11 @@ sequence with Ulysses-8 and keeps the complete model resident without offload.
 
 ## Performance
 
-| GPUs | Workload | E2E latency | Speedup |
-|---:|---|---:|---:|
-| 8 | 1344x768 @ 5 s | 27.21 s -> 6.88 s | **3.97x** |
+| GPUs | Workload | Dense (s) | Full-opt (s) | Speedup |
+|---:|---|---:|---:|---:|
+| 8 | 768p@5s | 27.21 | 6.88 | **3.95x** |
 
-E2E latency is shown as dense -> full-opt. The speedup is measured against the matching dense
-runtime. The released configuration is pinned by
+The speedup is measured against the matching dense runtime. The released configuration is pinned by
 [`minimax_h3_fullopt.toml`](../../../config/minimax_h3/fullopt.toml).
 
 ## Full-Opt

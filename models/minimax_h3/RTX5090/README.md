@@ -8,12 +8,12 @@ the 32 GiB GPU.
 
 ## Performance
 
-| GPUs | Workload | Dense (s) | Full-opt (s) | Speedup |
+| GPUs | Workload | Baseline (s) | Optimized (s) | Speedup |
 |---:|---|---:|---:|---:|
 | 1 | 768p@5s | 1045.4 | 231.2 | **4.52x** |
 
-The speedup is measured against the matching dense runtime. The released configuration is pinned by
-[`minimax_h3_rtx5090_fullopt.toml`](../../../config/minimax_h3/rtx5090_fullopt.toml).
+The speedup is measured against the matching baseline runtime. The released configuration is pinned
+by [`minimax_h3_rtx5090_fullopt.toml`](../../../config/minimax_h3/rtx5090_fullopt.toml).
 
 ## Full-Opt
 

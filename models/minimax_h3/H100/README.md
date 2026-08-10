@@ -8,12 +8,12 @@ the installed SGLang checkout.
 
 ## Performance
 
-| GPUs | Workload | Dense (s) | Full-opt (s) | Speedup |
+| GPUs | Workload | Baseline (s) | Optimized (s) | Speedup |
 |---:|---|---:|---:|---:|
 | 4 | 768p@5s | 81.47 | 22.89 | **3.56x** |
 
-The speedup is measured against the matching dense runtime. The released configuration is pinned by
-[`minimax_h3_h100_fullopt_exact.toml`](../../../config/minimax_h3/h100_fullopt_exact.toml).
+The speedup is measured against the matching baseline runtime. The released configuration is pinned
+by [`minimax_h3_h100_fullopt_exact.toml`](../../../config/minimax_h3/h100_fullopt_exact.toml).
 
 ## Full-Opt
 

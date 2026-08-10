@@ -8,12 +8,12 @@ MiniMax-H3 FL2VA pipeline.
 
 ## Performance
 
-| GPUs | Workload | Dense (s) | Full-opt (s) | Speedup |
+| GPUs | Workload | Baseline (s) | Optimized (s) | Speedup |
 |---:|---|---:|---:|---:|
 | 1 | 480p@5s | 710.6 | 181.3 | **3.92x** |
 
-The speedup is measured against the matching unoptimized GB10 runtime. The released configuration
-is pinned by
+The speedup is measured against the matching baseline runtime. The released configuration is pinned
+by
 [`minimax_h3_gb10_fullopt.toml`](../../../config/minimax_h3/gb10_fullopt.toml).
 
 ## Full-Opt

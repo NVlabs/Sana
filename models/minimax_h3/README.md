@@ -6,7 +6,7 @@ Sol-Attn, caching, and memory-efficient decoding.
 
 ## Performance
 
-| Hardware | GPUs | Workload | Dense (s) | Full-opt (s) | Speedup | Full-opt config |
+| Hardware | GPUs | Workload | Baseline (s) | Optimized (s) | Speedup | Config |
 |---|---:|---:|---:|---:|---:|---|
 | GB200 | 8 | 768p@5s | 27.21 | 6.88 | **3.95x** | [`minimax_h3_fullopt.toml`](../../config/minimax_h3/fullopt.toml) |
 | GB10 (DGX Spark) | 1 | 480p@5s | 710.6 | 181.3 | **3.92x** | [`minimax_h3_gb10_fullopt.toml`](../../config/minimax_h3/gb10_fullopt.toml) |
@@ -14,9 +14,9 @@ Sol-Attn, caching, and memory-efficient decoding.
 | H100 | 4 | 768p@5s | 81.47 | 22.89 | **3.56x** | [`minimax_h3_h100_fullopt_exact.toml`](../../config/minimax_h3/h100_fullopt_exact.toml) |
 | A100 | 4 | 768p@5s | 217.32 | 61.28 | **3.55x** | [`minimax_h3_a100_fullopt_exact.toml`](../../config/minimax_h3/a100_fullopt_exact.toml) |
 
-Speedups are measured against the matching dense runtime on the same hardware. Each platform uses
-its validated release workload, so the table compares relative acceleration rather than absolute
-latency across GPUs.
+Speedups are measured against the matching baseline runtime on the same hardware. Each platform
+uses its validated release workload, so the table compares relative acceleration rather than
+absolute latency across GPUs.
 
 ## Usage
 

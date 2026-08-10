@@ -54,7 +54,7 @@ wall).
 - Cause: `build_benchmark` injected the Cosmos label for all models.
 - Fix: model-aware label — generic `generation`/`decode` for non-Cosmos models;
   `Cosmos3DenoisingStage`/`Cosmos3DecodingStage` preserved only for Cosmos so the
-  Cosmos-only `scripts/audit_public_reference_alignment.py` keeps working.
+  Cosmos-only public-reference audit kept working.
 
 ## MI-5 — eval_profile pointed at the Cosmos profile
 - Symptom: `models/hunyuan_diffusers.toml` referenced

@@ -52,3 +52,26 @@ scripts/slurm_bench_sana_pisa_attention_backend.sh
 # runtime. tests/test_no_private_files_tracked.py now fails on any tracked file
 # an ignore rule claims, so a stale rule cannot leak quietly again.
 models/minimax_h3/GB200_sglang/
+
+# ---------------------------------------------------------------------------
+# Agent harness. Kept on disk, never published.
+#
+# What this repository presents is an acceleration pipeline and the methods in
+# it -- not the methodology that produced them. These directories are the
+# harness: master-agent orchestration, per-node system prompts and decision
+# policies for the codex executors, and the goal-session tooling. How the work
+# was driven is not part of the deliverable.
+#
+# They are also dead. 13 of the repository's 16 long-standing test failures
+# come from here, and they fail because they shell out to `workflow_lite/`, a
+# directory deleted in d2b47a0 and gone from the tree. Nothing on the launch
+# path imports any of it: the import closure of scripts/run.py is 21 modules,
+# all under scripts/ and techniques/.
+workflow/
+orchestration/
+tools/symposium/
+.symposium/
+scripts/create_model_experiment.py
+tests/test_create_model_experiment.py
+tests/test_workflow_lite_topology.py
+tests/test_workflow_managed_codex.py

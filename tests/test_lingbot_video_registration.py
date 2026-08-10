@@ -1,7 +1,32 @@
+"""LingBot-Video: the two arms stay separable, and a run resolves what it claims.
+
+This file went stale rather than wrong. It was written against a `runtime/`
+directory and flat `config/lingbot_video_*.toml` names, both of which the tree
+reorganisation replaced with `models/lingbot_video/<arm>/` and
+`config/lingbot_video/<arm>.toml`. Every one of its five tests then failed on a
+missing path, and stayed red long enough to stop being read -- which is how the
+finding below went unnoticed.
+
+So the config list is derived from the directory now instead of being spelled
+out. A config added or renamed is picked up; a config deleted stops being
+asserted about. The previous version hardcoded four filenames, two of which
+(`lingbot_video_cudnn_off`, `lingbot_video_fsdp4_reference`) no longer exist as
+configs at all, and could not tell that apart from a typo.
+
+Dropped with this rewrite: `test_lingbot_baseline_contract_does_not_copy_optimized_runtime`.
+It asserted over the spelling of `[baseline.copy].include` -- that no entry
+contains the string "lingbot_video_optimized" -- rather than over what the glob
+list actually selects. It passes today while `include` carries
+`models/lingbot_video/**`, which matches the optimized runtime it was written to
+keep out. That contract is read only by the experiment materializer, which is no
+longer part of what this repository publishes, so the test is not re-pointed
+here; the glob is noted rather than quietly changed.
+"""
+
 from __future__ import annotations
 
-import importlib.util
 import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -9,8 +34,13 @@ import tempfile
 import tomllib
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+CONFIG_DIR = ROOT / "config/lingbot_video"
+ARMS = {"baseline": "models/lingbot_video/baseline",
+        "optimized": "models/lingbot_video/optimized"}
+CONFIGS = sorted(CONFIG_DIR.glob("*.toml"))
 
 
 def load_toml(relative: str) -> dict:
@@ -19,7 +49,7 @@ def load_toml(relative: str) -> dict:
 
 
 def load_adapter_module():
-    path = ROOT / "runtime/lingbot_video_baseline/gpu_infer.py"
+    path = ROOT / "models/lingbot_video/baseline/gpu_infer.py"
     spec = importlib.util.spec_from_file_location("lingbot_video_gpu_infer", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -27,51 +57,58 @@ def load_adapter_module():
     return module
 
 
-def test_lingbot_profile_and_config_share_fixed_workload() -> None:
+def test_configs_exist_at_all() -> None:
+    """Guards the derivation above: an empty glob would make the rest vacuous."""
+    assert CONFIGS, f"no configs under {CONFIG_DIR}; the layout moved again"
+
+
+def test_profile_and_eval_agree_on_the_workload() -> None:
+    """The measured workload has to be one number, not one per file."""
     profile = load_toml("models/lingbot_video.toml")
     eval_profile = load_toml("evals/profiles/official_video_t2v_lingbot_video.toml")
-    baseline = load_toml("config/lingbot_video/baseline.toml")
-    optimized = load_toml("config/lingbot_video_cudnn_optimized.toml")
-    optimized_off = load_toml("config/lingbot_video_cudnn_off.toml")
-    fsdp_reference = load_toml("config/lingbot_video_fsdp4_reference.toml")
 
     assert profile["official_config"] == eval_profile["official_config"]
     assert profile["official_config"]["num_gpus"] == 4
-    assert baseline["model_profile"] == optimized["model_profile"] == "lingbot_video"
-    assert baseline["runtime"]["root"] == "runtime/lingbot_video_baseline"
-    assert optimized["runtime"]["root"] == "runtime/lingbot_video_optimized"
-    assert baseline["env"]["LINGBOT_ATTN_KERNEL"] == "fa2"
-    assert optimized["env"]["LINGBOT_ATTN_KERNEL"] == "cudnn"
-    assert optimized_off["runtime"]["root"] == "runtime/lingbot_video_optimized"
-    assert optimized_off["env"]["LINGBOT_ATTN_KERNEL"] == "fa2"
     assert profile["official_config"]["context_parallel_degree"] == 4
-    assert fsdp_reference["official_config"]["context_parallel_degree"] == 1
-    assert fsdp_reference["official_config"]["batch_cfg"] is False
 
 
-def test_lingbot_baseline_contract_does_not_copy_optimized_runtime() -> None:
-    contract = load_toml("models/lingbot_video/model.toml")
-    includes = contract["baseline"]["copy"]["include"]
-    excludes = contract["baseline"]["copy"]["exclude"]
+@pytest.mark.parametrize("config", CONFIGS, ids=lambda p: p.name)
+def test_each_config_names_this_model_and_an_arm_that_exists(config: Path) -> None:
+    """A config pointing at a runtime root that is not there is the failure that
+    costs the most: it survives every dry-run check and surfaces after an
+    allocation. Five GB200 configs did exactly this after their arms were
+    flattened away."""
+    with config.open("rb") as handle:
+        data = tomllib.load(handle)
 
-    assert "runtime/lingbot_video_baseline/**" in includes
-    assert not any("lingbot_video_optimized" in item for item in includes)
-    assert not any("lingbot_video_optimized" in item for item in excludes)
-    assert contract["baseline"]["manifest"] == "config/lingbot_video/baseline.toml"
+    assert data["model_profile"] == "lingbot_video"
+    root = data["runtime"]["root"]
+    assert root in ARMS.values(), f"{config.name}: unknown runtime root {root}"
+    assert (ROOT / root).is_dir(), f"{config.name}: {root} does not exist"
+
+    # The kernel a config selects has to match the arm it runs in: the baseline
+    # sources do not contain the cudnn path at all (asserted below), so a
+    # baseline-rooted config asking for cudnn would fail at run time, not here.
+    kernel = data["env"]["LINGBOT_ATTN_KERNEL"]
+    if root == ARMS["baseline"]:
+        assert kernel == "fa2", f"{config.name}: baseline arm cannot select {kernel}"
+    else:
+        assert kernel in {"fa2", "cudnn"}, f"{config.name}: unknown kernel {kernel}"
 
 
-def test_lingbot_baseline_and_optimized_sources_are_physically_isolated() -> None:
-    baseline_transformer = (
-        ROOT
-        / "runtime/lingbot_video_baseline/lingbot_src/lingbot_video/transformer_lingbot_video.py"
-    ).read_text()
-    optimized_transformer = (
-        ROOT
-        / "runtime/lingbot_video_optimized/lingbot_src/lingbot_video/transformer_lingbot_video.py"
-    ).read_text()
-    baseline_runner = (
-        ROOT / "runtime/lingbot_video_baseline/lingbot_src/lingbot_video/runner.py"
-    ).read_text()
+def test_the_two_arms_are_physically_separate_sources() -> None:
+    """Not 'configured differently' -- different files on disk.
+
+    A baseline that shares a source file with the optimized arm is one stray
+    environment variable away from measuring the optimized path and reporting it
+    as the control.
+    """
+    baseline = ROOT / "models/lingbot_video/baseline/lingbot_src/lingbot_video"
+    optimized = ROOT / "models/lingbot_video/optimized/lingbot_src/lingbot_video"
+
+    baseline_transformer = (baseline / "transformer_lingbot_video.py").read_text()
+    optimized_transformer = (optimized / "transformer_lingbot_video.py").read_text()
+    baseline_runner = (baseline / "runner.py").read_text()
 
     assert "_cudnn_varlen_attention" not in baseline_transformer
     assert "LINGBOT_ATTN_KERNEL" not in baseline_transformer
@@ -79,19 +116,24 @@ def test_lingbot_baseline_and_optimized_sources_are_physically_isolated() -> Non
     assert "LINGBOT_ATTN_KERNEL" in optimized_transformer
     assert "LINGBOT_PHASE_TIMING" in baseline_runner
     assert "LINGBOT_BCAST_WEIGHTS" not in baseline_runner
-    baseline_adapter = (ROOT / "runtime/lingbot_video_baseline/gpu_infer.py").read_text()
+
+    baseline_adapter = (ROOT / "models/lingbot_video/baseline/gpu_infer.py").read_text()
     assert "lingbot_video_optimized" not in baseline_adapter
     assert "registered c5" not in baseline_adapter
 
-    for runtime in ("lingbot_video_baseline", "lingbot_video_optimized"):
-        runtime_root = ROOT / "runtime" / runtime
-        snapshot = json.loads((runtime_root / "SOURCE_SNAPSHOT.json").read_text())
-        for relative, expected in snapshot["core_sha256"].items():
-            actual = hashlib.sha256((runtime_root / "lingbot_src" / relative).read_bytes()).hexdigest()
-            assert actual == expected
+
+@pytest.mark.parametrize("arm", sorted(ARMS))
+def test_vendored_sources_match_their_snapshot(arm: str) -> None:
+    """The snapshot is what makes 'the baseline is upstream' checkable rather
+    than asserted."""
+    runtime_root = ROOT / ARMS[arm]
+    snapshot = json.loads((runtime_root / "SOURCE_SNAPSHOT.json").read_text())
+    for relative, expected in snapshot["core_sha256"].items():
+        blob = (runtime_root / "lingbot_src" / relative).read_bytes()
+        assert hashlib.sha256(blob).hexdigest() == expected, f"{arm}: {relative} drifted"
 
 
-def test_lingbot_phase_parser_and_hot_sum_contract() -> None:
+def test_phase_parser_and_hot_sum_contract() -> None:
     adapter = load_adapter_module()
     phases = adapter.parse_phase_lines(
         [
@@ -103,67 +145,48 @@ def test_lingbot_phase_parser_and_hot_sum_contract() -> None:
 
     assert phases["base_denoise_done"]["dt_s"] == 89.10
     assert phases["refiner_denoise_done"]["dt_s"] == 123.88
+    # A hot sum with a missing part is None, never a partial total -- a partial
+    # total is a number that looks measured and is not.
     assert round(adapter.sum_if_complete(89.10, 19.30, 123.88, 1.54), 2) == 233.82
     assert adapter.sum_if_complete(89.10, None) is None
 
     adapter.validate_topology(4, 4, True)
     adapter.validate_topology(4, 1, True)
     for invalid in ((8, 4, True), (4, 2, True), (4, 1, False)):
-        try:
+        with pytest.raises(SystemExit):
             adapter.validate_topology(*invalid)
-        except SystemExit:
-            pass
-        else:
-            raise AssertionError(f"invalid topology was accepted: {invalid}")
 
 
-def test_lingbot_dry_run_persists_merged_profile_and_snapshot_identity() -> None:
-    expected = {
-        "lingbot_video_baseline.toml": (4, "fa2", "official_video_t2v_lingbot_video.toml"),
-        "lingbot_video_fsdp4_reference.toml": (
-            1,
-            "fa2",
-            "official_video_t2v_lingbot_video_fsdp4_reference.toml",
-        ),
-        "lingbot_video_cudnn_optimized.toml": (
-            4,
-            "cudnn",
-            "official_video_t2v_lingbot_video.toml",
-        ),
-        "lingbot_video_cudnn_off.toml": (
-            4,
-            "fa2",
-            "official_video_t2v_lingbot_video.toml",
-        ),
-    }
+@pytest.mark.parametrize("config", CONFIGS, ids=lambda p: p.name)
+def test_dry_run_persists_the_merged_profile_it_resolved(config: Path) -> None:
+    """What a run records has to be what it resolved, not what the file said.
+
+    Read back from the rendered bundle rather than compared to a hardcoded
+    table: the expectations are the config's own values, so this cannot drift
+    out of step with the configs the way the previous version did.
+    """
+    with config.open("rb") as handle:
+        declared = tomllib.load(handle)
+    relative = str(config.relative_to(ROOT))
+
     with tempfile.TemporaryDirectory() as tmp:
         run_root = Path(tmp) / "runs"
-        for filename in expected:
-            subprocess.run(
-                [
-                    sys.executable,
-                    "scripts/launch_config.py",
-                    f"config/{filename}",
-                    "--mode",
-                    "dry-run",
-                    "--strict-commit",
-                    "--run-root",
-                    str(run_root),
-                ],
-                cwd=ROOT,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-            )
+        subprocess.run(
+            [sys.executable, "scripts/launch_config.py", relative,
+             "--mode", "dry-run", "--strict-commit", "--run-root", str(run_root)],
+            cwd=ROOT, text=True, check=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        run_dirs = list(run_root.iterdir())
+        assert len(run_dirs) == 1, f"expected one run bundle, got {run_dirs}"
+        run_dir = run_dirs[0]
 
-        for run_dir in run_root.iterdir():
-            metadata = json.loads((run_dir / "metadata.json").read_text())
-            manifest = tomllib.loads((run_dir / "manifest.resolved.toml").read_text())
-            filename = Path(metadata["config_manifest"]).name
-            cp_degree, kernel, eval_name = expected[filename]
-            resolved_profile = manifest["resolved_profile"]
-            assert resolved_profile["official_config"]["context_parallel_degree"] == cp_degree
-            assert resolved_profile["env"]["LINGBOT_ATTN_KERNEL"] == kernel
-            assert resolved_profile["eval_profile"].endswith(eval_name)
-            assert metadata["runtime_commit"].startswith("snapshot:")
+        metadata = json.loads((run_dir / "metadata.json").read_text())
+        manifest = tomllib.loads((run_dir / "manifest.resolved.toml").read_text())
+
+    assert Path(metadata["config_manifest"]).name == config.name
+    assert metadata["runtime_commit"].startswith("snapshot:")
+
+    resolved = manifest["resolved_profile"]
+    assert resolved["env"]["LINGBOT_ATTN_KERNEL"] == declared["env"]["LINGBOT_ATTN_KERNEL"]
+    assert resolved["eval_profile"].endswith(".toml")

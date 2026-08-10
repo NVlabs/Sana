@@ -246,9 +246,8 @@ implemented or active.
 
 ## Public Reference Alignment Gate
 
-`scripts/audit_public_reference_alignment.py` records each config's actual
-scope relative to its public/canonical references. This is separate from URL
-validation:
+A config's declared scope relative to its public/canonical references is a
+separate claim from URL validation:
 
 - A public URL proves provenance, not full implementation equivalence.
 - Public source access means an implementation can be attempted; it does not
@@ -260,6 +259,5 @@ validation:
   advertised env/config, a GPU run must prove that path is active, and current
   quality/speed evidence must not be blocked.
 
-The review matrix is generated on demand with
-`scripts/audit_public_reference_alignment.py --markdown-out <path>`; it is not
-required to live in the repository.
+The review matrix is generated on demand and is not required to live in the
+repository.

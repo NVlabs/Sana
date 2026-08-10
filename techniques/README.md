@@ -66,8 +66,9 @@ that contract. The concrete model adapter remains in the runtime code under
 ## Verify
 
 ```bash
-PYTHONNOUSERSITE=1 python3 scripts/test_config_manifests.py
-PYTHONNOUSERSITE=1 python3 scripts/audit_config_soundness.py
-PYTHONNOUSERSITE=1 python3 scripts/test_public_reference_alignment.py
-PYTHONNOUSERSITE=1 /lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer/.conda/ltx23/bin/python efficiency/selftest.py
+# Every config resolves, and its repo-side paths exist:
+for c in config/*/*.toml; do python3 scripts/run.py "$c" --print >/dev/null || echo "FAILED $c"; done
+
+# The technique registry agrees with itself:
+PYTHONNOUSERSITE=1 python3 techniques/selftest.py
 ```

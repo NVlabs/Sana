@@ -29,10 +29,16 @@ capabilities, and verification policy. The generic implementation boundary must
 remain outside `Sol-LTX-Infer`; the runtime paths are integration hooks for the
 current Cosmos3 validation target.
 
-Method-family starting points live in `loops/<dimension>/dimension.toml` as
-`[[method_baseline]]` entries. Use `scripts/test_config_manifests.py`,
-`scripts/audit_config_soundness.py`, and
-`scripts/audit_public_reference_alignment.py` before launching GPU work.
+Resolve a config before spending an allocation:
+
+```bash
+python3 scripts/run.py config/<model>/<arm>.toml --print
+```
+
+That renders the run bundle and checks the repo-side paths -- runtime root, run
+script, prompt file -- without running anything. It is the check worth doing;
+the audit and alignment scripts that used to be named here were one-off probes
+and are not part of what this repository ships.
 
 `scripts/launch_config.py --mode dry-run` is expected to work for every
 config. `--mode local` and `--mode sbatch` are intentionally blocked for

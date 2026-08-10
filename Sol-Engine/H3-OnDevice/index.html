@@ -59,12 +59,6 @@ h1 .h1a{display:block;font-size:clamp(34px,5.2vw,54px);color:#fff}
 h1 .h1b{display:block;margin-top:12px;font-size:clamp(24px,3.4vw,34px);line-height:1.16;letter-spacing:-.02em;color:var(--text-2);font-weight:650}
 .dek{font-size:21px;line-height:1.56;color:var(--text-2);margin:0 0 32px;letter-spacing:-.008em}
 .dek b{color:#fff;font-weight:650}
-.hero-links{display:flex;flex-wrap:wrap;gap:12px;margin:-4px 0 32px}
-.hero-links a{
-    display:inline-flex;align-items:center;padding:9px 16px;border:1px solid var(--green-line);
-    border-radius:6px;background:var(--green-soft);color:var(--green);font-size:16px;font-weight:650;
-  }
-.hero-links a:hover{border-color:var(--green);background:rgba(118,185,0,.15)}
 .byline{
     display:flex;flex-direction:column;gap:7px;align-items:flex-start;
     color:var(--text-2);font-size:19px;padding-top:24px;border-top:1px solid var(--line-soft);
@@ -223,7 +217,8 @@ p code,li code,td code{background:var(--surface-2);border:1px solid var(--line);
 .bpanels{display:grid;grid-template-columns:1fr 1fr;gap:34px}
 @media(max-width:1000px){.bpanels{grid-template-columns:1fr;gap:40px}}
 .bpanel{min-width:0}
-.bpanel .dev{font-size:16px;font-weight:650;color:#fff;letter-spacing:-.01em;margin-bottom:18px}
+.bpanel .dev{font-size:16px;font-weight:650;color:#fff;letter-spacing:-.01em;margin-bottom:18px;
+             display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .prow{display:grid;grid-template-columns:150px 1fr 96px;gap:0 14px;align-items:center;margin-bottom:18px}
 .prow:last-of-type{margin-bottom:0}
 .prow .blab{font-size:15px;line-height:1.28}
@@ -273,6 +268,9 @@ p code,li code,td code{background:var(--surface-2);border:1px solid var(--line);
 .devhd{font-size:16px;font-weight:650;color:#fff;letter-spacing:-.01em;margin-bottom:12px;
        display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
 .devcfg{font-size:14.5px;font-weight:500;color:var(--muted);letter-spacing:0;font-variant-numeric:tabular-nums}
+.resbadge{display:inline-block;font-size:15px;font-weight:700;letter-spacing:.01em;color:var(--green);
+          background:var(--green-soft);border:1px solid var(--green-line);border-radius:100px;
+          padding:1px 11px;font-variant-numeric:tabular-nums}
 .devpair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .cmp4-row .vid .meta .r{color:#fff;font-weight:700;font-size:19px;letter-spacing:-.02em}
 .cmp4-row .vid.ok .meta .r{color:var(--green)}
@@ -304,6 +302,7 @@ footer p{margin:12px 0}
 
 <div class="hero">
   <div class="prose">
+    <span class="pill">Day One Optimization</span>
     <h1><span class="h1a">Deploy MiniMax-H3 with Sol Engine</span><span class="h1b">achieving up to <em>4.52× acceleration</em> on <em>on-device GPUs</em></span></h1>
     <p class="dek">
       A 33B omni-modal video model, running on hardware that sits on a desk. The Sol Video Inference
@@ -311,9 +310,6 @@ footer p{margin:12px 0}
       near-lossless quality. It gets there without distillation, without LoRA or fine-tuning, and
       without an offline calibration pass.
     </p>
-    <div class="hero-links">
-      <a href="https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3">MiniMax-H3 Code</a>
-    </div>
     <div class="byline">
       <span class="authors">Yitong Li<sup>*</sup>, Haopeng Li<sup>*</sup>, Enze Xie</span>
       <span class="meta-row">
@@ -379,7 +375,7 @@ footer p{margin:12px 0}
     <div class="shead">
       <span class="num">02 — Sol Engine</span>
       <h2>Up to 4.52× end-to-end optimization</h2>
-      <p>Measured on NVIDIA DGX Spark and GeForce RTX 5090 · 1344×768 · 24 fps · 124 frames.</p>
+      <p>DGX Spark renders at <strong>480p</strong> (832×480), the GeForce RTX 5090 at <strong>768p</strong> (1344×768) &mdash; 2.6× the pixels. Both at 24 fps, 124 frames, 50 steps.</p>
     </div>
 
     <p class="lede">
@@ -411,7 +407,7 @@ footer p{margin:12px 0}
 
       <div class="bpanels">
         <div class="bpanel">
-          <div class="dev">DGX Spark</div>
+          <div class="dev">DGX Spark<span class="resbadge">480p</span></div>
           <div class="prow">
             <div class="blab">Baseline<span class="bs">unmodified reference</span></div>
             <div class="btrack">
@@ -446,7 +442,7 @@ footer p{margin:12px 0}
           </div>
         </div>
         <div class="bpanel">
-          <div class="dev">GeForce RTX 5090</div>
+          <div class="dev">GeForce RTX 5090<span class="resbadge">768p</span></div>
           <div class="prow">
             <div class="blab">Baseline<span class="bs">unmodified reference</span></div>
             <div class="btrack">
@@ -485,9 +481,10 @@ footer p{margin:12px 0}
       <div class="fcap">
         The same four stages on both devices: kernel work covers every lossless change, on the DiT and
         on the VAE alike, and the two approximations follow. Each panel is scaled to its own maximum, so
-        the comparison is between the shapes of the ladders rather than between absolute times on very
-        different hardware. Spark reaches 3.92× and the 5090 4.52×; on both, the cross-step cache is by
-        far the largest single step.
+        the comparison is between the shapes of the ladders rather than between absolute times &mdash;
+        the two devices are not running the same job. Spark renders 480p and the 5090 768p, 2.6× the
+        pixels, so the wall times in the two panels do not belong on a common axis. Spark reaches 3.92×
+        and the 5090 4.52×; on both, the cross-step cache is by far the largest single step.
       </div>
     </div>
   </div>
@@ -501,22 +498,23 @@ footer p{margin:12px 0}
       <p class="cmp-sub">
         <strong>Full optimization</strong> is the whole stack — lossless kernels, Sol-Attn, the
         cross-step cache, and a resident BF16 VAE. Each clip carries its own audio track, so the sound
-        is part of what has to survive. Render settings differ per device and are noted above each
-        pair.
+        is part of what has to survive. Compare within a pair, not across the two devices: Spark runs
+        at 480p and the 5090 at 768p, so part of the visible difference between the halves of this grid
+        is resolution, not acceleration.
       </p>
 
       <div class="cmp4-row">
         <span class="cmp-lbl">Prompt 1</span>
         <p class="cmp-prompt">Cinematic push-in on a starship bridge: a captain in a high-collared navy tunic stands silhouetted at the observation window as a dreadnought armada charges its hyperdrives. A blinding flash, the bridge shudders, and the fleet is gone. <span class="pnote">[full prompt compacted]</span></p>
         <div class="devgrp">
-          <div class="devhd">DGX Spark<span class="devcfg">480p · 5 s · 50 steps</span></div>
+          <div class="devhd">DGX Spark<span class="resbadge">480p</span><span class="devcfg">832×480 · 5 s · 50 steps</span></div>
           <div class="devpair">
             <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/spark/p1_base.jpg" src="blog-assets/spark/p1_base.mp4"></video><div class="meta"><span class="t">Kernel lossless</span><span class="r">1.39×</span></div></div>
             <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/spark/p1_opt.jpg" src="blog-assets/spark/p1_opt.mp4"></video><div class="meta"><span class="t">Full optimization</span><span class="r">3.92×</span></div></div>
           </div>
         </div>
         <div class="devgrp">
-          <div class="devhd">GeForce RTX 5090<span class="devcfg">720p · 5 s · 50 steps</span></div>
+          <div class="devhd">GeForce RTX 5090<span class="resbadge">768p</span><span class="devcfg">1344×768 · 5 s · 50 steps</span></div>
           <div class="devpair">
             <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/g5090/p1_base.jpg" src="blog-assets/g5090/p1_base.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
             <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/g5090/p1_opt.jpg" src="blog-assets/g5090/p1_opt.mp4"></video><div class="meta"><span class="t">Full optimization</span><span class="r">4.52×</span></div></div>
@@ -528,14 +526,14 @@ footer p{margin:12px 0}
         <span class="cmp-lbl">Prompt 2</span>
         <p class="cmp-prompt">A flamenco dancer spins fast on a wooden stage under a single warm spotlight, her red skirt flaring wide, heels striking the boards in sharp rapid bursts, a guitar driving underneath and hands clapping on the offbeat, camera circling with her.</p>
         <div class="devgrp">
-          <div class="devhd">DGX Spark<span class="devcfg">480p · 5 s · 50 steps</span></div>
+          <div class="devhd">DGX Spark<span class="resbadge">480p</span><span class="devcfg">832×480 · 5 s · 50 steps</span></div>
           <div class="devpair">
             <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/spark/p2_base.jpg" src="blog-assets/spark/p2_base.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
             <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/spark/p2_opt.jpg" src="blog-assets/spark/p2_opt.mp4"></video><div class="meta"><span class="t">Full optimization</span><span class="r">3.92×</span></div></div>
           </div>
         </div>
         <div class="devgrp">
-          <div class="devhd">GeForce RTX 5090<span class="devcfg">720p · 5 s · 50 steps</span></div>
+          <div class="devhd">GeForce RTX 5090<span class="resbadge">768p</span><span class="devcfg">1344×768 · 5 s · 50 steps</span></div>
           <div class="devpair">
             <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/g5090/p2_base.jpg" src="blog-assets/g5090/p2_base.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
             <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/g5090/p2_opt.jpg" src="blog-assets/g5090/p2_opt.mp4"></video><div class="meta"><span class="t">Full optimization</span><span class="r">4.52×</span></div></div>
@@ -547,14 +545,14 @@ footer p{margin:12px 0}
         <span class="cmp-lbl">Prompt 3</span>
         <p class="cmp-prompt">Two mechanics in a garage at night lean over an open engine bay. The older one wipes his hands and says &ldquo;It&rsquo;s not the pump.&rdquo; The younger one answers &ldquo;Then what is it?&rdquo; A radio murmurs in the corner, a wrench clatters onto the concrete, fluorescent tubes buzz overhead.</p>
         <div class="devgrp">
-          <div class="devhd">DGX Spark<span class="devcfg">480p · 5 s · 50 steps</span></div>
+          <div class="devhd">DGX Spark<span class="resbadge">480p</span><span class="devcfg">832×480 · 5 s · 50 steps</span></div>
           <div class="devpair">
             <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/spark/p3_opt.jpg" src="blog-assets/spark/p3_opt.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
             <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/spark/p3_opt.jpg" src="blog-assets/spark/p3_opt.mp4"></video><div class="meta"><span class="t">Full optimization</span><span class="r">3.92×</span></div></div>
           </div>
         </div>
         <div class="devgrp">
-          <div class="devhd">GeForce RTX 5090<span class="devcfg">720p · 5 s · 50 steps</span></div>
+          <div class="devhd">GeForce RTX 5090<span class="resbadge">768p</span><span class="devcfg">1344×768 · 5 s · 50 steps</span></div>
           <div class="devpair">
             <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/g5090/p3_base.jpg" src="blog-assets/g5090/p3_base.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
             <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" poster="blog-assets/g5090/p3_opt.jpg" src="blog-assets/g5090/p3_opt.mp4"></video><div class="meta"><span class="t">Full optimization</span><span class="r">4.52×</span></div></div>

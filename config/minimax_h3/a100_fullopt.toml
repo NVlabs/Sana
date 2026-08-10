@@ -1,14 +1,14 @@
-id = "minimax_h3_h100_fullopt_exact"
+id = "minimax_h3_a100_fullopt"
 kind = "optimized"
 purpose = "delivery"
-description = "Exact-threshold 4x H100 profile: FirstBlockCache plus CuTe-SM90 Sol-Attn."
+description = "Exact-threshold 4x A100 profile: FirstBlockCache plus Triton Sol-Attn."
 model_profile = "minimax_h3"
 inherit_profile_env = false
-submodule = "models/minimax_h3/H100"
+submodule = "models/minimax_h3/A100"
 run_script = "run_minimax_h3_gpu.sh"
 
 [runtime]
-root = "models/minimax_h3/H100"
+root = "models/minimax_h3/A100"
 python = "python3"
 
 [official_config]
@@ -33,10 +33,10 @@ account = ""
 partition = ""
 nodes = 1
 gpus_per_node = 4
-cpus_per_task = 64
-mem = "700G"
-time = "02:00:00"
-job_name = "h3-h100-exact"
+cpus_per_task = 48
+mem = "500G"
+time = "04:00:00"
+job_name = "h3-a100-fullopt"
 exclusive = false
 
 [artifacts]

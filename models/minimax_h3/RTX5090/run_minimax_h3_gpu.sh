@@ -9,6 +9,17 @@ H3_ROOT="${H3_ROOT:-${HOME}/minimax_h3_5090}"
 PYTHON_BIN="${PYTHON_BIN:-${H3_ROOT}/.venv/bin/python}"
 FFMPEG_BIN_DIR="${H3_FFMPEG_BIN_DIR:-${H3_ROOT}/tools/ffmpeg-static}"
 
+# H3_PROMPT_FILE may arrive repo-relative -- that is how every config writes it.
+# Whether it resolves depends on the launcher: scripts/run.py leaves cwd at the
+# repo root, launch_config.py cds to the runtime dir first. Pin it here. This
+# was the one variant of the five that did not, and gpu_infer.py reads the value
+# straight through, so a run died on
+# `FileNotFoundError: models/minimax_h3/demo_prompt.json` after loading the model.
+REPO_ROOT="$(cd "${HERE}/../../.." && pwd)"
+if [[ -n "${H3_PROMPT_FILE:-}" && "${H3_PROMPT_FILE}" != /* ]]; then
+  export H3_PROMPT_FILE="${REPO_ROOT}/${H3_PROMPT_FILE}"
+fi
+
 if [[ ! -x "${PYTHON_BIN}" ]]; then
   echo "Python executable is not available: ${PYTHON_BIN}" >&2
   exit 2

@@ -3,7 +3,7 @@
 Sol-Engine is an efficiency-oriented inference framework for high-resolution video diffusion. It wraps Cosmos3-Super, LTX-2.3, SANA-Video, Wan2.2 (TI2V-5B and A14B), and LingBot-Video with one explicit acceleration line per model.
 
 !!! tip "Recently added"
-    **2026/07/15** — three new models: [Wan2.2 TI2V-5B](https://github.com/NVlabs/Sana/blob/sol-engine/scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](https://github.com/NVlabs/Sana/blob/sol-engine/scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](https://github.com/NVlabs/Sana/blob/sol-engine/scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
+    **2026/07/15** — three new models: [Wan2.2 TI2V-5B](https://github.com/NVlabs/Sana/blob/sol-engine/config/wan22_ti2v_5b/wan5b_kernel_easycache_pisa.toml) **~2.89×**, [Wan2.2-A14B](https://github.com/NVlabs/Sana/blob/sol-engine/config/wan22_t2v_a14b/singlegpu_opt.toml) **~2.17×**, and [LingBot-Video](https://github.com/NVlabs/Sana/blob/sol-engine/config/lingbot_video/cudnn_pisa_easycache_refiner.toml) **~2.60×** end-to-end.
 
     **2026/07/13** — refreshed the [agent workflow](agent-workflow.md): a master orchestrator driving per-technique executor sub-agents with automatic quality gates.
 

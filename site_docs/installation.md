@@ -1,15 +1,87 @@
 # Installation
 
-## Prerequisites
+This page is for **this** repository, `NVlabs/Sana` on the `sol-engine` branch.
 
-- NVIDIA GPU and driver support for CUDA 13.
-- `conda` or miniforge, `git`, and a Hugging Face account/token.
-- Cosmos3-Super 64B uses 4xB200. LTX-2.3 and SANA-Video use 1xB200.
+An earlier version described a different one. The commands were correct, but for
+[Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine):
+`scripts/create_code_conda_env.sh`, `scripts/postinstall_cuda_jit.sh`,
+`scripts/use_code_storage_env.sh` and `python[diffusion]` all live there and have
+never existed here, so anyone who cloned this repository and followed the page
+hit a missing script on the first command. Those instructions are still below,
+under [The Sol-Video-Inference-Engine runtime](#the-sol-video-inference-engine-runtime),
+because two of the models do need that repository — just not all of them, and
+not as the first step.
 
-## Environment
+## What this repository contains
+
+No package to build and nothing to `pip install`. It holds the acceleration line
+for each model: the configs, the per-hardware runtime code, and the Sol-Attn
+kernels. The model itself is Diffusers' or SGLang's; the weights are on Hugging
+Face.
 
 ```bash
-git clone https://github.com/NVlabs/Sol-Video-Inference-Engine.git Sol-Video-Inference-Engine
+git clone -b sol-engine https://github.com/NVlabs/Sana.git
+cd Sana
+```
+
+Everything is launched by one command, which needs nothing installed beyond a
+Python 3.9+ interpreter (3.11+, or the `tomli` backport, to read a config
+manifest):
+
+```bash
+python3 scripts/run.py config/<model>/<arm>.toml
+```
+
+Add `--print` to resolve a config and check its paths without running anything.
+See [`docs/simple-launch.md`](https://github.com/NVlabs/Sana/blob/sol-engine/docs/simple-launch.md)
+for the config format and for running under Slurm.
+
+## What each model needs
+
+The interpreter and the weights belong to the model, not to this repository, so
+prerequisites differ per model. Every config declares its own, and `--print`
+shows the resolved values.
+
+| Model | Runtime it needs |
+|---|---|
+| Wan2.2 TI2V-5B, Wan2.2-A14B, Wan2.1, HunyuanVideo | A Python env with **PyTorch + Diffusers**; point the config's `PYTHON_BIN` at it. |
+| SANA-Video, LingBot-Video | The same, plus a model bundle the runtime fetches on first run. |
+| MiniMax-H3 on H100 / A100 / RTX 5090 | An **SGLang container** — `H3_CONTAINER_RUNTIME = "pyxis"`, image pinned in the config. Nothing to install locally. |
+| MiniMax-H3 on GB200 / GB10 | A conda env with the **pinned Diffusers PR** that cell's `SOURCE_SNAPSHOT.json` records. |
+| Cosmos3-Super, LTX-2.3 | A **Sol-Video-Inference-Engine** checkout, reached by `SOL_LTX_INFER_ROOT`. See below. |
+
+## Sol-Attn kernels
+
+`techniques/sparse_backends` is a standalone package (`sol-attn`) and is the one
+piece here that is in no upstream framework:
+
+```bash
+pip install ./techniques/sparse_backends
+```
+
+It dispatches on compute capability: CuTe kernels for **sm90** (H100),
+**sm100** (GB200/B200) and **sm120** (RTX 5090), and a Triton reference
+everywhere else. The reference is correct but is not what the published speedups
+measure, so on an A100 (sm80) or a DGX Spark GB10 the number you get is not the
+number in the tables. `benchmark.json` records the backend that actually ran —
+read it rather than assuming.
+
+The CuTe path needs an `nvidia-cutlass-dsl` matching what the kernels were built
+against. A newer DSL fails at compile time with
+`module 'cutlass.cute.nvgpu' has no attribute 'OperandMajorMode'` instead of
+falling back, which is deliberate: a silent fallback reports a dense run as a
+sparse one.
+
+## The Sol-Video-Inference-Engine runtime
+
+Cosmos3-Super and LTX-2.3 run inside
+[Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine),
+which holds the SGLang `multimodal_gen` pipelines for them. This repository
+vendors the launch body and the official config, and reaches that checkout by
+absolute path.
+
+```bash
+git clone https://github.com/NVlabs/Sol-Video-Inference-Engine.git
 cd Sol-Video-Inference-Engine
 
 PYTHON_VERSION=3.12 bash scripts/create_code_conda_env.sh
@@ -17,34 +89,55 @@ source "$PWD/scripts/use_code_storage_env.sh"
 conda activate "$PWD/.conda/ltx23"
 
 uv pip install -e "$PWD/python[diffusion]" --prerelease=allow
-
 PYTHON_BIN=.conda/ltx23/bin/python bash scripts/postinstall_cuda_jit.sh
 ```
 
-`scripts/create_code_conda_env.sh` creates `.conda/ltx23` by default, installs
-`pip` and `uv`, and installs conda activation hooks for `scripts/use_code_storage_env.sh`.
-The script defaults to Python 3.11 when `PYTHON_VERSION` is unset; the agent guide
-sets `PYTHON_VERSION=3.12` for this stack.
+`create_code_conda_env.sh` creates `.conda/ltx23`, installs `pip` and `uv`, and
+adds the activation hooks for `use_code_storage_env.sh`; it defaults to Python
+3.11 when `PYTHON_VERSION` is unset. Add `--with-te` to `postinstall_cuda_jit.sh`
+for the NVFP4 path — without TransformerEngine those configs fall back to BF16.
 
-Add `--with-te` to `scripts/postinstall_cuda_jit.sh` when using the NVFP4 path for Cosmos3-Super or LTX-2.3.
+Then point this repository at it:
+
+```bash
+python3 scripts/run.py config/cosmos3/baseline.toml \
+  --set SOL_LTX_INFER_ROOT=/path/to/Sol-Video-Inference-Engine
+```
+
+Do not set `PYTHON_BIN` alongside it. The launch body derives the interpreter as
+`$SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python`; the two used to be pinned
+independently and came apart on every machine whose checkout was somewhere else.
+
+## Weights
+
+```bash
+export HF_HOME=/somewhere/with/room     # 30–140 GB per model
+hf auth login
+
+hf download nvidia/Cosmos3-Super
+hf download Lightricks/LTX-2.3
+hf download Efficient-Large-Model/SANA-Video_2B_480p_diffusers
+hf download Wan-AI/Wan2.2-TI2V-5B-Diffusers
+hf download MiniMaxAI/MiniMax-H3
+```
+
+MiniMax-H3's weights live in that repository's `FL2VA` subfolder and the
+runtimes resolve it themselves, so pass the repository id rather than a path
+into it.
 
 ## Verify
 
-```bash
-.conda/ltx23/bin/python -c "import torch, diffusers, sglang; print(torch.__version__, diffusers.__version__, torch.cuda.is_available())"
-```
-
-Expected versions are torch 2.11.0+cu130 and diffusers 0.38.0. `torch.cuda.is_available()` is false on CPU-only setup hosts.
-
-## Model downloads
+Resolve every config without a GPU — this checks each one's runtime root, run
+script and prompt path:
 
 ```bash
-export HF_HOME="$PWD/.hf_cache"
-huggingface-cli login
-
-huggingface-cli download nvidia/Cosmos3-Super
-huggingface-cli download Lightricks/LTX-2.3
-huggingface-cli download Efficient-Large-Model/SANA-Video_2B_480p_diffusers
+for c in config/*/*.toml; do
+  python3 scripts/run.py "$c" --print >/dev/null || echo "FAILED $c"
+done
 ```
 
-Convenience scripts are available under `scripts/cosmos/`, `scripts/ltx/`, and `scripts/sana/` for resumable or Slurm-based downloads.
+Then, inside the environment a given model will use:
+
+```bash
+python3 -c "import torch, diffusers; print(torch.__version__, diffusers.__version__, torch.cuda.is_available())"
+```

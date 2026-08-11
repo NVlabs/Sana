@@ -8,7 +8,12 @@ The paper lists sparse attention as a model-level family. The sparse-attention a
 
 LTX-2.3 uses PISA-style sparse video self-attention in selected stage-2 refinement work. It is combined with cache, fusion, NVFP4, and token pruning in the full optimization stack.
 
-Implemented entries:
+In this repository:
+
+- `techniques/transforms/sparse_attention.py` — the declaration and conflict-checked composition
+- `techniques/sparse_backends/sol_attn/` — the Sol-Attn CuTe kernels (sm90/sm100/sm120) and a Triton reference
+
+The SGLang backends these select are in [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine), not here:
 
 - `python/sglang/multimodal_gen/runtime/efficiency/transforms/sparse_attention.py`
 - `python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py`

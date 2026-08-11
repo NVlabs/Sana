@@ -8,7 +8,12 @@ The paper treats token pruning as a sequence-reduction family: the token-pruning
 
 LTX-2.3 uses token pruning in the full optimization stack together with kernel fusion, cache, PISA sparse attention, and NVFP4.
 
-Implemented entries:
+In this repository:
+
+- `techniques/methods/token_prune.py` — the pruning policy, model-agnostic
+- `techniques/spec.py` — the `ModelSpec` seams a model must expose for it to apply
+
+The runtime that consumes them is in [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine), not here:
 
 - `python/sglang/multimodal_gen/runtime/efficiency/techniques/token_prune.py`
 - `python/sglang/multimodal_gen/runtime/pipelines_core/stages/ltx_2_denoising.py`

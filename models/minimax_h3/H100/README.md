@@ -13,7 +13,7 @@ the installed SGLang checkout.
 | 4 | 768p@5s | 81.47 | 22.89 | **3.56x** |
 
 The speedup is measured against the matching baseline runtime. The released configuration is pinned
-by [`h100_fullopt.toml`](../../../config/minimax_h3/h100_fullopt.toml).
+by [`minimax_h3_h100_fullopt.toml`](../../../config/minimax_h3/minimax_h3_h100_fullopt.toml).
 
 ## Full-Opt
 
@@ -30,7 +30,7 @@ benchmark with seed `0`, 50 denoising steps and the workload above. Run it from
 the repository root:
 
 ```bash
-python3 scripts/run.py config/minimax_h3/h100_fullopt.toml                 # the optimized arm
+python3 scripts/run.py config/minimax_h3/minimax_h3_h100_fullopt.toml                 # the optimized arm
 python3 scripts/run.py config/minimax_h3/h100_dense.toml                 # the control it is measured against
 ```
 
@@ -41,7 +41,7 @@ config manifest -- and renders the same run bundle under `runs/`:
 override one value for a single run without editing the config:
 
 ```bash
-python3 scripts/run.py config/minimax_h3/h100_fullopt.toml \
+python3 scripts/run.py config/minimax_h3/minimax_h3_h100_fullopt.toml \
   --set H3_STORAGE_ROOT=/shared/path/Sana
 ```
 
@@ -50,7 +50,7 @@ your own job script, or call the renderer directly, which is the one thing
 `run.py` does not do:
 
 ```bash
-python3 scripts/launch_config.py config/minimax_h3/h100_fullopt.toml --mode sbatch --confirm-submit
+python3 scripts/launch_config.py config/minimax_h3/minimax_h3_h100_fullopt.toml --mode sbatch --confirm-submit
 ```
 
 ## Environment

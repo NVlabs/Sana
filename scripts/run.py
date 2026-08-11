@@ -7,7 +7,7 @@ That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,
 put this exact command inside your own sbatch script -- job scripts are not
 tracked here because their account/partition/QoS are site-specific; see
-docs/simple-launch.md for the four-line wrapper. Nothing here reads SLURM_*, and
+site_docs/installation.md for the four-line wrapper. Nothing here reads SLURM_*, and
 nothing here calls srun/sbatch/squeue, so the same command is correct on a login
 node inside an salloc, on a bare workstation, and inside a batch job.
 

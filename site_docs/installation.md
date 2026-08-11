@@ -32,9 +32,91 @@ manifest):
 python3 scripts/run.py config/<model>/<arm>.toml
 ```
 
-Add `--print` to resolve a config and check its paths without running anything.
-See [`docs/simple-launch.md`](https://github.com/NVlabs/Sana/blob/sol-engine/docs/simple-launch.md)
-for the config format and for running under Slurm.
+## Launching
+
+### The config
+
+A config is one layer. Lowercase keys belong to the launcher — `name`,
+`runtime`, `entry`, `out`, `gpus`, `description`. UPPERCASE keys are exported
+verbatim as environment variables. That split is the whole schema: environment
+variables are uppercase by convention, so the two namespaces cannot collide, and
+a lowercase key that is not a launcher key is an error rather than a silently
+ignored line.
+
+```toml
+name    = "minimax_h3_gb200_diffusers_dense"
+runtime = "."                              # the directory this config launches
+entry   = "run_minimax_h3_gpu.sh"
+gpus    = 1
+
+H3_MODEL_PATH = "/path/to/MiniMax-H3-diffusers"
+H3_STEPS      = "50"
+```
+
+Two path bases, one rule each:
+
+| keys | resolved against |
+|---|---|
+| `runtime`, `entry` | **this config's own directory** — a config beside its arm says `runtime = "."`, and moving the pair keeps them pointing at each other |
+| UPPERCASE values | **the repository root** — they are handed to a process whose cwd is the repository root |
+
+`scripts/run.py` also reads the richer manifest dialect under `config/`, which
+shares a model profile across variants and carries `kind`, `purpose` and
+`[requires].capabilities`. It tells the two apart by shape and renders the same
+run bundle either way: `runs/<stamp>-<id>/` with `launch.sh`,
+`manifest.resolved.toml`, `metadata.json` and `outputs/`.
+
+### Checking before you spend an allocation
+
+```bash
+python3 scripts/run.py config/wan22_ti2v_5b/baseline.toml --print
+python3 scripts/run.py config/wan22_ti2v_5b/baseline.toml --set H3_STEPS=2 --set H3_WARMUP=0
+```
+
+`--print` resolves and shows without running anything; `--set` overrides one key
+for one run without editing the file. The run fails immediately, naming the
+path, if the runtime directory, the entry script or `PYTHON_BIN` is missing — on
+this stack a missing entry script otherwise surfaces only after a GPU
+allocation, which is the most expensive moment to find it. `PYTHON_BIN` is
+machine-specific, so `--print` downgrades that one to a warning and a config
+written for another cluster stays inspectable.
+
+### Slurm
+
+`scripts/run.py` reads no `SLURM_*` variable and calls no `srun`, `sbatch` or
+`squeue`. It runs the arm in the current process on the current machine, so
+these are the same command:
+
+```bash
+# no scheduler
+python3 scripts/run.py config/wan22_ti2v_5b/baseline.toml
+
+# inside an interactive allocation
+srun -A <your-account> -p batch -N1 --gpus-per-node=4 -t 02:00:00 --pty bash
+python3 scripts/run.py config/wan22_ti2v_5b/baseline.toml
+```
+
+Job scripts are not tracked here — their account, partition and QoS are
+site-specific and of no use to anyone else. Write your own; it is a resource
+header plus the same one line:
+
+```bash
+#!/bin/bash
+#SBATCH -A <your-account>
+#SBATCH -p <your-partition>
+#SBATCH -N 1
+#SBATCH --gpus-per-node=4
+#SBATCH -t 02:00:00
+
+cd "${SLURM_SUBMIT_DIR:-$PWD}"
+python3 scripts/run.py config/wan22_ti2v_5b/baseline.toml
+```
+
+That last line is all the scheduler contributes to, which is the point:
+`run.py` never learns the scheduler exists, so a site that schedules differently
+rewrites this wrapper and changes nothing else. `scripts/launch_config.py`
+renders the bundle and is the one that can submit, with
+`--mode sbatch --confirm-submit`.
 
 ## What each model needs
 

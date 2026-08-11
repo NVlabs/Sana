@@ -3,10 +3,7 @@
 </p>
 
 <h3 align="center">
-  Accelerated video-diffusion inference —
-  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/sana/">SANA-Video</a> ·
-  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/cosmos3/">Cosmos3-Super</a> ·
-  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/ltx/">LTX-2.3</a>
+  Accelerated video-diffusion inference
 </h3>
 
 <h3 align="center">

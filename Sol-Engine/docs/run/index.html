@@ -12,13 +12,13 @@
         <meta name="author" content="Sol-Engine Team">
       
       
-        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/installation/">
+        <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/docs/run/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../installation/">
       
       
-        <link rel="next" href="../run/">
+        <link rel="next" href="../agent-workflow/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Installation - Sol-Engine Documentation</title>
+        <title>Run - Sol-Engine Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#installation" class="md-skip">
+        <a href="#run" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Installation
+              Run
             
           </span>
         </div>
@@ -288,6 +288,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -307,7 +334,7 @@
   <span class="md-ellipsis">
     
   
-    Installation
+    Run
   
 
     
@@ -325,7 +352,7 @@
   <span class="md-ellipsis">
     
   
-    Installation
+    Run
   
 
     
@@ -351,10 +378,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#environment" class="md-nav__link">
+  <a href="#before-you-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment
+        Before you run
       
     </span>
   </a>
@@ -362,10 +389,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#weights" class="md-nav__link">
+  <a href="#overriding-a-value" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Weights
+        Overriding a value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-config-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The config format
       
     </span>
   </a>
@@ -376,33 +414,6 @@
   
 </nav>
       
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../run/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Run
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1998,10 +2009,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#environment" class="md-nav__link">
+  <a href="#before-you-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment
+        Before you run
       
     </span>
   </a>
@@ -2009,10 +2020,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#weights" class="md-nav__link">
+  <a href="#overriding-a-value" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Weights
+        Overriding a value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-config-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The config format
       
     </span>
   </a>
@@ -2039,32 +2061,55 @@
   
 
 
-<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>solengine<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12<span class="w"> </span>-y
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>conda<span class="w"> </span>activate<span class="w"> </span>solengine
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">2</span>.11.0<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu128
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">diffusers</span><span class="o">==</span><span class="m">0</span>.37.1<span class="w"> </span>transformers<span class="w"> </span>accelerate<span class="w"> </span>imageio-ffmpeg
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span>sol-engine<span class="w"> </span>https://github.com/NVlabs/Sana.git
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nb">cd</span><span class="w"> </span>Sana
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>pip<span class="w"> </span>install<span class="w"> </span>./techniques/sparse_backends
+<h1 id="run">Run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h1>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>scripts/run.py<span class="w"> </span>config/&lt;model&gt;/&lt;arm&gt;.toml
 </code></pre></div>
-<p><code>techniques/sparse_backends</code> is the Sol-Attn kernel package. It needs PyTorch
-already installed — it does not pull one in, so it cannot override a build
-matched to your CUDA.</p>
-<p>Sol-Attn ships CuTe kernels for sm90 (H100), sm100 (B200/GB200) and sm120
-(RTX 5090), and a Triton reference elsewhere. <code>benchmark.json</code> records which
-backend a run used.</p>
-<h2 id="weights">Weights<a class="headerlink" href="#weights" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HF_HOME</span><span class="o">=</span>/somewhere/with/room<span class="w">     </span><span class="c1"># 30–140 GB per model</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>hf<span class="w"> </span>auth<span class="w"> </span>login
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>hf<span class="w"> </span>download<span class="w"> </span>Wan-AI/Wan2.2-TI2V-5B-Diffusers
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>hf<span class="w"> </span>download<span class="w"> </span>Wan-AI/Wan2.2-T2V-A14B-Diffusers
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>hf<span class="w"> </span>download<span class="w"> </span>MiniMaxAI/MiniMax-H3
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>hf<span class="w"> </span>download<span class="w"> </span>Efficient-Large-Model/SANA-Video_2B_480p_diffusers
+<p>That is the whole interface. <code>&lt;model&gt;</code> is a directory under <code>config/</code>, <code>&lt;arm&gt;</code>
+is one configuration of it — usually <code>baseline</code> plus one or more optimized
+arms.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python3<span class="w"> </span>scripts/run.py<span class="w"> </span>config/wan22_ti2v_5b/baseline.toml
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>scripts/run.py<span class="w"> </span>config/wan22_ti2v_5b/wan5b_kernel_easycache_pisa.toml
+</code></pre></div>
+<p>Each run writes a bundle under <code>runs/&lt;timestamp&gt;-&lt;id&gt;/</code>: <code>launch.sh</code>,
+<code>manifest.resolved.toml</code>, <code>metadata.json</code>, and <code>outputs/</code> with the video and
+<code>benchmark.json</code>.</p>
+<h2 id="before-you-run">Before you run<a class="headerlink" href="#before-you-run" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python3<span class="w"> </span>scripts/run.py<span class="w"> </span>&lt;config&gt;<span class="w"> </span>--print
+</code></pre></div>
+<p>Resolves the config and checks its paths without running anything — the runtime
+directory, the entry script, the interpreter — and fails naming whichever is
+missing.</p>
+<h2 id="overriding-a-value">Overriding a value<a class="headerlink" href="#overriding-a-value" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python3<span class="w"> </span>scripts/run.py<span class="w"> </span>&lt;config&gt;<span class="w"> </span>--set<span class="w"> </span><span class="nv">KEY</span><span class="o">=</span>VALUE<span class="w"> </span><span class="o">[</span>--set<span class="w"> </span><span class="nv">KEY</span><span class="o">=</span>VALUE<span class="w"> </span>...<span class="o">]</span>
+</code></pre></div>
+<p>Changes a key for one run without editing the file. For example, a short smoke
+run instead of the full 50 steps:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python3<span class="w"> </span>scripts/run.py<span class="w"> </span>config/wan22_ti2v_5b/baseline.toml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--set<span class="w"> </span><span class="nv">WAN22_STEPS</span><span class="o">=</span><span class="m">4</span><span class="w"> </span>--set<span class="w"> </span><span class="nv">WAN22_WARMUP_PASSES</span><span class="o">=</span><span class="m">0</span>
+</code></pre></div>
+<h2 id="the-config-format">The config format<a class="headerlink" href="#the-config-format" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">id</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&lt;model&gt;_&lt;arm&gt;&quot;</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">kind</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;baseline&quot;</span><span class="w">           </span><span class="c1"># or &quot;optimized&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">model_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&lt;model&gt;&quot;</span><span class="w">            </span><span class="c1"># inherits models/&lt;model&gt;.toml</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">[runtime]</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;models/&lt;model&gt;/&lt;variant&gt;&quot;</span><span class="w">    </span><span class="c1"># the code this config launches</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">[env]</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">KEY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="w">                        </span><span class="c1"># exported as an environment variable</span>
+</code></pre></div>
+<p>The model profile carries the workload and whatever every arm of that model
+shares; the config carries what makes this arm different. <code>--print</code> shows the
+merged result.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">id</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;wan22_ti2v_5b_baseline&quot;</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">kind</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;baseline&quot;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">model_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;wan22_ti2v_5b&quot;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">[runtime]</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;models/wan22_ti2v_5b/baseline&quot;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="k">[env]</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">WAN22_STEPS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;50&quot;</span>
 </code></pre></div>
 
 

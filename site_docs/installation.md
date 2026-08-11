@@ -1,16 +1,9 @@
 # Installation
 
-This page is for **this** repository, `NVlabs/Sana` on the `sol-engine` branch.
-
-An earlier version described a different one. The commands were correct, but for
-[Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine):
-`scripts/create_code_conda_env.sh`, `scripts/postinstall_cuda_jit.sh`,
-`scripts/use_code_storage_env.sh` and `python[diffusion]` all live there and have
-never existed here, so anyone who cloned this repository and followed the page
-hit a missing script on the first command. Those instructions are still below,
-under [The Sol-Video-Inference-Engine runtime](#the-sol-video-inference-engine-runtime),
-because two of the models do need that repository — just not all of them, and
-not as the first step.
+This page covers `NVlabs/Sana` on the `sol-engine` branch. Cosmos3-Super and
+LTX-2.3 additionally need
+[Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine);
+see [that section](#the-sol-video-inference-engine-runtime).
 
 ## What this repository contains
 
@@ -141,6 +134,10 @@ piece here that is in no upstream framework:
 pip install ./techniques/sparse_backends
 ```
 
+Requires Python 3.10+ and an existing PyTorch install — the package does not
+pull one in, so that it cannot override a build matched to your CUDA. Install
+PyTorch first; `import sol_attn` fails on `No module named 'torch'` otherwise.
+
 It dispatches on compute capability: CuTe kernels for **sm90** (H100),
 **sm100** (GB200/B200) and **sm120** (RTX 5090), and a Triton reference
 everywhere else. The reference is correct but is not what the published speedups
@@ -186,9 +183,8 @@ python3 scripts/run.py config/cosmos3/baseline.toml \
   --set SOL_LTX_INFER_ROOT=/path/to/Sol-Video-Inference-Engine
 ```
 
-Do not set `PYTHON_BIN` alongside it. The launch body derives the interpreter as
-`$SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python`; the two used to be pinned
-independently and came apart on every machine whose checkout was somewhere else.
+Do not set `PYTHON_BIN` alongside it — the launch body derives the interpreter
+as `$SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python`.
 
 ## Weights
 

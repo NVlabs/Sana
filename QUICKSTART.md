@@ -1,14 +1,10 @@
 # QUICKSTART — run SANA-Video / Cosmos3-Super / LTX-2.3 (baseline + full-opt)
 
 
-> **Which repository these commands run in.** Every `scripts/…` path below is in
-> [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine),
-> the SGLang `multimodal_gen` runtime — not in this one. Cloning `NVlabs/Sana`
-> and running them gives "no such file". This repository is launched by
-> `python3 scripts/run.py config/<model>/<arm>.toml`. See
-> [`site_docs/installation.md`](site_docs/installation.md) for the config
-> format, for `--print`/`--set`, and for which models need the runtime
-> repository at all.
+> **These commands run in [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine)**,
+> not in this repository — every `scripts/…` path below is one of its. This
+> repository is launched with `python3 scripts/run.py config/<model>/<arm>.toml`;
+> see [`site_docs/installation.md`](site_docs/installation.md).
 
 Human, copy-paste quickstart. (For the agent-oriented, machine-portable rules
 see `AGENTS.md` — this file is the short human version.)

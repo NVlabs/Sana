@@ -39,7 +39,7 @@ _OVERALL = {"pass": 0, "fail": 1, "inconclusive": 2, None: 3}
 # the runtime out-of-band. Each entry maps a registered technique name to:
 #   {param_name -> (env_var_name, stringifier)}
 # Adding a runtime technique here makes plan_eval able to drive it through the
-# render_config -> launcher -> Sol-LTX-Infer pipeline without further glue.
+# render_config -> launcher -> the SGLang runtime pipeline without further glue.
 _RUNTIME_TECHNIQUE_ENV: dict[str, dict[str, tuple[str, callable]]] = {
     "step_cache": {
         "skip": ("SGLANG_HQ_STEP_CACHE_SKIP", str),
@@ -258,7 +258,7 @@ def render_config(profile: dict, technique: str, cfg: dict, kind: str = "build_t
         plan.apply_transforms(None, "stage2", tech_env)  # transforms set SGLANG_HQ_* env
     else:
         # runtime techniques: publish their cfg through SGLANG_HQ_* env so the
-        # Sol-LTX-Infer side can rebuild the same technique inside the denoise loop.
+        # the SGLang runtime side can rebuild the same technique inside the denoise loop.
         tech_env.update(_runtime_technique_env(technique, cfg))
     cid = config_id or f"{profile['id']}__{technique}"
     manifest = {

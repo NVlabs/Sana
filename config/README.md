@@ -10,7 +10,7 @@ only executes when explicitly asked.
 ## Current Baseline
 
 - `baseline.toml`: official Cosmos3-Super baseline using
-  `Sol-LTX-Infer/scripts/run_cosmos3_sglang.sh`.
+  `sglang-runtime/scripts/run_cosmos3_sglang.sh`.
 
 ## Model-Agnostic Efficiency Configs
 
@@ -26,7 +26,7 @@ config under:
 Each manifest records the public/canonical reference, local generic
 implementation, model adapter example, runtime hook example, required model
 capabilities, and verification policy. The generic implementation boundary must
-remain outside `Sol-LTX-Infer`; the runtime paths are integration hooks for the
+remain outside `sglang-runtime`; the runtime paths are integration hooks for the
 current Cosmos3 validation target.
 
 Resolve a config before spending an allocation:

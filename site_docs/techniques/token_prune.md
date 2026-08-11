@@ -13,7 +13,7 @@ In this repository:
 - `techniques/methods/token_prune.py` — the pruning policy, model-agnostic
 - `techniques/spec.py` — the `ModelSpec` seams a model must expose for it to apply
 
-The runtime that consumes them is in [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine), not here:
+The runtime that consumes them is in the SGLang runtime, not here:
 
 - `python/sglang/multimodal_gen/runtime/efficiency/techniques/token_prune.py`
 - `python/sglang/multimodal_gen/runtime/pipelines_core/stages/ltx_2_denoising.py`

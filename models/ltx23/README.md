@@ -52,7 +52,7 @@ To run an arm directly:
 
 ```bash
 OUT_DIR=/path/to/out \
-SOL_LTX_INFER_ROOT=/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer \
+SGLANG_RUNTIME_ROOT=/path/to/sglang-runtime \
 bash models/ltx23/baseline/scripts/run_ltx23_gpu.sh
 ```
 
@@ -68,9 +68,9 @@ state.
 
 This directory holds the *profile and the two runnable arms*. The 22B model code
 itself — `LTX2TwoStageHQPipeline`, the ltx2 DiT/VAE/vocoder modules and the
-`ltx2_*` Triton kernels — stays in `Efficient-Large-Model/Sol-LTX-Infer`, pinned
+`ltx2_*` Triton kernels — stays in `the SGLang runtime`, pinned
 in `model.toml` to `b0b7eb4d0` (`elm/v1_formal`) and reached through
-`SOL_LTX_INFER_ROOT`. It is declared `reference_only` and is never copied into an
+`SGLANG_RUNTIME_ROOT`. It is declared `reference_only` and is never copied into an
 experiment worktree.
 
 ## Baseline timing is not filled in
@@ -78,7 +78,7 @@ experiment worktree.
 `models/ltx23.toml [baseline]` is zeroed with `measured = false`, and the eval
 profile deliberately omits `baseline_total_s`. The one published LTX-2.3 timing
 (119.811s Diffusers no-compile / 59.332s SGLang, from
-`docs/diffusion/ltx2_1080p_speedup.md` in Sol-LTX-Infer) is for a **30-step**
+`docs/diffusion/ltx2_1080p_speedup.md` in the SGLang runtime) is for a **30-step**
 stage-1 config; these arms run the **15-step** HQ config. The numbers are not
 comparable, so nothing was copied in. Fill them from a measured run of
 `config/ltx23/baseline.toml`.

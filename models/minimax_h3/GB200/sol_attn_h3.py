@@ -56,7 +56,7 @@ import torch
 import torch.nn.functional as F
 
 
-# The released package. Kept out of the deployed Sol-LTX-Infer checkout on purpose: that tree is
+# The released package. Kept out of the deployed the SGLang runtime checkout on purpose: that tree is
 # pinned at b42e35a7 (2026-07-21), which is what the lossless 22.482 s baseline was measured on,
 # and the Sol-Attn kernel landed a week later. Only the sparse path resolves through here.
 _RELEASE_ROOT = os.environ.get(

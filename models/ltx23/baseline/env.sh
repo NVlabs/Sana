@@ -8,7 +8,7 @@
 # knob is not listed here, it is not a seam this pipeline has.
 #
 # Provenance: expanded from clear_lossy_env() + disable_kwl_env() in
-# Sol-LTX-Infer scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh (see
+# the SGLang runtime scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh (see
 # models/ltx23/model.toml [[baseline.reference_only]] for the pinned commit).
 
 # --- Attention math path -----------------------------------------------------

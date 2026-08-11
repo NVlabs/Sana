@@ -42,7 +42,7 @@ Current local profiles include:
   baseline and a TeaCache + step-selective NVFP4 optimized arm.
 
 `ltx23` and `cosmos3` both keep their model code in the separate
-`Efficient-Large-Model/Sol-LTX-Infer` repo, declared `reference_only` and pinned
+`the SGLang runtime` repo, declared `reference_only` and pinned
 by commit in `model.toml`; what lives here is the profile plus the two runnable
 arms. Each arm is an `env.sh` (the technique declaration, with every knob written
 out explicitly including the zeros) plus a shim that sources it and then the

@@ -61,7 +61,7 @@ This repo no longer ships built-in per-model spec files. Config dry-runs
 synthesize a minimal `ModelSpec` from `[requirements].capabilities` in the
 manifest, then `compose()` checks the selected technique or transform against
 that contract. The concrete model adapter remains in the runtime code under
-`Sol-LTX-Infer/`.
+`sglang-runtime/`.
 
 ## Verify
 

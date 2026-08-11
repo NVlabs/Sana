@@ -8,7 +8,7 @@ Config manifests are TOML files.
 id = "baseline"
 kind = "baseline"
 description = "Official Cosmos3-Super baseline."
-submodule = "Sol-LTX-Infer"
+submodule = "sglang-runtime"
 base_commit = "3a69b7788a055bed728ec367961c5f25b4ab48dc"
 run_script = "scripts/run_cosmos3_sglang.sh"
 # Optional but recommended. Used by launcher metadata, single-flight guards,

@@ -245,7 +245,7 @@ def main() -> int:
             launch_args.mode = "dry-run"
             # Only [runtime].root, never submodule: root is repo-relative by
             # contract, while submodule may name an external checkout
-            # (config/cosmos3/sglang_baseline.toml points at Sol-LTX-Infer),
+            # (config/cosmos3/sglang_baseline.toml points at the SGLang runtime),
             # which is machine-specific and belongs in the warn bucket.
             root = cfg.get("runtime", {}).get("root") if isinstance(cfg.get("runtime"), dict) else None
             if root and not (REPO / str(root)).is_dir():

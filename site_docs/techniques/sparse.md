@@ -13,7 +13,7 @@ In this repository:
 - `techniques/transforms/sparse_attention.py` — the declaration and conflict-checked composition
 - `techniques/sparse_backends/sol_attn/` — the Sol-Attn CuTe kernels (sm90/sm100/sm120) and a Triton reference
 
-The SGLang backends these select are in [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine), not here:
+The SGLang backends these select are in the SGLang runtime, not here:
 
 - `python/sglang/multimodal_gen/runtime/efficiency/transforms/sparse_attention.py`
 - `python/sglang/multimodal_gen/runtime/layers/attention/backends/piecewise_attn.py`

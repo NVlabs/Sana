@@ -1,7 +1,7 @@
-# Agent README — Deploy & Run (Sol-LTX-Infer)
+# Agent README — Deploy & Run (the SGLang runtime)
 
 
-> **These commands run in [Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine)**,
+> **These commands run in the SGLang runtime**,
 > not in this repository — every `scripts/…` path below is one of its. This
 > repository is launched with `python3 scripts/run.py config/<model>/<arm>.toml`;
 > see [`site_docs/installation.md`](site_docs/installation.md).
@@ -31,8 +31,8 @@ Creates a self-contained conda env `.conda/ltx23` (Python 3.12, torch 2.11+cu130
 diffusers 0.38) and installs the package in editable mode.
 
 ```bash
-git clone https://github.com/NVlabs/Sol-Video-Inference-Engine.git Sol-Video-Inference-Engine
-cd Sol-Video-Inference-Engine
+git clone https://github.com/NVlabs/the SGLang runtime.git the SGLang runtime
+cd the SGLang runtime
 
 # create the env (Python 3.12); writes to ./.conda/ltx23
 PYTHON_VERSION=3.12 bash scripts/create_code_conda_env.sh
@@ -118,12 +118,12 @@ $PY scripts/sana/sana_video_sglang_run.py \
 
 ### Wan2.2 TI2V-5B (1 GPU) · Wan2.2-A14B (1 GPU) · LingBot-Video (4 GPU)
 
-> These three run through the **Sol-LTX-Infer optimization repo** (diffusers +
+> These three run through the **the SGLang runtime optimization repo** (diffusers +
 > `launch_config`), not the SGLang runtime. Clone it and point `SOL_LTX_INFER` at it;
 > the wrappers below carry the acceleration line and submit the run.
 
 ```bash
-export SOL_LTX_INFER=/path/to/Sol-LTX-Infer
+export SOL_LTX_INFER=/path/to/the SGLang runtime
 
 # Wan-5B   — baseline ~70.25s → fullopt ~24.35s (2.885×): kernel fusion + EasyCache
 bash scripts/wan5b/run_baseline.sh   ;  bash scripts/wan5b/run_optimized.sh

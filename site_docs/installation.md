@@ -2,7 +2,7 @@
 
 This page covers `NVlabs/Sana` on the `sol-engine` branch. Cosmos3-Super and
 LTX-2.3 additionally need
-[Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine);
+the SGLang runtime;
 see [that section](#the-sol-video-inference-engine-runtime).
 
 ## What this repository contains
@@ -123,7 +123,7 @@ shows the resolved values.
 | SANA-Video, LingBot-Video | The same, plus a model bundle the runtime fetches on first run. |
 | MiniMax-H3 on H100 / A100 / RTX 5090 | An **SGLang container** — `H3_CONTAINER_RUNTIME = "pyxis"`, image pinned in the config. Nothing to install locally. |
 | MiniMax-H3 on GB200 / GB10 | A conda env with the **pinned Diffusers PR** that cell's `SOURCE_SNAPSHOT.json` records. |
-| Cosmos3-Super, LTX-2.3 | A **Sol-Video-Inference-Engine** checkout, reached by `SOL_LTX_INFER_ROOT`. See below. |
+| Cosmos3-Super, LTX-2.3 | A **the SGLang runtime** checkout, reached by `SGLANG_RUNTIME_ROOT`. See below. |
 
 ## Sol-Attn kernels
 
@@ -151,17 +151,17 @@ against. A newer DSL fails at compile time with
 falling back, which is deliberate: a silent fallback reports a dense run as a
 sparse one.
 
-## The Sol-Video-Inference-Engine runtime
+## The SGLang runtime runtime
 
 Cosmos3-Super and LTX-2.3 run inside
-[Sol-Video-Inference-Engine](https://github.com/NVlabs/Sol-Video-Inference-Engine),
+the SGLang runtime,
 which holds the SGLang `multimodal_gen` pipelines for them. This repository
 vendors the launch body and the official config, and reaches that checkout by
 absolute path.
 
 ```bash
-git clone https://github.com/NVlabs/Sol-Video-Inference-Engine.git
-cd Sol-Video-Inference-Engine
+git clone https://github.com/NVlabs/the SGLang runtime.git
+cd the SGLang runtime
 
 PYTHON_VERSION=3.12 bash scripts/create_code_conda_env.sh
 source "$PWD/scripts/use_code_storage_env.sh"
@@ -180,11 +180,11 @@ Then point this repository at it:
 
 ```bash
 python3 scripts/run.py config/cosmos3/baseline.toml \
-  --set SOL_LTX_INFER_ROOT=/path/to/Sol-Video-Inference-Engine
+  --set SGLANG_RUNTIME_ROOT=/path/to/the SGLang runtime
 ```
 
 Do not set `PYTHON_BIN` alongside it — the launch body derives the interpreter
-as `$SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python`.
+as `$SGLANG_RUNTIME_ROOT/.conda/ltx23/bin/python`.
 
 ## Weights
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Operator fusions for MiniMax-H3, derived from Sol-LTX-Infer's KWL line.
+"""Operator fusions for MiniMax-H3, derived from the SGLang runtime's KWL line.
 
 The reference fuses LTX-2's block; none of its kernels drop into MiniMax-H3 unchanged, because the
 two models differ exactly where the kernels are specialized — RMSNorm instead of LayerNorm, partial

@@ -9,7 +9,7 @@ speed-targeted (low/mid/high) configs — without any dimension knowing which mo
   and optional `[[method_baseline]]` entries that classify method-family starting
   points as `wired`, `config_wired`, `runtime_patch`, or
   `upper_bound_probe`. They never name a model.
-- **Model** (`models/<id>.toml` + runtime code under `Sol-LTX-Infer/`) is the
+- **Model** (`models/<id>.toml` + runtime code under `sglang-runtime/`) is the
   model-specific surface. Config manifests declare required capabilities.
 - `search.py` gives the main agent a CPU-only diagnostic view. It can still run
   compose checks and print the method-baseline catalog, but those checks do not

@@ -72,9 +72,9 @@
         id: "curated-ti2v",
         kicker: "03 · Image-conditioned generation",
         title: "Text + Image-to-Video",
-        description: "The same ten prompts, conditioned on their corresponding first frames.",
-        gridColumns: 2,
-        items: itemsFor("ti2v")
+        description: "Nine curated prompts, conditioned on their corresponding first frames.",
+        gridColumns: 3,
+        items: itemsFor("ti2v").filter(item => item.selectionIndex !== 4)
       }];
       const insertionIndex = Math.max(0, config.sections.findIndex(section => section.id === "physical-ai"));
       config.sections.splice(insertionIndex, 0, ...sections);

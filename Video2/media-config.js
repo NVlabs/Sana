@@ -4,8 +4,8 @@ window.SANA_VIDEO_MEDIA = {
   curated: {
     root: "assets/curated-20260812",
     metadata: "assets/curated-20260812/metadata/dataset.json",
-    cinematicSamples: [0, 2, 4, 5, 8],
-    motionSamples: [1, 3, 6, 7, 9],
+    cinematicSamples: [0, 2, 4, 5, 8, 9],
+    motionSamples: [1, 3, 6, 7],
     titles: [
       "Lunar astronaut",
       "Iridescent dragon",
@@ -39,6 +39,7 @@ window.SANA_VIDEO_MEDIA = {
       kicker: "01 · Generated results",
       title: "Cinematic Stories",
       description: "Character, expression, lighting, and coherent visual storytelling at 720p.",
+      gridColumns: 3,
       batches: [
         [
           { title: "Village in a bottle", prompt: "A large glass bottle, sealed with a cork, drifts on a turbulent, dark sea. Inside is a serene, miniature Scandinavian village with red wooden houses, a church, green trees, and blue skies with white clouds. This tranquil scene contrasts sharply with the stormy sea outside, symbolizing a peaceful refuge. Dramatic aerial shot, close-up of the bottle then pull back to show the tumultuous sea.", poster: "assets/posters/cinematic-01.webp", duration: "8 s", resolution: "1280×736", width: 1280, height: 736, hls: "assets/hls/cinematic-01/index.m3u8", mp4: "assets/mp4/cinematic-01.mp4" },
@@ -57,6 +58,7 @@ window.SANA_VIDEO_MEDIA = {
       kicker: "02 · Generated results",
       title: "Motion & Dynamics",
       description: "Fast subjects, fluid motion, and temporally consistent scene evolution.",
+      gridColumns: 2,
       batches: [
         [
           { title: "Popcorn burst", prompt: "Numerous pieces of freshly popped popcorn burst upward in a crisp slow-motion macro shot.", poster: "assets/posters/motion-01.webp", duration: "8 s", resolution: "1280×704", width: 1280, height: 704, hls: "assets/hls/motion-01/index.m3u8", mp4: "assets/mp4/motion-01.mp4" },
@@ -75,6 +77,7 @@ window.SANA_VIDEO_MEDIA = {
       kicker: "04 · Embodied intelligence",
       title: "Physical AI",
       description: "Bimanual robot manipulation across everyday kitchen tasks.",
+      gridColumns: 3,
       batches: [
         [
           { title: "Sugar container", prompt: "Grab the lid of the canned sugar on the table with the right arm.", poster: "assets/posters/physical-ai-01.webp", duration: "5 s", resolution: "640×360", width: 640, height: 360, hls: "assets/hls/physical-ai-01/index.m3u8", mp4: "assets/mp4/physical-ai-01.mp4" },

@@ -73,6 +73,7 @@
         kicker: "03 · Image-conditioned generation",
         title: "Text + Image-to-Video",
         description: "The same ten prompts, conditioned on their corresponding first frames.",
+        gridColumns: 2,
         items: itemsFor("ti2v")
       }];
       const insertionIndex = Math.max(0, config.sections.findIndex(section => section.id === "physical-ai"));
@@ -297,6 +298,7 @@
       const element = document.createElement("section");
       element.className = "demo-section";
       element.id = section.id;
+      element.style.setProperty("--grid-columns", String(section.gridColumns || 3));
       element.setAttribute("aria-labelledby", `${section.id}-title`);
       element.innerHTML = `
         <header class="demo-section-header">

@@ -4,6 +4,8 @@ window.SANA_VIDEO_MEDIA = {
   curated: {
     root: "assets/curated-20260812",
     metadata: "assets/curated-20260812/metadata/dataset.json",
+    cinematicSamples: [0, 2, 4, 5, 8],
+    motionSamples: [1, 3, 6, 7, 9],
     titles: [
       "Lunar astronaut",
       "Iridescent dragon",
@@ -70,7 +72,7 @@ window.SANA_VIDEO_MEDIA = {
     },
     {
       id: "physical-ai",
-      kicker: "05 · Embodied intelligence",
+      kicker: "04 · Embodied intelligence",
       title: "Physical AI",
       description: "Bimanual robot manipulation across everyday kitchen tasks.",
       batches: [

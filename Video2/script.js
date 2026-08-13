@@ -43,6 +43,7 @@
           ? `${root}/input-frames/${stem}.png`
           : `${root}/posters/t2v/${stem}.jpg`;
         return {
+          selectionIndex: index,
           title: curated.titles?.[index] || `Sample ${index + 1}`,
           prompt: record.prompt,
           poster,
@@ -55,22 +56,25 @@
         };
       });
 
-      const sections = [
-        {
-          id: "curated-t2v",
-          kicker: "03 · Curated generation",
-          title: "Text-to-Video",
-          description: "Ten prompt-matched 720p generations selected from checkpoints 400 and 500.",
-          items: itemsFor("t2v")
-        },
-        {
-          id: "curated-ti2v",
-          kicker: "04 · Image-conditioned generation",
-          title: "Text + Image-to-Video",
-          description: "The same ten prompts, conditioned on their corresponding first frames.",
-          items: itemsFor("ti2v")
-        }
-      ];
+      const t2vItems = itemsFor("t2v");
+      const cinematicSamples = new Set(curated.cinematicSamples || []);
+      const motionSamples = new Set(curated.motionSamples || []);
+      const cinematicSection = config.sections.find(section => section.id === "cinematic");
+      const motionSection = config.sections.find(section => section.id === "motion");
+      if (cinematicSection) {
+        cinematicSection.batches.push(t2vItems.filter(item => cinematicSamples.has(item.selectionIndex)));
+      }
+      if (motionSection) {
+        motionSection.batches.push(t2vItems.filter(item => motionSamples.has(item.selectionIndex)));
+      }
+
+      const sections = [{
+        id: "curated-ti2v",
+        kicker: "03 · Image-conditioned generation",
+        title: "Text + Image-to-Video",
+        description: "The same ten prompts, conditioned on their corresponding first frames.",
+        items: itemsFor("ti2v")
+      }];
       const insertionIndex = Math.max(0, config.sections.findIndex(section => section.id === "physical-ai"));
       config.sections.splice(insertionIndex, 0, ...sections);
     } catch (error) {

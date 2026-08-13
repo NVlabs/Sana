@@ -111,11 +111,11 @@ video {
   display: flex;
   gap: 12px;
   pointer-events: none;
-  animation: hero-reel-scroll 68s linear infinite;
+  animation: hero-reel-scroll 48s linear infinite;
 }
 
 .intro-reel-set {
-  width: 225vw;
+  width: calc(var(--intro-columns, 5) * 33.333vw);
   display: grid;
   grid-template-columns: repeat(var(--intro-columns, 5), 1fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -828,7 +828,53 @@ video {
 }
 
 @media (min-width: 1600px) and (min-height: 900px) {
-  .intro-reel-set { width: 240vw; }
+  .intro-data-dock {
+    width: min(1680px, calc(100vw - 96px));
+    grid-template-columns: minmax(0, 1.08fr) minmax(640px, 0.92fr);
+    gap: clamp(64px, 5vw, 96px);
+  }
+
+  .intro-metrics span {
+    padding-right: 22px;
+    padding-left: 22px;
+    font-size: 0.72rem;
+  }
+
+  .intro-metrics b {
+    margin-bottom: 5px;
+    font-size: clamp(3.25rem, 3.6vw, 4.4rem);
+  }
+
+  .benchmark-panel h2 { font-size: 1.55rem; }
+
+  .benchmark-panel header p { font-size: 0.64rem; }
+
+  .benchmark-badge { font-size: 2.65rem; }
+
+  .latency-chart {
+    gap: 9px;
+    margin-top: 14px;
+  }
+
+  .latency-axis {
+    height: 20px;
+    margin-right: 58px;
+    margin-left: 108px;
+    font-size: 0.5rem;
+  }
+
+  .latency-row {
+    grid-template-columns: 98px minmax(0, 1fr) 48px;
+    gap: 12px;
+    font-size: 0.72rem;
+  }
+
+  .latency-row i { height: 9px; }
+
+  .chart-foot {
+    margin: 11px 0 0 110px;
+    font-size: 0.55rem;
+  }
 }
 
 @media (max-width: 600px) {
@@ -838,7 +884,7 @@ video {
 
   .intro-reel { top: 20px; bottom: 20px; }
 
-  .intro-reel-set { width: 420vw; }
+  .intro-reel-set { width: calc(var(--intro-columns, 5) * 70vw); }
 
   .intro-copy h1 {
     font-size: clamp(3rem, 13vw, 4.2rem);

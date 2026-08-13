@@ -63,7 +63,7 @@ code,pre,.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,"Liberation Mon
 .page-content{min-width:0}
 .page-content>.rule{margin-left:0;margin-right:0}
 .page-content .prose,.page-content .wide{max-width:none;padding-left:0;padding-right:0}
-section[id],.section-anchor,.cmp-lbl[id],.vgroup[id]{scroll-margin-top:28px}
+section[id],.section-anchor,.cmp-lbl[id],.vgroup[id],.abl-panel[id]{scroll-margin-top:28px}
 @media(max-width:1080px){
   .page-layout{display:block;max-width:var(--wide)}
   .page-directory{position:static;max-height:none;padding:52px 0 0}
@@ -95,6 +95,7 @@ h1{margin:0 0 26px;font-weight:700;letter-spacing:-.028em;line-height:1.06}
 h1 em{font-style:normal;color:var(--green)}
 h1 .h1a{display:block;font-size:clamp(34px,5.2vw,54px);color:#fff}
 h1 .h1b{display:block;margin-top:12px;font-size:clamp(24px,3.4vw,34px);line-height:1.16;letter-spacing:-.02em;color:var(--text-2);font-weight:650}
+.hero-amp{color:#fff;margin:0 .16em}
 .dek{font-size:21px;line-height:1.56;color:var(--text-2);margin:0 0 32px;letter-spacing:-.008em}
 .dek b{color:#fff;font-weight:650}
 .byline{
@@ -161,6 +162,13 @@ tbody tr.total td{background:var(--green-soft);border-top:1px solid var(--green-
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .up{color:var(--green);font-weight:650}
 .cap{padding:13px 20px;background:var(--surface);border-top:1px solid var(--line-soft);color:var(--muted);font-size:14px;line-height:1.55}
+.pipeline-table th:not(:first-child),.pipeline-table td:not(:first-child){text-align:center}
+.pipeline-table tbody td:first-child{color:#fff;font-weight:650}
+.pipeline-table tbody td:not(:first-child){font-variant-numeric:tabular-nums}
+.pipeline-notes{margin-top:30px}
+.optimization-stack{margin:24px 0 38px;padding-left:25px}
+.optimization-stack li{margin:16px 0;padding-left:6px;color:var(--text-2);line-height:1.65}
+.optimization-stack li::marker{color:var(--green);font-weight:700}
 /* ── vertical refiner comparison ─────────────────── */
 .refiner-chart{margin:34px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:26px 24px}
 .refiner-chart .ftitle{font-size:15px;letter-spacing:.085em;text-transform:uppercase;color:var(--muted);font-weight:650;text-align:center}
@@ -168,14 +176,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .vlegend span{display:inline-flex;align-items:center;gap:8px}
 .vlegend i{width:12px;height:12px;border-radius:3px;flex:0 0 12px}
 .vchart-scroll{overflow-x:auto;padding-bottom:4px}
-.vchart{display:grid;grid-template-columns:54px minmax(820px,1fr);gap:14px;min-width:888px}
-.vaxis{position:relative;height:390px;margin-bottom:72px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
-.vaxis span{position:absolute;right:0;bottom:var(--y);transform:translateY(50%);white-space:nowrap}
+.vchart{min-width:820px}
 .vgroups{display:grid;grid-template-columns:repeat(3,1fr)}
 .vgroup{min-width:0;padding:0 24px}
 .vgroup+.vgroup{border-left:1px dashed #3a3e45}
-.vbars{height:390px;display:flex;align-items:flex-end;justify-content:center;gap:34px;border-bottom:1px solid #3a3e45;
-       background:repeating-linear-gradient(to top,var(--line-soft) 0 1px,transparent 1px 22.2222%)}
+.vscale{margin-bottom:10px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.vbars{height:360px;display:flex;align-items:flex-end;justify-content:center;gap:34px;border-bottom:1px solid #3a3e45;
+       background:repeating-linear-gradient(to top,var(--line-soft) 0 1px,transparent 1px 25%)}
 .vbar{position:relative;width:78px;height:100%}
 .vstack{position:absolute;inset:0 0 0 0;display:flex;flex-direction:column-reverse;justify-content:flex-start}
 .vseg{flex:0 0 auto;border-left:1px solid rgba(255,255,255,.08);border-right:1px solid rgba(0,0,0,.25)}
@@ -193,10 +200,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .refiner-cases>h3{margin:0 0 -6px}
 .refiner-example{min-width:0}
 .refiner-example .cmp2-row{margin-bottom:0}
-.refiner-case-caption{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:12px;padding:0 2px}
-.refiner-case-caption span{font-size:17px;font-weight:700;color:#fff}
-.refiner-case-caption b{font-size:18px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums}
-@media(max-width:560px){.refiner-case-caption{align-items:flex-start;flex-direction:column;gap:3px}}
+.refiner-case-heading{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;margin:0 0 12px;padding:0 2px;text-align:left}
+.refiner-case-heading span{font-size:17px;font-weight:700;color:#fff}
+.refiner-case-heading b{font-size:16px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums}
 /* ── code ────────────────────────────────────────── */
   pre{background:#050506;border:1px solid var(--line);border-radius:10px;padding:20px 22px;overflow-x:auto;font-size:15px;line-height:1.7;margin:24px 0;color:#d6d8db}
 pre .c{color:#5f656d}
@@ -342,13 +348,12 @@ footer p{margin:12px 0}
 
 <div class="hero">
   <div class="prose">
-    <span class="pill">Day One Optimization</span>
-    <h1><span class="h1a">Accelerating LTX-2.5 with Sol Engine</span><span class="h1b">achieving a <em>4.68× end-to-end speedup</em></span></h1>
+    <h1><span class="h1a">Accelerating LTX-2.5 with Sol Engine</span><span class="h1b">up to <em>4.68× multi-step pipeline speedup</em> <span class="hero-amp">&amp;</span> <em>1.90× distilled pipeline speedup</em></span></h1>
     <p class="dek">
-      A 22B audio-video diffusion transformer, generating 1536×1024 at 24 fps with synchronized sound.
-      On <b>4× NVIDIA GB200</b>, the Sol Video Inference Engine cuts warm end-to-end latency from
-      <b>39.23 seconds to 8.38 seconds</b> by combining CFG parallelism, First Block Cache, and
-      compiled execution — no distillation, no LoRA, and no change to the released schedule.
+      We use the Sol Video Inference Engine to optimize video generation across different GPUs — including
+      B200, GeForce RTX 5090, and DGX Spark — and different configurations, including 4K, 1080p,
+      5-second, and 20-second workloads, by combining
+      parallelism optimization, diffusion cache, kernel fusion, and sparse attention.
     </p>
     <div class="byline">
       <span class="authors">Yitong Li<sup>*</sup>, Haopeng Li<sup>*</sup>, Junsong Chen, Jincheng Yu, Enze Xie</span>
@@ -364,22 +369,24 @@ footer p{margin:12px 0}
 <div class="page-layout">
   <aside class="page-directory" aria-label="Page directory">
     <nav class="directory-inner">
-      <div class="directory-label">On this page</div>
       <div class="directory-group">
-        <a class="directory-title is-active" data-directory-section="multi-step-generation" href="#multi-step-generation" aria-current="true">Multi-step High-quality Generation on 4× GB200</a>
+        <a class="directory-title is-active" data-directory-section="multi-step-generation" href="#multi-step-generation" aria-current="true">Multi-step Pipeline Optimization</a>
         <ul class="directory-list">
-          <li><a href="#multi-step-1536-1024">1536×1024 · 5 s</a></li>
-          <li><a href="#comparison-4k5s">4K · 5 s</a></li>
-          <li><a href="#comparison-1080p20s">1080p · 20 s</a></li>
+          <li><a href="#configuration-default">1536 × 1024 · 5 s</a></li>
+          <li><a href="#configuration-4k">4K · 5 s</a></li>
+          <li><a href="#configuration-1080p">1080p · 20 s</a></li>
         </ul>
       </div>
       <div class="directory-group">
-        <a class="directory-title" data-directory-section="refiner-optimization" href="#refiner-optimization">Refiner Optimization</a>
+        <a class="directory-title" data-directory-section="refiner-optimization" href="#refiner-optimization">Distilled Pipeline Optimization</a>
         <ul class="directory-list">
           <li><a href="#refiner-b200">B200</a></li>
           <li><a href="#refiner-rtx5090">RTX 5090</a></li>
           <li><a href="#refiner-dgx-spark">NVIDIA DGX Spark (GB10)</a></li>
         </ul>
+      </div>
+      <div class="directory-group">
+        <a class="directory-title" data-directory-section="agent-native-auto-optimization" href="#agent-native-auto-optimization">Agent-Native Auto-Optimization</a>
       </div>
     </nav>
   </aside>
@@ -427,42 +434,86 @@ footer p{margin:12px 0}
 <hr class="rule">
 
 <!-- ══════════════════════════════════════ 02 -->
+<section id="pipeline-comparison">
+  <div class="prose">
+    <div class="shead">
+      <span class="num">02 — Pipeline Comparison</span>
+      <h2>Multi-step Pipeline vs. Distilled Pipeline</h2>
+      <p>Two inference paths with different speed, guidance, and precision profiles.</p>
+    </div>
+  </div>
+
+  <div class="wide">
+    <div class="tw">
+      <div class="scroll">
+        <table class="pipeline-table" aria-label="Comparison of the Multi-step and Distilled LTX-2.5 pipelines">
+          <thead>
+            <tr><th>Dimension</th><th>Multi-step Pipeline</th><th>Distilled Pipeline</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Stage 1 steps</td><td>30</td><td>8</td></tr>
+            <tr><td>Stage 2 steps</td><td>2</td><td>2</td></tr>
+            <tr><td>CFG</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Precision</td><td>BF16</td><td>FP4 or BF16</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose pipeline-notes">
+    <p class="lede">The <strong>Distilled Pipeline</strong> is designed for fast, efficient inference: its eight-step first stage and CFG-free execution reduce iterative denoising, while leaving less refinement headroom for motion, structure, and fine detail. The <strong>Multi-step Pipeline</strong> takes the complementary approach, using 30 guided first-stage steps to progressively resolve the generation and prioritize higher video quality at greater compute cost. These two operating points naturally lead to two optimization paths: Section 3 optimizes the Multi-step BF16 pipeline end to end on 4× B200, while Section 4 focuses on accelerating the Distilled pipeline on a single GPU.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════ 03 -->
 <section id="multi-step-1536-1024">
   <div class="prose">
     <div class="shead">
-      <span class="num">02 — Sol Engine</span>
-      <h2>Multi-resolution E2E ablation</h2>
-      <p>4× NVIDIA GB200 · warm inference.</p>
+      <span class="num">03 — Multi-step Pipeline Optimization</span>
     </div>
+
+    <p class="lede">To accelerate video generation without changing the Multi-step Pipeline's high-quality operating point, we optimize the full inference stack at three complementary levels.</p>
+
+    <ol class="optimization-stack">
+      <li><strong>Diffusion Cache.</strong> The Multi-step Pipeline executes 30 steps in Stage 1, leaving redundancy across adjacent diffusion-denoising steps. We apply First Block Cache to reuse stable residuals and skip unnecessary forwards, delivering nearly 50% higher Stage 1 performance while preserving the overall visual result.</li>
+      <li><strong>Parallelism Optimization.</strong> Because the first-stage token sequence is relatively compact, sequence parallelism leaves too much communication overhead. At the same time, the high-quality Multi-step Pipeline contains four CFG branches, which naturally allows the guidance workload to be distributed across four GPUs with substantially less communication.</li>
+      <li><strong>Kernel optimization.</strong> Cache-aware compilation and kernel fusion reduce launch overhead and avoid unnecessary memory traffic. Block 0 remains the cache decision point, while cache misses execute the remaining compiled transformer blocks.</li>
+    </ol>
+
+    <h3 id="multi-step-performance">Performance across different resolutions and durations</h3>
+    <p>Warm end-to-end latency on 4× B200 at BF16 precision, with a 30-step first stage and a 2-step second stage.</p>
   </div>
 
   <div class="wide">
     <div class="fig ablation-figure" role="group" aria-label="Warm end-to-end ablation across Default 5-second, 4K 5-second, and 1080p 20-second configurations on four NVIDIA GB200 GPUs">
       <div class="ablation-grid">
-        <div class="abl-panel">
-          <div class="abl-title"><span>Default 1536×1024 · 5 s</span><b>4.68×</b></div>
+        <div class="abl-panel" id="configuration-default">
+          <div class="abl-title"><span>Default (1536 × 1024) · 5 s</span><b>4.68×</b></div>
           <div class="abl-row baseline"><div class="abl-meta"><span class="abl-name">Baseline · SP</span><span class="abl-value">39.23 s</span></div><div class="abl-track"><div class="abl-fill" style="width:100%"></div></div></div>
-          <div class="abl-row parallel"><div class="abl-meta"><span class="abl-name">+ CFG Parallel</span><span class="abl-value">14.14 s <small>2.77×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:36.0517%"></div></div></div>
+          <div class="abl-row parallel"><div class="abl-meta"><span class="abl-name">+ Parallel Optimization</span><span class="abl-value">14.14 s <small>2.77×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:36.0517%"></div></div></div>
           <div class="abl-row cache"><div class="abl-meta"><span class="abl-name">+ FBCache 0.08</span><span class="abl-value">11.09 s <small>1.28×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:28.2713%"></div></div></div>
-          <div class="abl-row compile"><div class="abl-meta"><span class="abl-name">+ torch.compile</span><span class="abl-value">8.38 s <small>1.32×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:21.3679%"></div></div></div>
+          <div class="abl-row compile"><div class="abl-meta"><span class="abl-name">+ Kernel Fusion</span><span class="abl-value">8.38 s <small>1.32×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:21.3679%"></div></div></div>
           <div class="abl-scale"><span>0 s</span><span>39.23 s</span></div>
         </div>
 
-        <div class="abl-panel">
-          <div class="abl-title"><span>4K 3840×2176 · 5 s</span><b>1.96×</b></div>
+        <div class="abl-panel" id="configuration-4k">
+          <div class="abl-title"><span>4K (3840 × 2176) · 5 s</span><b>1.96×</b></div>
           <div class="abl-row baseline"><div class="abl-meta"><span class="abl-name">Baseline · SP</span><span class="abl-value">75.57 s</span></div><div class="abl-track"><div class="abl-fill" style="width:100%"></div></div></div>
-          <div class="abl-row parallel"><div class="abl-meta"><span class="abl-name">+ CFG Parallel</span><span class="abl-value">63.66 s <small>1.19×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:84.2287%"></div></div></div>
+          <div class="abl-row parallel"><div class="abl-meta"><span class="abl-name">+ Parallel Optimization</span><span class="abl-value">63.66 s <small>1.19×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:84.2287%"></div></div></div>
           <div class="abl-row cache"><div class="abl-meta"><span class="abl-name">+ FBCache 0.08</span><span class="abl-value">46.29 s <small>1.38×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:61.2446%"></div></div></div>
-          <div class="abl-row compile"><div class="abl-meta"><span class="abl-name">+ torch.compile</span><span class="abl-value">38.49 s <small>1.20×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:50.9236%"></div></div></div>
+          <div class="abl-row compile"><div class="abl-meta"><span class="abl-name">+ Kernel Fusion</span><span class="abl-value">38.49 s <small>1.20×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:50.9236%"></div></div></div>
           <div class="abl-scale"><span>0 s</span><span>75.57 s</span></div>
         </div>
 
-        <div class="abl-panel">
-          <div class="abl-title"><span>1080p 1920×1088 · 20 s</span><b>2.52×</b></div>
+        <div class="abl-panel" id="configuration-1080p">
+          <div class="abl-title"><span>1080p (1920 × 1088) · 20 s</span><b>2.52×</b></div>
           <div class="abl-row baseline"><div class="abl-meta"><span class="abl-name">Baseline · SP</span><span class="abl-value">92.45 s</span></div><div class="abl-track"><div class="abl-fill" style="width:100%"></div></div></div>
-          <div class="abl-row parallel"><div class="abl-meta"><span class="abl-name">+ CFG Parallel</span><span class="abl-value">59.65 s <small>1.55×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:64.5249%"></div></div></div>
+          <div class="abl-row parallel"><div class="abl-meta"><span class="abl-name">+ Parallel Optimization</span><span class="abl-value">59.65 s <small>1.55×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:64.5249%"></div></div></div>
           <div class="abl-row cache"><div class="abl-meta"><span class="abl-name">+ FBCache 0.08</span><span class="abl-value">44.71 s <small>1.33×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:48.3569%"></div></div></div>
-          <div class="abl-row compile"><div class="abl-meta"><span class="abl-name">+ torch.compile</span><span class="abl-value">36.69 s <small>1.22×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:39.6893%"></div></div></div>
+          <div class="abl-row compile"><div class="abl-meta"><span class="abl-name">+ Kernel Fusion</span><span class="abl-value">36.69 s <small>1.22×</small></span></div><div class="abl-track"><div class="abl-fill" style="width:39.6893%"></div></div></div>
           <div class="abl-scale"><span>0 s</span><span>92.45 s</span></div>
         </div>
       </div>
@@ -470,114 +521,75 @@ footer p{margin:12px 0}
   </div>
 
   <div class="prose">
-    <h3>Same prompt, same seed</h3>
+    <h3 id="video-comparison">Video comparison</h3>
+    <p>Setting: 4× B200 · BF16 precision · 30-step first stage · 2-step second stage · same prompt and seed.</p>
   </div>
 
   <div class="wide">
     <div class="cmp cons">
-      <div class="cmp-hd">
-        <span class="ct">Four paired comparisons &mdash; Reference vs. Accelerated</span>
-        <span class="cn">4K · 1080p · 1536×1024</span>
-      </div>
-      <p class="cmp-sub">
-        Each comparison holds the prompt and seed fixed. The first two use the 4× GB200 multi-step
-        configurations summarized above, with the reference on the left and the accelerated result on
-        the right; the final two retain the original synchronized baseline and SOL Engine players. Every
-        clip includes its original audio track.
-      </p>
-
-      <div class="cmp-lbl" id="comparison-4k5s">P01 · Multi-shot continuity · 4K · 5 s</div>
-      <p class="cmp-prompt">
-        At dusk, a wide shot frames a rainy, neon-lit intersection as a woman in a yellow raincoat walks
-        toward camera holding a folded newspaper. Hard cuts move to her hooded close-up as she whispers,
-        “He's late,” then to a man's scuffed boots splashing into a puddle before he looks up and smiles
-        toward her. Synth music, traffic, and a passing bus carry the scene. [compact]
-      </p>
-      <div class="cmp2-row devpair">
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P01 4K 5-second Reference, 1.00×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p01_multishot_4k5s_reference.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P01 4K 5-second Accelerated, 1.96×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p01_multishot_4k5s_accelerated.mp4"></video><div class="meta"><span class="t">Accelerated</span><span class="r">1.96×</span></div></div>
-      </div>
-
-      <div class="cmp-lbl" id="comparison-1080p20s">P02 · News broadcast · 1080p · 20 s</div>
-      <p class="cmp-prompt">
-        A live morning report in New Castle, Vermont opens on a reporter before cordoned cars and caution
-        tape announcing that “black gold” has been found. He asks the camera to pan to a construction site,
-        where a geyser of oil suddenly erupts as workers cheer and scramble. Shouting over the roar, he
-        calls it a moment the town will never forget; the camera catches the oil mist in sunlight and pulls
-        back to the small-town skyline. [compact]
-      </p>
-      <div class="cmp2-row devpair">
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P02 1080p 20-second Reference, 1.00×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p02_newsbroadcast_1080p20s_reference.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P02 1080p 20-second Accelerated, 2.52×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p02_newsbroadcast_1080p20s_accelerated.mp4"></video><div class="meta"><span class="t">Accelerated</span><span class="r">2.52×</span></div></div>
-      </div>
-
-      <div class="cmp-lbl">P05 · Horse in water</div>
+      <div class="cmp-lbl">Video 01 · Horse in water</div>
       <p class="cmp-prompt">
         A galloping black horse crosses a shallow river in bright afternoon sun, water exploding into
         spray around its legs. The camera pans to follow, close enough to see individual droplets and
         the texture of the wet mane.
       </p>
       <div class="cmp2-row devpair">
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P05 Official Baseline, 1.00×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-ref.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-ref.mp4"></video><div class="meta"><span class="t">Official Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P05 SOL Engine, 4.68×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-t008.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-t008.mp4"></video><div class="meta"><span class="t">SOL Engine</span><span class="r">4.68×</span></div></div>
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 01 Official Baseline, 1.00×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-ref.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-ref.mp4"></video><div class="meta"><span class="t">Official Baseline</span><span class="r">1.00×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 01 SOL Engine, 4.68×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-t008.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p05_horse-t008.mp4"></video><div class="meta"><span class="t">SOL Engine</span><span class="r">4.68×</span></div></div>
       </div>
 
-      <div class="cmp-lbl">P06 · Fisherman close-up</div>
+      <div class="cmp-lbl">Video 02 · Fisherman close-up</div>
       <p class="cmp-prompt">
         Extreme close-up of an older fisherman looking directly into the lens, weathered skin, grey
         stubble, deep creases around the eyes. He blinks slowly and the corner of his mouth lifts into a
         faint smile. Soft window light from the left, very shallow depth of field, static camera.
       </p>
       <div class="cmp2-row devpair">
-        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P06 Official Baseline, 1.00×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-ref.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-ref.mp4"></video><div class="meta"><span class="t">Official Baseline</span><span class="r">1.00×</span></div></div>
-        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="P06 SOL Engine, 4.68×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-t008.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-t008.mp4"></video><div class="meta"><span class="t">SOL Engine</span><span class="r">4.68×</span></div></div>
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 02 Official Baseline, 1.00×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-ref.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-ref.mp4"></video><div class="meta"><span class="t">Official Baseline</span><span class="r">1.00×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 02 SOL Engine, 4.68×" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-t008.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p06_fisherman-t008.mp4"></video><div class="meta"><span class="t">SOL Engine</span><span class="r">4.68×</span></div></div>
+      </div>
+
+      <div class="cmp-lbl" id="comparison-4k5s">Video 03 · Multi-shot continuity</div>
+      <p class="cmp-prompt">
+        At dusk, a woman in a yellow raincoat crosses a neon-lit intersection, whispers “He's late,”
+        and watches a soaked man step from a puddle and smile toward her as synth music and traffic
+        carry across the hard cuts. [compact]
+      </p>
+      <div class="cmp2-row devpair">
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 03 Reference, 1.00×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p01_multishot_4k5s_reference.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 03 Accelerated, 1.96×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p01_multishot_4k5s_accelerated.mp4"></video><div class="meta"><span class="t">Accelerated</span><span class="r">1.96×</span></div></div>
+      </div>
+
+      <div class="cmp-lbl" id="comparison-1080p20s">Video 04 · News broadcast</div>
+      <p class="cmp-prompt">
+        A live reporter in New Castle announces that “black gold” has been found, then asks the camera
+        to pan toward a construction site. An oil geyser erupts as workers cheer, and the shot pulls
+        back over the town skyline. [compact]
+      </p>
+      <div class="cmp2-row devpair">
+        <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 04 Reference, 1.00×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p02_newsbroadcast_1080p20s_reference.mp4"></video><div class="meta"><span class="t">Reference</span><span class="r">1.00×</span></div></div>
+        <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="Video 04 Accelerated, 2.52×" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/p02_newsbroadcast_1080p20s_accelerated.mp4"></video><div class="meta"><span class="t">Accelerated</span><span class="r">2.52×</span></div></div>
       </div>
     </div>
-  </div>
-
-  <div class="prose">
-    <p>
-      <strong>CFG parallelism.</strong> Stage 1 runs at 768×512 in this configuration, so its token
-      sequence is relatively short. Sequence parallelism therefore spends a large share of runtime on
-      communication and falls well short of ideal multi-GPU scaling. We instead split the four guidance
-      passes across four CFG ranks, with each rank handling one guidance pass. This
-      requires much less communication and scales more efficiently for this workload.
-    </p>
-
-    <p>
-      <strong>First Block Cache.</strong> It detects denoising steps whose outputs would change very
-      little and reuses the previous result instead of running another full denoiser forward pass. This
-      reduces the total number of forwards while keeping the overall visual result close to the uncached
-      reference. At the 0.08 threshold used here, it skips 9 of 30 steps.
-    </p>
-
-    <p>
-      <strong>Cache-aware compilation.</strong> Each of the 48 transformer blocks is compiled separately
-      with <code>torch.compile</code>, while FBCache control remains in eager Python. Every step runs the
-      compiled Block 0, measures its residual change, and synchronizes the decision across all four CFG ranks
-      with <code>all_reduce(MIN)</code>. A cache hit reuses the previous residual and skips Blocks 1–47;
-      a miss executes the remaining compiled blocks. Because compilation is lazy, tracing and kernel
-      generation are treated as warm-up, and the reported latency uses only requests 6–10.
-    </p>
   </div>
 
 </section>
 
 <hr class="rule">
 
-<!-- ══════════════════════════════════════ 03 -->
+<!-- ══════════════════════════════════════ 04 -->
 <section id="refiner-optimization">
   <div class="prose">
     <div class="shead">
-      <span class="num">03 — Refiner Optimization</span>
-      <h2>Single-GPU acceleration</h2>
-      <p>Distilled NVFP4 · 4K · 5 seconds · Dense vs. Sol-Attn.</p>
+      <span class="num">04 — Distilled Pipeline Optimization</span>
     </div>
 
     <p class="lede">
-      The comparison below keeps one implementation fixed across all three devices: Distilled NVFP4 at
-      4K for five seconds. Each hardware group contains two vertical bars, Dense and Sol-Attn, with Stage 1,
-      Stage 2, and all remaining work stacked on a shared 0–900 second scale.
+      Our setting uses the NVFP4 Distilled Pipeline, with an 8-step Stage 1 and a 2-step Stage 2. Stage 1
+      operates on a relatively compact token sequence, and its denoising schedule is already well optimized;
+      consequently, our focus shifts to Stage 2. At 4K for five seconds, attention becomes the dominant cost
+      in this higher-resolution refinement stage. We therefore apply Sol-Attn, a training-free sparse attention
+      method, to target this bottleneck without additional training or calibration.
     </p>
 
     <div class="refiner-chart">
@@ -585,25 +597,21 @@ footer p{margin:12px 0}
       <div class="vlegend" aria-label="Latency stack legend">
         <span><i style="background:#4d760b"></i>Stage 1</span>
         <span><i style="background:#76b900"></i>Stage 2</span>
-        <span><i style="background:#555b63"></i>Others</span>
+        <span><i style="background:#555b63"></i>Others*</span>
       </div>
       <div class="vchart-scroll">
-        <div class="vchart">
-          <div class="vaxis" aria-hidden="true">
-            <span style="--y:100%">900 s</span><span style="--y:88.8889%">800</span>
-            <span style="--y:66.6667%">600</span><span style="--y:44.4444%">400</span>
-            <span style="--y:22.2222%">200</span><span style="--y:0%">0</span>
-          </div>
+        <div class="vchart" role="group" aria-label="Baseline and optimized latency stacks normalized within each GPU pair">
+          <div class="vscale"><span>Normalized scale</span></div>
           <div class="vgroups">
             <div class="vgroup" id="refiner-b200">
               <div class="vbars">
-                <div class="vbar" style="--total:10.2400%" role="img" aria-label="B200 Dense: Stage 1 25.45 seconds, Stage 2 50.37 seconds, Others 16.34 seconds, total 92.16 seconds">
-                  <div class="vstack"><div class="vseg s1" style="height:2.8278%" title="Stage 1: 25.45 s"></div><div class="vseg s2" style="height:5.5967%" title="Stage 2: 50.37 s"></div><div class="vseg oth" style="height:1.8156%" title="Others: 16.34 s"></div></div>
-                  <span class="vtotal">92.16 s</span><span class="vbar-name">Dense</span>
+                <div class="vbar" style="--total:100%" role="img" aria-label="B200 Baseline: Stage 1 25.45 seconds, Stage 2 50.37 seconds, Others 16.34 seconds, total 92.16 seconds">
+                  <div class="vstack"><div class="vseg s1" style="height:27.6150%" title="Stage 1: 25.45 s"></div><div class="vseg s2" style="height:54.6549%" title="Stage 2: 50.37 s"></div><div class="vseg oth" style="height:17.7300%" title="Others: 16.34 s"></div></div>
+                  <span class="vtotal">92.16 s</span><span class="vbar-name">Baseline</span>
                 </div>
-                <div class="vbar sol" style="--total:6.6733%" role="img" aria-label="B200 Sol-Attn: Stage 1 16.19 seconds, Stage 2 28.03 seconds, Others 15.84 seconds, total 60.06 seconds">
-                  <div class="vstack"><div class="vseg s1" style="height:1.7989%" title="Stage 1: 16.19 s"></div><div class="vseg s2" style="height:3.1144%" title="Stage 2: 28.03 s"></div><div class="vseg oth" style="height:1.7600%" title="Others: 15.84 s"></div></div>
-                  <span class="vtotal">60.06 s</span><span class="vbar-name">Sol-Attn</span>
+                <div class="vbar sol" style="--total:65.1693%" role="img" aria-label="B200 Optimized with Sol-Attn: Stage 1 16.19 seconds, Stage 2 28.03 seconds, Others 15.84 seconds, total 60.06 seconds">
+                  <div class="vstack"><div class="vseg s1" style="height:17.5673%" title="Stage 1: 16.19 s"></div><div class="vseg s2" style="height:30.4145%" title="Stage 2: 28.03 s"></div><div class="vseg oth" style="height:17.1875%" title="Others: 15.84 s"></div></div>
+                  <span class="vtotal">60.06 s</span><span class="vbar-name">Optimized</span>
                 </div>
               </div>
               <div class="vgroup-title">1× NVIDIA B200</div>
@@ -612,13 +620,13 @@ footer p{margin:12px 0}
 
             <div class="vgroup" id="refiner-rtx5090">
               <div class="vbars">
-                <div class="vbar" style="--total:35.8678%" role="img" aria-label="RTX 5090 Dense: Stage 1 56.53 seconds, Stage 2 221.95 seconds, Others 44.33 seconds, total 322.81 seconds">
-                  <div class="vstack"><div class="vseg s1" style="height:6.2811%" title="Stage 1: 56.53 s"></div><div class="vseg s2" style="height:24.6611%" title="Stage 2: 221.95 s"></div><div class="vseg oth" style="height:4.9256%" title="Others: 44.33 s"></div></div>
-                  <span class="vtotal">322.81 s</span><span class="vbar-name">Dense</span>
+                <div class="vbar" style="--total:100%" role="img" aria-label="RTX 5090 Baseline: Stage 1 56.53 seconds, Stage 2 221.95 seconds, Others 44.33 seconds, total 322.81 seconds">
+                  <div class="vstack"><div class="vseg s1" style="height:17.5118%" title="Stage 1: 56.53 s"></div><div class="vseg s2" style="height:68.7556%" title="Stage 2: 221.95 s"></div><div class="vseg oth" style="height:13.7325%" title="Others: 44.33 s"></div></div>
+                  <span class="vtotal">322.81 s</span><span class="vbar-name">Baseline</span>
                 </div>
-                <div class="vbar sol" style="--total:18.9244%" role="img" aria-label="RTX 5090 Sol-Attn: Stage 1 55.17 seconds, Stage 2 71.92 seconds, Others 43.23 seconds, total 170.32 seconds">
-                  <div class="vstack"><div class="vseg s1" style="height:6.1300%" title="Stage 1: 55.17 s"></div><div class="vseg s2" style="height:7.9911%" title="Stage 2: 71.92 s"></div><div class="vseg oth" style="height:4.8033%" title="Others: 43.23 s"></div></div>
-                  <span class="vtotal">170.32 s</span><span class="vbar-name">Sol-Attn</span>
+                <div class="vbar sol" style="--total:52.7617%" role="img" aria-label="RTX 5090 Optimized with Sol-Attn: Stage 1 55.17 seconds, Stage 2 71.92 seconds, Others 43.23 seconds, total 170.32 seconds">
+                  <div class="vstack"><div class="vseg s1" style="height:17.0905%" title="Stage 1: 55.17 s"></div><div class="vseg s2" style="height:22.2794%" title="Stage 2: 71.92 s"></div><div class="vseg oth" style="height:13.3918%" title="Others: 43.23 s"></div></div>
+                  <span class="vtotal">170.32 s</span><span class="vbar-name">Optimized</span>
                 </div>
               </div>
               <div class="vgroup-title">1× GeForce RTX 5090</div>
@@ -627,13 +635,13 @@ footer p{margin:12px 0}
 
             <div class="vgroup" id="refiner-dgx-spark">
               <div class="vbars">
-                <div class="vbar" style="--total:92.1778%" role="img" aria-label="DGX Spark Dense: Stage 1 161.60 seconds, Stage 2 558.70 seconds, Others 109.30 seconds, stacked total 829.60 seconds">
-                  <div class="vstack"><div class="vseg s1" style="height:17.9556%" title="Stage 1: 161.60 s"></div><div class="vseg s2" style="height:62.0778%" title="Stage 2: 558.70 s"></div><div class="vseg oth" style="height:12.1444%" title="Others: 109.30 s"></div></div>
-                  <span class="vtotal">829.60 s</span><span class="vbar-name">Dense</span>
+                <div class="vbar" style="--total:100%" role="img" aria-label="DGX Spark Baseline: Stage 1 161.60 seconds, Stage 2 558.70 seconds, Others 109.30 seconds, stacked total 829.60 seconds">
+                  <div class="vstack"><div class="vseg s1" style="height:19.4793%" title="Stage 1: 161.60 s"></div><div class="vseg s2" style="height:67.3457%" title="Stage 2: 558.70 s"></div><div class="vseg oth" style="height:13.1750%" title="Others: 109.30 s"></div></div>
+                  <span class="vtotal">829.60 s</span><span class="vbar-name">Baseline</span>
                 </div>
-                <div class="vbar sol" style="--total:63.7556%" role="img" aria-label="DGX Spark Sol-Attn: Stage 1 161.60 seconds, Stage 2 302.90 seconds, Others 109.30 seconds, stacked total 573.80 seconds">
-                  <div class="vstack"><div class="vseg s1" style="height:17.9556%" title="Stage 1: 161.60 s"></div><div class="vseg s2" style="height:33.6556%" title="Stage 2: 302.90 s"></div><div class="vseg oth" style="height:12.1444%" title="Others: 109.30 s"></div></div>
-                  <span class="vtotal">573.80 s</span><span class="vbar-name">Sol-Attn</span>
+                <div class="vbar sol" style="--total:69.1659%" role="img" aria-label="DGX Spark Optimized with Sol-Attn: Stage 1 161.60 seconds, Stage 2 302.90 seconds, Others 109.30 seconds, stacked total 573.80 seconds">
+                  <div class="vstack"><div class="vseg s1" style="height:19.4793%" title="Stage 1: 161.60 s"></div><div class="vseg s2" style="height:36.5116%" title="Stage 2: 302.90 s"></div><div class="vseg oth" style="height:13.1750%" title="Others: 109.30 s"></div></div>
+                  <span class="vtotal">573.80 s</span><span class="vbar-name">Optimized</span>
                 </div>
               </div>
               <div class="vgroup-title">1× DGX Spark (GB10)</div>
@@ -643,16 +651,32 @@ footer p{margin:12px 0}
         </div>
       </div>
       <div class="fcap">
-        All six bars share the same 0–900 s scale. For B200 and RTX 5090, Others is the measured E2E
-        residual after Stage 1 and Stage 2. For DGX Spark, Others totals 109.30 s from latent upsampling,
-        video VAE decoding, and audio decoding; its displayed total is the sum of the reported components.
+        Bar lengths are normalized within each hardware pair to show relative acceleration; * Others includes fixed overhead such as VAE decoding and upsampling.
       </div>
     </div>
 
+    <h3>Stage 2 Optimization — Core Technology: <a href="https://arxiv.org/abs/2607.24027">Sol-Attn</a></h3>
+    <p>
+      At high resolution and long duration, with audio tokens interleaved into the same attention,
+      sequence length dominates the cost. Attention maps in video diffusion are also extremely sparse:
+      most query blocks attend meaningfully to only a small fraction of key blocks. This structure calls
+      for an efficient sparse attention method that reduces computation without a catastrophic loss in quality.
+    </p>
+    <p>
+      <a href="https://arxiv.org/abs/2607.24027">Sol-Attn</a> is training-free and calibration-free. It folds
+      block selection into the online-softmax pass itself, avoiding a separate routing stage:
+    </p>
+    <ul>
+      <li><strong>Query-dependent thresholding.</strong> Instead of a fixed top-<em>k</em> or top-<em>p</em>, each query row derives a threshold from its block proxy-score statistics, <span class="mono">τᵢ = μᵢ + βσᵢ</span>. One β value controls density across layers, steps, and resolutions without learning or offline calibration.</li>
+      <li><strong>On-the-fly routing.</strong> Pooled keys stream chunk-wise and are compared with the threshold during softmax accumulation. No proxy map is materialized, keeping routing overhead low at long sequence lengths.</li>
+      <li><strong>Proxy-score reuse.</strong> Rejected blocks are approximated with a Taylor expansion around the row-wise mean score, recovering probability mass that hard selection discards and preserving quality at high sparsity.</li>
+    </ul>
+
     <div class="refiner-cases">
-      <h3>Dense vs. Schedule Sol-Attn</h3>
+      <h3>Baseline vs. Optimized</h3>
 
       <div class="refiner-example">
+        <div class="refiner-case-heading"><span>B200</span><b>Refiner speedup 1.80× · E2E speedup 1.53×</b></div>
         <p class="cmp-prompt">
           A luxury fragrance commercial opens on an amber perfume bottle over glossy black glass, wrapped
           in golden smoke and warm reflections. The same woman in a burnt-orange satin dress sprays perfume
@@ -661,13 +685,13 @@ footer p{margin:12px 0}
           no text or logos.
         </p>
         <div class="cmp2-row devpair">
-          <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="B200 luxury perfume Dense" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_dense.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_dense.mp4"></video><div class="meta"><span class="t">Dense</span></div></div>
-          <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="B200 luxury perfume Schedule Sol-Attn" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_sol_attn.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_sol_attn.mp4"></video><div class="meta"><span class="t">Schedule Sol-Attn</span></div></div>
+          <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="B200 luxury perfume Baseline" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_dense.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_dense.mp4"></video><div class="meta"><span class="t">Baseline</span></div></div>
+          <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="B200 luxury perfume Optimized" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_sol_attn.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_b200_perfume_sol_attn.mp4"></video><div class="meta"><span class="t">Optimized</span></div></div>
         </div>
-        <div class="refiner-case-caption"><span>B200</span><b>Refiner speedup 1.80×</b></div>
       </div>
 
       <div class="refiner-example">
+        <div class="refiner-case-heading"><span>GeForce RTX 5090</span><b>Refiner speedup 3.09× · E2E speedup 1.90×</b></div>
         <p class="cmp-prompt">
           A desert nomad woman in layered indigo robes leads a calm white horse across a mirror-like salt
           flat after a storm. A low tracking shot arcs toward them as wind moves her veil and the horse's
@@ -676,18 +700,23 @@ footer p{margin:12px 0}
           cinematic realism, one continuous shot, no text.
         </p>
         <div class="cmp2-row devpair">
-          <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="5090 salt-flat white horse Dense" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_dense.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_dense.mp4"></video><div class="meta"><span class="t">Dense</span></div></div>
-          <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="5090 salt-flat white horse Schedule Sol-Attn" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_sol_attn.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_sol_attn.mp4"></video><div class="meta"><span class="t">Schedule Sol-Attn</span></div></div>
+          <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="5090 salt-flat white horse Baseline" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_dense.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_dense.mp4"></video><div class="meta"><span class="t">Baseline</span></div></div>
+          <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="5090 salt-flat white horse Optimized" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_sol_attn.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_5090_salt_horse_sol_attn.mp4"></video><div class="meta"><span class="t">Optimized</span></div></div>
         </div>
-        <div class="refiner-case-caption"><span>5090</span><b>Refiner speedup 3.09×</b></div>
       </div>
 
       <div class="refiner-example">
+        <div class="refiner-case-heading"><span>DGX Spark (GB10)</span><b>Refiner speedup 1.85× · E2E speedup 1.45×</b></div>
+        <p class="cmp-prompt">
+          A product film frames a turntable in a dim room under hard raking light. A slow orbit follows the
+          record reaching speed before hard cuts move to the stylus settling into the lead-in groove, then the
+          arm tracking inward. Brushed aluminium, a matte-black plinth, and one amber indicator remain consistent.
+          Sound: platter motion, needle drop, and surface crackle; no hands, branding, or text.
+        </p>
         <div class="cmp2-row devpair">
-          <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="DGX Spark tonearm Dense" poster="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_dense.jpg" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_dense.mp4"></video><div class="meta"><span class="t">Dense</span></div></div>
-          <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="DGX Spark tonearm Schedule Sol-Attn" poster="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_sol_attn.jpg" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_sol_attn.mp4"></video><div class="meta"><span class="t">Schedule Sol-Attn</span></div></div>
+          <div class="vid live"><video controls autoplay muted loop playsinline preload="metadata" aria-label="DGX Spark tonearm Baseline" poster="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_dense.jpg" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_dense.mp4"></video><div class="meta"><span class="t">Baseline</span></div></div>
+          <div class="vid live ok"><video controls autoplay muted loop playsinline preload="metadata" aria-label="DGX Spark tonearm Optimized" poster="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_sol_attn.jpg" src="https://huggingface.co/datasets/yitongl/ltx25-sol-engine-blog-assets/resolve/main/Sol-Engine/LTX25/blog-assets/ltx/refiner_dgx_spark_tonearm_sol_attn.mp4"></video><div class="meta"><span class="t">Optimized</span></div></div>
         </div>
-        <div class="refiner-case-caption"><span>DGX Spark</span><b>Refiner speedup 1.85×</b></div>
       </div>
     </div>
   </div>
@@ -695,24 +724,27 @@ footer p{margin:12px 0}
 
 <hr class="rule">
 
-<!-- ══════════════════════════════════════ 04 -->
-<section>
+<!-- ══════════════════════════════════════ 05 -->
+<section id="agent-native-auto-optimization">
   <div class="prose">
     <div class="shead">
-      <span class="num">04 — Sol Engine</span>
+      <span class="num">05 — Sol Engine</span>
       <h2>Agent-Native Auto Optimization</h2>
       <p>Three kinds of specificity separate a published method from a deployed model.</p>
     </div>
 
-    <p class="lede">
-      The community already has the toolbox — sparse attention, diffusion caching, kernel fusion — and
-      every method comes with convincing numbers. It also comes with knobs. Any real deployment fixes
-      three things at once: a <strong>specific model</strong>, <strong>specific hardware</strong>, and a
-      <strong>specific configuration</strong> of duration, frame rate, and resolution. A setting tuned
-      under one combination rarely holds under another, so recipes do not transfer directly and each
-      deployment has to be tuned case by case — which is why accelerating a new model has historically
-      taken weeks of hand-tuning rather than an afternoon.
-    </p>
+    <p class="lede">We use Sol Engine to optimize video inference across different hardware and configurations:</p>
+    <ul>
+      <li><strong>Hardware:</strong> NVIDIA DGX Spark, B200, and other GPU platforms.</li>
+      <li><strong>Configurations:</strong> different resolutions and durations, including 4K and 1080p workloads.</li>
+    </ul>
+    <p>For each deployment target, Sol Engine combines:</p>
+    <ul>
+      <li>Parallelism optimization</li>
+      <li>Diffusion cache</li>
+      <li>Kernel fusion</li>
+      <li>Sparse attention</li>
+    </ul>
 
     <p>
       Sol Engine closes that gap by search instead of by hand. It runs one optimization search per
@@ -846,7 +878,7 @@ document.querySelectorAll('.devpair').forEach(function (row) {
   lead.addEventListener('ended', align);
 });
 
-// Highlight only the two top-level directory sections while scrolling.
+// Highlight only the top-level directory section currently in view.
 (function () {
   var links = Array.prototype.slice.call(document.querySelectorAll('[data-directory-section]'));
   var sections = links.map(function (link) {

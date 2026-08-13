@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#070a08" />
+    <meta
+      name="description"
+      content="SANA-Video 2.0 — efficient 720p video generation with hybrid linear attention and Attention Residuals."
+    />
+    <meta property="og:title" content="SANA-Video 2.0" />
+    <meta property="og:description" content="Hybrid Linear Attention with Attention Residuals for Efficient Video Generation." />
+    <title>SANA-Video 2.0 | Efficient Video Generation</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#citation">Skip to citation</a>
+
+    <main>
+      <section class="hero-page intro-scene" id="top" aria-label="SANA-Video 2.0 overview">
+        <div class="hero-stage" data-hero-stage>
+          <div class="intro-reel scene-reel" data-intro-reel></div>
+          <div class="scene-shade" aria-hidden="true"></div>
+          <div class="intro-copy">
+            <div class="intro-headline">
+              <p class="eyebrow">NVIDIA Research · Efficient AI Team &amp; Singapore Lab</p>
+              <h1>SANA-Video <span>2.0</span></h1>
+            </div>
+            <div class="intro-paper">
+              <p class="paper-title">Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
+              <div class="intro-content-swap">
+                <div class="intro-byline">
+                  <p class="authors">
+                    <span>Junsong Chen</span>, <span>Jincheng Yu</span>, <span>Yitong Li</span>,
+                    <span>Shuchen Xue</span>, <span>Haozhe Liu</span>, <span>Jingyu Xin</span>,
+                    <span>Yuyang Zhao</span>, <span>Tian Ye</span>, <span>Zhangjie Wu</span>, <span>Zian Wang</span>,
+                    <span>Daquan Zhou</span>, <span>Ping Luo</span>, <span>Song Han</span>, <span>Enze Xie</span>
+                  </p>
+                  <p class="affiliations"><span>NVIDIA</span></p>
+                  <div class="intro-actions" aria-label="Project links">
+                    <a class="is-featured" href="https://arxiv.org/abs/2607.21553">Paper ↗</a>
+                    <a href="https://github.com/NVlabs/Sana">Code ↗</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="intro-data-dock">
+            <div class="intro-metrics" aria-label="Headline results">
+              <span><b>84.30</b> VBench Total</span>
+              <span><b>13.06s</b> 720p/5s · one H100</span>
+              <span><b>3.2×</b> faster than softmax at 60 s</span>
+              <span><b>120×</b> faster than Wan 2.2 14B</span>
+            </div>
+            <div class="intro-benchmarks" aria-label="Efficiency benchmarks from Figure 1">
+              <section class="benchmark-panel latency-panel" aria-labelledby="latency-title">
+                <header>
+                  <div>
+                    <h2 id="latency-title">One-H100 latency</h2>
+                    <p>720p / 5s · one H100 · 40 steps</p>
+                  </div>
+                  <b class="benchmark-badge">120×</b>
+                </header>
+                <div class="latency-chart" role="img" aria-label="On a logarithmic scale, Wan 2.2 14B takes 1556 seconds, HunyuanVideo 788, LTX-2.3 130, Ours 14B 69.3, and Ours 5B with Sol-Engine 13.06 seconds.">
+                  <div class="latency-axis" aria-hidden="true"><i></i><span>10</span><span>100</span><span>300</span><span>1000</span></div>
+                  <div class="latency-row" style="--bar: 100%"><span>Wan 2.2 14B</span><i></i><b>1556</b></div>
+                  <div class="latency-row optional-mark" style="--bar: 88%"><span>Hunyuan</span><i></i><b>788</b></div>
+                  <div class="latency-row optional-mark" style="--bar: 58%"><span>LTX-2.3</span><i></i><b>130</b></div>
+                  <div class="latency-row ours-mark" style="--bar: 47%"><span>Ours 14B</span><i></i><b>69.3</b></div>
+                  <div class="latency-row ours-mark primary-mark" style="--bar: 22%"><span>Ours 5B + Sol</span><i></i><b>13.06</b></div>
+                </div>
+                <p class="chart-foot"><span>log scale</span><span>seconds ↓</span></p>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="abstract-page" id="abstract" aria-labelledby="abstract-title">
+        <div class="abstract-inner">
+          <div class="abstract-heading">
+            <p class="eyebrow">Paper overview</p>
+            <h2 id="abstract-title">Abstract</h2>
+            <p>Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
+          </div>
+          <p class="abstract-copy">
+            We introduce <strong>SANA-Video 2.0</strong>, a hybrid video diffusion transformer instantiated at 5B and 14B scales under a unified architecture. Designed to generate high-quality video up to 720p on a single GPU, SANA-Video 2.0 matches full-softmax video DiTs in quality while retaining the favorable long-sequence scaling of linear attention. To avoid quadratic attention throughout, <strong>Hybrid Linear-Softmax Attention</strong> combines gated linear attention for O(N)-dominated mixing with periodic gated-softmax anchors at a 3:1 ratio, restoring the full-rank token interactions that pure linear attention lacks. To propagate these refreshed representations across depth, <strong>Block Attention Residuals (AttnRes)</strong> route completed block summaries into later linear layers, enabling anchor-feature reuse and boosting deep-layer effective rank by ~12%. Through from-scratch training, SANA-Video 2.0 learns the complete hybrid directly rather than linearizing pretrained models, with reduced-resolution proxy studies establishing 25% softmax as the optimal quality-efficiency trade-off. With 40-step sampling, SANA-Video 2.0 achieves a VBench score of 84.30 in 13.2s at 480p on a single H100, remaining competitive with far larger softmax video DiTs at a fraction of the latency. Its compiled DiT forward pass is <strong>3.2× faster than a matched full-softmax baseline</strong> at 720p/60s, a gap that expands with video duration. Furthermore, full-stack Sol-Engine optimization (kernel fusion, caching, and sparse attention) accelerates this hardware-friendly backbone by a further <strong>3.58×</strong>, bringing the 5B pipeline to <strong>13.06s at 720p/5s</strong> and making it <strong>120× faster than Wan 2.2-A14B</strong> on one H100. Overall, our hybrid design recovers softmax-level expressiveness at substantially reduced cost, unlocking scalable long, high resolution video generation.
+          </p>
+        </div>
+      </section>
+
+      <section class="story" id="showcase" data-story>
+        <div class="story-stage">
+          <div class="scene-stack" data-scene-stack>
+            <div data-demo-scenes></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="citation-page" id="citation">
+        <div class="citation-inner">
+          <div class="citation-heading">
+            <p class="eyebrow">Paper</p>
+            <h2>SANA-Video 2.0</h2>
+            <p>Hybrid Linear Attention with Attention Residuals for Efficient Video Generation</p>
+            <div class="citation-actions">
+              <a href="https://arxiv.org/abs/2607.21553">Paper ↗</a>
+              <a href="https://github.com/NVlabs/Sana">GitHub ↗</a>
+              <button type="button" data-jump="0">Back to showreel ↑</button>
+            </div>
+          </div>
+
+          <div class="citation-panel">
+            <div class="citation-bar">
+              <span>BibTeX</span>
+              <button type="button" data-copy-citation>Copy</button>
+            </div>
+            <pre><code data-citation>@misc{chen2026sanavideo20hybridlinear,
+  title         = {SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
+  author        = {Junsong Chen and Jincheng Yu and Yitong Li and Shuchen Xue and Haozhe Liu and Jingyu Xin and Yuyang Zhao and Tian Ye and Zhangjie Wu and Zian Wang and Daquan Zhou and Ping Luo and Song Han and Enze Xie},
+  year          = {2026},
+  eprint        = {2607.21553},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  doi           = {10.48550/arXiv.2607.21553},
+  url           = {https://arxiv.org/abs/2607.21553}
+}</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="lightbox" data-lightbox>
+      <button class="lightbox-close" type="button" data-lightbox-close aria-label="Close video">×</button>
+      <div class="lightbox-placeholder" data-lightbox-placeholder>VIDEO SOURCE COMING SOON</div>
+      <video muted loop playsinline controls preload="none" data-lightbox-video></video>
+      <p data-lightbox-caption></p>
+    </dialog>
+
+    <script src="media-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

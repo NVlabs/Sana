@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/png" href="https://www.nvidia.com/favicon.ico">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.5; /* Adjust this value to make the spacing larger */
+            margin: 0;
+            padding: 0;
+            color: black;
+             /* background-image: url('https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/pexels-photo-28821825.jpeg'); Background image */
+            background-size: contain; /* Cover the entire viewport */
+            background-attachment: fixed; /* Fixed background */
+            background-position: center;
+            direction: ltr;
+        }
+        .hero {
+            text-align: center;
+            padding: 50px 0;
+            background-color: #fff;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+        .hero h1 {
+            font-size: 5em;
+            margin: 0.2em 0;
+        }
+        .hero h2 {
+            font-size: 2.8em;
+            margin: 0.2em 0;
+            font-weight: normal;
+            line-height: 1.4; /* Adjust this value to make the spacing larger */
+        }
+        .hero p {
+            font-size: 1.4em;
+            margin-bottom: 1em;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 0.9em;
+            color: white;
+            background-color: black;
+            border-radius: 30px;
+            text-decoration: none;
+        }
+        .button_green {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 0.9em;
+            color: black;
+            background-color: #76b900;
+            border-radius: 30px;
+            text-decoration: none;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #90caf9;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+
+        .badge:hover {
+            transform: translateY(-1px);
+            border-color: #64b5f6;
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.1);
+        }
+
+        .badge.paper {
+            border-color: #ef9a9a;
+        }
+
+        .badge.paper:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        .badge.code {
+            border-color: #90caf9;
+        }
+
+        .badge.code:hover {
+            border-color: #1976d2;
+            color: #1976d2;
+            background: rgba(25, 118, 210, 0.1);
+        }
+
+        .badge.demo {
+            border-color: #a5d6a7;
+            background: transparent;
+            margin-top: 0;
+            text-align: left;
+        }
+
+        .badge.demo:hover {
+            border-color: #388e3c;
+            color: #388e3c;
+            background: rgba(56, 142, 60, 0.1);
+        }
+
+        .badge.nvidia-green {
+            border-color: #76b900;
+        }
+
+        .badge.nvidia-green:hover {
+            border-color: #5a8f00;
+            color: #5a8f00;
+            background: rgba(118, 185, 0, 0.1);
+        }
+
+        .badge-icon {
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+
+        .gallery-container {
+            max-width: 77%; /* Limit the width of the gallery */
+            margin: 0 auto; /* Center the gallery */
+            padding: 20px 0; /* Add some padding on top and bottom */
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr); /* 12 columns grid */
+            grid-auto-rows: 150px; /* Adjust row height */
+            gap: 10px;
+        }
+        .gallery-item {
+            overflow: hidden;
+            /*aspect-ratio: 1/1; !* Keep the aspect ratio of the images *!*/
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer; /* Cursor change on hover */
+            border-radius: 10px; /* Rounded corners */
+            transition: transform 0.3s ease; /* Add smooth transition */
+        }
+        /* Image scaling on hover */
+        .gallery-item img:hover {
+            transform: scale(1.2); /* Scale the image to 1.2 times its original size */
+        }
+        /* Define specific grid item placements */
+        .item1 { grid-column: span 3; grid-row: span 3; } /* Large image */
+        .item2 { grid-column: span 7; grid-row: span 3; } /* Smaller image */
+        .item3 { grid-column: span 2; grid-row: span 3; } /* Horizontal image */
+
+        .item4 { grid-column: span 6; grid-row: span 3; } /* Wide image */
+        .item5 { grid-column: span 4; grid-row: span 3; } /* Wide image */
+        .item6 { grid-column: span 2; grid-row: span 3; } /* Wide image */
+
+        .item7 { grid-column: span 4; grid-row: span 4; } /* Square image */
+        .item8 { grid-column: span 3; grid-row: span 4; } /* Vertical image */
+        .item9 { grid-column: span 2; grid-row: span 4; } /* Vertical image */
+        .item10 { grid-column: span 3; grid-row: span 4; } /* Another larger image */
+
+        .item11 { grid-column: span 2; grid-row: span 3; } /* Another larger image */
+        .item12 { grid-column: span 4; grid-row: span 3; } /* Another larger image */
+        .item13 { grid-column: span 2; grid-row: span 3; } /* Another larger image */
+        .item14 { grid-column: span 4; grid-row: span 3; } /* Another larger image */
+
+        .item15 { grid-column: span 4; grid-row: span 4; } /* Another larger image */
+        .item16 { grid-column: span 4; grid-row: span 4; } /* Another larger image */
+        .item17 { grid-column: span 2; grid-row: span 4; } /* Another larger image */
+        .item18 { grid-column: span 2; grid-row: span 4; } /* Another larger image */
+
+        .item19 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item20 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item21 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item22 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+
+        .item23 { grid-column: span 6; grid-row: span 4; } /* Another larger image */
+        .item24 { grid-column: span 3; grid-row: span 4; } /* Another larger image */
+        .item25 { grid-column: span 3; grid-row: span 4; } /* Another larger image */
+
+        .item26 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item27 { grid-column: span 3; grid-row: span 5; } /* Another larger image */
+        .item28 { grid-column: span 6; grid-row: span 5; } /* Another larger image */
+
+        .item29 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item30 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item31 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+        .item32 { grid-column: span 3; grid-row: span 3; } /* Another larger image */
+
+
+        /* Modal styling */
+        #modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.9); /* Black w/ opacity */
+            justify-content: center; /* Horizontally center the image */
+            flex-direction: column;
+            align-items: center; /* Center align items vertically */
+        }
+        #modal img {
+            margin: auto;
+            display: block;
+            max-width: 77%;
+            max-height: 77%; /* Ensure the image doesn't overflow vertically */
+            object-fit: contain; /* Make sure the aspect ratio is preserved */
+        }
+        #modal-description {
+            color: white;
+            text-align: center;
+            margin-top: 10px; /* Adjust this value to move text closer to the image */
+            font-size: 1.2em;
+        }
+        .description {
+            font-family: Arial, sans-serif;
+            font-style: normal;
+            font-size: 17px;
+            line-height: 1.47;
+            color: #333;
+            /*color: black; !* Text color *!*/
+            letter-spacing: -0.022em;
+            font-weight: 400;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            padding: 20px 0; /* Add vertical padding */
+            text-align: center; /* Center align text */
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 2px 4px 12px #00000054;
+        }
+        .description_noborder {
+            font-family: Arial, sans-serif;
+            font-style: normal;
+            font-size: 17px;
+            line-height: 1.47;
+            color: #333;
+            /*color: black; !* Text color *!*/
+            letter-spacing: -0.022em;
+            font-weight: 400;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            padding: 20px 0; /* Add vertical padding */
+            text-align: center; /* Center align text */
+        }
+        .description-content {
+            /*background-color: rgba(255, 255, 255, 0.1); !* Semi-transparent background inside the section *!*/
+            /*border: 2px solid #555; !* Adding a lighter border *!*/
+            max-width: 65%; /* Limit the width to 80% of the screen */
+            margin: 0 auto; /* Center the content horizontally */
+            padding: 20px; /* Padding inside the border */
+            font-style: normal;
+            border-radius: 18px;
+            /*box-shadow: 2px 4px 12px #00000014;*/
+        }
+        .description-content h2 {
+            display: block;
+            color: black;
+            font-size: 1.5em;
+            line-height: 1.125;
+            letter-spacing: .004em;
+            font-weight: 600;
+            text-align: left; /* Center-align the h2 */
+            margin-block-start: 0.83em;
+            margin-block-end: 0.83em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-style: normal;
+        }
+        .description-content p {
+            font-size: 1.1em;
+            text-align: left; /* Left-align the p */
+            font-weight: normal;
+        }
+        .citation {
+            /*background-color: #333; !* Solid background color that spans the entire width *!*/
+            font-family: Arial, sans-serif;
+            background-color: #fff; /* Solid background color that spans the entire width */
+            color: black;
+            padding: 10px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .citation-content {
+            text-align: left;
+            border-radius: 15px; /* Rounded corners */
+            font-size: 0.8em;
+            max-width: 80%; /* Limit the width to 80% of the screen */
+            margin: 0 auto; /* Center the content horizontally */
+            margin-top: -30px;
+            padding: 0; /* Padding inside the border */
+            background-color: #f5f5f5; /* Semi-transparent background inside the section */
+            overflow-x: auto; /* Horizontal scrolling */
+            overflow-y: hidden; /* Prevent vertical scrolling */
+            white-space: nowrap; /* Prevent line breaks */
+        }
+        .citation-content h2 {
+            font-size: 2em;
+            text-align: left;
+            font-weight: normal;
+        }
+        .citation pre {
+            border-radius: 15px; /* Rounded corners */
+            max-width: 90%; /* Limit the width to 80% of the screen */
+            text-align: left;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            box-shadow: 2px 4px 12px #00000054;
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            margin-top: -20px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+        .footer a {
+            color: dodgerblue;
+            text-decoration: none;
+        }
+        .inserted-image {
+            max-width: 80%;  /* Set the maximum width for the image */
+            height: auto;    /* Ensure the height adjusts automatically to maintain aspect ratio */
+            margin: 30px;  /* Add space above and below the image */
+            margin-top: 10px;
+            display: block;  /* Make sure the image is treated as a block-level element */
+            margin-left: auto; /* Center the image horizontally */
+            margin-right: auto;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px 3px #00000030;
+        }
+        .inserted-image-noshadow {
+            max-width: 30%;  /* Set the maximum width for the image */
+            margin-left: auto; /* Center the image horizontally */
+            margin-right: auto;
+            border-radius: 10px;
+        }
+        .video-container {
+            text-align: center;  /* Center the video horizontally */
+            margin: 20px 0;  /* Add some vertical margin around the video */
+        }
+        video {
+            max-width: 80%;  /* The video will scale to fit the container */
+            height: auto;  /* Maintain the video's aspect ratio */
+            border-radius: 10px;  /* Rounded corners for the video */
+            box-shadow: 2px 2px 10px 3px #00000054;
+        }
+        .logo {
+            color: black;
+            display: flex;
+            justify-content: center;
+            /*justify-content: left;*/
+            align-items: center;
+            text-align: center;
+            gap: 60px;
+        }
+        .logo-sup {
+            position: absolute;
+            top: -5px; /* Adjust this value to position it closer to the top */
+            right: -10px; /* Adjust this value to move it horizontally */
+            font-size: 14px; /* Increase the size of the superscript */
+            color: black; /* Change the color if needed */
+          }
+        /* Image comparison container */
+        .image-comparison-container {
+            background-color: #fff; /* Solid background color that spans the entire width */
+        }
+        .image-comparison-content {
+            position: relative;
+            width: 580px;  /* Adjust the width as needed */
+            height: 402px; /* Adjust the height as needed */
+            overflow: hidden; /* Make sure overflow isn't hiding any part of the images */
+            margin: 0 auto;
+            margin-top: -20px;
+            cursor: ew-resize;
+            border-radius: 10px;
+        }
+        .image-comparison-content img {
+            position: absolute;
+            width: 100%;
+            height: 99%;
+            background-color: #fff;
+            object-fit: contain; /* Use contain to ensure the whole image is visible */
+        }
+        .image-comparison-content .slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: #fff;
+            z-index: 10;
+        }
+        .image-comparison-content .slider-black {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: black;
+            z-index: 10;
+        }
+        .demo {
+            margin-top: -20px;
+            background-color: #fff;
+            text-align: center;
+        }
+        .demo iframe {
+            width: 50%;
+        }
+        .image-comparison-content .image-2 {
+            clip-path: inset(0 0 0 50%);
+        }
+        .image-comparison-content .image-4 {
+            clip-path: inset(0 0 0 50%);
+        }
+        @media (max-width: 4096px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 100px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 200px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 800px;
+            }
+        }
+        @media (max-width: 2048px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 60px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 90px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 800px;
+            }
+        }
+        @media (min-width: 2048px) {
+            .description-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 1024px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 384px; /* Limit the width to 80% of the screen */
+            }
+            video {
+                max-width: 1024px;  /* The video will scale to fit the container */
+            }
+        }
+        @media (max-width: 1024px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 40px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 70px; /* Set a fixed height for the grid items */
+            }
+            .demo iframe {
+                width: 80%;
+            }
+        }
+        @media (min-width: 1024px) {
+            .description-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 728px; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 826px; /* Limit the width to 80% of the screen */
+                padding: 5px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 384px; /* Limit the width to 80% of the screen */
+            }
+            video {
+                max-width: 728px;  /* The video will scale to fit the container */
+            }
+        }
+        @media (max-width: 768px) {
+            .gallery {
+                /*grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); !* Adjust columns for smaller screens *!*/
+                grid-auto-columns: 20px; /* Adjust columns for smaller screens */
+                grid-auto-rows: 30px; /* Set a fixed height for the grid items */
+                gap: 5px;
+            }
+            .gallery-container {
+                max-width: 85%; /* Limit the width of the gallery */
+                padding: 10px 0; /* Add some padding on top and bottom */
+            }
+            .hero h1 {
+                font-size: 3em;
+            }
+            .hero h2 {
+                font-size: 2em;
+            }
+            .hero p {
+                font-size: 1em;
+            }
+            .description-content {
+                max-width: 92%; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .citation-content {
+                max-width: 92%; /* Limit the width to 80% of the screen */
+                padding: 10px; /* Padding inside the border */
+            }
+            .inserted-image {
+                max-width: 95%; /* Limit the width to 80% of the screen */
+                padding: 5px; /* Padding inside the border */
+            }
+            .inserted-image-noshadow {
+                max-width: 50%; /* Limit the width to 80% of the screen */
+                margin-left: auto; /* Center the image horizontally */
+                margin-right: auto;
+            }
+            .image-comparison-content {
+                max-height: 300px; /* Limit the width to 80% of the screen */
+                max-width: 92%;
+            }
+            video {
+                max-width: 92%;  /* The video will scale to fit the container */
+            }
+            .logo {
+                gap: 10px;
+            }
+            .demo iframe {
+                width: 95%;
+            }
+        }
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
+            .description {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description_noborder {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description_noborder h2{
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .description-content h2 {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .citation {
+                background-color: #333; /* Dark color for dark mode */
+                color: white; /* Light text color for dark mode */
+            }
+            .citation-content {
+                background-color: #555; /* Dark color for dark mode */
+            }
+            .citation-content h2 {
+                background-color: #555; /* Dark color for dark mode */
+            }
+            .footer {
+                background-color: #222; /* Dark color for dark mode */
+                color: white;
+            }
+            .image-comparison-container {
+                background-color: #333; /* Dark color for dark mode */
+            }
+            .demo {
+                background-color: #333;
+            }
+        }
+    </style>
+</head>
+<body>
+<!--    <div style="overflow: hidden; background-color: #6699cc;">-->
+<!--      <div class="container">-->
+<!--        <a href="https://www.nvidia.com/" style="float: left; color: black; text-align: center; padding: 12px 16px; text-decoration: none; font-size: 16px;"><img width="100%" src="https://nv-tlabs.github.io/3DStyleNet/assets/nvidia.svg"></a>-->
+<!--        <a href="https://github.com/Efficient-Large-Model/" style="float: left; color: black; text-align: center; padding: 14px 16px; text-decoration: none; font-size: 16px;"><strong>Efficient AI Group</strong></a>-->
+<!--      </div>-->
+<!--    </div>-->
+    <div class="hero">
+        <div style="display: flex; justify-content: center; align-items: center; margin-left: -40px;">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/logo.jpg" alt="Logo" style="width: 50px; height: auto; margin-right: 5px;">
+            <h1 style="margin: 0;">SANA</h1>
+        </div>
+        <h2>Efficient High-Resolution Image Synthesis <br>
+            with Linear Diffusion Transformer</h2>
+        <p>Exploring the Frontiers of Efficient Generative Foundation Models</p>
+        <p>ICLR 2025 Oral Presentation</p>
+
+        <!-- Add author and institution information -->
+        <div style="margin-top: 20px; text-align: center;">
+            <p style="font-size: 1.3em; margin-bottom: 5px;">
+                <a href="https://xieenze.github.io/" target="_blank" style="color: #76b900;">Enze Xie</a><sup>1*</sup>,
+                <a href="https://lawrence-cj.github.io/" target="_blank" style="color: #76b900;">Junsong Chen</a><sup>1*</sup>,
+                <a href="https://scholar.google.com.hk/citations?hl=zh-CN&user=mWdYMZ8AAAAJ" target="_blank" style="color: #76b900;">Junyu Chen</a><sup>2,3</sup>,
+                <a href="https://han-cai.github.io//" target="_blank" style="color: #76b900;">Han Cai</a><sup>1</sup>,
+                <a href="http://kentang.net/" target="_blank" style="color: #76b900;">Haotian Tang</a><sup>2</sup>,<br>
+                <a href="https://yujunlin.com//" target="_blank" style="color: #76b900;">Yujun Lin</a><sup>2</sup>,
+                <a href="https://hanlab.mit.edu/team/zhekai-zhang/" target="_blank" style="color: #76b900;">Zhekai Zhang</a><sup>2</sup>,
+                <a href="https://lmxyy.me//" target="_blank" style="color: #76b900;">Muyang Li</a><sup>2</sup>,
+                <a href="https://lzhu.me//" target="_blank" style="color: #76b900;">Ligeng Zhu</a><sup>1</sup>,
+                <a href="https://scholar.google.com/citations?user=OI7zFmwAAAAJ&hl=en/" target="_blank" style="color: #76b900;">Yao Lu</a><sup>1</sup>,
+                <a href="https://hanlab.mit.edu/songhan/" target="_blank" style="color: #76b900;">Song Han</a><sup>1,2</sup>
+            </p>
+            <p style="font-size: 1.2em; color: #888;">
+                <sup>1</sup>NVIDIA, <sup>2</sup>MIT, <sup>3</sup>Tsinghua University
+                <br>
+                *Project co-lead
+            </p>
+        </div>
+<!--        <div style="overflow: hidden; background-color: #6699cc;">-->
+        <div style="overflow: hidden; background-color: #fff;">
+          <div class="logo" style="padding: 12px;">
+            <a href="https://www.nvidia.com/" style="text-decoration: none; font-size: 16px;">
+              <img src="https://nv-tlabs.github.io/3DStyleNet/assets/nvidia.svg" alt="NVIDIA Logo" style="width: auto; height: 30px;">
+            </a>
+            <a href="https://hanlab.mit.edu/" style="text-decoration: none; font-size: 16px;">
+              <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/mit_han.png" alt="MIT Logo" style="width: auto; height: 30px;">
+            </a>
+            <a href="" style="text-decoration: none; font-size: 16px;">
+              <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/thu.jpg" alt="THU Logo" style="width: auto; height: 40px;">
+            </a>
+          </div>
+        </div>
+
+        <div class="badges">
+            <a href="https://nvlabs.github.io/Sana/docs/" target="_blank" class="badge code">
+                <span class="badge-icon">📖</span>
+                Docs
+            </a>
+            <a href="https://arxiv.org/abs/2410.10629" target="_blank" class="badge paper">
+                <span class="badge-icon">📄</span>
+                Paper
+            </a>
+            <a href="https://github.com/NVlabs/Sana" target="_blank" class="badge code">
+                <span class="badge-icon">💻</span>
+                Code
+            </a>
+            <a href="https://huggingface.co/collections/Efficient-Large-Model/sana-673efba2a57ed99843f11f9e" target="_blank" class="badge code">
+                <span class="badge-icon">🤗</span>
+                Huggingface
+            </a>
+            <a href="https://sana.hanlab.ai/" target="_blank" class="badge demo">
+                <span class="badge-icon">🚀</span>
+                Demo
+            </a>
+            <a href="https://sana.hanlab.ai/4bit/" target="_blank" class="badge demo">
+                <span class="badge-icon">⚡</span>
+                4bit Demo
+            </a>
+            <a href="https://sana.hanlab.ai/ctrlnet/" target="_blank" class="badge demo">
+                <span class="badge-icon">🎮</span>
+                ControlNet Demo
+            </a>
+            <a href="https://replicate.com/chenxwh/sana" target="_blank" class="badge code">
+                <span class="badge-icon">🔗</span>
+                Replicate API
+            </a>
+        </div>
+        <a href="https://nvlabs.github.io/Sana/Sana-1.5/" class="button_green">SANA-1.5</a>
+        <a href="https://nvlabs.github.io/Sana/Sprint/" class="button_green">SANA-Sprint</a>
+        <a href="https://nvlabs.github.io/Sana/Video/" class="button_green">SANA-Video</a>
+        <a href="https://nvlabs.github.io/Sana/WM/" class="button_green">SANA-WM</a>
+        <a href="https://nvlabs.github.io/Sana/Streaming/" class="button_green">SANA-Streaming</a>
+    </div>
+
+    <div class="gallery-container">
+        <section class="gallery" id="gallery">
+        <div class="gallery-item item1"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/28.jpg" alt="Image 1" data-description='a cyberpunk cat with a neon sign that says "SANA"'></div>
+        <div class="gallery-item item2"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/32.webp" alt="Image 2" data-description='create name "SANA" standing in the seaside area with sunrise and flowers the letters is whitesand made, vibrant, graffiti, photo, typography, 3d render'></div>
+        <div class="gallery-item item3"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/44.png" alt="Image 3" data-description='Epic anime artwork of a wizard atop a mountain at night casting a cosmic spell into the dark sky that says "NV" made out of colorful energy'></div>
+
+        <div class="gallery-item item4"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/45-3.png" alt="Image 4" data-description='make me a logo that says "So Fast"  with a really cool flying dragon shape with lightning sparks all over the sides and all of it contains Indonesian language'></div>
+        <div class="gallery-item item5"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/9.jpg" alt="Image 5" data-description="portrait photo of a girl, photograph, highly detailed face, depth of field"></div>
+        <div class="gallery-item item6"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/17-1.webp" alt="Image 10" data-description='a photo of a realistic cat that wears a taewondo uniform, chest protection gear and a helmet is kicking his leg high in a match in a stadium. Cinematic shot.'></div>
+
+        <div class="gallery-item item7"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/40.webp" alt="Image 7" data-description="A alpaca made of colorful building blocks, cyberpunk."></div>
+        <div class="gallery-item item8"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/8-1.webp" alt="Image 8" data-description="portrait of a man with bat robotic head ,wearing Louis Vuitton , horror"></div>
+        <div class="gallery-item item9"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/4.webp" alt="Image 9" data-description='a more or less distant girl, the sunsets over a large beach, clear sky, in the style of experimental film, desert wave, 35mm film, doug aitken, light black and light aquamarine, colorful melancholy, ed mell'></div>
+        <div class="gallery-item item10"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/19.webp" alt="Image 10" data-description='drone photography of the sea'></div>
+
+        <div class="gallery-item item11"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/24.webp" alt="Image 11" data-description='a stunning and luxurious bedroom carved into a rocky mountainside seamlessly blending nature with modern design with a plush earth-toned bed textured stone walls circular fireplace massive uniquely shaped window framing snow-capped mountains dense forests, tranquil mountain retreat offering breathtaking views of alpine landscape wooden floors soft rugs rustic sophisticated charm, cozy tranquil peaceful relaxing perfect escape unwind connect with nature, soothing intimate elegance modern design raw beauty of nature harmonious blend captivating view enchanting inviting space, soft ambient lighting warm hues indirect lighting natural daylight balanced inviting glow'></div>
+        <div class="gallery-item item12"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/7.jpg" alt="Image 12" data-description='Astronaut in a jungle, cold color palette, muted colors, detailed, 8k'></div>
+        <div class="gallery-item item13"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/1.webp" alt="Image 13" data-description='A vintage photograph of the old sailing yacht "Shamrock" with its long, white sails billowing in the wind as it floats on calm waters against an overcast sky. The photo captures the classic design and elegance of traditional racing yachts from early last century.'></div>
+        <div class="gallery-item item14"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/34.webp" alt="Image 14" data-description='a blue Porsche 356 parked in front of a yellow brick wall.'></div>
+
+        <div class="gallery-item item15"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/38.webp" alt="Image 15" data-description='smiling cartoon dog sits at a table, coffee mug on hand, as a room goes up in flames. "Help" the dog is yelling'></div>
+        <div class="gallery-item item16"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/4K-4.webp" alt="Image 16" data-description='Self-portrait oil painting, a beautiful cyborg with golden hair, 8k'></div>
+        <div class="gallery-item item17"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/4K-3.webp" alt="Image 17" data-description='Pirate ship trapped in a cosmic maelstrom nebula, rendered in cosmic beach whirlpool engine, volumetric lighting, spectacular, ambient lights, light pollution, cinematic atmosphere, art nouveau style, illustration art artwork by SenseiJaye, intricate detail.'></div>
+        <div class="gallery-item item18"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/samples/20.webp" alt="Image 18" data-description='photograph of a stunt man walking while on fire dressed as an American politician, 35mm film still from movie directed in the style of Quentin Tarantino'></div>
+
+        <div class="gallery-item item19"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/1.jpeg" alt="Image 19" data-description='A model wearing an orange and blue sweater with a knitted pattern, detailed face, ginger hair color, blue background, shot in the style of Tim Walker'></div>
+        <div class="gallery-item item20"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/2.jpeg" alt="Image 20" data-description='A studio shot of a figure composed of vivid, realistic flames walking in side profile, no face, with flames trailing naturally behind, against an intense red background, #D32F2F. Captured by Helmut Newton, with a Hasselblad H6D and an 80mm f/2.8 lens at f/5.6, 1/125s, ISO 400. The flames are intense and detailed, with a natural, realistic texture that emphasizes the movement. HD quality, natural look'></div>
+        <div class="gallery-item item21"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/17.jpeg" alt="Image 20" data-description='A surreal photograph of a man with his head covered in large, fluffy cotton clouds, sitting in an armchair facing the camera and using an old computer from the early 20th century. The computer has a green screen monitor. He is wearing a pink suit, and the overall scene has a soft, pastel color palette with a retro futuristic, 1970s vibe'></div>
+        <div class="gallery-item item22"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/4.jpeg" alt="Image 22" data-description='highend portrait of a cool ginger cat, high fashion Style with crazy glasses and stylish clothes and luxury necklace of jeweleries, hat consisting of lilies, oranges and lemons, color: dark green and gold, background: dark and luxury, hyper detailled, stil: raw, cinematic light, canon, expressive and original, canon, 50 mm lens, editorial, look: expensive, mood: motivated and good vibes'></div>
+
+        <div class="gallery-item item23"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/10.jpeg" alt="Image 23" data-description='雪山之巅红日东升'></div>
+        <div class="gallery-item item24"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/7.jpg" alt="Image 24" data-description='一只可爱的 🐼 在吃 🎋, 水墨画风格'></div>
+        <div class="gallery-item item25"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/8.jpg" alt="Image 25" data-description='孤舟蓑笠翁'></div>
+
+        <div class="gallery-item item26"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/3.jpeg" alt="Image 25" data-description='a cat floating in a body of water in the pool, Lean back clear and transparent water, light white, and turquoise, y2k aesthetic, soft and dreamy colors, brightly colored, popular Instagram, highlevel of detail, realistic photo feeling'></div>
+        <div class="gallery-item item27"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/16.jpeg" alt="Image 26" data-description='A black cat sits on the ground, facing away from us and casting its shadow in front of it. The silhouette of a majestic lion is projected onto the wall by the light source behind the scene. Black and white photography, soft lighting, high contrast, sharp focus, symmetrical composition, simple background, portrait lens, static posture.'></div>
+        <div class="gallery-item item28"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/2Ksamples/11.jpg" alt="Image 26" data-description='🐶 和 🐱 玩 ⚽'></div>
+
+        <div class="gallery-item item29"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/4Ksamples/1.jpg" alt="Image 27" data-description='A hot air balloon in the shape of a heart. Grand Canyon'></div>
+        <div class="gallery-item item30"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/4Ksamples/2.jpg" alt="Image 28" data-description='a melting apple'></div>
+        <div class="gallery-item item31"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/4Ksamples/3.jpg" alt="Image 29" data-description='A middle-aged woman of Asian descent, her dark hair streaked with silver, appears fractured and splintered, intricately embedded within a sea of broken porcelain. The porcelain glistens with splatter paint patterns in a harmonious blend of glossy and matte blues, greens, oranges, and reds, capturing her dance in a surreal juxtaposition of movement and stillness. Her skin tone, a light hue like the porcelain, adds an almost mystical quality to her form.'></div>
+        <div class="gallery-item item32"><img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/4Ksamples/4.jpeg" alt="Image 30" data-description='Modern luxury contemporary luxury home interiors house, in the style of mimicking ruined materials, ray tracing, haunting houses, and stone, capture the essence of nature, gray and bronze, dynamic outdoor shots.'></div>
+
+
+        </section>
+    </div>
+
+    <!-- The Modal -->
+    <div id="modal" onclick="this.style.display='none'">
+      <img id="modal-img" src="">
+      <div id="modal-description"></div> <!-- Text for description -->
+    </div>
+
+    <section class="description">
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/SANA.png" alt="Sana-logo" class="inserted-image-noshadow">
+        </div>
+
+        <div class="description-content">
+          <h2>About Sana</h2>
+          <p>We introduce Sana, a text-to-image framework that can efficiently generate images up to 4096 × 4096 resolution.
+                    Sana can synthesize high-resolution, high-quality images with strong text-image alignment at a remarkably fast speed,
+                    deployable on laptop GPU. Core designs include:
+                    <strong style="font-size: 18px;">Deep compression autoencoder: </strong> unlike traditional AEs, which compress images only 8×,
+                        we trained an AE that can compress images 32×, effectively reducing the number of latent tokens.
+                    <strong style="font-size: 18px;">Linear DiT: </strong> we replace all vanilla attention in DiT with linear attention, which is more efficient at high resolutions without sacrificing quality.
+                    <strong style="font-size: 18px;">Decoder-only text encoder: </strong> we replaced T5 with modern decoder-only small LLM as the text encoder and designed
+                        complex human instruction with in-context learning to enhance the image-text alignment.
+                    <strong style="font-size: 18px;">Efficient training and sampling: </strong> we propose Flow-DPM-Solver to reduce sampling steps,
+                        with efficient caption labeling and selection to accelerate convergence.<br>
+                    As a result, Sana-0.6B is very competitive with modern giant diffusion model (e.g. Flux-12B),
+                    being 20 times smaller and 100+ times faster in measured throughput.
+                    Moreover, Sana-0.6B can be deployed on a 16GB laptop GPU, taking less than 1 second to generate a 1024 × 1024 resolution image.
+                    Sana enables content creation at low cost.</p>
+        </div>
+
+        <!-- Insert your image here -->
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/latency_compare.jpg" alt="latency comparison with SOTA methods"
+                 class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <h2>Several Core Design Details for Efficiency</h2>
+          <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;  <strong style="font-size: 18px;">Deep Compression Autoencoder: </strong>
+              We introduce a new
+              <a rel="license" href="https://hanlab.mit.edu/projects/dc-ae" target="_blank" style="color: darkred; font-weight: bold">Deep Compression Autoencoder (DC-AE)</a> that aggressively increases the scaling factor to 32.
+              Compared with AE-F8, our AE-F32 outputs 16× fewer latent tokens, which is crucial for efficient training
+              and generating ultra-high-resolution images, such as 4K resolution.<br>
+          </p>
+        </div>
+    </section>
+
+    <section class="image-comparison-container">
+        <div class="image-comparison-content">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/ae/4_img_vae_junyu.jpg" alt="Image 1" class="image-1"/>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/ae/4_img_origin.jpg" alt="Image 2" class="image-2"/>
+            <div class="slider"></div>
+        </div>
+    </section>
+
+<!--    <section class="image-comparison-container">-->
+<!--        <div class="image-comparison-content">-->
+<!--            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/ae/3_img_vae_junyu.png" alt="Image 3" class="image-3"/>-->
+<!--            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/ae/3_img_origin.png" alt="Image 4" class="image-4"/>-->
+<!--            <div class="slider-black"></div>-->
+<!--        </div>-->
+<!--    </section>-->
+
+    <section class="description_noborder">
+        <div class="description-content">
+          <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Efficient Linear DiT: </strong>
+              We introduce a new linear DiT, replacing vanilla quadratic attention and reducing complexity from O(N<span style="font-size: 0.8em;"><sup>2</sup></span>) to O(N)
+              Mix-FFN, with 3×3 depth-wise convolution in MLP, enhances the local information of tokens.
+              Linear attention achieves comparable results to vanilla, improving 4K generation by 1.7× in latency.
+              Mix-FFN also removes the need for positional encoding (NoPE) without quality loss, marking the first DiT without positional embedding.<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Decoder-only Small LLM as Text Encoder: </strong>
+              We use Gemma, a decoder-only LLM, as the text encoder to enhance understanding and reasoning in prompts.
+              Unlike CLIP or T5, Gemma offers superior text comprehension and instruction-following.
+              We address training instability and design complex human instructions (CHI) to leverage Gemma’s in-context learning,
+              improving image-text alignment.<br>
+          </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/model-incremental.jpg" alt="pipeline for Sana" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+            <p>
+              &nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp; <strong style="font-size: 18px;">Efficient Training and Inference Strategy: </strong>
+              We propose automatic labeling and training strategies to improve text-image consistency.
+              Multiple VLMs generate diverse re-captions, and a CLIPScore-based strategy selects high-CLIPScore captions to enhance convergence and alignment.
+              Additionally, our <strong style="font-size: 1.05em;">Flow-DPM-Solver</strong> reduces inference steps from 28-50 to 14-20 compared to the Flow-Euler-Solver, with better performance.
+            </p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/sampler.jpg" alt="flow-dpms vs flow-euler" class="inserted-image">
+        </div>
+
+        <div class="description-content">
+          <h2>Overall Performance</h2>
+            <p>We compare Sana with the most advanced text-to-image diffusion models in Table 1. For 512 × 512 resolution,
+                Sana-0.6 demonstrates a throughput that is 5× faster than PixArt-Σ, which has a similar model size,
+                and significantly outperforms it in FID, Clip Score, GenEval, and DPG-Bench. For 1024 × 1024 resolution,
+                Sana is considerably stronger than most models with <3B parameters and excels in inference latency.
+                Our models achieve competitive performance even when compared to the most advanced large model FLUX-dev.
+                For instance, while the accuracy on DPG-Bench is equivalent and slightly lower on GenEval,
+                Sana-0.6B’s throughput is 39× faster, and Sana-1.6B is 23× faster.</p>
+        </div>
+
+        <div>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/performance.jpg" alt="Sana performance" class="inserted-image">
+        </div>
+
+        <!-- Video Section -->
+        <div class="description-content">
+            <h2>Sana-0.6B is Deployable on Laptop GPU</h2>
+        </div>
+        <div class="video-container">
+            <video controls autoplay muted loop>
+                <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/video/demo-final.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <!-- End Video Section -->
+
+        <div class="description-content">
+          <h2>ComfyUI Usage</h2>
+            <p> We’ve developed a
+                <a rel="license" href="https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels" target="_blank" style="color: dodgerblue">
+                    plugin
+                </a>
+                to integrate Sana with ComfyUI. For guidance and sample workflows, please refer to the
+                 <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/ComfyUI/comfyui.md" target="_blank" style="color: dodgerblue">
+                    Sana GitHub
+                </a>.
+                Special thanks to
+                <a rel="license" href="https://github.com/city96/ComfyUI_ExtraModels" target="_blank" style="color: dodgerblue">
+                    city96/ComfyUI_ExtraModels
+                </a> for their open-source contributions.
+            </p>
+        </div>
+
+        <figure>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/comfyui/sana.jpg" alt="Sana-comfyUI workflow" class="inserted-image">
+            <figcaption>
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/ComfyUI/comfyui.md" target="_blank" style="color: dodgerblue">
+                    Sana workflow in ComfyUI
+                </a>
+            </figcaption>
+        </figure>
+
+        <!-- Video Section -->
+        <figure class="video-container">
+            <video controls autoplay muted loop>
+                <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/comfyui/Sana_CogVideoX_Fun.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <figcaption>
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/ComfyUI/comfyui.md" target="_blank" style="color: dodgerblue">
+                    Sana + CogVideoX workflow in ComfyUI
+                </a>
+            </figcaption>
+        </figure>
+        <!-- End Video Section -->
+
+        <div class="description-content">
+          <h2>Sana-LoRA Dreambooth</h2>
+            <p> Sana-LoRA is support by 🧨diffusers. Check the our
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/sana_lora_dreambooth.md" target="_blank" style="color: dodgerblue">
+                     guidance
+                </a>
+                to train your customized models. Original diffusers doc is
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/sana_lora_dreambooth.md" target="_blank" style="color: dodgerblue">
+                    here
+                </a>.
+                We show some samples during Sana-LoRA fine-tuning process below.
+            </p>
+        </div>
+
+        <figure>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/dreambooth/step0.jpg" alt="Sana-comfyUI workflow" class="inserted-image">
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/dreambooth/step500.jpg" alt="Sana-comfyUI workflow" class="inserted-image">
+            <figcaption>
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/sana_lora_dreambooth.md" target="_blank" style="color: dodgerblue">
+                    Sana-LoRA training samples from 0 to 500 steps
+                </a>
+            </figcaption>
+        </figure>
+
+        <div class="description-content">
+          <h2>Sana ControlNet</h2>
+            <p>
+            We implement a ControlNet-Transformer architecture,
+                specifically tailored for Transformers, achieving explicit controllability alongside high-quality image generation.
+                Try our
+                <a rel="license" href="https://sana.hanlab.ai/ctrlnet/" target="_blank" style="color: dodgerblue">
+                    Demo
+                </a>.
+            </p>
+        </div>
+
+        <figure>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/controlnet/sana_controlnet.jpg" alt="Sana-controlnet model" class="inserted-image">
+            <figcaption>
+                <a rel="license" href="https://github.com/NVlabs/Sana/blob/main/asset/docs/sana_controlnet.md" target="_blank" style="color: dodgerblue">
+                    Sana-ControlNet architecture
+                </a>
+            </figcaption>
+        </figure>
+
+        <figure>
+            <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/content/controlnet/controlnet_app.jpg" alt="Sana-controlnet model" class="inserted-image">
+            <figcaption>
+                <a rel="license" href="https://sana.hanlab.ai/ctrlnet/" target="_blank" style="color: dodgerblue">
+                    Sana-ControlNet online demo
+                </a>
+            </figcaption>
+        </figure>
+
+        <div class="description-content">
+            <h2>Our Mission</h2>
+            <p>Our mission is to develop <strong>efficient, lightweight, and accelerated</strong>
+                AI technologies that address practical challenges and deliver fast, open-source solutions.</p>
+        </div>
+
+        <!--BibTex citation -->
+        <div class="description-content">
+            <h2 class="title">BibTeX</h2>
+        </div>
+        <section class="citation" id="BibTeX">
+            <div class="citation-content">
+                <pre><code>@misc{xie2024sana,
+      title={Sana: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer},
+      author={Enze Xie and Junsong Chen and Junyu Chen and Han Cai and Haotian Tang and Yujun Lin and Zhekai Zhang and Muyang Li and Ligeng Zhu and Yao Lu and Song Han},
+      year={2024},
+      eprint={2410.10629},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2410.10629},
+    }</code></pre>
+            </div>
+        </section>
+
+    </section>
+    <!--End BibTex citation -->
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-8">
+                    <div class="content">
+                        <p>
+                            This website is licensed under a <a
+                                rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+                                Commons Attribution-ShareAlike 4.0 International License</a>.
+                        </p>
+                        <span id="busuanzi_container_site_pv">Total clicks: <span id="busuanzi_value_site_pv"></span></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- End Footer -->
+
+    <script>
+      // Function to open the modal and display the clicked image and description
+      function openModal(img) {
+          var modal = document.getElementById("modal");
+          var modalImg = document.getElementById("modal-img");
+          var modalDescription = document.getElementById("modal-description");
+
+          modal.style.display = "flex";
+          modalImg.src = img.src;
+          modalDescription.textContent = img.getAttribute('data-description'); // Get description from data-description attribute
+      }
+
+      // Add click event listeners to all images in the gallery with their descriptions
+      const images = document.querySelectorAll('.gallery-item img');
+      images.forEach((img) => {
+        img.addEventListener('click', () => openModal(img));
+      });
+    </script>
+
+    <script>
+        const container = document.querySelector('.image-comparison-content');
+        const slider = document.querySelector('.slider');
+        // const slider_black = document.querySelector('.slider-black');
+        const image2 = document.querySelector('.image-2');
+        // const image4 = document.querySelector('.image-4');
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            let xPos = e.clientX - rect.left;
+
+            if (xPos < 0) xPos = 0;
+            if (xPos > rect.width) xPos = rect.width;
+
+            const percentage = (xPos / rect.width) * 100;
+
+            slider.style.left = `${percentage}%`;
+            // slider_black.style.left = `${percentage}%`;
+            image2.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+            // image4.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+        });
+    </script>
+</body>
+</html>

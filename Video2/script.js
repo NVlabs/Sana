@@ -57,6 +57,7 @@
       });
 
       const t2vItems = itemsFor("t2v");
+      config.intro = t2vItems;
       const cinematicSamples = new Set(curated.cinematicSamples || []);
       const motionSamples = new Set(curated.motionSamples || []);
       const cinematicSection = config.sections.find(section => section.id === "cinematic");
@@ -282,6 +283,7 @@
     const demoHost = document.querySelector("[data-demo-scenes]");
     const introEntries = [];
     const demoEntries = [];
+    introReel.style.setProperty("--intro-columns", String(config.introColumns || 5));
 
     [0, 1].forEach(repeatIndex => {
       const set = document.createElement("div");

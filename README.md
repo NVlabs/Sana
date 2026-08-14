@@ -59,13 +59,13 @@ support a wider range of models.
 |---|---|---|
 | [[weight](https://huggingface.co/nvidia/Cosmos3-Super) \| [code](models/)] **Cosmos3-Super** | TeaCache + step-selective NVFP4 | **~2.27×** |
 | [[weight](https://huggingface.co/Lightricks/LTX-2.3) \| [code](models/)] **LTX-2.3** | kernel fusion + cache + PISA + NVFP4 + token-prune | **~2.38×** |
-| [[weight](https://huggingface.co/Lightricks/LTX-2.5-Pre-Trained) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] **LTX-2.5** | multi-step: parallel optimization + FBCache + kernel fusion; distilled: Sol-Attn | **up to 4.68× / 1.90×** |
 | [[weight](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_diffusers) \| [code](models/sana_video/)] **SANA-Video** | EasyCache + kernel fusion + compile | **~2.77×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) \| [code](models/wan22_ti2v_5b/)] **Wan2.2 TI2V-5B** | EasyCache + kernel fusion + compile | **~2.89×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) \| [code](models/wan22_t2v_a14b/)] **Wan2.2-A14B** | kernel fusion + EasyCache + PISA | **~2.17×** |
 | [[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) \| [code](models/lingbot_video/)] **LingBot-Video** | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
 | [[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) \| [code](models/hunyuan_video/)] **HunyuanVideo-13B** | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) \| [code](models/wan21_t2v_14b/)] **Wan2.1-T2V-14B** | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
+| [[weight](https://huggingface.co/Lightricks/LTX-2.5-Pre-Trained) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] **LTX-2.5** | multi-step: parallel optimization + FBCache + kernel fusion; distilled: Sol-Attn | **up to 4.68× / 1.90×** |
 | [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.55×–4.52×** |
 
 </div>

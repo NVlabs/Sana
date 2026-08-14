@@ -27,6 +27,12 @@
   <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=HF Demo&message=Sprint&color=green" alt="HF Sprint"></a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/NVlabs/Sana/tree/sol-engine">
+    <img src="images/sol-engine-branch-banner.svg" width="100%" alt="Open the Sol-Engine inference engine branch">
+  </a>
+</p>
+
 ______________________________________________________________________
 
 ## Introduction

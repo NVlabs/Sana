@@ -1,0 +1,40 @@
+schema_version = 1
+id = "ltx25"
+display_name = "LTX-2.5 public 22B two-stage T2V on 4xGB200"
+contract_kind = "model_baseline_minimal_copy"
+
+[baseline]
+manifest = "models/ltx25/GB200/dense.toml"
+runtime_root = "models/ltx25/GB200"
+description = "Four-GB200 public LTX-2.5 dense control: Stage 1 vendor sequence parallelism, Stage 2 2x2 tiled data parallelism, distributed VAE, no cache, no compile, no sparse attention."
+
+[baseline.copy]
+paths_are_repo_relative = true
+include = [
+  "models/ltx25/**",
+  "scripts/run.py",
+  "scripts/launch_config.py",
+  "scripts/collect_run.py"
+]
+exclude = [
+  ".git/**",
+  ".venv/**",
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "runs/**",
+  "output/**"
+]
+
+[[baseline.reference_only]]
+name = "ltx25_public_weights"
+path = "/lustre/fsw/portfolios/nvr/users/yitongl/pretrained_models/LTX-2.5-public"
+repo_type = "model"
+reason = "Public BF16 transformer, Gemma4 projection encoder, video/audio VAEs, x2 spatial upsampler, and distilled LoRA; shared read-only and never copied into an experiment."
+
+[experiment_defaults]
+worktree_mode = "model_baseline_minimal_copy"
+experiments_root = "output/experiments"
+state_dir = "state"
+runs_dir = "runs"
+logs_dir = "logs"
+caches = ["tmp", "triton", "torchinductor", "cuda"]

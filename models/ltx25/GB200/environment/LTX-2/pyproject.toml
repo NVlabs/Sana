@@ -1,0 +1,85 @@
+[tool.uv.sources]
+ltx-core = { workspace = true }
+ltx-pipelines = { workspace = true }
+ltx-kernels = { path = "packages/ltx-kernels", editable = true }
+
+[tool.uv]
+no-build-isolation-package = ["ltx-kernels"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+# ltx-kernels compiles CUDA extensions; keep it out of the workspace so a plain
+# `uv sync` never forces a CUDA toolchain. Opt in via the `kernels` group below.
+exclude = ["packages/ltx-kernels"]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[dependency-groups]
+dev = [
+    "google-cloud-storage>=2.0",
+    "matplotlib>=3.7",
+    "pre-commit>=4.3.0",
+    "ruff>=0.14.3",
+    "pytest~=9.0",
+]
+# Opt-in compiled CUDA kernels (blockwise FP8/FP6 GEMM + multi-GPU all2all), built
+# editable from packages/ltx-kernels without build isolation (torch must already be
+# installed), CUDA host required. Install with `uv sync --group kernels`.
+kernels = ["ltx-kernels"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+exclude = [
+    # Vendored kernel sources, excluded from our lint/format rules.
+    "packages/ltx-kernels/src/ltx_kernels/blockwise/functional.py",
+    "packages/ltx-kernels/src/ltx_kernels/blockwise/linear.py",
+    "packages/ltx-kernels/src/ltx_kernels/blockwise/triton_ops.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # pyflakes
+    "W", # pycodestyle (warnings)
+    "I", # isort
+    "N", # pep8-naming
+    "ANN", # flake8-annotations
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "COM", # flake8-commas
+    "C4", # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "EXE", # flake8-executable
+    "PIE", # flake8-pie
+    "T20", # flake8-print
+    "PT", # flake8-pytest
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "PTH", # flake8--use-pathlib
+    "ERA", # flake8-eradicate
+    "RUF", # ruff specific rules
+    "PL", # pylint
+]
+ignore = [
+    "ANN002", # Missing type annotation for *args
+    "ANN003", # Missing type annotation for **kwargs
+    "ANN204", # Missing type annotation for special method
+    "COM812", # Missing trailing comma
+    "PTH123", # `open()` should be replaced by `Path.open()`
+    "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
+    "N812", # Lowercase  imported as non-lowercase
+]
+
+[tool.ruff.lint.per-file-ignores]
+# CI gates: stand-alone CLIs whose whole job is printing a report / GitHub annotations.
+".github/actions/test-collection-completeness/check_test_collection.py" = ["T201"]
+".github/actions/golden-pairing-gate/check_golden_pairing.py" = ["T201"]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+
+[tool.ruff.lint.isort]
+known-first-party = ["ltx_core", "ltx_pipelines", "ltx_trainer"]

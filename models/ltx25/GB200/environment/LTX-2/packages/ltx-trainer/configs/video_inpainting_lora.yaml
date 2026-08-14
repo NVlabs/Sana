@@ -1,0 +1,369 @@
+# =============================================================================
+# LTX-2 Video Inpainting LoRA Training Configuration
+# =============================================================================
+#
+# This configuration is for training LoRA adapters on the LTX-2 model for
+# video inpainting. The model learns to fill in masked regions of a video
+# using per-sample binary masks that define which regions are conditioning
+# (provided clean) and which regions the model must generate.
+#
+# Mask conditioning works by loading per-sample binary masks from disk.
+# Masked regions receive clean latents (no noise, timestep=0) and are excluded
+# from the loss. Unmasked regions are noised and trained normally.
+#
+# Use this configuration when you want to:
+#   - Train the model to fill in or replace regions of existing videos
+#   - Fine-tune video inpainting capabilities on custom datasets
+#   - Create object removal or region editing models
+#
+# Dataset structure:
+#   preprocessed_data_root/
+#   ├── latents/        # Video latents (VAE-encoded videos)
+#   ├── conditions/     # Text embeddings for each video
+#   └── video_masks/    # Per-sample binary masks defining conditioning regions
+#
+# Dataset metadata columns: video, video_mask, caption
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Configuration
+# -----------------------------------------------------------------------------
+# Specifies the base model to fine-tune and the training mode.
+model:
+  # Path to the LTX-2 model checkpoint (.safetensors file)
+  # This should be a local path to your downloaded model
+  model_path: "path/to/ltx-2-model.safetensors"
+
+  # Path to the text encoder model directory
+  # For LTX-2, this is typically the Gemma-based text encoder
+  text_encoder_path: "path/to/gemma-text-encoder"
+
+  # Training mode: "lora" for efficient adapter training, "full" for full fine-tuning
+  # LoRA is recommended for most use cases (faster, less memory, prevents overfitting)
+  training_mode: "lora"
+
+  # Optional: Path to resume training from a checkpoint
+  # Can be a checkpoint file (.safetensors) or directory (uses latest checkpoint)
+  load_checkpoint: null
+
+# -----------------------------------------------------------------------------
+# LoRA Configuration
+# -----------------------------------------------------------------------------
+# Controls the Low-Rank Adaptation parameters for efficient fine-tuning.
+lora:
+  # Rank of the LoRA matrices (higher = more capacity but more parameters)
+  # Typical values: 8, 16, 32, 64. Start with 32 for general fine-tuning.
+  rank: 32
+
+  # Alpha scaling factor (usually set equal to rank)
+  # The effective scaling is alpha/rank, so alpha=rank means scaling of 1.0
+  alpha: 32
+
+  # Dropout probability for LoRA layers (0.0 = no dropout)
+  # Can help with regularization if overfitting occurs
+  dropout: 0.0
+
+  # Which transformer modules to apply LoRA to
+  # The LTX-2 transformer has separate attention and FFN blocks for video and audio:
+  #
+  # VIDEO MODULES:
+  #   - attn1.to_k, attn1.to_q, attn1.to_v, attn1.to_out.0  (video self-attention)
+  #   - attn2.to_k, attn2.to_q, attn2.to_v, attn2.to_out.0  (video cross-attention to text)
+  #   - ff.net.0.proj, ff.net.2                             (video feed-forward)
+  #
+  # AUDIO MODULES:
+  #   - audio_attn1.to_k, audio_attn1.to_q, audio_attn1.to_v, audio_attn1.to_out.0  (audio self-attention)
+  #   - audio_attn2.to_k, audio_attn2.to_q, audio_attn2.to_v, audio_attn2.to_out.0  (audio cross-attention to text)
+  #   - audio_ff.net.0.proj, audio_ff.net.2                                         (audio feed-forward)
+  #
+  # AUDIO-VIDEO CROSS-ATTENTION MODULES (for cross-modal interaction):
+  #   - audio_to_video_attn.to_k, audio_to_video_attn.to_q, audio_to_video_attn.to_v, audio_to_video_attn.to_out.0
+  #       (Q from video, K/V from audio - allows video to attend to audio features)
+  #   - video_to_audio_attn.to_k, video_to_audio_attn.to_q, video_to_audio_attn.to_v, video_to_audio_attn.to_out.0
+  #       (Q from audio, K/V from video - allows audio to attend to video features)
+  #
+  # This is a video-only config, so explicitly target video attention modules.
+  target_modules:
+    - "attn1.to_k"
+    - "attn1.to_q"
+    - "attn1.to_v"
+    - "attn1.to_out.0"
+    - "attn2.to_k"
+    - "attn2.to_q"
+    - "attn2.to_v"
+    - "attn2.to_out.0"
+    # Uncomment below to also train feed-forward layers (can increase the LoRA's capacity):
+    # - "ff.net.0.proj"
+    # - "ff.net.2"
+
+# -----------------------------------------------------------------------------
+# Training Strategy Configuration
+# -----------------------------------------------------------------------------
+# Defines the video inpainting training approach using the unified flexible
+# strategy. Per-sample binary masks define which regions are provided as clean
+# conditioning and which regions the model must learn to generate.
+training_strategy:
+  # Strategy name: "flexible" for the unified conditioning framework
+  # Supports all training modes (T2V, I2V, V2V, A2V, V2A, etc.) through
+  # modality-specific configuration blocks.
+  name: "flexible"
+
+  # Video modality configuration
+  video:
+    # Whether the model generates video (true) or uses it as frozen conditioning (false)
+    is_generated: true
+    # Directory name (within preprocessed_data_root) containing video latents
+    latents_dir: "latents"
+
+    # Conditions applied to the video modality during training
+    # Mask conditioning: per-sample binary masks loaded from disk define which
+    # tokens are conditioning (clean, timestep=0, no loss) vs generated
+    conditions:
+      - type: mask
+        # Directory name (within preprocessed_data_root) containing binary masks
+        # Each mask file corresponds to a training sample and defines the
+        # conditioning region (mask=1 means conditioning, mask=0 means generate)
+        mask_dir: "video_masks"
+        # Probability of applying mask conditioning per training sample
+        # At 1.0, all training samples use inpainting mode
+        probability: 1.0
+
+# -----------------------------------------------------------------------------
+# Optimization Configuration
+# -----------------------------------------------------------------------------
+# Controls the training optimization parameters.
+optimization:
+  # Learning rate for the optimizer
+  # Typical range for LoRA: 1e-5 to 1e-4
+  learning_rate: 1e-4
+
+  # Total number of training steps
+  steps: 2000
+
+  # Batch size per GPU
+  # Reduce if running out of memory
+  batch_size: 1
+
+  # Number of gradient accumulation steps
+  # Effective batch size = batch_size * gradient_accumulation_steps * num_gpus
+  gradient_accumulation_steps: 1
+
+  # Maximum gradient norm for clipping (helps training stability)
+  max_grad_norm: 1.0
+
+  # Optimizer type: "adamw" (standard) or "adamw8bit" (memory-efficient)
+  optimizer_type: "adamw"
+
+  # Learning rate scheduler type
+  # Options: "constant", "linear", "cosine", "cosine_with_restarts", "polynomial"
+  scheduler_type: "linear"
+
+  # Additional scheduler parameters (depends on scheduler_type)
+  scheduler_params: { }
+
+  # Enable gradient checkpointing to reduce memory usage
+  # Recommended for training with limited GPU memory
+  enable_gradient_checkpointing: true
+
+# -----------------------------------------------------------------------------
+# Acceleration Configuration
+# -----------------------------------------------------------------------------
+# Hardware acceleration and memory optimization settings.
+acceleration:
+  # Mixed precision training mode
+  # Options: "no" (fp32), "fp16" (half precision), "bf16" (bfloat16, recommended)
+  mixed_precision_mode: "bf16"
+
+  # Model quantization for reduced memory usage
+  # Options: null (none), "int8-quanto", "int4-quanto", "int2-quanto", "fp8-quanto", "fp8uz-quanto"
+  quantization: null
+
+  # Load text encoder in 8-bit precision to save memory
+  # Useful when GPU memory is limited
+  load_text_encoder_in_8bit: false
+
+  # Offload optimizer state to CPU during validation video sampling and restore it after.
+  # Frees VRAM for the VAE decoder when optimizer state is large (full fine-tune, high-rank
+  # LoRA). No effect under FSDP (sharded state).
+  offload_optimizer_during_validation: false
+
+
+# -----------------------------------------------------------------------------
+# Data Configuration
+# -----------------------------------------------------------------------------
+# Specifies the training data location and loading parameters.
+data:
+  # Root directory containing preprocessed training data
+  # Should contain: latents/, conditions/, and video_masks/
+  preprocessed_data_root: "/path/to/preprocessed/data"
+
+  # Number of worker processes for data loading
+  # Used for parallel data loading to speed up data loading
+  num_dataloader_workers: 2
+
+# -----------------------------------------------------------------------------
+# Validation Configuration
+# -----------------------------------------------------------------------------
+# Controls validation sampling during training.
+# NOTE: Validation sampling use simplified inference pipelines and prioritizes speed over
+# maximum quality. For production-quality inference, use `packages/ltx-pipelines`.
+validation:
+  # Validation samples — each sample describes a self-contained generation request.
+  # Use 'conditions' to add conditioning (first_frame, prefix, suffix, reference, video_to_audio, etc.)
+  # See docs/configuration-reference.md#validation-condition-types for the full list of condition types.
+  samples:
+    - prompt: >-
+        A woman with long brown hair sits at a wooden desk in a cozy home office, typing on a
+        laptop while occasionally glancing at notes beside her. Soft natural light streams through
+        a large window, casting warm shadows across the room. She pauses to take a sip from a
+        ceramic mug, then continues working with focused concentration.
+      conditions:
+        - type: mask
+          video: "/path/to/inpainting_video_1.mp4"
+          mask: "/path/to/inpainting_mask_1.mp4"
+    - prompt: >-
+        A chef in a white uniform stands in a professional kitchen, carefully plating a gourmet
+        dish with precise movements. Steam rises from freshly cooked vegetables as he arranges
+        them with tweezers. The stainless steel surfaces gleam under bright overhead lights, and
+        various pots simmer on the stove behind him.
+      conditions:
+        - type: mask
+          video: "/path/to/inpainting_video_2.mp4"
+          mask: "/path/to/inpainting_mask_2.mp4"
+
+  # Negative prompt to avoid unwanted artifacts
+  negative_prompt: >-
+    blurry, out of focus, overexposed, underexposed, low contrast, washed out colors, excessive noise,
+    grainy texture, poor lighting, flickering, motion blur, distorted proportions, unnatural skin tones,
+    deformed facial features, asymmetrical face, missing facial features, extra limbs, disfigured hands,
+    wrong hand count, artifacts around text, inconsistent perspective, camera shake, incorrect depth of
+    field, background too sharp, background clutter, distracting reflections, harsh shadows, inconsistent
+    lighting direction, color banding, cartoonish rendering, 3D CGI look, unrealistic materials, uncanny
+    valley effect, incorrect ethnicity, wrong gender, exaggerated expressions, wrong gaze direction,
+    mismatched lip sync, silent or muted audio, distorted voice, robotic voice, echo, background noise,
+    off-sync audio, incorrect dialogue, added dialogue, repetitive speech, jittery movement, awkward
+    pauses, incorrect timing, unnatural transitions, inconsistent framing, tilted camera, flat lighting,
+    inconsistent tone, cinematic oversaturation, stylized filters, or AI artifacts.
+
+  # Output video dimensions [width, height, frames]
+  # Width and height must be divisible by the VAE spatial factor (32 for the default VAE).
+  # Frames must satisfy frames % T == 1, where T is the VAE temporal factor
+  # (8 for the default VAE, i.e. 1, 9, 17, 25, ...).
+  video_dims: [ 960, 544, 89 ]
+
+  # Frame rate for generated videos
+  frame_rate: 24.0
+
+  # Random seed for reproducible validation outputs
+  seed: 42
+
+  # Number of denoising steps for validation inference
+  # Higher values = better quality but slower generation
+  inference_steps: 30
+
+  # Generate validation videos every N training steps
+  # Set to null to disable validation during training
+  interval: 100
+
+  # Video CFG scale for validation sampling
+  video_cfg_scale: 3.0
+
+  # Audio CFG scale for validation sampling
+  audio_cfg_scale: 7.0
+
+  # Video STG scale; set to 0.0 to disable video STG
+  video_stg_scale: 1.0
+
+  # Audio STG scale; set to 0.0 to disable audio STG
+  audio_stg_scale: 1.0
+
+  # Transformer blocks perturbed for STG
+  stg_blocks: [28]
+
+  # Guidance variance rescale; set to 0.0 to disable
+  guidance_rescale: 0.7
+
+  # Video modality guidance scale for audio-to-video isolation guidance
+  video_modality_guidance_scale: 1.0
+
+  # Audio modality guidance scale for video-to-audio isolation guidance
+  audio_modality_guidance_scale: 3.0
+
+  # Video inpainting trains video only; do not generate validation audio.
+  generate_audio: false
+
+  # Skip validation at the beginning of training (step 0)
+  skip_initial_validation: false
+
+# -----------------------------------------------------------------------------
+# Checkpoint Configuration
+# -----------------------------------------------------------------------------
+# Controls model checkpoint saving during training.
+checkpoints:
+  # Save a checkpoint every N steps
+  # Set to null to disable intermediate checkpoints
+  interval: 250
+
+  # Number of most recent checkpoints to keep
+  # Set to -1 to keep all checkpoints
+  keep_last_n: -1
+
+  # Precision to use when saving checkpoint weights
+  # Options: "bfloat16" (default, smaller files) or "float32" (full precision)
+  precision: "bfloat16"
+
+# -----------------------------------------------------------------------------
+# Flow Matching Configuration
+# -----------------------------------------------------------------------------
+# Parameters for the flow matching training objective.
+flow_matching:
+  # Timestep sampling mode
+  # "shifted_logit_normal" is recommended for LTX-2 models
+  timestep_sampling_mode: "shifted_logit_normal"
+
+  # Additional parameters for timestep sampling
+  timestep_sampling_params: { }
+
+# -----------------------------------------------------------------------------
+# Hugging Face Hub Configuration
+# -----------------------------------------------------------------------------
+# Settings for uploading trained models to the Hugging Face Hub.
+hub:
+  # Whether to push the trained model to the Hub
+  push_to_hub: false
+
+  # Repository ID on Hugging Face Hub (e.g., "username/my-lora-model")
+  # Required if push_to_hub is true
+  hub_model_id: null
+
+# -----------------------------------------------------------------------------
+# Weights & Biases Configuration
+# -----------------------------------------------------------------------------
+# Settings for experiment tracking with W&B.
+wandb:
+  # Enable W&B logging
+  enabled: false
+
+  # W&B project name
+  project: "ltx-2-trainer"
+
+  # W&B username or team (null uses default account)
+  entity: null
+
+  # Tags to help organize runs
+  tags: [ "ltx2", "lora", "inpainting" ]
+
+  # Log validation outputs to W&B
+  log_validation_videos: true
+
+# -----------------------------------------------------------------------------
+# General Configuration
+# -----------------------------------------------------------------------------
+# Global settings for the training run.
+
+# Random seed for reproducibility
+seed: 42
+
+# Directory to save outputs (checkpoints, validation videos, logs)
+output_dir: "outputs/video_inpainting_lora"

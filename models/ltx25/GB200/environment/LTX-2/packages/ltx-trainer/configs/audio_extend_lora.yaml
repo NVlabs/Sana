@@ -1,0 +1,369 @@
+# =============================================================================
+# LTX-2 Audio Extension (Forward) LoRA Training Configuration
+# =============================================================================
+#
+# This configuration is for training LoRA adapters on the LTX-2 model for
+# forward audio extension. The model learns to continue audio forward in time
+# by conditioning on a prefix of existing audio latent timesteps.
+#
+# Prefix conditioning works by providing the first N audio latent timesteps as
+# clean conditioning signals during training — they receive no noise,
+# timestep=0, and are excluded from the loss. The model learns to generate
+# audio that seamlessly continues from the given prefix.
+#
+# This is an audio-only training mode — no video modality is configured.
+#
+# Use this configuration when you want to:
+#   - Train the model to extend/continue existing audio
+#   - Fine-tune audio temporal continuation capabilities
+#   - Create seamless audio extension models
+#
+# Dataset structure:
+#   preprocessed_data_root/
+#   ├── conditions/      # Text embeddings for each sample
+#   └── audio_latents/   # Audio latents (VAE-encoded audio)
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Configuration
+# -----------------------------------------------------------------------------
+# Specifies the base model to fine-tune and the training mode.
+model:
+  # Path to the LTX-2 model checkpoint (.safetensors file)
+  # This should be a local path to your downloaded model
+  model_path: "path/to/ltx-2-model.safetensors"
+
+  # Path to the text encoder model directory
+  # For LTX-2, this is typically the Gemma-based text encoder
+  text_encoder_path: "path/to/gemma-text-encoder"
+
+  # Training mode: "lora" for efficient adapter training, "full" for full fine-tuning
+  # LoRA is recommended for most use cases (faster, less memory, prevents overfitting)
+  training_mode: "lora"
+
+  # Optional: Path to resume training from a checkpoint
+  # Can be a checkpoint file (.safetensors) or directory (uses latest checkpoint)
+  load_checkpoint: null
+
+# -----------------------------------------------------------------------------
+# LoRA Configuration
+# -----------------------------------------------------------------------------
+# Controls the Low-Rank Adaptation parameters for efficient fine-tuning.
+lora:
+  # Rank of the LoRA matrices (higher = more capacity but more parameters)
+  # Typical values: 8, 16, 32, 64. Start with 32 for audio extension LoRA training.
+  rank: 32
+
+  # Alpha scaling factor (usually set equal to rank)
+  # The effective scaling is alpha/rank, so alpha=rank means scaling of 1.0
+  alpha: 32
+
+  # Dropout probability for LoRA layers (0.0 = no dropout)
+  # Can help with regularization if overfitting occurs
+  dropout: 0.0
+
+  # Which transformer modules to apply LoRA to
+  # The LTX-2 transformer has separate attention and FFN blocks for video and audio:
+  #
+  # VIDEO MODULES (not used for audio-only modes):
+  #   - attn1.to_k, attn1.to_q, attn1.to_v, attn1.to_out.0  (video self-attention)
+  #   - attn2.to_k, attn2.to_q, attn2.to_v, attn2.to_out.0  (video cross-attention to text)
+  #   - ff.net.0.proj, ff.net.2                             (video feed-forward)
+  #
+  # AUDIO MODULES:
+  #   - audio_attn1.to_k, audio_attn1.to_q, audio_attn1.to_v, audio_attn1.to_out.0  (audio self-attention)
+  #   - audio_attn2.to_k, audio_attn2.to_q, audio_attn2.to_v, audio_attn2.to_out.0  (audio cross-attention to text)
+  #   - audio_ff.net.0.proj, audio_ff.net.2                                         (audio feed-forward)
+  #
+  # AUDIO-VIDEO CROSS-ATTENTION MODULES (not used for audio-only modes):
+  #   - audio_to_video_attn.to_k, audio_to_video_attn.to_q, audio_to_video_attn.to_v, audio_to_video_attn.to_out.0
+  #       (Q from video, K/V from audio - allows video to attend to audio features)
+  #   - video_to_audio_attn.to_k, video_to_audio_attn.to_q, video_to_audio_attn.to_v, video_to_audio_attn.to_out.0
+  #       (Q from audio, K/V from video - allows audio to attend to video features)
+  #
+  # For audio-only extension, we explicitly target audio modules.
+  # Including audio FFN layers can increase the LoRA's capacity.
+  target_modules:
+    # Audio self-attention
+    - "audio_attn1.to_k"
+    - "audio_attn1.to_q"
+    - "audio_attn1.to_v"
+    - "audio_attn1.to_out.0"
+    # Audio cross-attention to text
+    - "audio_attn2.to_k"
+    - "audio_attn2.to_q"
+    - "audio_attn2.to_v"
+    - "audio_attn2.to_out.0"
+    # Audio feed-forward (often improves transformation quality)
+    - "audio_ff.net.0.proj"
+    - "audio_ff.net.2"
+
+# -----------------------------------------------------------------------------
+# Training Strategy Configuration
+# -----------------------------------------------------------------------------
+# Defines the audio extension training approach using the unified flexible
+# strategy. Prefix conditioning provides the first N audio latent timesteps as
+# clean conditioning, teaching the model to generate temporal continuations.
+training_strategy:
+  name: "flexible"
+
+  # Audio modality configuration (audio-only, no video)
+  audio:
+    # Whether the model generates audio (true) or uses it as frozen conditioning (false)
+    is_generated: true
+    # Directory name (within preprocessed_data_root) containing audio latents
+    latents_dir: "audio_latents"
+
+    # Conditions applied to the audio modality during training
+    conditions:
+      - type: prefix
+        # Number of audio latent timesteps to use as conditioning prefix
+        # Each audio latent timestep = 1 patchified token
+        temporal_boundary: 8
+        # Probability of applying prefix conditioning per training sample
+        # At 1.0, all training samples use audio extension mode
+        probability: 1.0
+
+# -----------------------------------------------------------------------------
+# Optimization Configuration
+# -----------------------------------------------------------------------------
+# Controls the training optimization parameters.
+optimization:
+  # Learning rate for the optimizer
+  # Typical range for LoRA: 1e-5 to 1e-4
+  learning_rate: 2e-4
+
+  # Total number of training steps
+  steps: 3000
+
+  # Batch size per GPU
+  # Reduce if running out of memory
+  batch_size: 1
+
+  # Number of gradient accumulation steps
+  # Effective batch size = batch_size * gradient_accumulation_steps * num_gpus
+  gradient_accumulation_steps: 1
+
+  # Maximum gradient norm for clipping (helps training stability)
+  max_grad_norm: 1.0
+
+  # Optimizer type: "adamw" (standard) or "adamw8bit" (memory-efficient)
+  optimizer_type: "adamw"
+
+  # Learning rate scheduler type
+  # Options: "constant", "linear", "cosine", "cosine_with_restarts", "polynomial"
+  scheduler_type: "linear"
+
+  # Additional scheduler parameters (depends on scheduler_type)
+  scheduler_params: { }
+
+  # Enable gradient checkpointing to reduce memory usage
+  # Recommended for training with limited GPU memory
+  enable_gradient_checkpointing: true
+
+# -----------------------------------------------------------------------------
+# Acceleration Configuration
+# -----------------------------------------------------------------------------
+# Hardware acceleration and memory optimization settings.
+acceleration:
+  # Mixed precision training mode
+  # Options: "no" (fp32), "fp16" (half precision), "bf16" (bfloat16, recommended)
+  mixed_precision_mode: "bf16"
+
+  # Model quantization for reduced memory usage
+  # Options: null (none), "int8-quanto", "int4-quanto", "int2-quanto", "fp8-quanto", "fp8uz-quanto"
+  quantization: null
+
+  # Load text encoder in 8-bit precision to save memory
+  # Useful when GPU memory is limited
+  load_text_encoder_in_8bit: false
+
+  # Offload optimizer state to CPU during validation video sampling and restore it after.
+  # Frees VRAM for the VAE decoder when optimizer state is large (full fine-tune, high-rank
+  # LoRA). No effect under FSDP (sharded state).
+  offload_optimizer_during_validation: false
+
+
+# -----------------------------------------------------------------------------
+# Data Configuration
+# -----------------------------------------------------------------------------
+# Specifies the training data location and loading parameters.
+data:
+  # Root directory containing preprocessed training data
+  # Should contain: conditions/ and audio_latents/ subdirectories
+  preprocessed_data_root: "/path/to/preprocessed/data"
+
+  # Number of worker processes for data loading
+  # Used for parallel data loading to speed up data loading
+  num_dataloader_workers: 2
+
+# -----------------------------------------------------------------------------
+# Validation Configuration
+# -----------------------------------------------------------------------------
+# Controls validation sampling during training.
+# NOTE: Validation sampling use simplified inference pipelines and prioritizes speed over
+# maximum quality. For production-quality inference, use `packages/ltx-pipelines`.
+validation:
+  # Validation samples — each sample describes a self-contained generation request.
+  # Each sample includes an audio prefix condition for forward audio extension.
+  samples:
+    - prompt: >-
+        A warm and soothing piano melody with soft ambient textures, reminiscent of a quiet
+        evening by the fireplace. Gentle reverb creates a sense of intimate space.
+      conditions:
+        - type: prefix
+          audio: "/path/to/prefix_audio_1.wav"
+          # Duration is in seconds; choose a value that covers a comparable audio context
+          # to the training temporal_boundary measured in audio latent timesteps.
+          duration: 1.0
+    - prompt: >-
+        Energetic electronic beats with pulsing synthesizer leads and crisp hi-hat patterns.
+        Deep bass tones provide a driving rhythm underneath bright melodic arpeggios.
+      conditions:
+        - type: prefix
+          audio: "/path/to/prefix_audio_2.wav"
+          # Duration is in seconds; choose a value that covers a comparable audio context
+          # to the training temporal_boundary measured in audio latent timesteps.
+          duration: 1.0
+
+  # Negative prompt to avoid unwanted artifacts
+  negative_prompt: >-
+    blurry, out of focus, overexposed, underexposed, low contrast, washed out colors, excessive noise,
+    grainy texture, poor lighting, flickering, motion blur, distorted proportions, unnatural skin tones,
+    deformed facial features, asymmetrical face, missing facial features, extra limbs, disfigured hands,
+    wrong hand count, artifacts around text, inconsistent perspective, camera shake, incorrect depth of
+    field, background too sharp, background clutter, distracting reflections, harsh shadows, inconsistent
+    lighting direction, color banding, cartoonish rendering, 3D CGI look, unrealistic materials, uncanny
+    valley effect, incorrect ethnicity, wrong gender, exaggerated expressions, wrong gaze direction,
+    mismatched lip sync, silent or muted audio, distorted voice, robotic voice, echo, background noise,
+    off-sync audio, incorrect dialogue, added dialogue, repetitive speech, jittery movement, awkward
+    pauses, incorrect timing, unnatural transitions, inconsistent framing, tilted camera, flat lighting,
+    inconsistent tone, cinematic oversaturation, stylized filters, or AI artifacts.
+
+  # Generation length control [width, height, frames]
+  # With generate_video=false, width/height are unused; frames and frame_rate set audio duration.
+  # Frames must satisfy frames % T == 1, where T is the VAE temporal factor
+  # (8 for the default VAE, i.e. 1, 9, 17, 25, ...).
+  video_dims: [ 960, 544, 89 ]
+
+  # Frame rate for generated videos
+  frame_rate: 24.0
+
+  # Random seed for reproducible validation outputs
+  seed: 42
+
+  # Number of denoising steps for validation inference
+  # Higher values = better quality but slower generation
+  inference_steps: 30
+
+  # Generate validation videos every N training steps
+  # Set to null to disable validation during training
+  interval: 100
+
+  # Video CFG scale for validation sampling
+  video_cfg_scale: 3.0
+
+  # Audio CFG scale for validation sampling
+  audio_cfg_scale: 7.0
+
+  # Video STG scale; set to 0.0 to disable video STG
+  video_stg_scale: 1.0
+
+  # Audio STG scale; set to 0.0 to disable audio STG
+  audio_stg_scale: 1.0
+
+  # Transformer blocks perturbed for STG
+  stg_blocks: [28]
+
+  # Guidance variance rescale; set to 0.0 to disable
+  guidance_rescale: 0.7
+
+  # Video modality guidance scale for audio-to-video isolation guidance
+  video_modality_guidance_scale: 3.0
+
+  # Audio modality guidance scale for video-to-audio isolation guidance
+  audio_modality_guidance_scale: 1.0
+
+  # Whether to generate audio in validation samples
+  # Enabled because this audio-only config generates audio
+  generate_audio: true
+
+  # Whether to generate video in validation samples
+  # Disabled because no video modality is configured
+  generate_video: false
+
+  # Skip validation at the beginning of training (step 0)
+  skip_initial_validation: false
+
+# -----------------------------------------------------------------------------
+# Checkpoint Configuration
+# -----------------------------------------------------------------------------
+# Controls model checkpoint saving during training.
+checkpoints:
+  # Save a checkpoint every N steps
+  # Set to null to disable intermediate checkpoints
+  interval: 250
+
+  # Number of most recent checkpoints to keep
+  # Set to -1 to keep all checkpoints
+  keep_last_n: 3
+
+  # Precision to use when saving checkpoint weights
+  # Options: "bfloat16" (default, smaller files) or "float32" (full precision)
+  precision: "bfloat16"
+
+# -----------------------------------------------------------------------------
+# Flow Matching Configuration
+# -----------------------------------------------------------------------------
+# Parameters for the flow matching training objective.
+flow_matching:
+  # Timestep sampling mode
+  # "shifted_logit_normal" is recommended for LTX-2 models
+  timestep_sampling_mode: "shifted_logit_normal"
+
+  # Additional parameters for timestep sampling
+  timestep_sampling_params: { }
+
+# -----------------------------------------------------------------------------
+# Hugging Face Hub Configuration
+# -----------------------------------------------------------------------------
+# Settings for uploading trained models to the Hugging Face Hub.
+hub:
+  # Whether to push the trained model to the Hub
+  push_to_hub: false
+
+  # Repository ID on Hugging Face Hub (e.g., "username/my-ic-lora-model")
+  # Required if push_to_hub is true
+  hub_model_id: null
+
+# -----------------------------------------------------------------------------
+# Weights & Biases Configuration
+# -----------------------------------------------------------------------------
+# Settings for experiment tracking with W&B.
+wandb:
+  # Enable W&B logging
+  enabled: false
+
+  # W&B project name
+  project: "ltx-2-trainer"
+
+  # W&B username or team (null uses default account)
+  entity: null
+
+  # Tags to help organize runs
+  tags: [ "ltx2", "lora", "audio-extension", "audio-only" ]
+
+  # Log validation media (video/audio) to W&B
+  log_validation_videos: true
+
+# -----------------------------------------------------------------------------
+# General Configuration
+# -----------------------------------------------------------------------------
+# Global settings for the training run.
+
+# Random seed for reproducibility
+seed: 42
+
+# Directory to save outputs (checkpoints, validation videos, logs)
+output_dir: "outputs/audio_extend_lora"

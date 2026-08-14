@@ -1,0 +1,33 @@
+# LTX-2.5 public two-stage pipeline on 4xGB200 -- dense control.
+# Run only inside a four-GPU allocation:
+#   python3 scripts/run.py models/ltx25/GB200/dense.toml
+
+name    = "ltx25_gb200_dense"
+runtime = "."
+entry   = "run_ltx25_gpu.sh"
+gpus    = 4
+
+LTX25_VARIANT  = "dense"
+LTX25_PROFILE  = "default5s"
+LTX25_WORLD_SIZE = "4"
+
+# Every acceleration seam is explicit. Stage 2 and the distributed VAE retain
+# the vendor 4-GPU 2x2 topology in both arms.
+LTX25_S1_PARALLEL = "sp"
+LTX25_CACHE       = "off"
+LTX25_CACHE_THRESHOLD = "0.08"
+LTX25_CACHE_WARMUP = "1"
+LTX25_CACHE_MAX_CONSECUTIVE = "10"
+LTX25_COMPILE = "0"
+LTX_SOL_STAGE1 = "0"
+
+LTX25_WEIGHTS_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/pretrained_models/LTX-2.5-public"
+LTX25_COMPILE_CACHE_ROOT = ".cache/ltx25/gb200-sm100_py31311_torch2110-cu130_triton360/ltx25-7954dcb-ccedf84-stage-scope-v1"
+
+LTX25_PROMPT_FILES = "models/ltx25/prompts/p01_multishot.txt:models/ltx25/prompts/p02_newsbroadcast.txt:models/ltx25/prompts/p03_frogyoga.txt"
+LTX25_WARMUP_REQUESTS = "3"
+LTX25_MEASURE_REQUESTS = "3"
+LTX25_KEEP_WARMUP = "0"
+LTX25_STAGE1_STEPS = "30"
+LTX25_FPS = "24"
+LTX25_SEED = "42"

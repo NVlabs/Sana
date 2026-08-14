@@ -60,15 +60,17 @@ def _load_sol_attn() -> Callable:
 
 
 def sol_attn_supported(q) -> bool:
-    """Whether ``q`` can use a CuTe or portable Triton Sol-Attn backend."""
+    """Whether ``q`` can use an available Sol-Attn backend."""
 
     try:
         import torch
     except Exception:  # pragma: no cover - torch is a runtime dependency
         return False
-    if not (hasattr(q, "is_cuda") and q.is_cuda):
-        return False
     if q.ndim != 4 or q.shape[-1] != HEAD_DIM or q.dtype != torch.bfloat16:
+        return False
+    if q.device.type == "mps":
+        return hasattr(torch.mps, "compile_shader")
+    if not (hasattr(q, "is_cuda") and q.is_cuda):
         return False
     try:
         arch = tuple(torch.cuda.get_device_capability(q.device))
@@ -96,6 +98,8 @@ def _resolve_kv_splits(q, kv_splits: int | str | None) -> int:
 
     if kv_splits not in (None, "auto"):
         return int(kv_splits)
+    if q.device.type == "mps":
+        return 1
     arch = tuple(torch.cuda.get_device_capability(q.device))
     if (
         arch == (9, 0)

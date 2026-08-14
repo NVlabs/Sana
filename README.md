@@ -110,8 +110,9 @@ into a model runtime through env-gated hooks and powers the optimization stacks 
 Backend selection is automatic: H100 (SM90), B200 (SM100), and RTX 5090
 (SM120) use their optimized CuTe DSL kernels when CuTe is installed. Older
 supported GPUs such as A100 (SM80) and RTX 4090 (SM89), or installations
-without CuTe DSL, use the portable Triton implementation. Model call sites do
-not need architecture-specific changes. See the
+without CuTe DSL, use the portable Triton implementation. Apple Silicon uses
+the tiled Metal backend when `torch.mps.compile_shader` is available. Model
+call sites do not need architecture-specific changes. See the
 [Sol-Attn usage guide](techniques/sparse_backends/) for requirements and API
 details.
 

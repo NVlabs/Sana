@@ -160,6 +160,31 @@ class SolAttentionTest(unittest.TestCase):
 
         self.assertEqual(stats["sol_calls"], 141)
 
+    def test_patches_underlying_blocks_wrapped_by_torch_compile(self) -> None:
+        blocks, _ = make_blocks(self.dense)
+        compiled_wrappers = [SimpleNamespace(_orig_mod=block) for block in blocks]
+        transformer = SimpleNamespace(transformer_blocks=compiled_wrappers)
+        fake_torch = types.ModuleType("torch")
+        disabled = []
+
+        def disable(function):
+            disabled.append(function)
+            return function
+
+        fake_torch.compiler = SimpleNamespace(disable=disable)
+        modules = dict(self.modules)
+        modules["torch"] = fake_torch
+        with patch.dict(sys.modules, modules):
+            adapter = Stage2SolAttention(
+                transformer,
+                isolate_sol_from_compile=True,
+            )
+            stats = self._run_three_steps(adapter, blocks)
+
+        self.assertEqual(len(disabled), 1)
+        self.assertEqual(stats["sol_calls"], 141)
+        self.assertEqual(stats["compile_boundary"], "eager_inner_sol_callable")
+
     def test_rejects_non_48_layer_transformer(self) -> None:
         blocks, _ = make_blocks(self.dense, count=47)
         transformer = SimpleNamespace(transformer_blocks=blocks)

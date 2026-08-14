@@ -50,6 +50,37 @@ class RefinerContractTest(unittest.TestCase):
         self.assertEqual(config["LTX25_REFINER_OFFLOAD"], "0")
         self.assertEqual(config["LTX25_REFINER_QUANTIZATION"], "none")
 
+    def test_compile_arm_changes_only_compile_and_run_identity(self) -> None:
+        eager = tomllib.loads((GB200 / "refiner.toml").read_text(encoding="utf-8"))
+        compiled = tomllib.loads(
+            (GB200 / "refiner_compile.toml").read_text(encoding="utf-8")
+        )
+        compile_only = {
+            "name",
+            "LTX25_REFINER_COMPILE",
+            "LTX25_REFINER_COMPILE_MODE",
+            "LTX25_REFINER_COMPILE_FULLGRAPH",
+            "LTX25_REFINER_COMPILE_CAPTURE",
+            "LTX25_REFINER_COMPILE_CACHE_ROOT",
+        }
+        self.assertEqual(
+            {key: value for key, value in eager.items() if key not in compile_only},
+            {key: value for key, value in compiled.items() if key not in compile_only},
+        )
+        self.assertEqual(compiled["gpus"], 4)
+        self.assertEqual(compiled["LTX25_REFINER_COMPILE"], "1")
+        self.assertEqual(
+            compiled["LTX25_REFINER_COMPILE_MODE"],
+            "max-autotune-no-cudagraphs",
+        )
+        self.assertEqual(compiled["LTX25_REFINER_COMPILE_FULLGRAPH"], "0")
+        self.assertEqual(compiled["LTX25_REFINER_COMPILE_CAPTURE"], "0")
+        cache_root = Path(compiled["LTX25_REFINER_COMPILE_CACHE_ROOT"])
+        self.assertTrue(cache_root.is_absolute())
+        self.assertTrue(
+            str(cache_root).startswith("/home/yitongl/code/.cache/sol-engine/")
+        )
+
     def test_launcher_uses_four_distributed_workers_and_shared_venv(self) -> None:
         launcher = (GB200 / "run_refiner_gb200.sh").read_text(encoding="utf-8")
         self.assertIn(
@@ -59,6 +90,24 @@ class RefinerContractTest(unittest.TestCase):
         self.assertIn("--nproc_per_node=4", launcher)
         self.assertIn("torch.distributed.run", launcher)
         self.assertNotIn("TiledDataParallel", launcher)
+
+    def test_all_compiler_caches_are_persistent_and_exported_pre_import(self) -> None:
+        launcher = (GB200 / "run_refiner_gb200.sh").read_text(encoding="utf-8")
+        for variable, leaf in (
+            ("TORCHINDUCTOR_CACHE_DIR", "inductor"),
+            ("TRITON_CACHE_DIR", "triton"),
+            ("CUDA_CACHE_PATH", "cuda"),
+            ("CUTE_DSL_CACHE_DIR", "cute_dsl"),
+        ):
+            self.assertIn(
+                f'export {variable}="$LTX25_REFINER_COMPILE_CACHE_ROOT/{leaf}"',
+                launcher,
+            )
+        self.assertNotIn("/tmp", launcher)
+        self.assertLess(
+            launcher.index("export CUTE_DSL_CACHE_DIR="),
+            launcher.index('exec "$PYTHON_BIN" -m torch.distributed.run'),
+        )
 
     def test_split_vae_latent_statistics_key_is_supported(self) -> None:
         runner = (GB200 / "refiner_head_cp.py").read_text(encoding="utf-8")

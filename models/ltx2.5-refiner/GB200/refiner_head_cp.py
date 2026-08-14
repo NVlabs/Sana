@@ -28,6 +28,7 @@ from ltx_core.components.patchifiers import VideoLatentPatchifier
 from ltx_core.loader import LTXV_LORA_COMFY_RENAMING_MAP, LoraPathStrengthAndSDOps
 from ltx_core.loader.registry import ModelRegistry
 from ltx_core.loader.sft_loader import SafetensorsModelStateDictLoader
+from ltx_core.model.transformer.compiling import CompilationConfig
 from ltx_core.multigpu.transformer.attention import AttentionManager
 from ltx_core.tools import VideoLatentTools
 from ltx_core.types import Audio, VIDEO_SCALE_FACTORS, VideoLatentShape, VideoPixelShape
@@ -61,6 +62,8 @@ MAX_VIDEO_TOKENS = 65536
 EXPECTED_VIDEO_TOKENS = 63240  # 31 latent frames x 34 rows x 60 columns
 TAEHV_PARALLEL_ELEMENT_LIMIT = 100_000_000
 TAEHV_WEIGHT_SHA256 = "007788e6b9cb7f77e8589ae30ba7456b119d38b0d017e1d349c1c1d11e3d6339"
+COMPILE_MODE = "max-autotune-no-cudagraphs"
+COMPILE_WARMUP_ALL2ALL_TIMEOUT_S = 600.0
 T = TypeVar("T")
 
 
@@ -257,6 +260,10 @@ class ResidentRefiner:
         self.world_size = dist.get_world_size()
         self.device = torch.device("cuda", int(os.environ["LOCAL_RANK"]))
         self.dtype = torch.bfloat16
+        self.compile_enabled = bool(args.compile)
+        self.compile_cache_root = (
+            args.compile_cache_root.resolve() if args.compile_cache_root is not None else None
+        )
         if self.world_size != WORLD_SIZE:
             raise RuntimeError(f"expected world size {WORLD_SIZE}, got {self.world_size}")
         capability = tuple(torch.cuda.get_device_capability(self.device))
@@ -292,6 +299,19 @@ class ResidentRefiner:
             LORA_STRENGTH,
             LTXV_LORA_COMFY_RENAMING_MAP,
         )
+        compilation_config = None
+        if self.compile_enabled:
+            if args.compile_mode != COMPILE_MODE or self.compile_cache_root is None:
+                raise ValueError(
+                    f"compiled arm requires mode={COMPILE_MODE!r} and a persistent cache root"
+                )
+            compilation_config = CompilationConfig(
+                mode=COMPILE_MODE,
+                fullgraph=False,
+                dynamic=None,
+                seq_dim_dynamic=False,
+                capture=False,
+            )
         stage = DiffusionStage.from_checkpoint(
             model_paths.transformer(),
             self.dtype,
@@ -299,7 +319,7 @@ class ResidentRefiner:
             loras=(lora,),
             quantization=None,
             registry=registry,
-            compilation_config=None,
+            compilation_config=compilation_config,
             alloc_trim_strategy=AllocatorTrimStrategy.DEFER,
             offload_mode=OffloadMode.NONE,
         )
@@ -320,6 +340,10 @@ class ResidentRefiner:
             tensor_dtype=self.dtype,
             group=dist.group.WORLD,
         )
+        self.attention_manager = attention_manager
+        self.steady_all2all_timeout_s = attention_manager.all2all_timeout_seconds
+        if self.compile_enabled:
+            attention_manager.all2all_timeout_seconds = COMPILE_WARMUP_ALL2ALL_TIMEOUT_S
         stage._transformer_builder = SequenceParallelBuilder(
             inner=stage._transformer_builder,
             attn_mgr=attention_manager,
@@ -345,7 +369,10 @@ class ResidentRefiner:
         )
 
         self.transformer = stage._build_transformer(video_tools=self.video_tools).requires_grad_(False)
-        self.sol_attention = Stage2SolAttention(self.transformer)
+        self.sol_attention = Stage2SolAttention(
+            self.transformer,
+            isolate_sol_from_compile=self.compile_enabled,
+        )
         self.sol_backend = _actual_sol_backend()
         if self.sol_backend != "cute_sm100":
             raise RuntimeError(f"rank {self.rank} expected cute_sm100, got {self.sol_backend!r}")
@@ -379,22 +406,41 @@ class ResidentRefiner:
             "taehv_wide": _module_residency("taehv_wide", self.taehv),
         }
         self.guard_attempts = 0
-        self._install_weight_load_guard()
+        # Safetensors model loads are forbidden as soon as residency is
+        # established.  The compiled arm delays the broader torch.load guard
+        # until after its excluded compile/autotune warm-up because Inductor's
+        # persistent cache is allowed to deserialize compiler artifacts.  The
+        # measured request runs with both guards installed.
+        self._install_safetensors_load_guard()
+        if not self.compile_enabled:
+            self._install_torch_load_guard()
         gc.collect()
         torch.cuda.empty_cache()
         _cuda_sync()
 
-    def _install_weight_load_guard(self) -> None:
+    def _install_safetensors_load_guard(self) -> None:
         def forbidden_safetensors_load(*_args: Any, **_kwargs: Any) -> Any:
             self.guard_attempts += 1
             raise RuntimeError("safetensors weight load attempted after resident preload")
 
+        SafetensorsModelStateDictLoader.load = forbidden_safetensors_load
+
+    def _install_torch_load_guard(self) -> None:
         def forbidden_torch_load(*_args: Any, **_kwargs: Any) -> Any:
             self.guard_attempts += 1
-            raise RuntimeError("torch.load attempted after resident preload")
+            raise RuntimeError("torch.load attempted during measured resident inference")
 
-        SafetensorsModelStateDictLoader.load = forbidden_safetensors_load
         torch.load = forbidden_torch_load
+
+    def prepare_steady_state(self) -> None:
+        """Leave compile warm-up mode and restore the production All2All timeout."""
+
+        dist.barrier()
+        if self.compile_enabled:
+            self.attention_manager.all2all_timeout_seconds = self.steady_all2all_timeout_s
+            self._install_torch_load_guard()
+        _cuda_sync()
+        dist.barrier()
 
     def prepare_input(self, source_path: Path) -> tuple[torch.Tensor, dict[str, Any]]:
         metadata = get_videostream_metadata(str(source_path))
@@ -687,6 +733,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--refiner-lora", type=Path, required=True)
     parser.add_argument("--taehv-source", type=Path, required=True)
     parser.add_argument("--taehv-checkpoint", type=Path, required=True)
+    parser.add_argument("--compile", action="store_true")
+    parser.add_argument("--compile-mode", default=None)
+    parser.add_argument("--compile-cache-root", type=Path, default=None)
     return parser
 
 
@@ -705,6 +754,63 @@ def _validate_paths(args: argparse.Namespace) -> None:
     for path in required:
         if not path.exists() or (path.is_file() and path.stat().st_size == 0):
             raise FileNotFoundError(path)
+    if args.compile:
+        if args.compile_mode != COMPILE_MODE or args.compile_cache_root is None:
+            raise ValueError(
+                f"compiled arm requires --compile-mode={COMPILE_MODE} and --compile-cache-root"
+            )
+        if not args.compile_cache_root.is_absolute():
+            raise ValueError("compile cache root must be an absolute persistent path")
+        expected_cache = args.compile_cache_root.resolve()
+        configured = {
+            name: Path(os.environ.get(name, "")).resolve()
+            for name in (
+                "TORCHINDUCTOR_CACHE_DIR",
+                "TRITON_CACHE_DIR",
+                "CUDA_CACHE_PATH",
+                "CUTE_DSL_CACHE_DIR",
+            )
+        }
+        expected = {
+            "TORCHINDUCTOR_CACHE_DIR": expected_cache / "inductor",
+            "TRITON_CACHE_DIR": expected_cache / "triton",
+            "CUDA_CACHE_PATH": expected_cache / "cuda",
+            "CUTE_DSL_CACHE_DIR": expected_cache / "cute_dsl",
+        }
+        if configured != expected:
+            raise RuntimeError(
+                f"compiler cache environment does not match persistent root: "
+                f"expected={expected}, configured={configured}"
+            )
+
+
+def _compile_metadata(args: argparse.Namespace) -> dict[str, Any]:
+    cache_root = (
+        args.compile_cache_root.resolve()
+        if args.compile and args.compile_cache_root is not None
+        else None
+    )
+    return {
+        "enabled": bool(args.compile),
+        "backend": "inductor" if args.compile else None,
+        "mode": args.compile_mode if args.compile else None,
+        "fullgraph": False,
+        "dynamic": None,
+        "sequence_dimension_dynamic": False if args.compile else None,
+        "capture": False,
+        "sol_boundary": "eager_inner_callable" if args.compile else None,
+        "cache_root": str(cache_root) if cache_root is not None else None,
+        "cache_paths": (
+            {
+                "inductor": str(cache_root / "inductor"),
+                "triton": str(cache_root / "triton"),
+                "cuda": str(cache_root / "cuda"),
+                "cute_dsl": str(cache_root / "cute_dsl"),
+            }
+            if cache_root is not None
+            else None
+        ),
+    }
 
 
 def main() -> int:
@@ -767,7 +873,7 @@ def main() -> int:
                     "dtype": "torch.bfloat16",
                     "offload": False,
                     "quantization": None,
-                    "compile": False,
+                    "compile": _compile_metadata(args),
                     "cache": False,
                     "all_inference_modules_simultaneously_gpu_resident": True,
                     "taehv_temporal_execution": "sequential",
@@ -780,8 +886,14 @@ def main() -> int:
         if rank == 0:
             assert warmup is not None
             _write_json(args.metadata_dir / "warmup.json", warmup)
+        models.prepare_steady_state()
 
-        output_path = args.output_dir / "ltx25_refiner_1920x1088_241f.mp4"
+        output_name = (
+            "ltx25_refiner_compile_1920x1088_241f.mp4"
+            if args.compile
+            else "ltx25_refiner_1920x1088_241f.mp4"
+        )
+        output_path = args.output_dir / output_name
         measured = models.run_sample(record, warmup=False, output_path=output_path)
         if rank == 0:
             assert measured is not None
@@ -806,9 +918,11 @@ def main() -> int:
                         "lora_strength": LORA_STRENGTH,
                     },
                     "timing_scope": (
-                        "resident post-warmup single-video E2E; model loading, Sol first-use "
-                        "compilation/autotuning, and the complete warm-up request are excluded"
+                        "resident post-warmup single-video E2E; model loading, torch.compile, "
+                        "Inductor/Triton autotuning, Sol first-use compilation, and the complete "
+                        "warm-up request are excluded"
                     ),
+                    "compile": _compile_metadata(args),
                     "sample_wall_s": measured["sample_wall_s"],
                     "phases_s": {
                         key: measured[key]
@@ -839,6 +953,7 @@ def main() -> int:
                     "weight_load_guard_attempts": measured["weight_load_guard_attempts"],
                     "all_inference_modules_simultaneously_gpu_resident": True,
                     "attention_aggregate": measured["attention"]["aggregate"],
+                    "compile": _compile_metadata(args),
                     "output": measured["output"],
                     "timestamp_epoch_s": time.time(),
                 },

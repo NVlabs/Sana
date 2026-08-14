@@ -31,7 +31,9 @@ GB200/SM100 kernel.
 | Cross-attention | dense |
 | Sol selection | `thresh_type=diag`, `kv_splits=auto`, strict mode enabled |
 | TAEHV temporal execution | sequential memblock path for this workload |
-| Disabled features | cache, `torch.compile`, quantization, offload, sink, reorder |
+| Eager control | `refiner.toml`: `torch.compile=0` |
+| Compile arm | `refiner_compile.toml`: per-block Inductor compile; stateful Sol callable remains eager |
+| Disabled in both arms | algorithm cache, quantization, offload, sink, reorder |
 | Residency | all inference modules remain GPU-resident after preload |
 
 The transformer parameters are replicated on all four ranks. Within each
@@ -193,6 +195,55 @@ GPU holds a full parameter replica and participates in the head/context-parallel
 self-attention for the same video; this is not data parallelism over four
 videos.
 
+## Run the matched torch.compile arm
+
+The compile arm changes no model, prompt, seed, shape, sampling, parallelism,
+or Sol-Attn setting. It compiles each transformer block with Inductor using
+`mode=max-autotune-no-cudagraphs`, `fullgraph=False`, and capture disabled.
+The fixed token shape is compiled statically (`seq_dim_dynamic=False`).
+The stateful tau scheduler and CuTe Sol call form an explicit eager graph
+boundary; norms, projections, dense cross-attention, MLPs, and dense layer 0
+remain eligible for compilation. The first complete request performs tracing,
+code generation, autotuning, and all three tau steps and is excluded. Only the
+following identical request is measured.
+
+Use the same command and path overrides as above, changing only the config and
+using a separate run directory:
+
+```bash
+export RUN_ROOT=/absolute/path/to/run/ltx25-refiner-1080p10s-compile
+mkdir -p "$RUN_ROOT/outputs" "$RUN_ROOT/metadata"
+
+srun -A nvr_elm_llm \
+  --partition batch \
+  --qos interactive \
+  --nodes 1 \
+  --ntasks 1 \
+  --gpus-per-node 4 \
+  --cpus-per-task 32 \
+  --mem 0 \
+  --time 00:30:00 \
+  python3 scripts/run.py models/ltx2.5-refiner/GB200/refiner_compile.toml \
+    --set INPUT_ROOT="$INPUT_ROOT" \
+    --set MANIFEST="$MANIFEST" \
+    --set OUTPUT_DIR="$RUN_ROOT/outputs" \
+    --set METADATA_DIR="$RUN_ROOT/metadata"
+```
+
+All generated-code caches are versioned under this persistent shared root,
+which survives Slurm job-node teardown:
+
+```text
+/home/yitongl/code/.cache/sol-engine/ltx25-refiner/gb200-sm100_py31311_torch2110-cu130_triton360/stage2-headcp4-sol-eager-boundary-v1/1080p10s
+```
+
+The launcher creates and exports `inductor/`, `triton/`, `cuda/`, and
+`cute_dsl/` below that root before Python starts. The last directory is
+required because CuTe DSL otherwise defaults to a node-local temporary cache.
+Change the versioned root whenever the source, compiler stack, GPU
+architecture, input shape, parallel degree, or compile policy changes; do not
+mix H100 and GB200 artifacts.
+
 ## Timing contract and validation
 
 The authoritative latency is the post-warm-up resident `sample_wall_s`. It is
@@ -200,8 +251,10 @@ a hot end-to-end single-sample wall time: input decode/validation, prompt
 encoding, TAEHV encode, x2 latent upsampling, three-step Stage-2 denoising,
 TAEHV decode, video encode/mux, and output verification are included. Process
 startup, model loading, Sol kernel first-use compilation/autotuning, and the
-entire warm-up request are excluded. This delivery has no `torch.compile` at
-all; first-use Sol kernel compilation is only a warm-up cost.
+entire warm-up request are excluded. For the compile arm, Dynamo tracing,
+Inductor/Triton/CuTe code generation or cache restoration, and compiler
+autotuning are likewise warm-up costs and excluded. The measured request still
+guards against any model-weight reload.
 
 At minimum, a successful metadata record must prove all of the following:
 
@@ -219,7 +272,7 @@ Do not carry the prior one-H100 latency numbers forward as GB200 results. A
 GB200 latency is reportable only after this exact four-GPU hot run passes the
 metadata checks above.
 
-## Validated 4xGB200 smoke
+## Validated 4xGB200 eager control
 
 The fixed contract passed end to end on 2026-08-14 in Slurm job `6145732`.
 This is one validated smoke sample, not a multi-sample performance
@@ -253,4 +306,36 @@ The validated video and metadata are outside Git at:
 ```text
 /home/yitongl/code/agent_deploy/sol-engine/runs/ltx25-refiner-smoke/outputs/ltx25_refiner_1920x1088_241f.mp4
 /home/yitongl/code/agent_deploy/sol-engine/runs/ltx25-refiner-smoke/metadata/
+```
+
+## Validated 4xGB200 compile result
+
+Two new-process compile runs passed the same fixed contract and all attention
+checks. Each rank again reported 3 dense layer-0 calls, 141 Sol calls, and 141
+actual `cute_sm100` kernel calls, with no fallback or measured weight load.
+
+| Arm | Hot Stage-2 transformer | Hot resident E2E |
+|---|---:|---:|
+| Eager control | 2.372426 s | 5.677548 s |
+| Compile run A | 1.973195 s | 5.232343 s |
+| Compile run B, persistent cache reused | 1.969754 s | 5.367247 s |
+| Compile mean | **1.971475 s** | **5.299795 s** |
+
+Against the eager control, the compile mean is a **1.203x transformer
+speedup** (16.90% lower transformer latency) and a **1.071x hot E2E speedup**
+(6.65% lower E2E latency). The two compiled transformer measurements differ
+by only 0.17%; their wider E2E difference is from input decode and replica
+synchronization, neither of which is compiled. These are one eager and two
+compiled smoke measurements, not a performance distribution.
+
+Cold cache compilation took 118.466213 s in the excluded first request. A new
+process reusing the persistent disk cache took 31.838885 s for its excluded
+request; Dynamo tracing and guards still occur per process. Neither value is
+part of the hot latency above.
+
+The compile outputs and complete metadata are outside Git at:
+
+```text
+/home/yitongl/code/agent_deploy/sol-engine/runs/ltx25-refiner-compile-1080p10s-20260814-a/
+/home/yitongl/code/agent_deploy/sol-engine/runs/ltx25-refiner-compile-1080p10s-20260814-b/
 ```

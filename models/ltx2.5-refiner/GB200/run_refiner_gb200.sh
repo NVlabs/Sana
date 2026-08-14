@@ -49,7 +49,6 @@ require_fixed LTX25_REFINER_SOL_KV_SPLITS auto
 require_fixed LTX25_REFINER_DTYPE bfloat16
 require_fixed LTX25_REFINER_LORA_STRENGTH 0.8
 require_fixed LTX25_REFINER_CACHE 0
-require_fixed LTX25_REFINER_COMPILE 0
 require_fixed LTX25_REFINER_OFFLOAD 0
 require_fixed LTX25_REFINER_QUANTIZATION none
 require_fixed LTX25_REFINER_SINK 0
@@ -61,6 +60,38 @@ require_fixed LTX25_REFINER_SAMPLE_INDEX 0
 require_fixed LTX25_REFINER_TAEHV_SOURCE_COMMIT 32ac0146b11007cda5a57b60a3b35653361fb8a4
 require_fixed LTX25_REFINER_TAEHV_WEIGHT_SHA256 007788e6b9cb7f77e8589ae30ba7456b119d38b0d017e1d349c1c1d11e3d6339
 require_fixed SOL_ATTN_STRICT 1
+
+case "${LTX25_REFINER_COMPILE:-}" in
+  0|1) ;;
+  *)
+    echo "[error] LTX25_REFINER_COMPILE must be exactly 0 or 1" >&2
+    exit 2
+    ;;
+esac
+
+COMPILE_ARGS=()
+if [[ "$LTX25_REFINER_COMPILE" == "1" ]]; then
+  require_fixed LTX25_REFINER_COMPILE_MODE max-autotune-no-cudagraphs
+  require_fixed LTX25_REFINER_COMPILE_FULLGRAPH 0
+  require_fixed LTX25_REFINER_COMPILE_CAPTURE 0
+  : "${LTX25_REFINER_COMPILE_CACHE_ROOT:?compiled arm requires a persistent cache root}"
+  if [[ "$LTX25_REFINER_COMPILE_CACHE_ROOT" != /* ]]; then
+    echo "[error] compile cache root must be an absolute persistent path" >&2
+    exit 2
+  fi
+  mkdir -p "$LTX25_REFINER_COMPILE_CACHE_ROOT"/{inductor,triton,cuda,cute_dsl}
+  export TORCHINDUCTOR_CACHE_DIR="$LTX25_REFINER_COMPILE_CACHE_ROOT/inductor"
+  export TRITON_CACHE_DIR="$LTX25_REFINER_COMPILE_CACHE_ROOT/triton"
+  export CUDA_CACHE_PATH="$LTX25_REFINER_COMPILE_CACHE_ROOT/cuda"
+  export CUTE_DSL_CACHE_DIR="$LTX25_REFINER_COMPILE_CACHE_ROOT/cute_dsl"
+  export TORCHINDUCTOR_FX_GRAPH_CACHE=1
+  export TORCHINDUCTOR_AUTOGRAD_CACHE=1
+  COMPILE_ARGS=(
+    --compile
+    --compile-mode "$LTX25_REFINER_COMPILE_MODE"
+    --compile-cache-root "$LTX25_REFINER_COMPILE_CACHE_ROOT"
+  )
+fi
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "[error] missing shared repository environment: $PYTHON_BIN" >&2
@@ -98,6 +129,7 @@ export PYTHONPATH="$HERE:$REPO_ROOT/models/ltx25/GB200/ltx_src:$REPO_ROOT/models
 
 echo "[ltx25-refiner] fixed workload=1920x1088/241f/24fps Stage2=3 updates"
 echo "[ltx25-refiner] parallelism=4-way-head-context parameters=full-replica attention=Sol-SM100"
+echo "[ltx25-refiner] torch_compile=$LTX25_REFINER_COMPILE cache=${LTX25_REFINER_COMPILE_CACHE_ROOT:-disabled}"
 nvidia-smi -L
 
 cd "$REPO_ROOT"
@@ -115,4 +147,5 @@ exec "$PYTHON_BIN" -m torch.distributed.run \
   --upsampler "$UPSAMPLER" \
   --refiner-lora "$LORA" \
   --taehv-source "$TAEHV_SOURCE" \
-  --taehv-checkpoint "$TAEHV_CHECKPOINT"
+  --taehv-checkpoint "$TAEHV_CHECKPOINT" \
+  "${COMPILE_ARGS[@]}"

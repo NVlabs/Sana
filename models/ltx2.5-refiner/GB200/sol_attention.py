@@ -53,6 +53,12 @@ def _transformer_blocks(transformer: Any) -> Sequence[Any]:
     )
 
 
+def _eager_block(block: Any) -> Any:
+    """Return the underlying block when ``torch.compile`` installed a wrapper."""
+
+    return getattr(block, "_orig_mod", block)
+
+
 class Stage2SolAttention:
     """Apply the fixed three-step Stage 2 Sol-Attn policy.
 
@@ -62,7 +68,12 @@ class Stage2SolAttention:
     per step; layers 1 through 47 consume the selected tau.
     """
 
-    def __init__(self, transformer: Any) -> None:
+    def __init__(
+        self,
+        transformer: Any,
+        *,
+        isolate_sol_from_compile: bool = False,
+    ) -> None:
         blocks = _transformer_blocks(transformer)
         if len(blocks) != STAGE2_TRANSFORMER_LAYERS:
             raise ValueError(
@@ -74,7 +85,8 @@ class Stage2SolAttention:
         self._step = -1
         self._dense_calls = 0
         self._sol_calls = 0
-        self._blocks = tuple(blocks)
+        self._isolate_sol_from_compile = isolate_sol_from_compile
+        self._blocks = tuple(_eager_block(block) for block in blocks)
         self._all2all_wrappers = tuple(
             block.attn1.attention_function for block in self._blocks
         )
@@ -91,6 +103,15 @@ class Stage2SolAttention:
                     "is not callable"
                 )
 
+        sol_call = self._call
+        if isolate_sol_from_compile:
+            # Keep the stateful tau schedule and CuTe call on the eager side of
+            # an explicit graph boundary.  Dynamo can still compile projections,
+            # norms, cross-attention, and MLP regions around this callable.
+            import torch
+
+            sol_call = torch.compiler.disable(sol_call)
+
         # Layer 0's outer All2AllAttention and its dense inner callable are both
         # deliberately unchanged.  Only local-head attention in layers 1..47
         # is redirected through Sol-Attn.
@@ -98,7 +119,7 @@ class Stage2SolAttention:
             all2all = self._all2all_wrappers[layer_index]
             dense = all2all.original_attention
             all2all.original_attention = partial(
-                self._call, layer_index, dense
+                sol_call, layer_index, dense
             )
 
     def begin_denoise(self) -> None:
@@ -186,6 +207,11 @@ class Stage2SolAttention:
             "dense_layers": [0],
             "sol_layers": list(range(1, STAGE2_TRANSFORMER_LAYERS)),
             "cross_attention": "dense",
+            "compile_boundary": (
+                "eager_inner_sol_callable"
+                if self._isolate_sol_from_compile
+                else "none"
+            ),
             "completed_steps": self._step + 1,
             "dense_calls": self._dense_calls,
             "dense_calls_source": "inferred_from_layer1_entry_after_dense_layer0",

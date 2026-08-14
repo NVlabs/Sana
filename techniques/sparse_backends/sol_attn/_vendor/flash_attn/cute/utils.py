@@ -59,6 +59,16 @@ POLY_EX2 = {
 _fa_clc_enabled: bool = os.environ.get("FA_CLC", "0") == "1"
 _fa_disable_2cta_enabled: bool = os.environ.get("FA_DISABLE_2CTA", "0") == "1"
 
+# CUTLASS DSL 4.7 exposes CUDA 12.9 while already using the newer MLIR NVVM
+# fmax binding.  CUDA toolkit version therefore cannot identify the binding
+# signature.  Detect the callable shape directly: legacy bindings take an
+# explicit result type plus a and b, while current bindings take only a and b.
+_NVVM_FMAX_REQUIRES_RESULT_TYPE = sum(
+    parameter.kind
+    in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    for parameter in inspect.signature(nvvm.fmax).parameters.values()
+) >= 3
+
 
 def _get_use_clc_scheduler_default() -> bool:
     return _fa_clc_enabled
@@ -281,10 +291,7 @@ def smid(*, loc=None, ip=None) -> Int32:
 def fmax(
     a: float | Float32, b: float | Float32, c: float | Float32 | None = None, *, loc=None, ip=None
 ) -> Float32:
-    from cutlass import CUDA_VERSION
-
-    # * NVVM call based on nvvm version
-    if CUDA_VERSION.major == 12 and CUDA_VERSION.minor == 9:
+    if _NVVM_FMAX_REQUIRES_RESULT_TYPE:
         # Old API: requires explicit result type as first positional argument
         return Float32(
             nvvm.fmax(

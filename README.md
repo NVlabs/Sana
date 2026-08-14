@@ -59,17 +59,18 @@ support a wider range of models.
 |---|---|---|
 | [[weight](https://huggingface.co/nvidia/Cosmos3-Super) \| [code](models/)] **Cosmos3-Super** | TeaCache + step-selective NVFP4 | **~2.27×** |
 | [[weight](https://huggingface.co/Lightricks/LTX-2.3) \| [code](models/)] **LTX-2.3** | kernel fusion + cache + PISA + NVFP4 + token-prune | **~2.38×** |
+| [[weight](https://huggingface.co/Lightricks/LTX-2.5-Pre-Trained) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] **LTX-2.5** | multi-step: parallel optimization + FBCache + kernel fusion; distilled: Sol-Attn | **up to 4.68× / 1.90×** |
 | [[weight](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_diffusers) \| [code](models/sana_video/)] **SANA-Video** | EasyCache + kernel fusion + compile | **~2.77×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) \| [code](models/wan22_ti2v_5b/)] **Wan2.2 TI2V-5B** | EasyCache + kernel fusion + compile | **~2.89×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) \| [code](models/wan22_t2v_a14b/)] **Wan2.2-A14B** | kernel fusion + EasyCache + PISA | **~2.17×** |
 | [[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) \| [code](models/lingbot_video/)] **LingBot-Video** | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
 | [[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) \| [code](models/hunyuan_video/)] **HunyuanVideo-13B** | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) \| [code](models/wan21_t2v_14b/)] **Wan2.1-T2V-14B** | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
-| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **3.95×** |
+| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.55×–4.52×** |
 
 </div>
 
-<sub>GB200, warmup-excluded. SANA 480p (832×480, 81f, 50 steps); Cosmos3 1280×720, 189f, 35 steps; LTX 1088×1920, 241f. Wan-5B 704×1280, 121f, 50 steps (1 GPU); Wan-14B 720×1280, 81f, 40 steps (1 GPU); LingBot base 480×832→refiner 1088×1920, 121f (4 GPU CP4, same-topology baseline); HunyuanVideo 1280×720, 129f, 50 steps (1 GPU, hot-vs-hot); Wan2.1-14B 720×1280, 81f, 50 steps (1 GPU); MiniMax-H3 1344×768, 124f, 50 steps (8×GB200 Ulysses8, hot-path vs the same-topology 8-GPU diffusers baseline).</sub>
+<sub>GB200, warmup-excluded unless noted otherwise. SANA 480p (832×480, 81f, 50 steps); Cosmos3 1280×720, 189f, 35 steps; LTX-2.3 1088×1920, 241f. LTX-2.5 multi-step reaches up to 4.68× on 4×B200 (1536×1024, 5 s, BF16), while the distilled pipeline reaches up to 1.90× end-to-end on 1×GeForce RTX 5090 (4K, 5 s, NVFP4). Wan-5B 704×1280, 121f, 50 steps (1 GPU); Wan-14B 720×1280, 81f, 40 steps (1 GPU); LingBot base 480×832→refiner 1088×1920, 121f (4 GPU CP4, same-topology baseline); HunyuanVideo 1280×720, 129f, 50 steps (1 GPU, hot-vs-hot); Wan2.1-14B 720×1280, 81f, 50 steps (1 GPU). MiniMax-H3 1344×768, 124f, 50 steps: ~3.95× on 8×GB200, ~3.56× on 4×H100, ~3.55× on 4×A100, ~3.92× on DGX Spark (GB10), and ~4.52× on GeForce RTX 5090.</sub>
 
 ## 🧩 The five acceleration methods
 
@@ -147,6 +148,11 @@ your specific machine.
 - [x] **SANA-Video** acceleration line — EasyCache + fusion + compile
 - [x] **Cosmos3-Super** acceleration line — TeaCache + step-selective NVFP4
 - [x] **LTX-2.3** acceleration line — KWL fusion + cache + PISA + NVFP4 + token-prune
+- [x] **Wan2.2 TI2V-5B, Wan2.2-A14B, and LingBot-Video** acceleration lines — kernel fusion + cache + PISA/compile
+- [x] **HunyuanVideo-13B and Wan2.1-T2V-14B** acceleration lines — kernel fusion + cache + Sol-Attn
+- [x] **Sol-Attn** sparse-attention release — optimized SM90/SM100/SM120 kernels + portable Triton backend
+- [x] **MiniMax-H3** across GB200, H100, A100, GB10, and RTX 5090 — context parallel + kernel fusion + Sol-Attn + FirstBlockCache
+- [x] **LTX-2.5** across B200, GeForce RTX 5090, and DGX Spark — parallel optimization + FBCache + kernel fusion + Sol-Attn
 - [ ] More backends for each acceleration method
 - [ ] Agent-native workflow without human-in-the-loop
 

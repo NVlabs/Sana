@@ -128,8 +128,8 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 
 **In summary**, SANA is a fully open-source framework integrating **efficient training, fast inference, and flexible deployment** for both image and video generation. Deployable on laptop GPUs with **< 8GB VRAM** via 4-bit quantization.
 
-<p align="center" border-raduis="10px">
-  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/all.png" width="90%" alt="teaser_page2"/>
+<p align="center">
+  <img src="asset/all.png" width="90%" alt="SANA Series overview: efficient image, video, world models, and post-training"/>
 </p>
 
 ## Quick Start

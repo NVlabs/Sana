@@ -91,6 +91,98 @@ class RefinerContractTest(unittest.TestCase):
         self.assertIn("torch.distributed.run", launcher)
         self.assertNotIn("TiledDataParallel", launcher)
 
+    def test_minimax_batch_contract_preserves_validated_stage2_shape(self) -> None:
+        config = tomllib.loads(
+            (GB200 / "refiner_minimax_h3_480_to_1080_compile.toml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(config["gpus"], 4)
+        self.assertEqual(
+            (
+                config["LTX25_REFINER_SOURCE_WIDTH"],
+                config["LTX25_REFINER_SOURCE_HEIGHT"],
+                config["LTX25_REFINER_SOURCE_FRAMES"],
+                config["LTX25_REFINER_FPS"],
+            ),
+            ("864", "480", "243", "24"),
+        )
+        self.assertEqual(
+            (
+                config["LTX25_REFINER_WIDTH"],
+                config["LTX25_REFINER_HEIGHT"],
+                config["LTX25_REFINER_FRAME_COUNT"],
+                config["LTX25_REFINER_FPS"],
+            ),
+            ("1920", "1088", "241", "24"),
+        )
+        self.assertEqual(config["LTX25_REFINER_EXPECTED_SAMPLES"], "15")
+        self.assertEqual(config["LTX25_REFINER_MEASURE_REQUESTS"], "15")
+        self.assertEqual(config["LTX25_REFINER_SOURCE_NAMED_OUTPUTS"], "1")
+        self.assertEqual(config["LTX25_REFINER_COMPILE"], "1")
+        self.assertEqual(config["LTX25_REFINER_PARALLELISM"], "head_context")
+        self.assertEqual(config["LTX25_REFINER_CACHE"], "0")
+
+    def test_batch_measurement_aggregation_is_one_to_one_and_complete(self) -> None:
+        runner_path = GB200 / "refiner_head_cp.py"
+        tree = ast.parse(runner_path.read_text(encoding="utf-8"))
+        expected_phases = (
+            "input_decode_resize_s",
+            "gemma_embedding_s",
+            "taehv_encode_s",
+            "latent_upsample_s",
+            "replica_sync_s",
+            "denoise_prepare_s",
+            "transformer_denoise_s",
+            "denoise_finish_s",
+            "taehv_decode_s",
+            "h264_encode_mux_s",
+        )
+        self.assertEqual(literal_constants(runner_path)["TIMED_PHASES"], expected_phases)
+
+        assignments = {
+            target.id: node.value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance((target := node.targets[0]), ast.Name)
+            and target.id in {"sample_summaries", "phases_s_mean"}
+        }
+        summaries = assignments["sample_summaries"]
+        self.assertIsInstance(summaries, ast.ListComp)
+        self.assertEqual(len(summaries.generators), 1)
+        self.assertEqual(ast.unparse(summaries.generators[0].iter), "measurements")
+
+        phase_means = assignments["phases_s_mean"]
+        self.assertIsInstance(phase_means, ast.DictComp)
+        self.assertEqual(len(phase_means.generators), 1)
+        self.assertEqual(ast.unparse(phase_means.generators[0].iter), "TIMED_PHASES")
+
+        sample_fields = {
+            key.value
+            for key in summaries.elt.keys
+            if isinstance(key, ast.Constant) and isinstance(key.value, str)
+        }
+        self.assertEqual(
+            sample_fields,
+            {"index", "prompt_id", "seed", "input", "output", "sample_wall_s"},
+        )
+
+    def test_launcher_forwards_source_and_batch_arguments(self) -> None:
+        launcher = (GB200 / "run_refiner_gb200.sh").read_text(encoding="utf-8")
+        for argument in (
+            "--source-width",
+            "--source-height",
+            "--source-frames",
+            "--expected-samples",
+            "--source-named-outputs",
+        ):
+            self.assertIn(argument, launcher)
+        self.assertIn(
+            '[[ "$LTX25_REFINER_MEASURE_REQUESTS" != "$EXPECTED_SAMPLES" ]]',
+            launcher,
+        )
+
     def test_all_compiler_caches_are_persistent_and_exported_pre_import(self) -> None:
         launcher = (GB200 / "run_refiner_gb200.sh").read_text(encoding="utf-8")
         for variable, leaf in (

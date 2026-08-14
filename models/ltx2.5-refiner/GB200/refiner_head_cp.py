@@ -64,6 +64,18 @@ TAEHV_PARALLEL_ELEMENT_LIMIT = 100_000_000
 TAEHV_WEIGHT_SHA256 = "007788e6b9cb7f77e8589ae30ba7456b119d38b0d017e1d349c1c1d11e3d6339"
 COMPILE_MODE = "max-autotune-no-cudagraphs"
 COMPILE_WARMUP_ALL2ALL_TIMEOUT_S = 600.0
+TIMED_PHASES = (
+    "input_decode_resize_s",
+    "gemma_embedding_s",
+    "taehv_encode_s",
+    "latent_upsample_s",
+    "replica_sync_s",
+    "denoise_prepare_s",
+    "transformer_denoise_s",
+    "denoise_finish_s",
+    "taehv_decode_s",
+    "h264_encode_mux_s",
+)
 T = TypeVar("T")
 
 
@@ -184,21 +196,45 @@ def _safe_source_path(input_root: Path, relative_path: str) -> Path:
     return path
 
 
-def _load_single_record(manifest: Path, input_root: Path) -> dict[str, Any]:
+def _load_records(
+    manifest: Path,
+    input_root: Path,
+    *,
+    expected_count: int,
+) -> list[dict[str, Any]]:
     payload = json.loads(manifest.read_text(encoding="utf-8"))
-    if not isinstance(payload, list) or len(payload) != 1 or not isinstance(payload[0], dict):
-        raise ValueError("the refiner manifest must be a JSON array containing exactly one row")
-    record = dict(payload[0])
-    if record.get("index") != 0:
-        raise ValueError("the only manifest row must have index 0")
-    if not isinstance(record.get("prompt"), str) or not record["prompt"].strip():
-        raise ValueError("manifest row 0 must contain a non-empty prompt")
-    if not isinstance(record.get("seed"), int):
-        raise ValueError("manifest row 0 must contain an integer seed")
-    if not isinstance(record.get("file"), str):
-        raise ValueError("manifest row 0 must contain a relative MP4 file")
-    record["_source_path"] = str(_safe_source_path(input_root, record["file"]))
-    return record
+    if (
+        not isinstance(payload, list)
+        or len(payload) != expected_count
+        or not all(isinstance(row, dict) for row in payload)
+    ):
+        raise ValueError(
+            "the refiner manifest must be a JSON array containing exactly "
+            f"{expected_count} row(s)"
+        )
+
+    records: list[dict[str, Any]] = []
+    source_paths: set[str] = set()
+    for row_index, row in enumerate(payload):
+        record = dict(row)
+        if record.get("index") != row_index:
+            raise ValueError(
+                f"manifest row {row_index} must have index {row_index}, "
+                f"got {record.get('index')!r}"
+            )
+        if not isinstance(record.get("prompt"), str) or not record["prompt"].strip():
+            raise ValueError(f"manifest row {row_index} must contain a non-empty prompt")
+        if not isinstance(record.get("seed"), int):
+            raise ValueError(f"manifest row {row_index} must contain an integer seed")
+        if not isinstance(record.get("file"), str):
+            raise ValueError(f"manifest row {row_index} must contain a relative MP4 file")
+        source_path = str(_safe_source_path(input_root, record["file"]))
+        if source_path in source_paths:
+            raise ValueError(f"manifest row {row_index} repeats source video {source_path}")
+        source_paths.add(source_path)
+        record["_source_path"] = source_path
+        records.append(record)
+    return records
 
 
 def _tae_pixels_from_ltx(pixels: torch.Tensor) -> torch.Tensor:
@@ -261,6 +297,9 @@ class ResidentRefiner:
         self.device = torch.device("cuda", int(os.environ["LOCAL_RANK"]))
         self.dtype = torch.bfloat16
         self.compile_enabled = bool(args.compile)
+        self.source_width = int(args.source_width)
+        self.source_height = int(args.source_height)
+        self.source_frames = int(args.source_frames)
         self.compile_cache_root = (
             args.compile_cache_root.resolve() if args.compile_cache_root is not None else None
         )
@@ -445,17 +484,28 @@ class ResidentRefiner:
     def prepare_input(self, source_path: Path) -> tuple[torch.Tensor, dict[str, Any]]:
         metadata = get_videostream_metadata(str(source_path))
         actual = (metadata.width, metadata.height, metadata.frames, float(metadata.fps))
-        expected = (WIDTH, HEIGHT, FRAME_COUNT, FPS)
+        expected = (self.source_width, self.source_height, self.source_frames, FPS)
         if actual[:3] != expected[:3] or not math.isclose(actual[3], expected[3], rel_tol=0, abs_tol=1e-6):
             raise ValueError(f"input must be exactly {expected}, got {actual}")
         frames = decode_video_by_frame(str(source_path), device=self.device, frame_cap=FRAME_COUNT)
         pixels = video_preprocess(frames, HEIGHT // 2, WIDTH // 2, self.dtype, self.device)
+        expected_pixels = (1, 3, FRAME_COUNT, HEIGHT // 2, WIDTH // 2)
+        if tuple(pixels.shape) != expected_pixels:
+            raise RuntimeError(
+                f"preprocessed base video has shape {tuple(pixels.shape)}, "
+                f"expected {expected_pixels}"
+            )
         tae_pixels = _tae_pixels_from_ltx(pixels)
         return tae_pixels, {
-            "width": metadata.width,
-            "height": metadata.height,
-            "frames": metadata.frames,
-            "fps": float(metadata.fps),
+            "source_width": metadata.width,
+            "source_height": metadata.height,
+            "source_frames": metadata.frames,
+            "source_fps": float(metadata.fps),
+            "consumed_frames": FRAME_COUNT,
+            "dropped_tail_frames": metadata.frames - FRAME_COUNT,
+            "preprocess": "resize_and_center_crop",
+            "taehv_input_width": WIDTH // 2,
+            "taehv_input_height": HEIGHT // 2,
             "taehv_pixels_shape": list(tae_pixels.shape),
         }
 
@@ -733,6 +783,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--refiner-lora", type=Path, required=True)
     parser.add_argument("--taehv-source", type=Path, required=True)
     parser.add_argument("--taehv-checkpoint", type=Path, required=True)
+    parser.add_argument("--source-width", type=int, default=WIDTH)
+    parser.add_argument("--source-height", type=int, default=HEIGHT)
+    parser.add_argument("--source-frames", type=int, default=FRAME_COUNT)
+    parser.add_argument("--expected-samples", type=int, default=1)
+    parser.add_argument("--source-named-outputs", action="store_true")
     parser.add_argument("--compile", action="store_true")
     parser.add_argument("--compile-mode", default=None)
     parser.add_argument("--compile-cache-root", type=Path, default=None)
@@ -754,6 +809,14 @@ def _validate_paths(args: argparse.Namespace) -> None:
     for path in required:
         if not path.exists() or (path.is_file() and path.stat().st_size == 0):
             raise FileNotFoundError(path)
+    if args.source_width < 1 or args.source_height < 1:
+        raise ValueError("source width and height must be positive")
+    if args.source_frames < FRAME_COUNT:
+        raise ValueError(
+            f"source must contain at least {FRAME_COUNT} frames, got {args.source_frames}"
+        )
+    if not 1 <= args.expected_samples <= 100:
+        raise ValueError("expected sample count must be in [1, 100]")
     if args.compile:
         if args.compile_mode != COMPILE_MODE or args.compile_cache_root is None:
             raise ValueError(
@@ -813,6 +876,28 @@ def _compile_metadata(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _output_name(
+    record: dict[str, Any],
+    *,
+    compile_enabled: bool,
+    source_named: bool,
+) -> str:
+    if not source_named:
+        return (
+            "ltx25_refiner_compile_1920x1088_241f.mp4"
+            if compile_enabled
+            else "ltx25_refiner_1920x1088_241f.mp4"
+        )
+    source_stem = Path(record["file"]).stem
+    safe_stem = "".join(
+        character if character.isalnum() or character in "-_" else "_"
+        for character in source_stem
+    ).strip("_")
+    if not safe_stem:
+        raise ValueError(f"cannot derive output name from {record['file']!r}")
+    return f"{safe_stem}-ltx25-refined-1920x1088-241f.mp4"
+
+
 def main() -> int:
     args = _build_parser().parse_args()
     local_rank = int(os.environ.get("LOCAL_RANK", "-1"))
@@ -828,7 +913,11 @@ def main() -> int:
                 f"devices={torch.cuda.device_count()} world={dist.get_world_size()}"
             )
         _validate_paths(args)
-        record = _load_single_record(args.manifest, args.input_root)
+        records = _load_records(
+            args.manifest,
+            args.input_root,
+            expected_count=args.expected_samples,
+        )
 
         verification_error: str | None = None
         if rank == 0:
@@ -840,6 +929,26 @@ def main() -> int:
                     )
                 args.output_dir.mkdir(parents=True, exist_ok=True)
                 args.metadata_dir.mkdir(parents=True, exist_ok=True)
+                output_names = [
+                    _output_name(
+                        record,
+                        compile_enabled=args.compile,
+                        source_named=args.source_named_outputs,
+                    )
+                    for record in records
+                ]
+                if len(output_names) != len(set(output_names)):
+                    raise RuntimeError("manifest rows map to duplicate output filenames")
+                existing = [
+                    str(args.output_dir / name)
+                    for name in output_names
+                    if (args.output_dir / name).exists()
+                ]
+                if existing:
+                    raise FileExistsError(
+                        "refusing to overwrite existing refined outputs: "
+                        + ", ".join(existing[:4])
+                    )
             except Exception as exc:
                 verification_error = f"rank-0 setup validation failed: {type(exc).__name__}: {exc}"
         _broadcast_rank0_error(verification_error if rank == 0 else None)
@@ -875,6 +984,19 @@ def main() -> int:
                     "quantization": None,
                     "compile": _compile_metadata(args),
                     "cache": False,
+                    "input_contract": {
+                        "source_width": args.source_width,
+                        "source_height": args.source_height,
+                        "source_frames": args.source_frames,
+                        "source_fps": FPS,
+                        "consumed_frames": FRAME_COUNT,
+                        "taehv_input_width": WIDTH // 2,
+                        "taehv_input_height": HEIGHT // 2,
+                        "output_width": WIDTH,
+                        "output_height": HEIGHT,
+                        "output_frames": FRAME_COUNT,
+                        "resize_mode": "center_crop",
+                    },
                     "all_inference_modules_simultaneously_gpu_resident": True,
                     "taehv_temporal_execution": "sequential",
                     "preload_wall_s_max_excluded": round(max(float(value) for value in load_times if value is not None), 6),
@@ -882,83 +1004,155 @@ def main() -> int:
                 },
             )
 
-        warmup = models.run_sample(record, warmup=True, output_path=None)
+        warmup = models.run_sample(records[0], warmup=True, output_path=None)
         if rank == 0:
             assert warmup is not None
             _write_json(args.metadata_dir / "warmup.json", warmup)
         models.prepare_steady_state()
 
-        output_name = (
-            "ltx25_refiner_compile_1920x1088_241f.mp4"
-            if args.compile
-            else "ltx25_refiner_1920x1088_241f.mp4"
-        )
-        output_path = args.output_dir / output_name
-        measured = models.run_sample(record, warmup=False, output_path=output_path)
+        measurements: list[dict[str, Any]] = []
+        for sample_index, record in enumerate(records):
+            output_path = args.output_dir / _output_name(
+                record,
+                compile_enabled=args.compile,
+                source_named=args.source_named_outputs,
+            )
+            measured = models.run_sample(record, warmup=False, output_path=output_path)
+            if rank == 0:
+                assert measured is not None
+                measurements.append(measured)
+                _write_json(
+                    args.metadata_dir / "samples" / f"{sample_index:02d}.json",
+                    measured,
+                )
+
         if rank == 0:
-            assert measured is not None
-            _write_json(args.metadata_dir / "samples" / "00.json", measured)
+            sample_wall_s_mean = round(
+                sum(float(item["sample_wall_s"]) for item in measurements)
+                / len(measurements),
+                6,
+            )
+            phases_s_mean = {
+                phase: round(
+                    sum(float(item[phase]) for item in measurements)
+                    / len(measurements),
+                    6,
+                )
+                for phase in TIMED_PHASES
+            }
+            attention_total = {
+                key: sum(
+                    int(item["attention"]["aggregate"][key])
+                    for item in measurements
+                )
+                for key in ("dense_calls", "sol_calls", "kernel_calls")
+            }
+            outputs = [str(item["output"]) for item in measurements]
+            sample_summaries = [
+                {
+                    "index": item["index"],
+                    "prompt_id": item["prompt_id"],
+                    "seed": item["seed"],
+                    "input": item["input"],
+                    "output": item["output"],
+                    "sample_wall_s": item["sample_wall_s"],
+                }
+                for item in measurements
+            ]
+            if len(sample_summaries) != len(measurements):
+                raise RuntimeError("measurement summary count does not match measured samples")
+            benchmark = {
+                "schema_version": 2,
+                "hardware": "4xGB200",
+                "host": platform.node(),
+                "torch": torch.__version__,
+                "cuda": torch.version.cuda,
+                "workload": {
+                    "source_width": args.source_width,
+                    "source_height": args.source_height,
+                    "source_frames": args.source_frames,
+                    "source_fps": FPS,
+                    "preprocess": "take_first_241_frames_then_resize_and_center_crop",
+                    "taehv_input_width": WIDTH // 2,
+                    "taehv_input_height": HEIGHT // 2,
+                    "width": WIDTH,
+                    "height": HEIGHT,
+                    "frames": FRAME_COUNT,
+                    "fps": FPS,
+                    "duration_s": FRAME_COUNT / FPS,
+                    "stage2_sigmas": list(STAGE2_SIGMAS),
+                    "stage2_updates": 3,
+                    "taus": list(STAGE2_TAUS),
+                    "lora_strength": LORA_STRENGTH,
+                },
+                "timing_scope": (
+                    "resident post-warmup sequential per-video E2E; model loading, "
+                    "torch.compile, Inductor/Triton autotuning, Sol first-use "
+                    "compilation, and the complete warm-up request are excluded"
+                ),
+                "compile": _compile_metadata(args),
+                "measured_hot_samples": len(measurements),
+                "sample_wall_s_mean": sample_wall_s_mean,
+                "sample_wall_s_min": min(
+                    float(item["sample_wall_s"]) for item in measurements
+                ),
+                "sample_wall_s_max": max(
+                    float(item["sample_wall_s"]) for item in measurements
+                ),
+                "phases_s_mean": phases_s_mean,
+                "attention_total": attention_total,
+                "samples": sample_summaries,
+                "outputs": outputs,
+            }
+            if len(measurements) == 1:
+                benchmark.update(
+                    {
+                        "sample_wall_s": measurements[0]["sample_wall_s"],
+                        "phases_s": {
+                            phase: measurements[0][phase] for phase in TIMED_PHASES
+                        },
+                        "attention": measurements[0]["attention"],
+                        "output": measurements[0]["output"],
+                    }
+                )
             _write_json(
                 args.metadata_dir / "benchmark.json",
-                {
-                    "schema_version": 1,
-                    "hardware": "4xGB200",
-                    "host": platform.node(),
-                    "torch": torch.__version__,
-                    "cuda": torch.version.cuda,
-                    "workload": {
-                        "width": WIDTH,
-                        "height": HEIGHT,
-                        "frames": FRAME_COUNT,
-                        "fps": FPS,
-                        "duration_s": FRAME_COUNT / FPS,
-                        "stage2_sigmas": list(STAGE2_SIGMAS),
-                        "stage2_updates": 3,
-                        "taus": list(STAGE2_TAUS),
-                        "lora_strength": LORA_STRENGTH,
-                    },
-                    "timing_scope": (
-                        "resident post-warmup single-video E2E; model loading, torch.compile, "
-                        "Inductor/Triton autotuning, Sol first-use compilation, and the complete "
-                        "warm-up request are excluded"
-                    ),
-                    "compile": _compile_metadata(args),
-                    "sample_wall_s": measured["sample_wall_s"],
-                    "phases_s": {
-                        key: measured[key]
-                        for key in (
-                            "input_decode_resize_s",
-                            "gemma_embedding_s",
-                            "taehv_encode_s",
-                            "latent_upsample_s",
-                            "replica_sync_s",
-                            "denoise_prepare_s",
-                            "transformer_denoise_s",
-                            "denoise_finish_s",
-                            "taehv_decode_s",
-                            "h264_encode_mux_s",
-                        )
-                    },
-                    "attention": measured["attention"],
-                    "output": measured["output"],
-                },
+                benchmark,
             )
+            success = {
+                "status": "succeeded",
+                "rendered_outputs": len(measurements),
+                "measured_hot_samples": len(measurements),
+                "sample_wall_s_mean": sample_wall_s_mean,
+                "weight_load_guard_attempts": 0,
+                "all_inference_modules_simultaneously_gpu_resident": True,
+                "attention_total": attention_total,
+                "compile": _compile_metadata(args),
+                "outputs": outputs,
+                "timestamp_epoch_s": time.time(),
+            }
+            if len(measurements) == 1:
+                success.update(
+                    {
+                        "sample_wall_s": measurements[0]["sample_wall_s"],
+                        "attention_aggregate": measurements[0]["attention"]["aggregate"],
+                        "output": measurements[0]["output"],
+                    }
+                )
             _write_json(
                 args.metadata_dir / "success.json",
-                {
-                    "status": "succeeded",
-                    "rendered_outputs": 1,
-                    "measured_hot_samples": 1,
-                    "sample_wall_s": measured["sample_wall_s"],
-                    "weight_load_guard_attempts": measured["weight_load_guard_attempts"],
-                    "all_inference_modules_simultaneously_gpu_resident": True,
-                    "attention_aggregate": measured["attention"]["aggregate"],
-                    "compile": _compile_metadata(args),
-                    "output": measured["output"],
-                    "timestamp_epoch_s": time.time(),
-                },
+                success,
             )
-            print(json.dumps({"sample_wall_s": measured["sample_wall_s"], "output": measured["output"]}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "measured_hot_samples": len(measurements),
+                        "sample_wall_s_mean": sample_wall_s_mean,
+                        "outputs": outputs,
+                    },
+                    indent=2,
+                )
+            )
         dist.barrier()
         return 0
     finally:

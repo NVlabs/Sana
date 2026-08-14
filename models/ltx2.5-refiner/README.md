@@ -1,9 +1,11 @@
 # LTX-2.5 Stage-2 Refiner + TAEHV wide on 4xGB200
 
 This model directory is the GB200 implementation of the delivered standalone
-LTX-2.5 Stage-2 refiner. One invocation processes one 1080p, 10-second input
-video with four GB200 GPUs. It uses the Sol-Engine SM100 attention backend
-already present in this repository and the repository's existing root
+LTX-2.5 Stage-2 refiner. The standard configs process one 1080p, 10-second
+input video with four GB200 GPUs. The MiniMax H3 batch config processes 15
+aligned 480p base videos sequentially in the same resident process. It uses the
+Sol-Engine SM100 attention backend already present in this repository and the
+repository's existing root
 `.venv`; it does not depend on an adjacent checkout or create another Python
 environment.
 
@@ -138,9 +140,10 @@ hash. It does not modify the shared Python environment.
 
 ## Input manifest
 
-The manifest is a JSON array containing exactly one row. `file` is relative to
-`INPUT_ROOT`; prompt and seed are the only per-sample model inputs that may
-vary:
+The manifest is a JSON array. `refiner.toml` and `refiner_compile.toml` require
+exactly one row. The MiniMax H3 batch config requires exactly 15 rows. Indices
+must be contiguous from zero, `file` is relative to `INPUT_ROOT`, and prompt
+and seed are the per-sample model inputs:
 
 ```json
 [
@@ -154,10 +157,97 @@ vary:
 ]
 ```
 
-The source clip must already be 1920x1088, 241 frames, and 24 FPS. The runner
-rejects a different frame count, frame rate, batch size, GPU count, parallel
-degree, parameter layout, or sampling policy instead of silently changing the
-fixed configuration.
+For the two standard configs, the source clip must already be 1920x1088, 241
+frames, and 24 FPS. The runner rejects a source that disagrees with the chosen
+config, as well as a different frame rate, manifest count, GPU count, parallel
+degree, parameter layout, or sampling policy.
+
+## Refine the 15 MiniMax H3 480p base videos
+
+`refiner_minimax_h3_480_to_1080_compile.toml` implements the provided TAEHV
+wide upsampler handoff on the existing MiniMax H3 outputs. It preserves the
+same Stage-2 schedule, Sol-Attn policy, four-way head/context parallelism, and
+persistent compile cache as the validated compile arm.
+
+| Point | Value |
+|---|---|
+| Source | 864x480, 243 frames, 24 FPS |
+| Frames used | first 241; final two source frames are dropped |
+| Pixel preprocessing | aspect-preserving resize and center crop to 960x544 |
+| TAEHV latent | `(1, 31, 128, 17, 30)` in TAEHV layout |
+| Spatial upsampler | official LTX latent x2 upsampler |
+| Stage-2 latent | `(1, 128, 31, 34, 60)` in LTX layout |
+| Output | 1920x1088, 241 frames, 24 FPS, approximately 10.04 seconds |
+| Execution | one excluded warm-up, then 15 sequential hot samples in one resident process |
+
+Build the prompt- and seed-aligned manifests on the B200 login node. This is a
+small standard-library-only JSON operation; it does not import model code:
+
+```bash
+cd /home/yitongl/code/agent_deploy/sol-engine
+
+export TEACHER=/home/yitongl/code/b200_runs/minimax-h3-resolution-handoff/sglang_teacher50_1080p10s_wan50_15_42edc94/benchmark.json
+export STUDENT=/home/yitongl/code/b200_runs/minimax-h3-resolution-handoff/sglang_t2_l3_480_compile_wan50_15_42edc94
+export RUN=/home/yitongl/code/b200_runs/ltx25-refiner-minimax-h3-480-to-1080-20260814
+
+mkdir -p "$RUN"/{smoke,batch}/{outputs,metadata}
+python3 models/ltx2.5-refiner/GB200/build_minimax_h3_manifest.py \
+  --teacher-benchmark "$TEACHER" \
+  --student-root "$STUDENT" \
+  --output "$RUN/manifest-smoke.json" \
+  --limit 1
+python3 models/ltx2.5-refiner/GB200/build_minimax_h3_manifest.py \
+  --teacher-benchmark "$TEACHER" \
+  --student-root "$STUDENT" \
+  --output "$RUN/manifest-15.json"
+```
+
+Run the one-video smoke first. The two overrides keep the fixed batch config
+but require only the one-row smoke manifest:
+
+```bash
+srun -A nvr_elm_llm \
+  --partition batch \
+  --qos interactive \
+  --nodes 1 \
+  --ntasks 1 \
+  --gpus-per-node 4 \
+  --cpus-per-task 32 \
+  --mem 0 \
+  --time 00:10:00 \
+  python3 scripts/run.py \
+    models/ltx2.5-refiner/GB200/refiner_minimax_h3_480_to_1080_compile.toml \
+    --run-root "$RUN/smoke/run-bundles" \
+    --set INPUT_ROOT="$STUDENT" \
+    --set MANIFEST="$RUN/manifest-smoke.json" \
+    --set OUTPUT_DIR="$RUN/smoke/outputs" \
+    --set METADATA_DIR="$RUN/smoke/metadata" \
+    --set LTX25_REFINER_EXPECTED_SAMPLES=1 \
+    --set LTX25_REFINER_MEASURE_REQUESTS=1
+```
+
+After the smoke passes, run all 15. The model fleet and compiler state remain
+resident across the measured samples, and source-derived output names keep the
+videos one-to-one with their inputs:
+
+```bash
+srun -A nvr_elm_llm \
+  --partition batch \
+  --qos interactive \
+  --nodes 1 \
+  --ntasks 1 \
+  --gpus-per-node 4 \
+  --cpus-per-task 32 \
+  --mem 0 \
+  --time 00:12:00 \
+  python3 scripts/run.py \
+    models/ltx2.5-refiner/GB200/refiner_minimax_h3_480_to_1080_compile.toml \
+    --run-root "$RUN/batch/run-bundles" \
+    --set INPUT_ROOT="$STUDENT" \
+    --set MANIFEST="$RUN/manifest-15.json" \
+    --set OUTPUT_DIR="$RUN/batch/outputs" \
+    --set METADATA_DIR="$RUN/batch/metadata"
+```
 
 ## Run one hot 4xGB200 inference
 
@@ -338,4 +428,37 @@ The compile outputs and complete metadata are outside Git at:
 ```text
 /home/yitongl/code/agent_deploy/sol-engine/runs/ltx25-refiner-compile-1080p10s-20260814-a/
 /home/yitongl/code/agent_deploy/sol-engine/runs/ltx25-refiner-compile-1080p10s-20260814-b/
+```
+
+## Validated MiniMax H3 480p-to-1080p batch
+
+The one-video smoke passed in Slurm job `6154485`, followed by the complete
+15-video batch in job `6154715`. All 15 records passed the fixed source and
+output geometry checks, produced one non-empty MP4 each, remained fully
+resident with zero measured weight loads, and used the required SM100 kernel
+without fallback.
+
+| Scope | Seconds per video, 15-video batch mean |
+|---|---:|
+| Input decode, first-241-frame selection, resize and center crop | 0.654742 |
+| Gemma embedding | 0.103557 |
+| TAEHV encode | 0.240331 |
+| Latent x2 upsample | 0.048924 |
+| Replica synchronization | 0.006712 |
+| Denoise preparation and finish | 0.001203 |
+| Stage-2 transformer, 3 updates | 1.962294 |
+| TAEHV decode | 0.298052 |
+| H.264 encode and mux | 1.532127 |
+| **Hot resident end to end** | **4.842361** |
+
+The per-video hot E2E range was 4.637821-5.093040 seconds. Across the batch,
+metadata recorded 180 dense layer-0 calls and 8,460 Sol calls backed by 8,460
+actual SM100 kernel calls. Phase means are maxima across ranks and do not need
+to sum exactly to the E2E mean.
+
+The generated videos and complete metadata are outside Git at:
+
+```text
+/home/yitongl/code/b200_runs/ltx25-refiner-minimax-h3-480-to-1080-20260814/batch/outputs/
+/home/yitongl/code/b200_runs/ltx25-refiner-minimax-h3-480-to-1080-20260814/batch/metadata/
 ```

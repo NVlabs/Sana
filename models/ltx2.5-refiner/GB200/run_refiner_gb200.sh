@@ -8,7 +8,7 @@ fi
 
 : "${OUT_DIR:?OUT_DIR must be set by scripts/run.py}"
 : "${INPUT_ROOT:?set INPUT_ROOT to the directory containing the input manifest assets}"
-: "${MANIFEST:?set MANIFEST to the one-row input JSON manifest}"
+: "${MANIFEST:?set MANIFEST to the input JSON manifest}"
 : "${OUTPUT_DIR:?set OUTPUT_DIR for the refined MP4}"
 : "${METADATA_DIR:?set METADATA_DIR for benchmark and validation JSON}"
 
@@ -54,12 +54,48 @@ require_fixed LTX25_REFINER_QUANTIZATION none
 require_fixed LTX25_REFINER_SINK 0
 require_fixed LTX25_REFINER_REORDER 0
 require_fixed LTX25_REFINER_WARMUP_REQUESTS 1
-require_fixed LTX25_REFINER_MEASURE_REQUESTS 1
 require_fixed LTX25_REFINER_WARMUP_INDEX 0
 require_fixed LTX25_REFINER_SAMPLE_INDEX 0
 require_fixed LTX25_REFINER_TAEHV_SOURCE_COMMIT 32ac0146b11007cda5a57b60a3b35653361fb8a4
 require_fixed LTX25_REFINER_TAEHV_WEIGHT_SHA256 007788e6b9cb7f77e8589ae30ba7456b119d38b0d017e1d349c1c1d11e3d6339
 require_fixed SOL_ATTN_STRICT 1
+
+readonly SOURCE_WIDTH="${LTX25_REFINER_SOURCE_WIDTH:-1920}"
+readonly SOURCE_HEIGHT="${LTX25_REFINER_SOURCE_HEIGHT:-1088}"
+readonly SOURCE_FRAMES="${LTX25_REFINER_SOURCE_FRAMES:-241}"
+readonly EXPECTED_SAMPLES="${LTX25_REFINER_EXPECTED_SAMPLES:-1}"
+readonly SOURCE_NAMED_OUTPUTS="${LTX25_REFINER_SOURCE_NAMED_OUTPUTS:-0}"
+for integer_value in "$SOURCE_WIDTH" "$SOURCE_HEIGHT" "$SOURCE_FRAMES" "$EXPECTED_SAMPLES"; do
+  if [[ ! "$integer_value" =~ ^[1-9][0-9]*$ ]]; then
+    echo "[error] source dimensions, frames, and sample count must be positive integers" >&2
+    exit 2
+  fi
+done
+if (( SOURCE_FRAMES < 241 || EXPECTED_SAMPLES > 100 )); then
+  echo "[error] source requires at least 241 frames and at most 100 samples" >&2
+  exit 2
+fi
+if [[ "$LTX25_REFINER_MEASURE_REQUESTS" != "$EXPECTED_SAMPLES" ]]; then
+  echo "[error] measured requests must equal expected manifest samples" >&2
+  exit 2
+fi
+case "$SOURCE_NAMED_OUTPUTS" in
+  0|1) ;;
+  *)
+    echo "[error] LTX25_REFINER_SOURCE_NAMED_OUTPUTS must be exactly 0 or 1" >&2
+    exit 2
+    ;;
+esac
+
+SOURCE_ARGS=(
+  --source-width "$SOURCE_WIDTH"
+  --source-height "$SOURCE_HEIGHT"
+  --source-frames "$SOURCE_FRAMES"
+  --expected-samples "$EXPECTED_SAMPLES"
+)
+if [[ "$SOURCE_NAMED_OUTPUTS" == "1" ]]; then
+  SOURCE_ARGS+=(--source-named-outputs)
+fi
 
 case "${LTX25_REFINER_COMPILE:-}" in
   0|1) ;;
@@ -128,6 +164,7 @@ export SOL_ATTN_STRICT=1
 export PYTHONPATH="$HERE:$REPO_ROOT/models/ltx25/GB200/ltx_src:$REPO_ROOT/models/ltx25/GB200/environment/LTX-2/packages/ltx-kernels/src:$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
 echo "[ltx25-refiner] fixed workload=1920x1088/241f/24fps Stage2=3 updates"
+echo "[ltx25-refiner] source=${SOURCE_WIDTH}x${SOURCE_HEIGHT}/${SOURCE_FRAMES}f samples=${EXPECTED_SAMPLES} resize=center-crop"
 echo "[ltx25-refiner] parallelism=4-way-head-context parameters=full-replica attention=Sol-SM100"
 echo "[ltx25-refiner] torch_compile=$LTX25_REFINER_COMPILE cache=${LTX25_REFINER_COMPILE_CACHE_ROOT:-disabled}"
 nvidia-smi -L
@@ -148,4 +185,5 @@ exec "$PYTHON_BIN" -m torch.distributed.run \
   --refiner-lora "$LORA" \
   --taehv-source "$TAEHV_SOURCE" \
   --taehv-checkpoint "$TAEHV_CHECKPOINT" \
+  "${SOURCE_ARGS[@]}" \
   "${COMPILE_ARGS[@]}"

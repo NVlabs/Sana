@@ -28,8 +28,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/NVlabs/Sana/tree/sol-engine">
-    <img src="images/sol-engine-branch-banner.svg" width="100%" alt="Open the Sol-Engine inference engine branch">
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/">
+    <img src="https://raw.githubusercontent.com/NVlabs/Sana/main/asset/sol-engine-branch-banner.svg" width="100%" alt="Open the Sol-Engine documentation">
   </a>
 </p>
 

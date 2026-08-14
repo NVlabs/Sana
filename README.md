@@ -15,6 +15,8 @@
 
 <p align="center">
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/"><img src="https://img.shields.io/badge/🏠_Homepage-Sol--Engine-76b900?style=flat-square" alt="Homepage"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/H3/"><img src="https://img.shields.io/badge/MiniMax--H3-Project_Page-76b900?style=flat-square" alt="MiniMax H3"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/LTX25/"><img src="https://img.shields.io/badge/LTX--2.5-Project_Page-76b900?style=flat-square" alt="LTX-2.5"/></a>
   <a href="https://arxiv.org/abs/2606.23743"><img src="https://img.shields.io/badge/📄_arXiv-2606.23743-b31b1b?style=flat-square" alt="arXiv"/></a>
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/"><img src="https://img.shields.io/badge/📖_Docs-github.io-blue?style=flat-square" alt="Docs"/></a>
   <a href="#-license"><img src="https://img.shields.io/badge/License-Apache_2.0-green?style=flat-square" alt="License"/></a>
@@ -36,6 +38,7 @@ support a wider range of models.
 
 ## 📰 News
 
+- **[2026/08/13]** 🔥 **[LTX-2.5](https://github.com/Lightricks/LTX-2) across B200, GeForce RTX 5090, and DGX Spark** [[Blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] — reaches up to **4.68×** multi-step pipeline speedup and **1.90×** distilled pipeline speedup.
 - **[2026/08/09]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on H100 and A100** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-DataCenter/)] — reaches **3.56×** end-to-end on 4×H100 and **3.55×** on 4×A100.
 - **[2026/08/06]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB10 and RTX 5090** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — reaches **3.92×** end-to-end on DGX Spark (GB10) and **4.52×** on RTX 5090.
 - **[2026/08/03]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB200** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] — reaches **3.95×** end-to-end on 8×GB200.

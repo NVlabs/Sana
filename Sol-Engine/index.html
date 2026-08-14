@@ -263,7 +263,7 @@
         const venue = root.querySelector('.hero .venue');
         if (venue) venue.textContent = 'Technical Report · 2026';
 
-        const badges = root.querySelector('.badges');
+        const badges = root.querySelector('.badges, .hero-actions');
         if (badges) {
           badges.innerHTML = '';
           const paperBadge = document.createElement('a');
@@ -276,7 +276,17 @@
           codeBadge.href = 'https://github.com/NVlabs/Sana/tree/sol-engine';
           codeBadge.target = '_blank';
           codeBadge.rel = 'noopener noreferrer';
-          badges.append(paperBadge, codeBadge);
+          const h3Badge = document.createElement('a');
+          h3Badge.textContent = 'MiniMax H3';
+          h3Badge.href = 'https://nvlabs.github.io/Sana/Sol-Engine/H3/';
+          h3Badge.target = '_blank';
+          h3Badge.rel = 'noopener noreferrer';
+          const ltx25Badge = document.createElement('a');
+          ltx25Badge.textContent = 'LTX-2.5';
+          ltx25Badge.href = 'https://nvlabs.github.io/Sana/Sol-Engine/LTX25/';
+          ltx25Badge.target = '_blank';
+          ltx25Badge.rel = 'noopener noreferrer';
+          badges.append(paperBadge, codeBadge, h3Badge, ltx25Badge);
         }
 
         const heroLinks = Array.from(root.querySelectorAll('.hero a, .hero-shell a'));

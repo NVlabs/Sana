@@ -252,6 +252,7 @@ Thanks to the following open-sourced projects:
 - [Open-Sora](https://github.com/hpcaitech/Open-Sora)
 - [Wan](https://github.com/Wan-Video/Wan2.1)
 - [LTX-2](https://github.com/Lightricks/LTX-2)
+- [Sol-Engine](https://github.com/NVlabs/Sana/tree/sol-engine)
 - [LongLive](https://github.com/NVlabs/LongLive)
 - [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
 

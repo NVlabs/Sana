@@ -10,16 +10,6 @@
 </h3>
 
 <p align="center">
-  <a href="https://github.com/NVlabs/Sana/tree/sol-engine">
-    <img src="https://img.shields.io/badge/⚡_SOL--ENGINE-OPEN_THE_INFERENCE_ENGINE_BRANCH_→-76B900?style=for-the-badge" height="42" alt="Open the Sol-Engine branch"/>
-  </a>
-</p>
-<p align="center">
-  <b>Agent-native full-stack acceleration for video diffusion inference</b><br>
-  <sub>Cache · Sparse Attention · Token Pruning · Quantization · Kernel Fusion</sub>
-</p>
-
-<p align="center">
   <a href="https://nv-sana.mit.edu/"><img src="https://img.shields.io/static/v1?label=Demo:6x3090&message=SANA&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/4bit/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=4bit&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=yellow"></a> &ensp;
@@ -32,6 +22,12 @@
   <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
   <a href="https://sana-wm.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-WM&color=yellow"></a> &ensp;
   <a href="https://sana-streaming.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-Streaming&color=yellow"></a> &ensp;
+</p>
+
+<p align="center">
+  <a href="https://github.com/NVlabs/Sana/tree/sol-engine">
+    <img src="asset/sol-engine-branch-banner.svg" width="100%" alt="Open the Sol-Engine inference engine branch"/>
+  </a>
 </p>
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>

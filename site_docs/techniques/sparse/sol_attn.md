@@ -24,10 +24,12 @@ This produces a dynamic block budget without materializing a full routing map.
 
 | GPU | Architecture | Execution |
 |---|---|---|
+| NVIDIA RTX 4090 | SM89 | CuTe DSL |
 | NVIDIA H100 | SM90 | CuTe DSL, including split-KV execution |
 | NVIDIA B200 / GB200 | SM100 | CuTe DSL |
 | NVIDIA RTX 5090 | SM120 | CuTe DSL |
-| other | — | Triton reference |
+| NVIDIA A100 | SM80 | Triton reference |
+| other supported architectures | — | Triton reference |
 
 An architecture with no CuTe kernel falls back to the Triton reference, which
 is correct but is not what the published speedups measure. `benchmark.json`
@@ -94,7 +96,8 @@ still use dense attention, while Sol-Attn serves image or video query rows.
 
 ## Split KV on H100
 
-H100 supports `kv_splits=1`, `2`, and `4`; B200 currently uses `kv_splits=1`.
+H100 supports `kv_splits=1`, `2`, and `4`; B200, RTX 4090, and RTX 5090
+currently use `kv_splits=1`.
 
 ```python
 out = sol_attn(q, k, v, tau=1.0, kv_splits=4)

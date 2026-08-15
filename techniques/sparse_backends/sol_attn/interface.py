@@ -8,6 +8,7 @@ import torch
 
 BLOCK_SIZE = 64
 _CUTE_BACKENDS = {
+    (8, 9): "cute_sm89",
     (9, 0): "cute_sm90",
     (10, 0): "cute_sm100",
     (12, 0): "cute_sm120",
@@ -152,6 +153,33 @@ def _compile_sm90(
     return compiled, args
 
 
+def _compile_sm89(
+    key,
+    tensors,
+    scale,
+    sink_start_block,
+    sink_end_block,
+    stream,
+):
+    import cutlass.cute as cute
+
+    from .sm89 import make_kernel
+
+    operator = make_kernel()
+    args = _to_cute_tensors(tensors)
+    compiled = cute.compile(
+        operator,
+        *args,
+        scale,
+        sink_start_block,
+        sink_end_block,
+        stream=stream,
+        options="--enable-tvm-ffi",
+    )
+    _compiled[key] = compiled
+    return compiled, args
+
+
 def _compile_sm100(
     key,
     tensors,
@@ -240,7 +268,33 @@ def _sol_attn_cute(
         stream = _stream(q.device)
         key = (q.device.index, arch, batch, tokens, heads, kv_splits)
 
-        if arch == (9, 0):
+        if arch == (8, 9):
+            sink_start_block, sink_end_block = _sink_block_range(
+                tokens,
+                sink_start,
+                sink_tokens,
+            )
+            tensors = [q, k, v, output, kc, vc, threshold, lse]
+            compiled = _compiled.get(key)
+            if compiled is None:
+                compiled, args = _compile_sm89(
+                    key,
+                    tensors,
+                    scale,
+                    sink_start_block,
+                    sink_end_block,
+                    stream,
+                )
+            else:
+                args = _to_cute_tensors(tensors)
+            compiled(
+                *args,
+                scale,
+                sink_start_block,
+                sink_end_block,
+                stream=stream,
+            )
+        elif arch == (9, 0):
             if sink_tokens:
                 sink_start_block, sink_end_block = _sink_block_range(
                     tokens,

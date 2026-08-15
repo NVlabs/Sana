@@ -42,7 +42,7 @@ support a wider range of models.
 - **[2026/08/09]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on H100 and A100** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-DataCenter/)] — reaches **3.56×** end-to-end on 4×H100 and **3.55×** on 4×A100.
 - **[2026/08/06]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB10 and RTX 5090** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — reaches **3.92×** end-to-end on DGX Spark (GB10) and **4.52×** on RTX 5090.
 - **[2026/08/03]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB200** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] — reaches **3.95×** end-to-end on 8×GB200.
-- **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
+- **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM89/SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.
 - **[2026/06]** 📖 **Docs release** — full documentation site live: [3 pipeline designs + 5 acceleration techniques](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
@@ -107,11 +107,11 @@ into a model runtime through env-gated hooks and powers the optimization stacks 
 [**MiniMax-H3**](models/minimax_h3/). The HunyuanVideo and Wan2.1 stacks reach
 **~5.03×** and **~3.48×** end-to-end speedup, respectively.
 
-Backend selection is automatic: H100 (SM90), B200 (SM100), and RTX 5090
-(SM120) use their optimized CuTe DSL kernels when CuTe is installed. Older
-supported GPUs such as A100 (SM80) and RTX 4090 (SM89), or installations
-without CuTe DSL, use the portable Triton implementation. Model call sites do
-not need architecture-specific changes. See the
+Backend selection is automatic: RTX 4090 (SM89), H100 (SM90), B200 (SM100),
+and RTX 5090 (SM120) use their optimized CuTe DSL kernels when CuTe is
+installed. Older supported GPUs such as A100 (SM80), or installations without
+CuTe DSL, use the portable Triton implementation. Model call sites do not need
+architecture-specific changes. See the
 [Sol-Attn usage guide](techniques/sparse_backends/) for requirements and API
 details.
 
@@ -150,7 +150,7 @@ your specific machine.
 - [x] **LTX-2.3** acceleration line — KWL fusion + cache + PISA + NVFP4 + token-prune
 - [x] **Wan2.2 TI2V-5B, Wan2.2-A14B, and LingBot-Video** acceleration lines — kernel fusion + cache + PISA/compile
 - [x] **HunyuanVideo-13B and Wan2.1-T2V-14B** acceleration lines — kernel fusion + cache + Sol-Attn
-- [x] **Sol-Attn** sparse-attention release — optimized SM90/SM100/SM120 kernels + portable Triton backend
+- [x] **Sol-Attn** sparse-attention release — optimized SM89/SM90/SM100/SM120 kernels + portable Triton backend
 - [x] **MiniMax-H3** across GB200, H100, A100, GB10, and RTX 5090 — context parallel + kernel fusion + Sol-Attn + FirstBlockCache
 - [x] **LTX-2.5** across B200, GeForce RTX 5090, and DGX Spark — parallel optimization + FBCache + kernel fusion + Sol-Attn
 - [ ] More backends for each acceleration method

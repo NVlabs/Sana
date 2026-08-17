@@ -38,7 +38,7 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/08/17]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GeForce RTX 4090** [[Code](models/minimax_h3/RTX4090/)] — reaches **4.44×** end-to-end with TeaCache, regional compile, and the SM89 Sol-Attn kernel.
+- **[2026/08/17]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GeForce RTX 4090** [[Code](models/minimax_h3/)] — reaches **4.44×** end-to-end on RTX 4090. Sol-Attn now includes an optimized SM89 CuTe DSL kernel for RTX 4090.
 - **[2026/08/13]** 🔥 **[LTX-2.5](https://github.com/Lightricks/LTX-2) across B200, GeForce RTX 5090, and DGX Spark** [[Code](models/ltx25/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] — reaches up to **4.68×** multi-step pipeline speedup and **1.90×** distilled pipeline speedup.
 - **[2026/08/09]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on H100 and A100** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-DataCenter/)] — reaches **3.56×** end-to-end on 4×H100 and **3.55×** on 4×A100.
 - **[2026/08/06]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB10 and RTX 5090** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — reaches **3.92×** end-to-end on DGX Spark (GB10) and **4.52×** on RTX 5090.

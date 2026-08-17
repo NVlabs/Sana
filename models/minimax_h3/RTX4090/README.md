@@ -15,7 +15,7 @@ the 24 GiB GPU.
 The speedup is one warm end-to-end timing sample against the matching dense runtime on the same
 GPU. Both arms use the released BF16 FL2VA weights, prompt, seed, 50 measured denoising steps, and
 layerwise component offload. The released full-opt configuration is pinned by
-[`rtx4090_fullopt.toml`](../../../config/minimax_h3/rtx4090_fullopt.toml).
+[`minimax_h3/rtx4090_fullopt.toml`](../../../config/minimax_h3/rtx4090_fullopt.toml).
 
 The controlled attribution experiment held the optimized runtime, 50-step warmup, prompt, seed,
 and measured workload fixed:

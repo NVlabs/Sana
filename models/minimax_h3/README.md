@@ -10,8 +10,8 @@ Sol-Attn, caching, and memory-efficient decoding.
 |---|---:|---:|---:|---:|---:|---|
 | GB200 | 8 | 768p@5s | 27.21 | 6.88 | **3.95x** | [`minimax_h3_fullopt.toml`](../../config/minimax_h3/fullopt.toml) |
 | GB10 (DGX Spark) | 1 | 480p@5s | 710.6 | 181.3 | **3.92x** | [`minimax_h3_gb10_fullopt.toml`](../../config/minimax_h3/gb10_fullopt.toml) |
-| RTX 4090 | 1 | 768p@5s | 2239.22 | 504.33 | **4.44x** | [`rtx4090_fullopt.toml`](../../config/minimax_h3/rtx4090_fullopt.toml) |
-| RTX 5090 | 1 | 768p@5s | 1045.4 | 231.2 | **4.52x** | [`minimax_h3_rtx5090_fullopt.toml`](../../config/minimax_h3/rtx5090_fullopt.toml) |
+| RTX 4090 | 1 | 768p@5s | 2239.22 | 504.33 | **4.44x** | [`minimax_h3/rtx4090_fullopt.toml`](../../config/minimax_h3/rtx4090_fullopt.toml) |
+| RTX 5090 | 1 | 768p@5s | 1045.4 | 231.2 | **4.52x** | [`minimax_h3/rtx5090_fullopt.toml`](../../config/minimax_h3/rtx5090_fullopt.toml) |
 | H100 | 4 | 768p@5s | 81.47 | 22.89 | **3.56x** | [`minimax_h3_h100_fullopt.toml`](../../config/minimax_h3/minimax_h3_h100_fullopt.toml) |
 | A100 | 4 | 768p@5s | 217.32 | 61.28 | **3.55x** | [`minimax_h3_a100_fullopt.toml`](../../config/minimax_h3/minimax_h3_a100_fullopt.toml) |
 

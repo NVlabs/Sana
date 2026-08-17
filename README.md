@@ -274,7 +274,7 @@ Thanks go to these wonderful contributors:
 
 ## 🌟 Star History
 
-[![NVlabs/Sana star history chart](https://raw.githubusercontent.com/NVlabs/Sana/page/star-history/chart.svg)](https://github.com/NVlabs/Sana/stargazers)
+[![NVlabs/Sana star history chart](asset/star-history.svg)](https://github.com/NVlabs/Sana/stargazers)
 
 # 📖 BibTeX
 

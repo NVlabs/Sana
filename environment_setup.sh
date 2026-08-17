@@ -1,74 +1,86 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
-# SANA environment installer. Single source of truth for deps is
-# pyproject.toml; this script only handles things that can't live there:
-# conda env + Python 3.11 + CUDA toolkit, the cu128 torch wheels, and the
-# few packages that need special install flags (mmcv / flash-attn / Pi3).
+# SANA environment installer using uv. Single source of truth for deps is
+# pyproject.toml; this script handles environment creation, Python 3.11,
+# OS-aware PyTorch installation (CUDA vs. Apple Silicon/MLX), and packages
+# that need special install flags.
 #
 # Usage:
-#   bash ./environment_setup.sh sana   # create a fresh conda env
-#   bash ./environment_setup.sh        # install into the active env
+#   bash ./environment_setup.sh .venv  # create a fresh uv env in .venv
+#   bash ./environment_setup.sh        # install into the active env or default .venv
 #
 # Idempotent: re-running on an existing env will reconcile versions.
 # -----------------------------------------------------------------------------
 set -e
 
-# Check if we should skip environment setup entirely (used by CI).
 if [ "${SKIP_ENV_SETUP}" = "true" ]; then
     echo "SKIP_ENV_SETUP is set to true. Skipping all environment setup steps."
-    echo "Using default conda environment. Make sure it has all required packages installed."
     exit 0
 fi
 
-CONDA_ENV=${1:-""}
-if [ -n "$CONDA_ENV" ]; then
-    eval "$(conda shell.bash hook)"
-
-    if conda env list | awk '{print $1}' | grep -qx "$CONDA_ENV"; then
-        echo "[sana] conda env '$CONDA_ENV' already exists; reusing it."
-    else
-        # Python 3.11 required: triton 3.5's @triton.jit uses inspect.getsource
-        # and regex-matches ``^def\s+\w+\s*\(``; on 3.10 the source returned for
-        # fla's decorated kernels starts after the decorator line and the regex
-        # returns None.
-        conda create -n "$CONDA_ENV" python=3.11 -y
-    fi
-    conda activate "$CONDA_ENV"
-
-    # Match the torch wheels' CUDA major/minor for from-source builds
-    # (flash-attn etc.). torch ships its own CUDA libs at runtime, but nvcc
-    # needs to match at build time.
-    conda install -c nvidia cuda-toolkit=12.8 -y
-else
-    echo "[sana] Skipping conda env creation. Make sure the target env is activated."
+if ! command -v uv &> /dev/null; then
+    echo "Error: 'uv' is not installed. Please install it first."
+    exit 1
 fi
 
-# setuptools<80: mmcv 1.7.2's setup.py imports ``pkg_resources``, which
-# setuptools 80+ no longer ships as an importable module.
-pip install -U pip wheel
-pip install "setuptools<80"
+VENV_DIR=${1:-".venv"}
 
-# Pre-install the torch stack from the cu128 index. Versions match pyproject
-# pins, so the subsequent ``pip install -e .`` treats them as satisfied.
-pip install --upgrade --index-url https://download.pytorch.org/whl/cu128 \
-    torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1
-pip install --upgrade --index-url https://download.pytorch.org/whl/cu128 \
-    xformers==0.0.33.post2
+if [ -n "$1" ] || [ ! -d "$VENV_DIR" ]; then
+    if [ ! -d "$VENV_DIR" ]; then
+        echo "[sana] Creating virtual environment '$VENV_DIR' with Python 3.11..."
+        uv venv "$VENV_DIR" --python 3.11
+    fi
+    source "$VENV_DIR/bin/activate"
+else
+    if [ -z "$VIRTUAL_ENV" ] && [ -f "$VENV_DIR/bin/activate" ]; then
+        source "$VENV_DIR/bin/activate"
+    fi
+fi
 
-# mmcv must build without PEP 517 isolation so its setup.py sees the env's
-# pre-installed torch + setuptools<80.
-pip install --no-build-isolation mmcv==1.7.2
+# Detect Apple Silicon
+OS_NAME=$(uname -s)
+ARCH_NAME=$(uname -m)
+IS_APPLE_SILICON=false
 
-# Editable install resolves everything else from pyproject.toml.
-pip install -e .
+if [ "$OS_NAME" = "Darwin" ] && [ "$ARCH_NAME" = "arm64" ]; then
+    IS_APPLE_SILICON=true
+    echo "🍎 Detected Apple Silicon (Mac ARM64). Adapting for MPS/MLX..."
+else
+    echo "🐧 Detected standard/CUDA target environment."
+    if ! command -v nvcc &> /dev/null; then
+        echo "WARNING: 'nvcc' not found in PATH. Source extensions will fail to build."
+    fi
+fi
 
-# Pi3X (camera intrinsics from a single image, used by SANA-WM): --no-deps so
-# it doesn't downgrade torch/numpy.
-pip install git+https://github.com/yyfz/Pi3.git --no-deps
+# setuptools<80: mmcv 1.7.2's setup.py imports ``pkg_resources``
+uv pip install "setuptools<80" wheel
 
-# flash-attn
-MAX_JOBS=${MAX_JOBS:-8} NVCC_THREADS=${NVCC_THREADS:-2} \
-    pip install --no-build-isolation "flash-attn>=2.7.0"
+if [ "$IS_APPLE_SILICON" = true ]; then
+    # Standard PyTorch has native MPS support on Mac
+    uv pip install torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1
+    uv pip install mlx
+else
+    # Pre-install the torch stack from the cu128 index so uv doesn't pull PyPI defaults
+    uv pip install --index-url https://download.pytorch.org/whl/cu128 \
+        torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1
+fi
+
+# mmcv must build without PEP 517 isolation
+uv pip install --no-build-isolation mmcv==1.7.2
+
+# Editable install resolves everything else from pyproject.toml
+# (Triton, xformers, etc. will be automatically skipped on macOS thanks to PEP 508 markers)
+uv pip install -e .
+
+# Pi3X (camera intrinsics)
+uv pip install git+https://github.com/yyfz/Pi3.git --no-deps
+
+if [ "$IS_APPLE_SILICON" = true ]; then
+    echo "[sana] Skipping flash-attn installation (CUDA-only)."
+else
+    MAX_JOBS=${MAX_JOBS:-8} NVCC_THREADS=${NVCC_THREADS:-2} \
+        uv pip install --no-build-isolation "flash-attn>=2.7.0"
+fi
 
 # NVIDIA Transformer Engine: enables fp8 / fp4 quantized SANA-WM streaming
 # inference (--stage1_precision / --refiner_precision). Built from source against
@@ -84,4 +96,4 @@ if [ "${SANA_SKIP_TE:-0}" != "1" ]; then
 fi
 
 echo
-echo "[sana] Done. Activate with:  conda activate ${CONDA_ENV:-<your-env>}"
+echo "[sana] Done. Activate with:  source ${VENV_DIR}/bin/activate"

@@ -995,7 +995,7 @@ def main(cfg: SanaConfig) -> None:
         tracker_config = dict(vars(config))
         try:
             accelerator.init_trackers(args.tracker_project_name, tracker_config)
-        except:
+        except Exception:
             accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
@@ -1042,7 +1042,7 @@ def main(cfg: SanaConfig) -> None:
         try:
             start_epoch = int(path.replace(".pth", "").split("_")[1]) - 1
             start_step = int(path.replace(".pth", "").split("_")[3])
-        except:
+        except Exception:
             pass
 
     # 8. Prepare everything

@@ -47,6 +47,7 @@ ______________________________________________________________________
 | **Sana-1.5** | Training-time and inference-time compute scaling |
 | **Sana-Sprint** | Few-step generation via sCM (Consistency Model) distillation |
 | **Sana-Video** | Efficient video generation with Block Linear Attention |
+| **Sana-Video 2.0** | 5B/14B hybrid-attention video models with Attention Residuals; [5B 720p weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) released |
 | **LongSana** | Minute-length real-time video generation (with LongLive) |
 
 ### Key Techniques
@@ -55,6 +56,7 @@ ______________________________________________________________________
 - **DC-AE**: 32× image compression (vs. traditional 8×) to reduce latent tokens
 - **Block Causal Linear Attention**: Efficient attention for video generation
 - **Causal Mix-FFN**: Memory-efficient feedforward for long videos
+- **Hybrid Attention & Attention Residuals**: Gated linear attention with periodic softmax anchors and shared depth-wise residual aggregation
 - **Flow-DPM-Solver**: Reduce sampling steps with efficient training and sampling
 - **sCM Distillation**: One/few-step generation with continuous-time consistency distillation
 
@@ -65,6 +67,7 @@ ______________________________________________________________________
 - ⚡ **One-step inference** with Sana-Sprint
 - 💻 **< 8GB VRAM** with 4-bit quantization
 - 🎬 **Efficient video generation** with Sana-Video
+- 🎥 **720p, 8-second T2V/TI2V generation** with [SANA-Video 2.0](sana_video2.md)
 - ⏱️ **27 FPS real-time** minute-length video with LongSana
 - 📦 **Full training & inference codebase**
 

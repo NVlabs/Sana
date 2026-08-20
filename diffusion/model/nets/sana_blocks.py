@@ -46,7 +46,16 @@ def t2i_modulate(x, shift, scale):
 
 
 class MultiHeadCrossAttention(nn.Module):
-    def __init__(self, d_model, num_heads, attn_drop=0.0, proj_drop=0.0, qk_norm=False, **block_kwargs):
+    def __init__(
+        self,
+        d_model,
+        num_heads,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        qk_norm=False,
+        use_xformers: Optional[bool] = None,
+        **block_kwargs,
+    ):
         super().__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
@@ -65,11 +74,16 @@ class MultiHeadCrossAttention(nn.Module):
         else:
             self.q_norm = nn.Identity()
             self.k_norm = nn.Identity()
+        self.use_xformers = _xformers_available if use_xformers is None else bool(use_xformers and _xformers_available)
+
+    def set_use_xformers(self, enabled: bool) -> None:
+        """Select the xFormers backend independently for text cross-attention."""
+        self.use_xformers = bool(enabled and _xformers_available)
 
     def forward(self, x, cond, mask=None):
         # query: img tokens; key/value: condition; mask: if padding tokens
         B, N, C = x.shape
-        first_dim = 1 if _xformers_available else B
+        first_dim = 1 if self.use_xformers else B
 
         q = self.q_linear(x)
         kv = self.kv_linear(cond).view(first_dim, -1, 2, C)
@@ -78,7 +92,7 @@ class MultiHeadCrossAttention(nn.Module):
         k = self.k_norm(k).view(first_dim, -1, self.num_heads, self.head_dim)
         v = v.view(first_dim, -1, self.num_heads, self.head_dim)
 
-        if _xformers_available:
+        if self.use_xformers:
             attn_bias = None
             if mask is not None:
                 attn_bias = xformers.ops.fmha.BlockDiagonalMask.from_seqlens([N] * B, mask)

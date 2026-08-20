@@ -50,6 +50,61 @@ MODELS = Registry("models")
 transformers_logging.set_verbosity_error()
 
 
+def _as_bool(value, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in {"", "0", "false", "no", "off"}
+    return bool(value)
+
+
+def _config_get(config, key: str, default=None):
+    if config is None:
+        return default
+    if isinstance(config, dict):
+        return config.get(key, default)
+    return getattr(config, key, default)
+
+
+def _use_ltx2_causal_encoder(config) -> bool:
+    return _as_bool(_config_get(config, "use_causal_encode", False))
+
+
+def _ltx2_diffusers_load_overrides(vae_config):
+    """Map the released LTX 2.3 decoder config to the Diffusers API."""
+    if "upsample_type" not in vae_config and "decoder_upsample_type" in vae_config:
+        # ``decoder_upsample_type`` follows encoder-to-latent order, while the
+        # public Diffusers ``upsample_type`` argument follows decoder execution
+        # order. The original LTX 2.3 implementation reverses this sequence in
+        # its decoder constructor.
+        return {"upsample_type": tuple(reversed(vae_config["decoder_upsample_type"]))}
+    return {}
+
+
+def _build_ltx2_causal_encoder(vae, device, dtype):
+    """Reuse a Diffusers checkpoint in the public causal encoder."""
+    from accelerate import init_empty_weights
+
+    from diffusion.model.ltx2.causal_vae import AutoencoderKLCausalLTX2Video
+
+    causal_config = {key: value for key, value in dict(vae.config).items() if not key.startswith("_")}
+    if "upsample_type" in causal_config:
+        causal_config["decoder_upsample_type"] = causal_config.pop("upsample_type")
+    causal_config = {key: tuple(value) if isinstance(value, list) else value for key, value in causal_config.items()}
+    with init_empty_weights():
+        causal_vae = AutoencoderKLCausalLTX2Video(**causal_config)
+    causal_vae.decoder = None
+    encoder_state = {
+        key: value
+        for key, value in vae.state_dict().items()
+        if key.startswith("encoder.") or key in {"latents_mean", "latents_std"}
+    }
+    causal_vae.load_state_dict(encoder_state, strict=True, assign=True)
+    causal_vae.to(device=device, **({"dtype": dtype} if dtype is not None else {})).eval()
+    causal_vae.requires_grad_(False)
+    return causal_vae
+
+
 def build_model(cfg, use_grad_checkpoint=False, use_fp32_attention=False, gc_step=1, **kwargs):
     if isinstance(cfg, str):
         cfg = dict(type=cfg)
@@ -207,11 +262,19 @@ def get_vae(name, model_path, device="cuda", dtype=None, config=None):
         # Use diffusers AutoencoderKLLTX2Video for LTX2
         assert config is not None, "config.vae is required for LTX2VAE_diffusers"
         print(colored(f"[LTX2VAE_diffusers] Loading model from {config.vae_pretrained}", attrs=["bold"]))
-        vae = (
-            AutoencoderKLLTX2Video.from_pretrained(config.vae_pretrained, subfolder="vae", torch_dtype=dtype)
-            .to(device)
-            .eval()
-        )
+        vae_config = AutoencoderKLLTX2Video.load_config(config.vae_pretrained, subfolder="vae")
+        vae = AutoencoderKLLTX2Video.from_pretrained(
+            config.vae_pretrained,
+            subfolder="vae",
+            torch_dtype=dtype,
+            **_ltx2_diffusers_load_overrides(vae_config),
+        ).eval()
+        vae.use_causal_encode = _use_ltx2_causal_encoder(config)
+        if vae.use_causal_encode:
+            vae = _build_ltx2_causal_encoder(vae, device=device, dtype=dtype)
+            print(colored("[LTX2VAE_diffusers] Causal encoder enabled", "green"))
+        else:
+            vae = vae.to(device)
         return vae
     else:
         print("error load vae")

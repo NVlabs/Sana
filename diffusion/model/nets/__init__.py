@@ -57,3 +57,4 @@ from .sana_U_shape_multi_scale import (
     SanaUMS_1600M_P2_D20,
     SanaUMSBlock,
 )
+from .sana_video2 import SanaVideo2, SanaVideo2_5B, SanaVideo2_14B

@@ -24,10 +24,12 @@ This produces a dynamic block budget without materializing a full routing map.
 
 | GPU | Architecture | Execution |
 |---|---|---|
+| NVIDIA RTX 4090 | SM89 | CuTe DSL |
 | NVIDIA H100 | SM90 | CuTe DSL, including split-KV execution |
 | NVIDIA B200 / GB200 | SM100 | CuTe DSL |
 | NVIDIA RTX 5090 | SM120 | CuTe DSL |
-| NVIDIA SM80 / SM89 | SM80 / SM89 | Triton reference |
+| NVIDIA A100 | SM80 | Triton reference |
+| other supported architectures | — | Triton reference |
 | Apple M-series | Apple Silicon | Metal |
 
 An NVIDIA architecture with no CuTe kernel falls back to the Triton reference,
@@ -54,8 +56,7 @@ python -m pip install -e techniques/sparse_backends
 ```
 
 The CuTe DSL version has to match what the kernels were built against. A
-mismatch fails at compile time — `module 'cutlass.cute.nvgpu' has no attribute
-'OperandMajorMode'` is the SM100 symptom — rather than falling back, so that a
+mismatch fails at compile time — `module 'cutlass.cute.nvgpu' has no attribute 'OperandMajorMode'` is the SM100 symptom — rather than falling back, so that a
 dense run is never reported as a sparse one.
 
 ## Core API
@@ -96,8 +97,8 @@ still use dense attention, while Sol-Attn serves image or video query rows.
 
 ## Split KV on H100
 
-H100 supports `kv_splits=1`, `2`, and `4`; other backends currently use
-`kv_splits=1`.
+H100 supports `kv_splits=1`, `2`, and `4`; B200, RTX 4090, and RTX 5090
+currently use `kv_splits=1`. Triton and Metal also use `kv_splits=1`.
 
 ```python
 out = sol_attn(q, k, v, tau=1.0, kv_splits=4)

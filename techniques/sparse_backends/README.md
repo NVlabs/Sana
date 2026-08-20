@@ -11,7 +11,7 @@
   <a href="../../README.md#-license"><img src="https://img.shields.io/badge/License-Apache_2.0-green?style=flat-square" alt="License"/></a>
 </p>
 
----
+______________________________________________________________________
 
 ## Introduction
 
@@ -19,7 +19,7 @@ Sol-Attn is a training-free sparse attention method for accelerating image
 and video generation. It performs dynamic block routing during online softmax
 and reuses proxy scores to approximate unselected blocks, avoiding a
 materialized routing map while preserving visual quality. CuTe DSL kernels
-support SM90, SM100, and SM120; SM80 and SM89 use Triton kernels; Apple
+support SM89, SM90, SM100, and SM120; SM80 uses the Triton kernel; Apple
 Silicon uses a tiled Metal kernel.
 
 ## Requirements
@@ -48,10 +48,11 @@ The public `sol_attn(...)` API selects the implementation from `q.device`:
 
 | GPU architecture | Example GPU | Preferred backend |
 |---|---|---|
+| SM89 | RTX 4090 | CuTe DSL |
 | SM90 | H100 | CuTe DSL |
 | SM100 | GB200 | CuTe DSL |
 | SM120 | RTX 5090 | CuTe DSL |
-| SM80 / SM89 | A100 / RTX 4090 | Triton |
+| SM80 | A100 | Triton |
 | Apple Silicon | M-series Mac | Metal |
 
 CuTe DSL and `cuda-python` are optional at runtime. NVIDIA devices fall back to
@@ -134,7 +135,7 @@ and realized sparsity.
 out = sol_attn(q, k, v, tau=1.0, kv_splits=4)
 ```
 
-B200, RTX 5090, Triton, and Metal currently use `kv_splits=1`.
+B200, RTX 4090, RTX 5090, Triton, and Metal currently use `kv_splits=1`.
 
 ## Sol-Engine integration
 

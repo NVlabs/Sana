@@ -130,6 +130,31 @@ upstream_pull_request = "https://github.com/huggingface/diffusers/pull/14355"
 upstream_commit = "abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc"
 source_snapshot = "models/minimax_h3/GB200/diffusers_src"
 
+[rtx4090]
+variant = "sglang_registered_bf16_single_rtx4090"
+status = "measured_rtx4090"
+runtime_root = "models/minimax_h3/RTX4090"
+run_script = "models/minimax_h3/RTX4090/run_minimax_h3_gpu.sh"
+config = ["config/minimax_h3/rtx4090_fullopt.toml"]
+hardware = "1x NVIDIA GeForce RTX 4090, 24 GiB GDDR6X, SM89"
+cell = "1344x768, 124 frames, 5 seconds, 50 steps, released BF16 FL2VA"
+timing_scope = "benchmark.json measured.inference_time_s after a 50-step warmup"
+memory_scope = "benchmark.json measured.peak_memory_mb"
+source_snapshot = "models/minimax_h3/RTX4090/SOURCE_SNAPSHOT.json"
+note = "The single released config composes the SM89 Sol-Attn kernel, TeaCache, regional compile, full BF16 VAE decode, and SGLang layerwise offload."
+
+[rtx4090.policy]
+tau = 1.0
+threshold = "diag"
+first_dense_steps = 10
+first_dense_layers = 2
+reorder = false
+text_kv_sink = "exact"
+text_query_rows = "dense"
+teacache_threshold = 0.10
+teacache_retain_steps = 5
+teacache_cooldown_steps = 1
+
 [rtx5090]
 variant = "sglang_registered_bf16_single_rtx5090"
 status = "single_gpu_layerwise_offload"

@@ -115,7 +115,7 @@ if HAVE_TRITON:
 
     @triton.jit
     def _swiglu_kernel(out_ptr, x_ptr, n_cols, stride_in_row, stride_out_row, BLOCK: tl.constexpr):
-        row = tl.program_id(0)
+        row = tl.program_id(0).to(tl.int64)
         cols = tl.arange(0, BLOCK)
         mask = cols < n_cols
         value = tl.load(x_ptr + row * stride_in_row + cols, mask=mask, other=0.0).to(tl.float32)

@@ -6,7 +6,6 @@ import torch
 
 from .metal import sol_attn_tiled_mps
 
-
 BLOCK_SIZE = 64
 
 

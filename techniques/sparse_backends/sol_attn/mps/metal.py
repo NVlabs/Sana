@@ -6,7 +6,6 @@ import torch
 
 from .preprocess import _routing_thresholds
 
-
 _SOURCE = r"""
 #include <c10/metal/utils.h>
 #include <metal_simdgroup>
@@ -543,13 +542,15 @@ def sol_attn_tiled_mps(
     query_block_size: int = 64,
 ) -> torch.Tensor:
     if q.dtype not in (torch.float16, torch.bfloat16) or q.shape[-1] not in (64, 128):
-        raise ValueError("tiled Metal forward requires float16/bfloat16 heads of dimension 64 or 128")
+        raise ValueError(
+            "tiled Metal forward requires float16/bfloat16 heads of dimension 64 or 128"
+        )
     if q.ndim != 4 or q.shape != k.shape or q.shape != v.shape:
         raise ValueError("q, k, and v must have the same BTHD shape")
     if q.shape[1] == 0:
         return torch.empty_like(q)
     if query_block_size not in (32, 64):
-      raise ValueError("query_block_size must be 32 or 64")
+        raise ValueError("query_block_size must be 32 or 64")
     if q.stride(-1) != 1 or k.stride(-1) != 1 or v.stride(-1) != 1:
         q, k, v = q.contiguous(), k.contiguous(), v.contiguous()
 
@@ -562,42 +563,78 @@ def sol_attn_tiled_mps(
     v_sums = torch.empty(summary_shape, device=q.device, dtype=v.dtype)
     dtype_name = "f16" if q.dtype == torch.float16 else "bf16"
     summary_kernel = getattr(
-      _get_library(), f"sol_reduce_summaries_{dtype_name}_d{head_dim}"
+        _get_library(), f"sol_reduce_summaries_{dtype_name}_d{head_dim}"
     )
     summary_kernel(
-      q, k, v, q_centroids, k_centroids, v_sums,
-      tokens, heads, blocks,
-      q.stride(0), q.stride(1), q.stride(2),
-      k.stride(0), k.stride(1), k.stride(2),
-      v.stride(0), v.stride(1), v.stride(2),
-      threads=batch * heads * blocks * 128,
-      group_size=128,
-      arg_casts={6: "int32", 7: "int32", 8: "int32"},
+        q,
+        k,
+        v,
+        q_centroids,
+        k_centroids,
+        v_sums,
+        tokens,
+        heads,
+        blocks,
+        q.stride(0),
+        q.stride(1),
+        q.stride(2),
+        k.stride(0),
+        k.stride(1),
+        k.stride(2),
+        v.stride(0),
+        v.stride(1),
+        v.stride(2),
+        threads=batch * heads * blocks * 128,
+        group_size=128,
+        arg_casts={6: "int32", 7: "int32", 8: "int32"},
     )
     thresholds = _routing_thresholds(
-      q_centroids, k_centroids.float(), scale, float(tau), thresh_type
+        q_centroids, k_centroids.float(), scale, float(tau), thresh_type
     ).contiguous()
     output = torch.empty_like(q)
     query_tiles = (tokens + query_block_size - 1) // query_block_size
     group_size = query_block_size * 4
     kernel = getattr(
-      _get_library(),
-      f"sol_attn_tiled_{dtype_name}_d{head_dim}_bq{query_block_size}",
+        _get_library(),
+        f"sol_attn_tiled_{dtype_name}_d{head_dim}_bq{query_block_size}",
     )
     kernel(
-      q, k, v, q_centroids, k_centroids, v_sums, thresholds, output,
-      scale, tokens, heads, k_centroids.shape[2],
-      int(sink_blocks[0]), int(sink_blocks[1]),
-      int(sink_q[0]), int(sink_q[1]),
-        q.stride(0), q.stride(1), q.stride(2),
-        k.stride(0), k.stride(1), k.stride(2),
-        v.stride(0), v.stride(1), v.stride(2),
+        q,
+        k,
+        v,
+        q_centroids,
+        k_centroids,
+        v_sums,
+        thresholds,
+        output,
+        scale,
+        tokens,
+        heads,
+        k_centroids.shape[2],
+        int(sink_blocks[0]),
+        int(sink_blocks[1]),
+        int(sink_q[0]),
+        int(sink_q[1]),
+        q.stride(0),
+        q.stride(1),
+        q.stride(2),
+        k.stride(0),
+        k.stride(1),
+        k.stride(2),
+        v.stride(0),
+        v.stride(1),
+        v.stride(2),
         threads=batch * heads * query_tiles * group_size,
         group_size=group_size,
-      arg_casts={
-        9: "int32", 10: "int32", 11: "int32",
-        12: "int32", 13: "int32", 14: "int32", 15: "int32",
-      },
+        arg_casts={
+            9: "int32",
+            10: "int32",
+            11: "int32",
+            12: "int32",
+            13: "int32",
+            14: "int32",
+            15: "int32",
+        },
     )
     return output
 
@@ -622,38 +659,62 @@ def _routing_debug_mps(
     unused_v_sums = torch.empty(summary_shape, device=q.device, dtype=k.dtype)
     dtype_name = "f16" if q.dtype == torch.float16 else "bf16"
     summary_kernel = getattr(
-      _get_library(), f"sol_reduce_summaries_{dtype_name}_d{head_dim}"
+        _get_library(), f"sol_reduce_summaries_{dtype_name}_d{head_dim}"
     )
     summary_kernel(
-      q, k, k, q_centroids, k_centroids, unused_v_sums,
-      tokens, heads, blocks,
-      q.stride(0), q.stride(1), q.stride(2),
-      k.stride(0), k.stride(1), k.stride(2),
-      k.stride(0), k.stride(1), k.stride(2),
-      threads=batch * heads * blocks * 128,
-      group_size=128,
-      arg_casts={6: "int32", 7: "int32", 8: "int32"},
+        q,
+        k,
+        k,
+        q_centroids,
+        k_centroids,
+        unused_v_sums,
+        tokens,
+        heads,
+        blocks,
+        q.stride(0),
+        q.stride(1),
+        q.stride(2),
+        k.stride(0),
+        k.stride(1),
+        k.stride(2),
+        k.stride(0),
+        k.stride(1),
+        k.stride(2),
+        threads=batch * heads * blocks * 128,
+        group_size=128,
+        arg_casts={6: "int32", 7: "int32", 8: "int32"},
     )
     thresholds = _routing_thresholds(
-      q_centroids, k_centroids.float(), scale, float(tau), thresh_type
+        q_centroids, k_centroids.float(), scale, float(tau), thresh_type
     ).contiguous()
     routes = torch.empty(
-      (batch, heads, blocks, blocks), device=q.device, dtype=torch.uint8
+        (batch, heads, blocks, blocks), device=q.device, dtype=torch.uint8
     )
     route_kernel = getattr(
-      _get_library(), f"sol_route_mask_debug_{dtype_name}_d{head_dim}"
+        _get_library(), f"sol_route_mask_debug_{dtype_name}_d{head_dim}"
     )
     route_kernel(
-      q_centroids, k_centroids, thresholds, routes,
-      scale, heads, blocks,
-      int(sink_blocks[0]), int(sink_blocks[1]),
-      int(sink_q[0]), int(sink_q[1]),
-      threads=batch * heads * blocks * 128,
-      group_size=128,
-      arg_casts={
-        5: "int32", 6: "int32", 7: "int32", 8: "int32",
-        9: "int32", 10: "int32",
-      },
+        q_centroids,
+        k_centroids,
+        thresholds,
+        routes,
+        scale,
+        heads,
+        blocks,
+        int(sink_blocks[0]),
+        int(sink_blocks[1]),
+        int(sink_q[0]),
+        int(sink_q[1]),
+        threads=batch * heads * blocks * 128,
+        group_size=128,
+        arg_casts={
+            5: "int32",
+            6: "int32",
+            7: "int32",
+            8: "int32",
+            9: "int32",
+            10: "int32",
+        },
     )
     return routes.bool(), q_centroids, k_centroids, thresholds
 

@@ -8,6 +8,7 @@ import torch
 
 BLOCK_SIZE = 64
 _CUTE_BACKENDS = {
+    (8, 9): "cute_sm89",
     (9, 0): "cute_sm90",
     (10, 0): "cute_sm100",
     (12, 0): "cute_sm120",
@@ -29,7 +30,11 @@ def _validate_inputs(
         raise ValueError("Sol-Attn requires T > 0 and head dimension 128")
     if any(x.dtype != torch.bfloat16 for x in (q, k, v)):
         raise TypeError("q, k, and v must use torch.bfloat16")
-    if q.device.type not in ("cuda", "mps") or k.device != q.device or v.device != q.device:
+    if (
+        q.device.type not in ("cuda", "mps")
+        or k.device != q.device
+        or v.device != q.device
+    ):
         raise ValueError("q, k, and v must be on the same CUDA or MPS device")
     if not (q.is_contiguous() and k.is_contiguous() and v.is_contiguous()):
         raise ValueError("q, k, and v must be contiguous BTHD tensors")
@@ -79,9 +84,7 @@ def _backend_for_arch(
     cute_backend = _CUTE_BACKENDS.get(arch)
     if cute_backend is not None:
         available = (
-            _cute_runtime_available()
-            if cute_available is None
-            else cute_available
+            _cute_runtime_available() if cute_available is None else cute_available
         )
         if available:
             return cute_backend
@@ -159,6 +162,33 @@ def _compile_sm90(
         *args,
         scale,
         sink_range,
+        stream=stream,
+        options="--enable-tvm-ffi",
+    )
+    _compiled[key] = compiled
+    return compiled, args
+
+
+def _compile_sm89(
+    key,
+    tensors,
+    scale,
+    sink_start_block,
+    sink_end_block,
+    stream,
+):
+    import cutlass.cute as cute
+
+    from .sm89 import make_kernel
+
+    operator = make_kernel()
+    args = _to_cute_tensors(tensors)
+    compiled = cute.compile(
+        operator,
+        *args,
+        scale,
+        sink_start_block,
+        sink_end_block,
         stream=stream,
         options="--enable-tvm-ffi",
     )
@@ -254,7 +284,33 @@ def _sol_attn_cute(
         stream = _stream(q.device)
         key = (q.device.index, arch, batch, tokens, heads, kv_splits)
 
-        if arch == (9, 0):
+        if arch == (8, 9):
+            sink_start_block, sink_end_block = _sink_block_range(
+                tokens,
+                sink_start,
+                sink_tokens,
+            )
+            tensors = [q, k, v, output, kc, vc, threshold, lse]
+            compiled = _compiled.get(key)
+            if compiled is None:
+                compiled, args = _compile_sm89(
+                    key,
+                    tensors,
+                    scale,
+                    sink_start_block,
+                    sink_end_block,
+                    stream,
+                )
+            else:
+                args = _to_cute_tensors(tensors)
+            compiled(
+                *args,
+                scale,
+                sink_start_block,
+                sink_end_block,
+                stream=stream,
+            )
+        elif arch == (9, 0):
             if sink_tokens:
                 sink_start_block, sink_end_block = _sink_block_range(
                     tokens,

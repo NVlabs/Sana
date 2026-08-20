@@ -21,7 +21,7 @@ import torch
 from accelerate import init_empty_weights
 from diffusers import AutoencoderKLLTX2Video
 
-from diffusion.model.builder import _build_ltx2_causal_encoder
+from diffusion.model.builder import _build_ltx2_causal_encoder, _ltx2_diffusers_load_overrides
 from diffusion.model.nets.sana_video2 import (
     BlockAttentionResidual,
     SanaVideo2,
@@ -52,6 +52,15 @@ def test_causal_encoder_reuses_the_diffusers_encoder_weights():
     assert vae.decoder is None
     assert set(vae.state_dict()) == encoder_keys
     assert not any(parameter.is_meta for parameter in vae.parameters())
+
+
+def test_released_ltx2_decoder_config_is_accepted_by_diffusers():
+    released_config = {"decoder_upsample_type": ["spatial", "temporal", "spatiotemporal", "spatiotemporal"]}
+
+    assert _ltx2_diffusers_load_overrides(released_config) == {
+        "upsample_type": ("spatiotemporal", "spatiotemporal", "temporal", "spatial")
+    }
+    assert _ltx2_diffusers_load_overrides({"upsample_type": ["spatiotemporal"]}) == {}
 
 
 def test_released_model_dimensions_and_parameter_counts():
@@ -173,10 +182,10 @@ def test_null_caption_embedding_can_be_loaded(tmp_path):
 
 def test_public_configs_select_released_models_and_video_only_training():
     repo_root = Path(__file__).resolve().parents[1]
+    assert not (repo_root / "configs" / "sana_video2" / "SanaVideo2_14B_480p.yaml").exists()
     expected = {
         "SanaVideo2_5B_480p.yaml": ("SanaVideo2_5B", 480, 81, 16),
         "SanaVideo2_5B_720p.yaml": ("SanaVideo2_5B", 720, 193, 24),
-        "SanaVideo2_14B_480p.yaml": ("SanaVideo2_14B", 480, 81, 16),
     }
     for filename, (model_name, image_size, num_frames, target_fps) in expected.items():
         with open(repo_root / "configs" / "sana_video2" / filename, encoding="utf-8") as stream:
@@ -189,3 +198,44 @@ def test_public_configs_select_released_models_and_video_only_training():
         assert config.model.attn_res_block_size == 8
         assert config.vae.use_causal_encode
         assert config.train.joint_training_interval == 0
+
+
+def test_release_demo_prompt_command_and_links_stay_in_sync():
+    repo_root = Path(__file__).resolve().parents[1]
+    prompt = (
+        "In a cozy, vintage room adorned with floral wallpaper, a cartoon rooster sits comfortably in a "
+        "floral-patterned armchair, sipping from a bottle of beer. The rooster, with its vibrant red comb and "
+        "wattle, displays a range of expressions—smiling, nodding, and opening its beak wide in a cheerful "
+        "manner. The setting includes wooden furniture and another beer bottle on the table, adding to the "
+        "relaxed atmosphere. The camera captures the rooster from a close-up angle, emphasizing its animated "
+        "movements and lively demeanor."
+    )
+    command = """bash inference_video_scripts/inference_sana_video.sh \\
+  --np 1 \\
+  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \\
+  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p/checkpoints/SANA_Video_2.0_5B_720p.pth \\
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \\
+  --cfg_scale 8 \\
+  --flow_shift 12 \\
+  --step 50 \\
+  --fps 24 \\
+  --motion_score 20 \\
+  --seed 0 \\
+  --work_dir output/sana_video2_t2v_720p_demo"""
+    video_url = (
+        "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/"
+        "Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4"
+    )
+
+    assert (repo_root / "asset" / "samples" / "sana_video2_5b_720p_demo.txt").read_text(
+        encoding="utf-8"
+    ) == f"{prompt}\n"
+    documents = [
+        (repo_root / "README.md").read_text(encoding="utf-8"),
+        (repo_root / "docs" / "sana_video2.md").read_text(encoding="utf-8"),
+        (repo_root / "asset" / "docs" / "sana_video2.md").read_text(encoding="utf-8"),
+    ]
+    for document in documents:
+        assert command in document
+        assert video_url in document
+    assert documents[1] == documents[2]

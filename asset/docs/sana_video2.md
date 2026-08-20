@@ -3,8 +3,9 @@
 SANA-Video 2.0 provides efficient text-to-video and text-image-to-video models
 built with hybrid linear/softmax attention and Attention Residuals. This
 release includes the model architecture, training and inference code, 480p
-reference configs for the 5B and 14B variants, and a post-trained 5B checkpoint
-for 720p, 8-second generation.
+and 720p reference configs for the 5B variant, and a post-trained 5B checkpoint
+for 720p, 8-second generation. The 14B config and checkpoint are not included
+yet.
 
 > **Release status:** The 5B 720p checkpoint is available on
 > [Hugging Face](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
@@ -78,20 +79,43 @@ The prompt file contains one prompt per line. The released 720p model generates
 193 frames at 24 FPS (about 8 seconds) in a 736×1280 bucket. It was evaluated
 with classifier-free guidance 8, flow shift 12, and 50 sampling steps.
 
+### Verified 5B 720p release example
+
+The following sample was generated from the public checkpoint with seed 0. The
+encoded result is 1280 × 736, 193 frames, 24 FPS, and 8.04 seconds long.
+
+<video controls muted loop playsinline poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" style="width: 100%;">
+  <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4" type="video/mp4">
+  <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">Open the generated video.</a>
+</video>
+
+[Open or download the generated MP4](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4).
+
+> **Prompt:** In a cozy, vintage room adorned with floral wallpaper, a cartoon
+> rooster sits comfortably in a floral-patterned armchair, sipping from a bottle
+> of beer. The rooster, with its vibrant red comb and wattle, displays a range of
+> expressions—smiling, nodding, and opening its beak wide in a cheerful manner.
+> The setting includes wooden furniture and another beer bottle on the table,
+> adding to the relaxed atmosphere. The camera captures the rooster from a
+> close-up angle, emphasizing its animated movements and lively demeanor.
+
 ### Text-to-video
+
+This is the exact command used to generate the verified example above:
 
 ```bash
 bash inference_video_scripts/inference_sana_video.sh \
   --np 1 \
   --config configs/sana_video2/SanaVideo2_5B_720p.yaml \
   --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p/checkpoints/SANA_Video_2.0_5B_720p.pth \
-  --txt_file=asset/samples/video_prompts_samples.txt \
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \
   --cfg_scale 8 \
   --flow_shift 12 \
   --step 50 \
   --fps 24 \
   --motion_score 20 \
-  --work_dir output/sana_video2_t2v_720p
+  --seed 0 \
+  --work_dir output/sana_video2_t2v_720p_demo
 ```
 
 ### Text-image-to-video
@@ -115,8 +139,7 @@ bash inference_video_scripts/inference_sana_video.sh \
 ```
 
 Height and width must be divisible by 32, and frame counts must satisfy
-`(num_frames - 1) % 8 == 0`. Select the 14B YAML when a compatible 14B
-checkpoint becomes available.
+`(num_frames - 1) % 8 == 0`.
 
 ## Training
 
@@ -127,14 +150,6 @@ online Gemma 2 caption encoding, causal LTX 2.3 VAE encoding, and flow matching.
 torchrun --nproc_per_node=8 --master_port=29500 \
   train_video_scripts/train_video_ivjoint_chunk.py \
   --config_path configs/sana_video2/SanaVideo2_5B_480p.yaml
-```
-
-For 14B:
-
-```bash
-torchrun --nproc_per_node=8 --master_port=29500 \
-  train_video_scripts/train_video_ivjoint_chunk.py \
-  --config_path configs/sana_video2/SanaVideo2_14B_480p.yaml
 ```
 
 The released 720p config can also be used as the starting point for 5B

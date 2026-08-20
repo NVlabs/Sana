@@ -30,9 +30,11 @@ This produces a dynamic block budget without materializing a full routing map.
 | NVIDIA RTX 5090 | SM120 | CuTe DSL |
 | NVIDIA A100 | SM80 | Triton reference |
 | other supported architectures | — | Triton reference |
+| Apple M-series | Apple Silicon | Metal |
 
-An architecture with no CuTe kernel falls back to the Triton reference, which
-is correct but is not what the published speedups measure. `benchmark.json`
+An NVIDIA architecture with no CuTe kernel falls back to the Triton reference,
+which is correct but is not what the published speedups measure. Apple Silicon
+uses Metal when `torch.mps.compile_shader` is available. `benchmark.json`
 records the backend a run selected.
 
 The released kernels are forward-only and require contiguous BF16 Q/K/V tensors
@@ -42,10 +44,10 @@ in BTHD layout with head dimension 128.
 
 - Python ≥ 3.10
 - PyTorch ≥ 2.10
-- CUDA ≥ 12.8
-- Triton ≥ 3.6
-- NVIDIA CuTe DSL / CUTLASS Python
-- `cuda-python`
+- CUDA ≥ 12.8 and Triton ≥ 3.6 for NVIDIA backends
+- NVIDIA CuTe DSL / CUTLASS Python and `cuda-python` for CuTe DSL backends
+- A PyTorch build with `torch.mps.compile_shader` for the Metal backend
+  (tested with PyTorch 2.13)
 
 Install from the repository root:
 
@@ -54,8 +56,7 @@ python -m pip install -e techniques/sparse_backends
 ```
 
 The CuTe DSL version has to match what the kernels were built against. A
-mismatch fails at compile time — `module 'cutlass.cute.nvgpu' has no attribute
-'OperandMajorMode'` is the SM100 symptom — rather than falling back, so that a
+mismatch fails at compile time — `module 'cutlass.cute.nvgpu' has no attribute 'OperandMajorMode'` is the SM100 symptom — rather than falling back, so that a
 dense run is never reported as a sparse one.
 
 ## Core API
@@ -64,17 +65,17 @@ dense run is never reported as a sparse one.
 from sol_attn import sol_attn
 
 out = sol_attn(
-    q,  # Queries: contiguous BF16 CUDA tensor of shape [B, T, H, 128].
-    k,  # Keys: contiguous BF16 CUDA tensor of shape [B, T, H, 128].
-    v,  # Values: contiguous BF16 CUDA tensor of shape [B, T, H, 128].
+    q,  # Queries: contiguous BF16 CUDA or MPS tensor of shape [B, T, H, 128].
+    k,  # Keys: same shape, dtype, layout, and device as q.
+    v,  # Values: same shape, dtype, layout, and device as q.
     tau=1.0,  # Threshold coefficient; larger values route fewer KV blocks exactly.
     thresh_type="exact",  # Use full covariance for the routing threshold.
 )
 # out: attention output [B, T, H, 128], with the same dtype/device as q.
 ```
 
-CuTe DSL is imported lazily, so the first eligible call compiles the matching
-kernel for the input device.
+CuTe DSL and Metal shaders are loaded lazily, so the first eligible call
+compiles the matching kernel for the input device.
 
 ## Exact KV sink
 
@@ -97,7 +98,7 @@ still use dense attention, while Sol-Attn serves image or video query rows.
 ## Split KV on H100
 
 H100 supports `kv_splits=1`, `2`, and `4`; B200, RTX 4090, and RTX 5090
-currently use `kv_splits=1`.
+currently use `kv_splits=1`. Triton and Metal also use `kv_splits=1`.
 
 ```python
 out = sol_attn(q, k, v, tau=1.0, kv_splits=4)

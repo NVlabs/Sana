@@ -11,7 +11,7 @@
   <a href="../../README.md#-license"><img src="https://img.shields.io/badge/License-Apache_2.0-green?style=flat-square" alt="License"/></a>
 </p>
 
----
+______________________________________________________________________
 
 ## Introduction
 
@@ -19,15 +19,17 @@ Sol-Attn is a training-free sparse attention method for accelerating image
 and video generation. It performs dynamic block routing during online softmax
 and reuses proxy scores to approximate unselected blocks, avoiding a
 materialized routing map while preserving visual quality. CuTe DSL kernels
-support SM89, SM90, SM100, and SM120; SM80 uses the Triton kernel.
+support SM89, SM90, SM100, and SM120; SM80 uses the Triton kernel; Apple
+Silicon uses a tiled Metal kernel.
 
 ## Requirements
 
 - Python ≥ 3.10
 - PyTorch ≥ 2.10
-- CUDA ≥ 12.8
-- Triton ≥ 3.6
+- CUDA ≥ 12.8 and Triton ≥ 3.6 for NVIDIA backends
 - NVIDIA CuTe DSL / CUTLASS Python ≥ 4.5 and `cuda-python` for CuTe DSL backends
+- A PyTorch build with `torch.mps.compile_shader` for the Metal backend
+  (tested with PyTorch 2.13)
 
 ## Installation
 
@@ -51,15 +53,17 @@ The public `sol_attn(...)` API selects the implementation from `q.device`:
 | SM100 | GB200 | CuTe DSL |
 | SM120 | RTX 5090 | CuTe DSL |
 | SM80 | A100 | Triton |
+| Apple Silicon | M-series Mac | Metal |
 
-CuTe DSL and `cuda-python` are optional at runtime. When either cannot be
-imported, the same public API falls back to Triton.
+CuTe DSL and `cuda-python` are optional at runtime. NVIDIA devices fall back to
+Triton when either cannot be imported. Metal shader compilation is lazy and
+requires no CUDA or Triton installation.
 
 ## Usage
 
 For kernel and library integrations, `sol_attn(...)` is the public API. It
-validates the tensor contract and automatically selects the CuTe or Triton
-backend for the input device.
+validates the tensor contract and automatically selects the CuTe, Triton, or
+Metal backend for the input device.
 
 The released kernels are forward-only and require contiguous BF16 Q/K/V
 tensors in BTHD layout with head dimension 128.
@@ -70,7 +74,7 @@ tensors in BTHD layout with head dimension 128.
 from sol_attn import sol_attn
 
 out = sol_attn(
-    q,  # Query: contiguous BF16 CUDA tensor in [batch, tokens, heads, 128].
+    q,  # Query: contiguous BF16 CUDA or MPS tensor in [batch, tokens, heads, 128].
     k,  # Key: same shape, dtype, layout, and device as q.
     v,  # Value: same shape, dtype, layout, and device as q.
     tau=1.0,  # Higher values select fewer KV blocks for exact attention.
@@ -131,7 +135,7 @@ and realized sparsity.
 out = sol_attn(q, k, v, tau=1.0, kv_splits=4)
 ```
 
-B200, RTX 4090, RTX 5090, and Triton currently use `kv_splits=1`.
+B200, RTX 4090, RTX 5090, Triton, and Metal currently use `kv_splits=1`.
 
 ## Sol-Engine integration
 

@@ -46,7 +46,7 @@
 
 | Model | Reso | pth link | diffusers | Precision | Description |
 | --- | --- | --- | --- | --- | --- |
-| SANA-Video 2.0 5B | 480p | Coming soon | Coming soon | bf16 | 32-layer hybrid-attention model |
+| SANA-Video 2.0 5B | 720p | [SANA-Video_2.0_5B_720p](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) | --- | bf16 inference | 8s T2V/TI2V ReFL model (193 frames at 24 FPS) |
 | SANA-Video 2.0 14B | 480p | Coming soon | Coming soon | bf16 | 40-layer hybrid-attention model |
 
 ______________________________________________________________________

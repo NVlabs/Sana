@@ -42,7 +42,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
-- 🔥 [2026/08/19] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The release also includes 5B and 14B hybrid linear/softmax Attention Residual models and reference configs. See [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
+- 🔥 [2026/08/19] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The 8-second model supports both text-to-video and text-image-to-video generation, with hybrid linear/softmax attention and Attention Residuals. See [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
 - 🔥 [2026/08/03] ⚡ **Sol Engine: Day-One MiniMax-H3 Acceleration** is available! The 33B omni-modal audio+video DiT runs **3.95×** faster on GB200, reached in 4.5 hours of optimization, and up to **4.52×** on hardware that sits on a desk — 3.92× on DGX Spark, 4.52× on GeForce RTX 5090 — with no distillation, no LoRA, and no calibration pass. See [GB200 Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/) | [On-Device Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/).
 - 🔥 [2026/07] 🌍 **SANA-Streaming** training is released! Includes bidirectional and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/).
 - 🔥 [2026/07] 🌍 **SANA-WM** Stage-1 training is released! Includes bidirectional, chunk-causal, and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/).
@@ -111,7 +111,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/)**: Efficient training-time and inference-time compute scaling for better quality.
 - **[SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/)**: One/few-step generation via sCM distillation, **0.1s per 1024px image** on H100.
 - **[SANA-Video/LongSANA](https://nvlabs.github.io/Sana/Video/)**: Efficient video generation with Block Linear Attention / with [LongLive](https://github.com/NVlabs/LongLive).
-- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/)**: 5B and 14B text-to-video models with hybrid linear/softmax attention and Attention Residuals.
+- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/)**: 5B and 14B text-to-video/text-image-to-video models with hybrid linear/softmax attention and Attention Residuals. The [5B 720p checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) is available now.
 - **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 - **[SANA-WM](https://nvlabs.github.io/Sana/WM/)**: 2.6B parameter controllable world model, generating 720p, 1-minute video worlds with 6-DoF camera control.
 - **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
@@ -237,7 +237,7 @@ We will try our best to achieve
 - [✅] Better re-construction F32/F64 [VAEs](https://github.com/dc-ai-projects/DC-Gen)
 - [✅] SANA-Video: Linear DiT Video model, and real-time minute-length video generation
 - [✅] SANA-Video 2.0 training, inference, and 5B/14B model architecture
-- [🚀] SANA-Video 2.0 weights (coming soon)
+- [✅] [SANA-Video 2.0 5B 720p weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p)
 - [✅] RL Post-training: collaborate with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
 - [✅] SANA World Model
 - [✅] SANA-Streaming Video-to-Video Editing

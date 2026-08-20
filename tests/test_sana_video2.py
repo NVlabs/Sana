@@ -174,13 +174,17 @@ def test_null_caption_embedding_can_be_loaded(tmp_path):
 def test_public_configs_select_released_models_and_video_only_training():
     repo_root = Path(__file__).resolve().parents[1]
     expected = {
-        "SanaVideo2_5B_480p.yaml": "SanaVideo2_5B",
-        "SanaVideo2_14B_480p.yaml": "SanaVideo2_14B",
+        "SanaVideo2_5B_480p.yaml": ("SanaVideo2_5B", 480, 81, 16),
+        "SanaVideo2_5B_720p.yaml": ("SanaVideo2_5B", 720, 193, 24),
+        "SanaVideo2_14B_480p.yaml": ("SanaVideo2_14B", 480, 81, 16),
     }
-    for filename, model_name in expected.items():
+    for filename, (model_name, image_size, num_frames, target_fps) in expected.items():
         with open(repo_root / "configs" / "sana_video2" / filename, encoding="utf-8") as stream:
             config = pyrallis.load(SanaVideoConfig, stream)
         assert config.model.model == model_name
+        assert config.model.image_size == image_size
+        assert config.data.num_frames == num_frames
+        assert config.data.target_fps == target_fps
         assert config.model.softmax_ratio == 0.25
         assert config.model.attn_res_block_size == 8
         assert config.vae.use_causal_encode

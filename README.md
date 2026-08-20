@@ -24,6 +24,12 @@
   <a href="https://sana-streaming.reactor.inc/"><img src="https://img.shields.io/static/v1?label=Reactor%20Demo&message=SANA-Streaming&color=yellow"></a> &ensp;
 </p>
 
+<p align="center">
+  <a href="https://github.com/NVlabs/Sana/tree/sol-engine">
+    <img src="asset/sol-engine-branch-banner.svg" width="100%" alt="Open the Sol-Engine inference engine branch"/>
+  </a>
+</p>
+
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
 
 **SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
@@ -36,7 +42,8 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
-- 🔥 [2026/08] 🎬 **SANA-Video 2.0** training, inference, and model architecture are released! The release includes 5B and 14B hybrid linear/softmax Attention Residual models and 480p reference configs. Weights are coming soon. See [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20).
+- 🔥 [2026/08/19] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The release also includes 5B and 14B hybrid linear/softmax Attention Residual models and reference configs. See [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
+- 🔥 [2026/08/03] ⚡ **Sol Engine: Day-One MiniMax-H3 Acceleration** is available! The 33B omni-modal audio+video DiT runs **3.95×** faster on GB200, reached in 4.5 hours of optimization, and up to **4.52×** on hardware that sits on a desk — 3.92× on DGX Spark, 4.52× on GeForce RTX 5090 — with no distillation, no LoRA, and no calibration pass. See [GB200 Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/) | [On-Device Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/).
 - 🔥 [2026/07] 🌍 **SANA-Streaming** training is released! Includes bidirectional and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/).
 - 🔥 [2026/07] 🌍 **SANA-WM** Stage-1 training is released! Includes bidirectional, chunk-causal, and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/).
 - 🔥 [2026/06] 🎬 **SANA-Streaming: 2B Model for Real-time Streaming Editing** is released! Supports 720p, 1-min video editing. A pioneer work for streaming editing. See [Project](https://nvlabs.github.io/Sana/Streaming/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/) | [Paper](https://huggingface.co/papers/2605.30409) | [Reactor Demo](https://sana-streaming.reactor.inc).
@@ -124,8 +131,8 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 
 **In summary**, SANA is a fully open-source framework integrating **efficient training, fast inference, and flexible deployment** for both image and video generation. Deployable on laptop GPUs with **< 8GB VRAM** via 4-bit quantization.
 
-<p align="center" border-raduis="10px">
-  <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/asset/all.png" width="90%" alt="teaser_page2"/>
+<p align="center">
+  <img src="asset/all.png" width="90%" alt="SANA Series overview: efficient image, video, world models, and post-training"/>
 </p>
 
 ## Quick Start
@@ -253,6 +260,7 @@ Thanks to the following open-sourced projects:
 - [LTX-2](https://github.com/Lightricks/LTX-2)
 - [LongLive](https://github.com/NVlabs/LongLive)
 - [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
+- [Sol-Engine](https://github.com/NVlabs/Sana/tree/sol-engine)
 
 Thanks [Paper2Video](https://showlab.github.io/Paper2Video/) for generating Jeason presenting SANA😊. Refer to [Paper2Video](https://showlab.github.io/Paper2Video/) for more details.
 
@@ -272,7 +280,7 @@ Thanks go to these wonderful contributors:
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=NVlabs/sana&type=Date)](https://www.star-history.com/#NVlabs/sana&Date)
+[![NVlabs/Sana star history chart](asset/star-history.svg)](https://github.com/NVlabs/Sana/stargazers)
 
 # 📖 BibTeX
 

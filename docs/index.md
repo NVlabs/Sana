@@ -27,6 +27,12 @@
   <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=HF Demo&message=Sprint&color=green" alt="HF Sprint"></a>
 </p>
 
+<p align="center">
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/">
+    <img src="https://raw.githubusercontent.com/NVlabs/Sana/main/asset/sol-engine-branch-banner.svg" width="100%" alt="Open the Sol-Engine documentation">
+  </a>
+</p>
+
 ______________________________________________________________________
 
 ## Introduction

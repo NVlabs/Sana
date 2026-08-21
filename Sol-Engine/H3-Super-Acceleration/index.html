@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="H3 Super Acceleration generates 5-second and 10-second 768p videos in 6.48 and 8.91 seconds on one NVIDIA GB200.">
+<meta name="description" content="H3 Super Acceleration generates 5-second and 10-second 768p videos in 6.85 and 14.93 seconds on one NVIDIA GB200.">
 <title>MiniMax H3 Super Acceleration | NVIDIA</title>
 <style>
   :root{
@@ -161,7 +161,7 @@
   .breakdown-key span{display:inline-flex;min-width:0;align-items:center;gap:5px}
   .breakdown-key i{width:8px;height:8px;flex:0 0 auto;border-radius:2px}
   .internal-track{height:42px;overflow:hidden;background:#22262b;border-radius:0 5px 5px 0}
-  .internal-track.current{--current-width:35.864%;position:relative}
+  .internal-track.current{--current-width:38.148284%;position:relative}
   .internal-fill{height:100%;display:flex;align-items:stretch;justify-content:flex-start;overflow:hidden;border-radius:0 5px 5px 0}
   .internal-fill.before,.internal-fill.after{width:100%}
   .internal-track.current .internal-fill{position:relative;z-index:1}
@@ -177,6 +177,7 @@
   .seg-stage1{background:#76b900}
   .seg-h3-vae{background:#91b84f}
   .seg-taeh3{background:#c4ec8d}
+  .seg-s1encode{background:#8faf57}
   .seg-s1decode{background:#70808b}
   .seg-encode{background:#a6d95d}
   .seg-dense{background:#657447;color:#fff}
@@ -301,10 +302,10 @@
       <h1>
         <span class="main">MiniMax H3 Super Acceleration</span>
         <span class="sub">fast draft generation and high-resolution refinement, powered by Sol Engine</span>
-        <span class="result"><em>6.48 s</em> for a 5-second 768p video · <em>8.91 s</em> for a 10-second video</span>
+        <span class="result"><em>6.85 s</em> for a 5-second 768p video · <em>14.93 s</em> for a 10-second video</span>
       </h1>
       <p class="dek">
-        H3 Super Acceleration first uses H3 with a LoRA to generate a four-step draft at 896×512. It then upsamples the draft and performs three LTX refinement steps at the target resolution with Sol-Attn. Combining the measured stages on one NVIDIA GB200 gives <strong>23.5× speedup</strong> for a 5-second 1344×768 video and <strong>46.5× speedup</strong> for a 10-second video over the published SGLang baseline.
+        H3 Super Acceleration first uses H3 with a LoRA to generate a four-step draft at 896×512. It then upsamples the draft and performs three LTX refinement steps at the target resolution with Sol-Attn. Combining the measured stages on one NVIDIA GB200 gives <strong>22.2× speedup</strong> for a 5-second 1344×768 video and <strong>27.7× speedup</strong> for a 10-second video over the published SGLang baseline.
       </p>
       <div class="byline">
         <span class="authors">Yitong Li<sup>*</sup>, Junsong Chen<sup>*</sup>, Haozhe Liu, Haopeng Li, Yuze Ma, Yongchang Liu, Enze Xie</span>
@@ -428,7 +429,7 @@
         <span class="num">03 — Measured Latency</span>
         <p>End-to-end 768p latency on one NVIDIA GB200.</p>
       </div>
-      <p class="lede">The latest Sol-Super results use Sol-Attn for the complete Stage 2 service. Adding the measured Stage 1 and Stage 2 blocks gives <strong>6.479 seconds</strong> for a 5-second 1344×768 video and <strong>8.911 seconds</strong> for a 10-second video, corresponding to <strong>23.5×</strong> and <strong>46.5×</strong> speedup over the published SGLang baseline.</p>
+      <p class="lede">The latest Sol-Super results use Sol-Attn for the complete Stage 2 service. Adding the measured Stage 1 and Stage 2 blocks gives <strong>6.852 seconds</strong> for a 5-second 1344×768 video and <strong>14.931 seconds</strong> for a 10-second video, corresponding to <strong>22.2×</strong> and <strong>27.7×</strong> speedup over the published SGLang baseline.</p>
 
       <div class="table-wrap">
         <table class="perf-table">
@@ -436,13 +437,13 @@
             <tr><th>Resolution</th><th>Duration</th><th>Diffusers</th><th>SGLang</th><th>Sol Engine</th><th>Sol-Super<br>E2E</th><th>Sol-Super<br>vs. SGLang</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>1344×768</strong></td><td>5 s</td><td class="diffusers">167.8 s</td><td>152.3 s</td><td class="sol">45.4 s</td><td class="fast">6.479 s</td><td class="speedup">23.5×</td></tr>
-            <tr><td><strong>1344×768</strong></td><td>10 s</td><td class="diffusers">468.2 s</td><td>414.1 s</td><td class="sol">132.5 s</td><td class="fast">8.911 s</td><td class="speedup">46.5×</td></tr>
+            <tr><td><strong>1344×768</strong></td><td>5 s</td><td class="diffusers">167.8 s</td><td>152.3 s</td><td class="sol">45.4 s</td><td class="fast">6.852 s</td><td class="speedup">22.2×</td></tr>
+            <tr><td><strong>1344×768</strong></td><td>10 s</td><td class="diffusers">468.2 s</td><td>414.1 s</td><td class="sol">132.5 s</td><td class="fast">14.931 s</td><td class="speedup">27.7×</td></tr>
           </tbody>
         </table>
       </div>
 
-      <p class="method-note"><strong>Benchmark basis.</strong> Diffusers, SGLang, and Sol Engine are author-supplied warm end-to-end measurements. Sol-Super combines a separately measured 3.800-second Stage 1 block with the latest Stage 2 means from 10 hot complete-service requests on one GB200; model loading and warmup are excluded. Sol-Super speedup is SGLang E2E ÷ Sol-Super E2E.</p>
+      <p class="method-note"><strong>Benchmark basis.</strong> Diffusers, SGLang, and Sol Engine are author-supplied warm end-to-end measurements. For the 5-second and 10-second settings, Sol-Super combines separately measured Stage 1 blocks of 4.1728 and 9.8204 seconds, respectively, with the latest Stage 2 means from 10 hot complete-service requests on one GB200; model loading and warmup are excluded. Sol-Super speedup is SGLang E2E ÷ Sol-Super E2E.</p>
 
       <div class="latency-figure" role="img" aria-label="Two horizontal latency charts comparing SGLang and Sol-Super end-to-end latency, with Sol-Super split into Stage 1 draft and Stage 2 refinement latency. Sol-Super bars are enlarged for label readability while the printed values and speedups remain unscaled.">
         <div class="latency-title">SGLang vs. Sol-Super end-to-end latency</div>
@@ -460,7 +461,7 @@
           </div>
           <div class="latency-row fast">
             <div class="latency-label">Sol-Super<small>Stage 1 + Stage 2</small></div>
-            <div class="time-track" style="--bar-width:12.516213%;--baseline-width:100%"><div class="time-fill super"><span class="stage-seg s1" style="width:58.653697%"><span class="stage-value"><span>S1</span><span>3.800 s</span></span></span><span class="stage-seg s2" style="width:41.346303%"><span class="stage-value"><span>S2</span><span>2.679 s</span></span></span></div><span class="speedup-arrow" aria-label="23.5 times faster"><span class="speedup-copy">23.5× <span class="speedup-word">faster</span></span></span></div>
+            <div class="time-track" style="--bar-width:12.516213%;--baseline-width:100%"><div class="time-fill super"><span class="stage-seg s1" style="width:60.900785%"><span class="stage-value"><span>S1</span><span>4.173 s</span></span></span><span class="stage-seg s2" style="width:39.099215%"><span class="stage-value"><span>S2</span><span>2.679 s</span></span></span></div><span class="speedup-arrow" aria-label="22.2 times faster"><span class="speedup-copy">22.2× <span class="speedup-word">faster</span></span></span></div>
           </div>
         </div>
 
@@ -472,20 +473,20 @@
           </div>
           <div class="latency-row fast">
             <div class="latency-label">Sol-Super<small>Stage 1 + Stage 2</small></div>
-            <div class="time-track" style="--bar-width:17.214903%;--baseline-width:100%"><div class="time-fill super"><span class="stage-seg s1" style="width:42.644574%"><span class="stage-value"><span>S1</span><span>3.800 s</span></span></span><span class="stage-seg s2" style="width:57.355426%"><span class="stage-value"><span>S2</span><span>5.111 s</span></span></span></div><span class="speedup-arrow" aria-label="46.5 times faster"><span class="speedup-copy">46.5× <span class="speedup-word">faster</span></span></span></div>
+            <div class="time-track" style="--bar-width:17.214903%;--baseline-width:100%"><div class="time-fill super"><span class="stage-seg s1" style="width:65.770122%"><span class="stage-value"><span>S1</span><span>9.820 s</span></span></span><span class="stage-seg s2" style="width:34.229878%"><span class="stage-value"><span>S2</span><span>5.111 s</span></span></span></div><span class="speedup-arrow" aria-label="27.7 times faster"><span class="speedup-copy">27.7× <span class="speedup-word">faster</span></span></span></div>
           </div>
         </div>
 
         <p class="figure-note">The SGLang baseline fills the track in each setting. Sol-Super bars are enlarged only to keep the Stage 1 and Stage 2 labels readable; their internal proportions, printed latency values, and speedups are the measured results. Each red arrow ends at the right edge of its corresponding SGLang bar.</p>
       </div>
 
-      <div class="latency-figure internal-figure" role="img" aria-label="Internal 1344 by 768 five-second latency comparison excluding mux and cleanup: our reconstructed baseline takes 16.320 seconds and current Sol-Super takes 5.853 seconds, a 2.79 times speedup and 64.1 percent latency reduction. Segment widths are proportional to latency on one shared scale.">
+      <div class="latency-figure internal-figure" role="img" aria-label="Internal 1344 by 768 five-second latency comparison excluding mux and cleanup: our reconstructed baseline takes 16.320 seconds and current Sol-Super takes 6.226 seconds, a 2.62 times speedup and 61.9 percent latency reduction. Segment widths are proportional to latency on one shared scale.">
         <div class="internal-head">
           <div>
             <div class="latency-title">Our baseline vs. current Sol-Super</div>
             <div class="internal-kicker">1344×768 · 5 s · one NVIDIA GB200</div>
           </div>
-          <div class="internal-result"><strong>2.79× faster</strong><span>64.1% lower latency</span></div>
+          <div class="internal-result"><strong>2.62× faster</strong><span>61.9% lower latency</span></div>
         </div>
 
         <div class="internal-row">
@@ -507,20 +508,22 @@
           </div>
         </div>
         <div class="internal-row">
-          <div class="internal-label">Current Sol-Super<small>Stage 1: 3.800 s · TAEH3 decode · Sol-Attn Refiner · LTX TAEHV final decode</small></div>
+          <div class="internal-label">Current Sol-Super<small>Stage 1: 4.1728 s · TAEH3 decode · text/image encoding · Sol-Attn Refiner · LTX TAEHV final decode</small></div>
           <div class="internal-barline">
             <div class="internal-track current"><div class="internal-fill after">
               <span class="breakdown-seg seg-stage1" style="--seg-width:23.111015453%" title="Stage 1 H3 DiT and shared work: 3.772 seconds"><span class="breakdown-copy">H3 DiT · 3.772 s</span></span>
               <span class="breakdown-seg seg-taeh3" style="--seg-width:0.173732610%" title="TAEH3 decode: 0.028 seconds"></span>
+              <span class="breakdown-seg seg-s1encode" style="--seg-width:2.284313725%" title="Stage 1 text / image encoding: 0.3728 seconds"></span>
               <span class="breakdown-seg seg-s1decode" style="--seg-width:3.946152040%" title="Gemma text encoding: 0.644 seconds"></span>
               <span class="breakdown-seg seg-encode" style="--seg-width:0.876241835%" title="LTX-2.5 Video VAE encode: 0.143 seconds"></span>
               <span class="breakdown-seg seg-sol" style="--seg-width:6.611642937%" title="Sol-Attn Refiner: 1.079 seconds"></span>
               <span class="breakdown-seg seg-tae" style="--seg-width:1.145854707%" title="LTX TAEHV final decode: 0.187 seconds"></span>
-            </div><span class="internal-inline-total">5.853 s</span><span class="internal-speedup-arrow" aria-hidden="true"><span class="internal-speedup-copy">2.79× faster</span></span></div>
+            </div><span class="internal-inline-total">6.226 s</span><span class="internal-speedup-arrow" aria-hidden="true"><span class="internal-speedup-copy">2.62× faster</span></span></div>
             <div class="internal-total" aria-hidden="true"></div>
           </div>
           <div class="breakdown-key" aria-label="Small current Sol-Super segments">
             <span><i class="seg-taeh3"></i>TAEH3 decode · 0.028 s</span>
+            <span><i class="seg-s1encode"></i>Stage 1 text/image encoding · 0.3728 s</span>
             <span><i class="seg-s1decode"></i>Gemma · 0.644 s</span>
             <span><i class="seg-encode"></i>LTX VAE encode · 0.143 s</span>
             <span><i class="seg-sol"></i>Sol-Attn Refiner · 1.079 s</span>
@@ -528,7 +531,7 @@
           </div>
         </div>
 
-        <p class="figure-note">All segments use one linear scale. Labels are placed inside the bar wherever they fit; the compact keys below each bar list only the narrow segments. The red arrow spans from the current latency to the baseline endpoint. Totals exclude the shared mux and cleanup stage. In our baseline, Stage 1 combines 3.772 seconds of H3 DiT and shared work with 3.427 seconds of official H3 VAE decode, for 7.199 seconds total. Sol-Super keeps the same H3 work but replaces the official decoder with TAEH3, reducing decode to 0.028 seconds and Stage 1 to 3.800 seconds; both decoder values are averages from two matched 1344×768 cases. Refiner blocks report complete Refiner latency; the Sol-Attn DiT portion takes 0.985 seconds. The original LTX-2.5 Video VAE decoder takes 6.404 seconds in the matched 121-frame decode benchmark.</p>
+        <p class="figure-note">All segments use one linear scale. Labels are placed inside the bar wherever they fit; the compact keys below each bar list only the narrow segments. The red arrow spans from the current latency to the baseline endpoint. Totals exclude the shared mux and cleanup stage. In our baseline, Stage 1 combines 3.772 seconds of H3 DiT and shared work with 3.427 seconds of official H3 VAE decode, for 7.199 seconds total. Sol-Super Stage 1 combines the same 3.772 seconds of H3 work with 0.028 seconds of TAEH3 decode and 0.3728 seconds of text/image encoding, for 4.1728 seconds total. The decoder values are averages from two matched 1344×768 cases. Refiner blocks report complete Refiner latency; the Sol-Attn DiT portion takes 0.985 seconds. The original LTX-2.5 Video VAE decoder takes 6.404 seconds in the matched 121-frame decode benchmark.</p>
         <div class="encoder-note"><strong>Why the encoder stays unchanged.</strong> Stage 2 retains the original LTX-2.5 Video VAE encoder because the Refiner was trained on its latent distribution. LTX TAEHV is used only for the final decode, where it reduces latency without feeding shifted conditioning latents back into the Refiner.</div>
       </div>
     </div>
@@ -634,7 +637,7 @@
         <p>Throughput, revenue, and compute-adjusted margin for one fully utilized NVIDIA GB200.</p>
       </div>
 
-      <p class="lede"><a href="https://platform.minimax.io/docs/guides/pricing-paygo#video">MiniMax's official API pricing</a> lists 768P H3 output at <strong>$0.08 per second</strong>: $0.40 for a 5-second video and $0.80 for a 10-second video. Under the clearly stated assumptions below, the combined Sol-Super latency corresponds to a <strong>97.5%–98.3% GPU-only gross margin</strong>.</p>
+      <p class="lede"><a href="https://platform.minimax.io/docs/guides/pricing-paygo#video">MiniMax's official API pricing</a> lists 768P H3 output at <strong>$0.08 per second</strong>: $0.40 for a 5-second video and $0.80 for a 10-second video. Under the clearly stated assumptions below, the combined Sol-Super latency corresponds to a <strong>97.1%–97.4% GPU-only gross margin</strong>.</p>
 
       <div class="table-wrap econ-table-wrap">
         <table class="econ-table">
@@ -642,8 +645,8 @@
             <tr><th>Setting / price</th><th class="num-col">SGLang<br>videos / hour</th><th class="num-col">Sol-Super<br>videos / hour</th><th class="num-col">SGLang<br>revenue / hour</th><th class="num-col">Sol-Super<br>revenue / hour</th><th class="num-col">Speedup<br>vs. SGLang</th><th class="num-col">Sol-Super<br>gross margin</th></tr>
           </thead>
           <tbody>
-            <tr><td data-label="Setting / price"><strong>768p · 5 s</strong><span class="econ-setting-price">$0.40 / video</span></td><td class="num-col" data-label="SGLang videos / hour">23.64</td><td class="num-col gain" data-label="Sol-Super videos / hour">555.67</td><td class="num-col" data-label="SGLang revenue / hour">$9.46</td><td class="num-col gain" data-label="Sol-Super revenue / hour">$222.27</td><td class="num-col gain" data-label="Speedup vs. SGLang">23.5×</td><td class="num-col gain" data-label="Sol-Super gross margin">97.5%</td></tr>
-            <tr><td data-label="Setting / price"><strong>768p · 10 s</strong><span class="econ-setting-price">$0.80 / video</span></td><td class="num-col" data-label="SGLang videos / hour">8.69</td><td class="num-col gain" data-label="Sol-Super videos / hour">404.00</td><td class="num-col" data-label="SGLang revenue / hour">$6.95</td><td class="num-col gain" data-label="Sol-Super revenue / hour">$323.20</td><td class="num-col gain" data-label="Speedup vs. SGLang">46.5×</td><td class="num-col gain" data-label="Sol-Super gross margin">98.3%</td></tr>
+            <tr><td data-label="Setting / price"><strong>768p · 5 s</strong><span class="econ-setting-price">$0.40 / video</span></td><td class="num-col" data-label="SGLang videos / hour">23.64</td><td class="num-col gain" data-label="Sol-Super videos / hour">525.41</td><td class="num-col" data-label="SGLang revenue / hour">$9.46</td><td class="num-col gain" data-label="Sol-Super revenue / hour">$210.16</td><td class="num-col gain" data-label="Speedup vs. SGLang">22.2×</td><td class="num-col gain" data-label="Sol-Super gross margin">97.4%</td></tr>
+            <tr><td data-label="Setting / price"><strong>768p · 10 s</strong><span class="econ-setting-price">$0.80 / video</span></td><td class="num-col" data-label="SGLang videos / hour">8.69</td><td class="num-col gain" data-label="Sol-Super videos / hour">241.10</td><td class="num-col" data-label="SGLang revenue / hour">$6.95</td><td class="num-col gain" data-label="Sol-Super revenue / hour">$192.88</td><td class="num-col gain" data-label="Speedup vs. SGLang">27.7×</td><td class="num-col gain" data-label="Sol-Super gross margin">97.1%</td></tr>
           </tbody>
         </table>
       </div>

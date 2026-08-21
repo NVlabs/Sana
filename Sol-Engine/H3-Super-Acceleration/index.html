@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="H3 Super Acceleration generates 5-second and 10-second 768p videos in 6.85 and 14.93 seconds on one NVIDIA GB200.">
+<meta name="description" content="H3 Super Acceleration generates 5-second and 10-second 768p videos in 6.85 and 14.93 seconds on one NVIDIA GB200—up to 12.6K videos per day and 378K per 30 days.">
 <title>MiniMax H3 Super Acceleration | NVIDIA</title>
 <style>
   :root{
@@ -69,6 +69,25 @@
   .metric .v{color:#fff;font-size:28px;font-weight:750;line-height:1.12;letter-spacing:-.028em}
   .metric .v.green{color:var(--green)}
   .metric .n{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.45}
+
+  .production-overview{padding:38px 0 0}
+  .production-panel{padding:30px;border:1px solid var(--green-line);border-radius:14px;background:linear-gradient(135deg,rgba(118,185,0,.11),var(--surface) 42%,#0c0e10);box-shadow:0 18px 60px rgba(0,0,0,.18)}
+  .production-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.72fr);align-items:end;gap:26px;margin-bottom:25px}
+  .production-eyebrow{display:block;margin-bottom:7px;color:var(--green);font-size:13px;font-weight:780;letter-spacing:.1em;text-transform:uppercase}
+  .production-heading h2{font-size:clamp(27px,3.8vw,42px);line-height:1.08}
+  .production-heading p{margin:0;color:var(--text-2);font-size:15px;line-height:1.55}
+  .production-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .production-workload{min-width:0;padding:20px;border:1px solid var(--line);border-radius:10px;background:rgba(8,9,10,.7)}
+  .production-workload-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:18px;padding-bottom:13px;border-bottom:1px solid var(--line-soft)}
+  .production-workload-head strong{font-size:17px;letter-spacing:-.01em}
+  .production-workload-head span{color:var(--muted);font-size:12px;font-weight:650;white-space:nowrap}
+  .production-numbers{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .production-number{min-width:0}
+  .production-value{display:block;color:var(--green);font-size:clamp(31px,4.2vw,43px);font-weight:790;line-height:1;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+  .production-unit{display:block;margin-top:7px;color:#fff;font-size:14px;font-weight:700;line-height:1.25;text-transform:uppercase;letter-spacing:.045em}
+  .production-number small{display:block;margin-top:5px;color:var(--muted);font-size:12px;line-height:1.4}
+  .production-note{margin:18px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
+  .production-note strong{color:var(--text-2)}
 
   .pipeline{position:relative;display:grid;grid-template-columns:1fr 70px 1fr;align-items:stretch;margin:38px 0 22px}
   .stage{position:relative;min-width:0;padding:28px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(180deg,var(--surface),#0d0f11)}
@@ -238,6 +257,7 @@
 
   @media(max-width:900px){
     .summary{grid-template-columns:1fr 1fr}
+    .production-heading{grid-template-columns:1fr;align-items:start;gap:12px}
     .pipeline{grid-template-columns:1fr;gap:18px}
     .bridge{height:46px;flex-direction:row}
     .bridge .arrow{transform:rotate(90deg)}
@@ -261,6 +281,11 @@
     .prose,.wide{padding-left:20px;padding-right:20px}
     .hero{padding:66px 0 55px}
     .summary,.cards{grid-template-columns:1fr}
+    .production-overview{padding-top:24px}
+    .production-panel{padding:22px 18px}
+    .production-grid{grid-template-columns:1fr}
+    .production-workload-head{align-items:flex-start;flex-direction:column;gap:3px}
+    .production-value{font-size:36px}
     .stage{padding:22px 19px}
     .stage-head{flex-direction:column}
     .table-wrap{overflow-x:auto}
@@ -314,6 +339,40 @@
       </div>
     </div>
   </div>
+
+  <section class="production-overview" aria-labelledby="production-title">
+    <div class="wide">
+      <div class="production-panel">
+        <div class="production-heading">
+          <div>
+            <span class="production-eyebrow">Production at a glance</span>
+            <h2 id="production-title">Up to 378K videos every 30 days</h2>
+          </div>
+          <p>One NVIDIA GB200 running H3 Super Acceleration continuously can turn the measured end-to-end latency into production-scale output.</p>
+        </div>
+
+        <div class="production-grid">
+          <article class="production-workload">
+            <div class="production-workload-head"><strong>768p · 5-second videos</strong><span>6.852 s measured E2E</span></div>
+            <div class="production-numbers">
+              <div class="production-number"><span class="production-value">12.6K</span><span class="production-unit">videos / day</span><small>17.5 hours of finished video</small></div>
+              <div class="production-number"><span class="production-value">378K</span><span class="production-unit">videos / 30 days</span><small>525 hours of finished video</small></div>
+            </div>
+          </article>
+
+          <article class="production-workload">
+            <div class="production-workload-head"><strong>768p · 10-second videos</strong><span>14.931 s measured E2E</span></div>
+            <div class="production-numbers">
+              <div class="production-number"><span class="production-value">5.79K</span><span class="production-unit">videos / day</span><small>16.1 hours of finished video</small></div>
+              <div class="production-number"><span class="production-value">174K</span><span class="production-unit">videos / 30 days</span><small>482 hours of finished video</small></div>
+            </div>
+          </article>
+        </div>
+
+        <p class="production-note"><strong>Ideal full-utilization estimate.</strong> Counts assume one GB200, batch size 1, 24 × 7 serial inference, no idle time or failed jobs, and a 30-day month. Finished-video hours express media volume; encoded storage in GB or TB depends on the delivery codec and bitrate.</p>
+      </div>
+    </div>
+  </section>
 
   <section>
     <div class="prose">

@@ -144,7 +144,7 @@ cd Sana && ./environment_setup.sh sana
 
 ### SANA-Video 2.0 5B release demo
 
-This sample was generated from the public 5B checkpoint with seed 0. The result
+This sample was generated from the public 5B checkpoint with seed 4. The result
 contains 193 frames at 24 FPS in a 1280 × 736 bucket (8.04 seconds).
 
 <p align="center">
@@ -178,7 +178,7 @@ bash inference_video_scripts/inference_sana_video.sh \
   --step 50 \
   --fps 24 \
   --motion_score 20 \
-  --seed 0 \
+  --seed 4 \
   --work_dir output/sana_video2_t2v_720p_demo
 ```
 

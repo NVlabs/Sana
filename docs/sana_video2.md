@@ -81,7 +81,7 @@ with classifier-free guidance 8, flow shift 12, and 50 sampling steps.
 
 ### Verified 5B 720p release example
 
-The following sample was generated from the public checkpoint with seed 0. The
+The following sample was generated from the public checkpoint with seed 4. The
 encoded result is 1280 × 736, 193 frames, 24 FPS, and 8.04 seconds long.
 
 <video controls muted loop playsinline poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" style="width: 100%;">
@@ -114,7 +114,7 @@ bash inference_video_scripts/inference_sana_video.sh \
   --step 50 \
   --fps 24 \
   --motion_score 20 \
-  --seed 0 \
+  --seed 4 \
   --work_dir output/sana_video2_t2v_720p_demo
 ```
 

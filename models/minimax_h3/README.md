@@ -19,6 +19,21 @@ Speedups are measured against the matching baseline runtime on the same hardware
 uses its validated release workload, so the table compares relative acceleration rather than
 absolute latency across GPUs.
 
+## Super acceleration: H3 -> LTX-2.5
+
+The separate [Super Acceleration profile](super_acceleration/) runs MiniMax-H3
+Stage 1 on one GB200 and a resident LTX-2.5 Stage 2 Refiner on a second GB200.
+A four-GPU node runs two independent pairs; it does not use four-way model,
+tensor, or context parallelism. The profile uses a direct BF16 video plus PCM
+handoff and full-temporal input-VAE tiling, and deliberately lives outside the
+Lightweight/YAML interface.
+
+Formal job `6304303` measured a 6.760544632-second median across 20 hot complete
+requests. This is an absolute latency result for a different composite profile,
+not another row in the same-profile speedup table above. No matched end-to-end
+baseline or perceptual quality gate exists, so no speedup or quality-pass claim
+is made.
+
 ## Usage
 
 Run the launcher from the repository root and select the full-opt config for your GPU from the

@@ -38,6 +38,7 @@ support a wider range of models.
 
 ## 📰 News
 
+- **[2026/08/22]** 🔥 **MiniMax-H3 Super Acceleration** [[Code](models/minimax_h3/super_acceleration/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-Super-Acceleration/)] — combines a 4-step MiniMax-H3 draft with a 3-step LTX-2.5 refinement pass, reaching **22.2×** end-to-end speedup for 5-second 768p video and **27.7×** for 10-second video on one NVIDIA GB200.
 - **[2026/08/17]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GeForce RTX 4090** \[[Code](models/minimax_h3/)\] — reaches **4.44×** end-to-end on RTX 4090. Sol-Attn now includes an optimized SM89 CuTe DSL kernel for RTX 4090.
 - **[2026/08/13]** 🔥 **[LTX-2.5](https://github.com/Lightricks/LTX-2) across B200, GeForce RTX 5090, and DGX Spark** \[[Code](models/ltx25/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)\] — reaches up to **4.68×** multi-step pipeline speedup and **1.90×** distilled pipeline speedup.
 - **[2026/08/09]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on H100 and A100** \[[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-DataCenter/)\] — reaches **3.56×** end-to-end on 4×H100 and **3.55×** on 4×A100.
@@ -57,16 +58,17 @@ support a wider range of models.
 
 | Model | Acceleration line | Speedup |
 |---|---|---|
-| \[[weight](https://huggingface.co/nvidia/Cosmos3-Super) | [code](models/)\] **Cosmos3-Super** | TeaCache + step-selective NVFP4 | **~2.27×** |
-| \[[weight](https://huggingface.co/Lightricks/LTX-2.3) | [code](models/)\] **LTX-2.3** | kernel fusion + cache + PISA + NVFP4 + token-prune | **~2.38×** |
-| \[[weight](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_diffusers) | [code](models/sana_video/)\] **SANA-Video** | EasyCache + kernel fusion + compile | **~2.77×** |
-| \[[weight](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) | [code](models/wan22_ti2v_5b/)\] **Wan2.2 TI2V-5B** | EasyCache + kernel fusion + compile | **~2.89×** |
-| \[[weight](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) | [code](models/wan22_t2v_a14b/)\] **Wan2.2-A14B** | kernel fusion + EasyCache + PISA | **~2.17×** |
-| \[[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) | [code](models/lingbot_video/)\] **LingBot-Video** | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
-| \[[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) | [code](models/hunyuan_video/)\] **HunyuanVideo-13B** | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
-| \[[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) | [code](models/wan21_t2v_14b/)\] **Wan2.1-T2V-14B** | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
-| \[[weight](https://huggingface.co/Lightricks/LTX-2.5) | [code](models/ltx25/) | [blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)\] **LTX-2.5** | parallel optimization + FBCache + kernel fusion | **~4.68×** |
-| \[[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) | [code](models/minimax_h3/) | [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)\] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.95×** |
+| [[weight](https://huggingface.co/nvidia/Cosmos3-Super) \| [code](models/)] **Cosmos3-Super** | TeaCache + step-selective NVFP4 | **~2.27×** |
+| [[weight](https://huggingface.co/Lightricks/LTX-2.3) \| [code](models/)] **LTX-2.3** | kernel fusion + cache + PISA + NVFP4 + token-prune | **~2.38×** |
+| [[weight](https://huggingface.co/Efficient-Large-Model/SANA-Video_2B_480p_diffusers) \| [code](models/sana_video/)] **SANA-Video** | EasyCache + kernel fusion + compile | **~2.77×** |
+| [[weight](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) \| [code](models/wan22_ti2v_5b/)] **Wan2.2 TI2V-5B** | EasyCache + kernel fusion + compile | **~2.89×** |
+| [[weight](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) \| [code](models/wan22_t2v_a14b/)] **Wan2.2-A14B** | kernel fusion + EasyCache + PISA | **~2.17×** |
+| [[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) \| [code](models/lingbot_video/)] **LingBot-Video** | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
+| [[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) \| [code](models/hunyuan_video/)] **HunyuanVideo-13B** | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
+| [[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) \| [code](models/wan21_t2v_14b/)] **Wan2.1-T2V-14B** | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
+| [[weight](https://huggingface.co/Lightricks/LTX-2.5) \| [code](models/ltx25/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] **LTX-2.5** | parallel optimization + FBCache + kernel fusion | **~4.68×** |
+| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.95×** |
+| [[H3 weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [LTX-2.5 weight](https://huggingface.co/Lightricks/LTX-2.5-Pre-Trained) \| [code](models/minimax_h3/super_acceleration/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-Super-Acceleration/)] **MiniMax-H3 Super Acceleration** | 4-step H3 draft + 3-step LTX-2.5 refinement + [**Sol-Attn**](techniques/sparse_backends/) + kernel fusion | **22.2×** (5 s) / **27.7×** (10 s) |
 
 </div>
 

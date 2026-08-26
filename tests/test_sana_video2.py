@@ -28,7 +28,7 @@ from diffusion.model.nets.sana_video2 import (
     SanaVideo2_5B,
     SanaVideo2_14B,
 )
-from diffusion.model.nets.sana_video2_blocks import SanaVideo2Block
+from diffusion.model.nets.sana_video2_blocks import GatedLinearAttention, SanaVideo2Block
 from diffusion.utils.config import SanaVideoConfig
 
 
@@ -157,6 +157,37 @@ def test_checkpoint_parameter_names_are_preserved():
     assert "attn_res.final_proj.weight" in keys
 
 
+def test_gated_linear_attention_removes_canceled_relu_normalizer():
+    torch.manual_seed(20260826)
+    module = GatedLinearAttention(dim=32, head_dim=8).to(dtype=torch.bfloat16).eval()
+    module.fp32_attention = True
+    x = torch.randn(2, 17, 32, dtype=torch.bfloat16)
+
+    with torch.no_grad():
+        actual = module(x)
+
+        batch, tokens, channels = x.shape
+        q, k, v = module.qkv(x).reshape(batch, tokens, 3, channels).unbind(2)
+        q = module.q_norm(q).transpose(-1, -2).reshape(batch, module.heads, module.dim, tokens)
+        k = module.k_norm(k).transpose(-1, -2).reshape(batch, module.heads, module.dim, tokens)
+        v = v.transpose(-1, -2).reshape(batch, module.heads, module.dim, tokens)
+        normalizer = torch.matmul(
+            torch.relu(k).sum(dim=-1, keepdim=True).transpose(-2, -1),
+            torch.relu(q),
+        )
+        normalizer = torch.reciprocal(normalizer + module.eps)
+        beta = torch.sigmoid(module.beta_proj(x)).transpose(1, 2).unsqueeze(2)
+        key_value = torch.matmul(v.float(), (k * beta).float().transpose(-1, -2))
+        legacy = (torch.matmul(key_value, q.float()) * normalizer).to(x.dtype)
+        legacy = module.o_norm(legacy).reshape(batch, channels, tokens).permute(0, 2, 1)
+        legacy = module.proj(legacy * torch.sigmoid(module.output_gate(x)))
+
+    cosine = torch.nn.functional.cosine_similarity(actual.float().flatten(), legacy.float().flatten(), dim=0)
+    assert cosine > 0.999
+    assert torch.isfinite(actual).all()
+    assert not hasattr(module, "kernel_func")
+
+
 def test_null_caption_embedding_can_be_loaded(tmp_path):
     null_caption = torch.randn(4, 32)
     null_embed_path = tmp_path / "null_embed.pth"
@@ -220,7 +251,7 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
   --step 50 \\
   --fps 24 \\
   --motion_score 20 \\
-  --seed 0 \\
+  --seed 4 \\
   --work_dir output/sana_video2_t2v_720p_demo"""
     video_url = (
         "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/"

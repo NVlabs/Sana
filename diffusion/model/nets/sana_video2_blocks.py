@@ -79,8 +79,7 @@ class GatedLinearAttention(TimmAttention):
         super().__init__(dim, num_heads=num_heads, qkv_bias=False)
         self.heads = num_heads
         self.dim = head_dim
-        self.eps = eps
-        self.kernel_func = nn.ReLU(inplace=False)
+        self.eps = eps  # Retained for compatibility with the training implementation.
         if qk_norm:
             self.q_norm = RMSNorm(dim, scale_factor=1.0, eps=norm_eps)
             self.k_norm = RMSNorm(dim, scale_factor=1.0, eps=norm_eps)
@@ -108,8 +107,6 @@ class GatedLinearAttention(TimmAttention):
 
         q_rotated = _apply_rope_channel_first(q, rotary_emb) if rotary_emb is not None else q
         k_rotated = _apply_rope_channel_first(k, rotary_emb) if rotary_emb is not None else k
-        q_kernel = self.kernel_func(q)
-        k_kernel = self.kernel_func(k)
         beta = torch.sigmoid(self.beta_proj(x)).transpose(1, 2).unsqueeze(2)
         k_gated = k_rotated * beta
 
@@ -118,14 +115,11 @@ class GatedLinearAttention(TimmAttention):
             k_gated = k_gated.float()
             v = v.float()
 
-        normalizer = torch.matmul(
-            k_kernel.sum(dim=-1, keepdim=True).transpose(-2, -1),
-            q_kernel,
-        )
-        normalizer = torch.reciprocal(normalizer + self.eps)
         key_value = torch.matmul(v, k_gated.transpose(-1, -2))
-        out = torch.matmul(key_value, q_rotated) * normalizer
-        out = self.o_norm(out).to(output_dtype)
+        # The former ReLU-kernel denominator was scalar along ``head_dim`` and
+        # was effectively canceled by the following RMSNorm.
+        out = torch.matmul(key_value, q_rotated).to(output_dtype)
+        out = self.o_norm(out)
         out = out.reshape(batch, channels, tokens).permute(0, 2, 1)
         out = out * torch.sigmoid(self.output_gate(x))
         return self.proj(out)

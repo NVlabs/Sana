@@ -11,6 +11,7 @@
     <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><img src="https://img.shields.io/static/v1?label=Project&message=Sana&color=blue&logo=github-pages" alt="Sana"></a>
   <a href="https://nvlabs.github.io/Sana/Sprint/"><img src="https://img.shields.io/static/v1?label=Project&message=Sprint&color=blue&logo=github-pages" alt="Sprint"></a>
   <a href="https://nvlabs.github.io/Sana/Video/"><img src="https://img.shields.io/static/v1?label=Project&message=Video&color=blue&logo=github-pages" alt="Video"></a>
+  <a href="https://nvlabs.github.io/Sana/Video2/"><img src="https://img.shields.io/static/v1?label=Project&message=Video%202.0&color=76B900&logo=github-pages" alt="SANA-Video 2.0"></a>
 </p>
 
 <p align="center">
@@ -25,6 +26,7 @@
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=green" alt="ControlNet"></a>
   <a href="https://nv-sana.mit.edu/sprint/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=Sprint&color=green" alt="Sprint"></a>
   <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=HF Demo&message=Sprint&color=green" alt="HF Sprint"></a>
+  <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><img src="https://img.shields.io/static/v1?label=HF Demo&message=Video%202.0&color=76B900" alt="HF SANA-Video 2.0"></a>
 </p>
 
 <p align="center">
@@ -47,7 +49,7 @@ ______________________________________________________________________
 | **Sana-1.5** | Training-time and inference-time compute scaling |
 | **Sana-Sprint** | Few-step generation via sCM (Consistency Model) distillation |
 | **Sana-Video** | Efficient video generation with Block Linear Attention |
-| **Sana-Video 2.0** | 5B/14B hybrid-attention video models with Attention Residuals; [5B 720p weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) released |
+| **Sana-Video 2.0** | 5B/14B hybrid-attention video models with Attention Residuals; [project page](https://nvlabs.github.io/Sana/Video2/), [online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), and [5B 720p weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) released |
 | **LongSana** | Minute-length real-time video generation (with LongLive) |
 
 ### Key Techniques
@@ -67,7 +69,7 @@ ______________________________________________________________________
 - ⚡ **One-step inference** with Sana-Sprint
 - 💻 **< 8GB VRAM** with 4-bit quantization
 - 🎬 **Efficient video generation** with Sana-Video
-- 🎥 **720p, 8-second T2V/TI2V generation** with [SANA-Video 2.0](sana_video2.md)
+- 🎥 **720p, 8-second T2V/TI2V generation** with [SANA-Video 2.0](sana_video2.md) — [try the online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
 - ⏱️ **27 FPS real-time** minute-length video with LongSana
 - 📦 **Full training & inference codebase**
 

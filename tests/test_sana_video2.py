@@ -257,16 +257,26 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
         "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/"
         "Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4"
     )
+    demo_url = "https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"
+    project_url = "https://nvlabs.github.io/Sana/Video2/"
 
     assert (repo_root / "asset" / "samples" / "sana_video2_5b_720p_demo.txt").read_text(
         encoding="utf-8"
     ) == f"{prompt}\n"
-    documents = [
+    release_documents = [
         (repo_root / "README.md").read_text(encoding="utf-8"),
         (repo_root / "docs" / "sana_video2.md").read_text(encoding="utf-8"),
         (repo_root / "asset" / "docs" / "sana_video2.md").read_text(encoding="utf-8"),
     ]
-    for document in documents:
+    for document in release_documents:
         assert command in document
         assert video_url in document
-    assert documents[1] == documents[2]
+    linked_documents = release_documents + [
+        (repo_root / "docs" / "index.md").read_text(encoding="utf-8"),
+        (repo_root / "docs" / "model_zoo.md").read_text(encoding="utf-8"),
+        (repo_root / "asset" / "docs" / "model_zoo.md").read_text(encoding="utf-8"),
+    ]
+    for document in linked_documents:
+        assert demo_url in document
+        assert project_url in document
+    assert release_documents[1] == release_documents[2]

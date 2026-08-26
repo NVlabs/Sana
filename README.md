@@ -3,9 +3,9 @@
 </p>
 
 <h3 align="center">
-<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/docs/sana_video2/"><b>SANA-Video 2.0</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
+<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/Video2/"><b>SANA-Video 2.0</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
 
-<a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
+<a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><b>🎬 SANA-Video 2.0 Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
 
 </h3>
 
@@ -15,6 +15,7 @@
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/sprint/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=SANA-Sprint&color=yellow"></a> &ensp;
   <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=Huggingface%20Demo&message=SANA-Sprint&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><img src="https://img.shields.io/static/v1?label=Huggingface%20Demo&message=SANA-Video%202.0&color=76B900"></a> &ensp;
 </p>
 
 <p align="center">
@@ -32,7 +33,7 @@
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
 
-**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
+**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
 
 Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with the community! If you have any questions, run into issues, or are interested in contributing, don't hesitate to reach out!
 
@@ -42,7 +43,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
-- 🔥 [2026/08/19] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The 8-second model supports both text-to-video and text-image-to-video generation, with hybrid linear/softmax attention and Attention Residuals. See [Demo](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4) | [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
+- 🔥 [2026/08/19] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The 8-second model supports both text-to-video and text-image-to-video generation, with hybrid linear/softmax attention and Attention Residuals. See [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) | [Project](https://nvlabs.github.io/Sana/Video2/) | [Sample](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4) | [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
 - 🔥 [2026/08/03] ⚡ **Sol Engine: Day-One MiniMax-H3 Acceleration** is available! The 33B omni-modal audio+video DiT runs **3.95×** faster on GB200, reached in 4.5 hours of optimization, and up to **4.52×** on hardware that sits on a desk — 3.92× on DGX Spark, 4.52× on GeForce RTX 5090 — with no distillation, no LoRA, and no calibration pass. See [GB200 Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/) | [On-Device Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/).
 - 🔥 [2026/07] 🌍 **SANA-Streaming** training is released! Includes bidirectional and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/).
 - 🔥 [2026/07] 🌍 **SANA-WM** Stage-1 training is released! Includes bidirectional, chunk-causal, and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/).
@@ -111,7 +112,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/)**: Efficient training-time and inference-time compute scaling for better quality.
 - **[SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/)**: One/few-step generation via sCM distillation, **0.1s per 1024px image** on H100.
 - **[SANA-Video/LongSANA](https://nvlabs.github.io/Sana/Video/)**: Efficient video generation with Block Linear Attention / with [LongLive](https://github.com/NVlabs/LongLive).
-- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/)**: 5B and 14B text-to-video/text-image-to-video architectures with hybrid linear/softmax attention and Attention Residuals. The [5B 720p checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) is available now; the 14B config and checkpoint are not included yet.
+- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/)**: 5B and 14B text-to-video/text-image-to-video architectures with hybrid linear/softmax attention and Attention Residuals. Try the [5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) or download the [checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p); the 14B config and checkpoint are not included yet.
 - **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 - **[SANA-WM](https://nvlabs.github.io/Sana/WM/)**: 2.6B parameter controllable world model, generating 720p, 1-minute video worlds with 6-DoF camera control.
 - **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
@@ -146,6 +147,8 @@ cd Sana && ./environment_setup.sh sana
 
 This sample was generated from the public 5B checkpoint with seed 4. The result
 contains 193 frames at 24 FPS in a 1280 × 736 bucket (8.04 seconds).
+
+Try your own prompt in the [SANA-Video 2.0 5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce the verified sample below with the exact release command.
 
 <p align="center">
   <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">
@@ -221,7 +224,7 @@ image[0].save("sana.png")
 - [Sana Inference & Training](https://nvlabs.github.io/Sana/docs/sana/)
 - [SANA-Sprint](https://nvlabs.github.io/Sana/docs/sana_sprint/)
 - [SANA-Video](https://nvlabs.github.io/Sana/docs/sana_video/)
-- [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/)
+- [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/) ([Project](https://nvlabs.github.io/Sana/Video2/) · [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo))
 - [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/)
 - [SANA-WM](https://nvlabs.github.io/Sana/docs/sana_wm/)
 - [SANA-Streaming](https://nvlabs.github.io/Sana/docs/sana_streaming/)

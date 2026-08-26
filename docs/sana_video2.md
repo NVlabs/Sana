@@ -7,8 +7,9 @@ and 720p reference configs for the 5B variant, and a post-trained 5B checkpoint
 for 720p, 8-second generation. The 14B config and checkpoint are not included
 yet.
 
-> **Release status:** The 5B 720p checkpoint is available on
-> [Hugging Face](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
+> **Release status:** Explore the [project page](https://nvlabs.github.io/Sana/Video2/),
+> try the [5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo),
+> or download the [checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
 > The 14B checkpoint is coming soon.
 
 ## Architecture
@@ -83,6 +84,8 @@ with classifier-free guidance 8, flow shift 12, and 50 sampling steps.
 
 The following sample was generated from the public checkpoint with seed 4. The
 encoded result is 1280 × 736, 193 frames, 24 FPS, and 8.04 seconds long.
+
+[Try SANA-Video 2.0 5B 720p online](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce this sample with the exact command below.
 
 <video controls muted loop playsinline poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" style="width: 100%;">
   <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4" type="video/mp4">

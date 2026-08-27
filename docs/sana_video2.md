@@ -8,8 +8,10 @@ for 720p, 8-second generation. The 14B config and checkpoint are not included
 yet.
 
 > **Release status:** Explore the [project page](https://nvlabs.github.io/Sana/Video2/),
-> try the [5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo),
-> or download the [checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
+> try the [4-step 5B 720p preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo),
+> or download the [50-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p)
+> and [4-step preview](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step)
+> checkpoints.
 > The 14B checkpoint is coming soon.
 
 ## Architecture
@@ -36,6 +38,7 @@ Both variants use:
 | Model | Resolution | Checkpoint | Precision |
 | --- | --- | --- | --- |
 | SANA-Video 2.0 5B | 720p, 193 frames at 24 FPS | [SANA-Video_2.0_5B_720p](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) | BF16 inference |
+| SANA-Video 2.0 5B 4-step preview | 720p, 81 frames at 16 FPS | [SANA-Video_2.0_5B_720p_4step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | BF16 inference |
 | SANA-Video 2.0 14B | 480p | Coming soon | BF16 |
 
 The released 5B checkpoint was jointly post-trained for text-to-video (T2V)
@@ -44,10 +47,16 @@ merged model `state_dict`; optimizer, scheduler, and standalone LoRA state are
 not included. The checkpoint preserves the source EMA tensor values and is
 cast to BF16 by the inference entry point.
 
+The 4-step research preview is a full-model DMD EMA export initialized from
+the merged ReFL step-500 model. It is T2V-only and is not a LoRA adapter. The
+release artifact contains model tensors only, without optimizer or scheduler
+state.
+
 ## Code layout
 
 - Model: `diffusion/model/nets/sana_video2.py`
 - Transformer blocks: `diffusion/model/nets/sana_video2_blocks.py`
+- Four-step sampler: `diffusion/scheduler/fastvideo_dmd_sampler.py`
 - Training: `train_video_scripts/train_video_ivjoint_chunk.py`
 - Inference: `inference_video_scripts/inference_sana_video.py`
 - Configs: `configs/sana_video2/`
@@ -85,7 +94,7 @@ with classifier-free guidance 8, flow shift 12, and 50 sampling steps.
 The following sample was generated from the public checkpoint with seed 4. The
 encoded result is 1280 × 736, 193 frames, 24 FPS, and 8.04 seconds long.
 
-[Try SANA-Video 2.0 5B 720p online](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce this sample with the exact command below.
+[Try the SANA-Video 2.0 5B 720p 4-step preview online](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce the original 50-step sample below with its exact command.
 
 <video controls muted loop playsinline poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" style="width: 100%;">
   <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4" type="video/mp4">
@@ -119,6 +128,37 @@ bash inference_video_scripts/inference_sana_video.sh \
   --motion_score 20 \
   --seed 4 \
   --work_dir output/sana_video2_t2v_720p_demo
+```
+
+### Four-step text-to-video preview
+
+The DMD preview uses four fixed stochastic stages, CFG 1, BF16 latent noise,
+and the `sana_shift6_dpm` sigma profile. It generates 81 frames at 16 FPS
+(about 5.06 seconds) and does not support first-frame conditioning. The
+`flow_shift` argument is retained for CLI consistency but is not applied by
+this sampler. Model construction stays at the source tower's 480 setting;
+`custom_height_width` controls the actual 736×1280 latent and MP4 dimensions.
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+  --np 1 \
+  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \
+  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/checkpoints/SANA_Video_2.0_5B_720p_4step.pth \
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \
+  --task=t2v \
+  --model.image_size=480 \
+  --custom_height_width='[736,1280]' \
+  --sampling_algo=fastvideo_dmd_4step \
+  --generator_sigma_profile=sana_shift6_dpm \
+  --cfg_scale=1.0 \
+  --flow_shift=1.0 \
+  --motion_score=0 \
+  --negative_prompt=None \
+  --num_frames=81 \
+  --step=4 \
+  --fps=16 \
+  --seed=0 \
+  --work_dir output/sana_video2_t2v_720p_4step_preview
 ```
 
 ### Text-image-to-video

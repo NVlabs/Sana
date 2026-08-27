@@ -112,7 +112,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/)**: Efficient training-time and inference-time compute scaling for better quality.
 - **[SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/)**: One/few-step generation via sCM distillation, **0.1s per 1024px image** on H100.
 - **[SANA-Video/LongSANA](https://nvlabs.github.io/Sana/Video/)**: Efficient video generation with Block Linear Attention / with [LongLive](https://github.com/NVlabs/LongLive).
-- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/)**: 5B and 14B text-to-video/text-image-to-video architectures with hybrid linear/softmax attention and Attention Residuals. Try the [5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) or download the [checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p); the 14B config and checkpoint are not included yet.
+- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/)**: 5B and 14B text-to-video/text-image-to-video architectures with hybrid linear/softmax attention and Attention Residuals. Try the [5B 720p 4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or download the [50-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) and [4-step preview](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) checkpoints; the 14B config and checkpoint are not included yet.
 - **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 - **[SANA-WM](https://nvlabs.github.io/Sana/WM/)**: 2.6B parameter controllable world model, generating 720p, 1-minute video worlds with 6-DoF camera control.
 - **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
@@ -148,7 +148,7 @@ cd Sana && ./environment_setup.sh sana
 This sample was generated from the public 5B checkpoint with seed 4. The result
 contains 193 frames at 24 FPS in a 1280 × 736 bucket (8.04 seconds).
 
-Try your own prompt in the [SANA-Video 2.0 5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce the verified sample below with the exact release command.
+Try your own prompt in the [SANA-Video 2.0 5B 720p 4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce the original 50-step sample below with its exact release command.
 
 <p align="center">
   <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">
@@ -183,6 +183,30 @@ bash inference_video_scripts/inference_sana_video.sh \
   --motion_score 20 \
   --seed 4 \
   --work_dir output/sana_video2_t2v_720p_demo
+```
+
+Run the T2V-only 4-step DMD preview with its fixed training-aligned schedule:
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+  --np 1 \
+  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \
+  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/checkpoints/SANA_Video_2.0_5B_720p_4step.pth \
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \
+  --task=t2v \
+  --model.image_size=480 \
+  --custom_height_width='[736,1280]' \
+  --sampling_algo=fastvideo_dmd_4step \
+  --generator_sigma_profile=sana_shift6_dpm \
+  --cfg_scale=1.0 \
+  --flow_shift=1.0 \
+  --motion_score=0 \
+  --negative_prompt=None \
+  --num_frames=81 \
+  --step=4 \
+  --fps=16 \
+  --seed=0 \
+  --work_dir output/sana_video2_t2v_720p_4step_preview
 ```
 
 ### Inference with 🧨 diffusers

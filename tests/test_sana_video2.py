@@ -253,6 +253,25 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
   --motion_score 20 \\
   --seed 4 \\
   --work_dir output/sana_video2_t2v_720p_demo"""
+    preview_command = """bash inference_video_scripts/inference_sana_video.sh \\
+  --np 1 \\
+  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \\
+  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/checkpoints/SANA_Video_2.0_5B_720p_4step.pth \\
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \\
+  --task=t2v \\
+  --model.image_size=480 \\
+  --custom_height_width='[736,1280]' \\
+  --sampling_algo=fastvideo_dmd_4step \\
+  --generator_sigma_profile=sana_shift6_dpm \\
+  --cfg_scale=1.0 \\
+  --flow_shift=1.0 \\
+  --motion_score=0 \\
+  --negative_prompt=None \\
+  --num_frames=81 \\
+  --step=4 \\
+  --fps=16 \\
+  --seed=0 \\
+  --work_dir output/sana_video2_t2v_720p_4step_preview"""
     video_url = (
         "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/"
         "Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4"
@@ -270,6 +289,7 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
     ]
     for document in release_documents:
         assert command in document
+        assert preview_command in document
         assert video_url in document
     linked_documents = release_documents + [
         (repo_root / "docs" / "index.md").read_text(encoding="utf-8"),

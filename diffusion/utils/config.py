@@ -140,10 +140,12 @@ class ModelVideoConfig(ModelConfig):
     image_latent_mode: str = "video_zero"
     # chunkcasual
     chunk_index: Optional[List[int]] = None
-    # V2V hybrid attention
+    # Hybrid-attention video models
     softmax_ratio: Optional[float] = 0.0
     softmax_layer_indices: Optional[List[int]] = None
     softmax_attn_type: str = "V2VGatedSoftmaxAttention"
+    softmax_head_dim: int = 256
+    attn_res_block_size: int = 8
 
 
 @dataclass
@@ -157,6 +159,7 @@ class AEConfig(BaseConfig):
     vae_downsample_rate: int = 32
     sample_posterior: bool = True
     vae_stride: Optional[List[int]] = None
+    use_causal_encode: bool = False
     if_cache: bool = False
     cache_dir: Optional[str] = None
     # Framewise / tiling fields used by LTX2VAE_diffusers for long-video decode.
@@ -271,7 +274,7 @@ class TrainingConfig(BaseConfig):
     online_metric: bool = False
     eval_metric_step: int = 5000
     online_metric_dir: str = "metric_helper"
-    work_dir: str = "/cache/exps/"
+    work_dir: str = "output/"
     skip_step: int = 0
     loss_type: str = "huber"
     huber_c: float = 0.001
@@ -478,6 +481,30 @@ def model_video_init_config(config: SanaVideoConfig, latent_size: int = 32):
 
     pred_sigma = getattr(config.scheduler, "pred_sigma", True)
     learn_sigma = getattr(config.scheduler, "learn_sigma", True) and pred_sigma
+    if config.model.model.startswith("SanaVideo2_"):
+        return {
+            "input_size": latent_size,
+            "config": config,
+            "model_max_length": config.text_encoder.model_max_length,
+            "qk_norm": config.model.qk_norm,
+            "caption_channels": config.text_encoder.caption_channels,
+            "class_dropout_prob": config.model.class_dropout_prob,
+            "y_norm": config.text_encoder.y_norm,
+            "ffn_type": config.model.ffn_type,
+            "mlp_ratio": config.model.mlp_ratio,
+            "in_channels": config.vae.vae_latent_dim,
+            "y_norm_scale_factor": config.text_encoder.y_norm_scale_factor,
+            "use_pe": config.model.use_pe,
+            "pos_embed_type": config.model.pos_embed_type,
+            "rope_fhw_dim": config.model.rope_fhw_dim,
+            "linear_head_dim": config.model.linear_head_dim,
+            "softmax_head_dim": config.model.softmax_head_dim,
+            "softmax_ratio": config.model.softmax_ratio,
+            "pred_sigma": pred_sigma,
+            "cross_norm": config.model.cross_norm,
+            "attn_res_block_size": config.model.attn_res_block_size,
+            "timestep_norm_scale_factor": config.scheduler.timestep_norm_scale_factor,
+        }
     return {
         "input_size": latent_size,
         "pe_interpolation": config.model.pe_interpolation,

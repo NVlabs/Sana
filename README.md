@@ -3,9 +3,9 @@
 </p>
 
 <h3 align="center">
-<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
+<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/Video2/"><b>SANA-Video 2.0</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
 
-<a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
+<a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><b>🎬 SANA-Video 2.0 Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
 
 </h3>
 
@@ -15,6 +15,7 @@
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/sprint/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=SANA-Sprint&color=yellow"></a> &ensp;
   <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=Huggingface%20Demo&message=SANA-Sprint&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><img src="https://img.shields.io/static/v1?label=Huggingface%20Demo&message=SANA-Video%202.0&color=76B900"></a> &ensp;
 </p>
 
 <p align="center">
@@ -32,7 +33,7 @@
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
 
-**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
+**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
 
 Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with the community! If you have any questions, run into issues, or are interested in contributing, don't hesitate to reach out!
 
@@ -42,6 +43,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
+- 🔥 [2026/08/19] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The 8-second model supports both text-to-video and text-image-to-video generation, with hybrid linear/softmax attention and Attention Residuals. See [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) | [Project](https://nvlabs.github.io/Sana/Video2/) | [Sample](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4) | [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
 - 🔥 [2026/08/03] ⚡ **Sol Engine: Day-One MiniMax-H3 Acceleration** is available! The 33B omni-modal audio+video DiT runs **3.95×** faster on GB200, reached in 4.5 hours of optimization, and up to **4.52×** on hardware that sits on a desk — 3.92× on DGX Spark, 4.52× on GeForce RTX 5090 — with no distillation, no LoRA, and no calibration pass. See [GB200 Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/) | [On-Device Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/).
 - 🔥 [2026/07] 🌍 **SANA-Streaming** training is released! Includes bidirectional and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_streaming/).
 - 🔥 [2026/07] 🌍 **SANA-WM** Stage-1 training is released! Includes bidirectional, chunk-causal, and distillation training. See [Doc](https://nvlabs.github.io/Sana/docs/sana_wm/).
@@ -110,6 +112,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/)**: Efficient training-time and inference-time compute scaling for better quality.
 - **[SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/)**: One/few-step generation via sCM distillation, **0.1s per 1024px image** on H100.
 - **[SANA-Video/LongSANA](https://nvlabs.github.io/Sana/Video/)**: Efficient video generation with Block Linear Attention / with [LongLive](https://github.com/NVlabs/LongLive).
+- **[SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/)**: 5B and 14B text-to-video/text-image-to-video architectures with hybrid linear/softmax attention and Attention Residuals. Try the [5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) or download the [checkpoint](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p); the 14B config and checkpoint are not included yet.
 - **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 - **[SANA-WM](https://nvlabs.github.io/Sana/WM/)**: 2.6B parameter controllable world model, generating 720p, 1-minute video worlds with 6-DoF camera control.
 - **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
@@ -120,6 +123,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[DC-AE](https://hanlab.mit.edu/projects/dc-ae)**: 32× image compression (vs. traditional 8×) to reduce latent tokens.
 - **Decoder-only Text Encoder**: Modern decoder-only LLM with in-context learning for better text-image alignment.
 - **Block Causal Linear Attention & Causal Mix-FFN**: Efficient attention and feedforward for long video generation.
+- **Hybrid Attention & Attention Residuals**: Combine gated linear attention with periodic softmax anchors and shared depth-wise residual aggregation.
 - **Flow-DPM-Solver**: Reduce sampling steps with efficient training and sampling.
 - **sCM Distillation**: One/few-step generation with continuous-time consistency distillation.
 - **Sol-RL**: Low precision(NVFP4) rollout selection, high precesion(BF16) optimization for faster RL training.
@@ -137,6 +141,48 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 ```bash
 git clone https://github.com/NVlabs/Sana.git
 cd Sana && ./environment_setup.sh sana
+```
+
+### SANA-Video 2.0 5B release demo
+
+This sample was generated from the public 5B checkpoint with seed 4. The result
+contains 193 frames at 24 FPS in a 1280 × 736 bucket (8.04 seconds).
+
+Try your own prompt in the [SANA-Video 2.0 5B 720p online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce the verified sample below with the exact release command.
+
+<p align="center">
+  <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">
+    <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" width="90%" alt="SANA-Video 2.0 5B release demo: a cartoon rooster holding a beer bottle in a floral vintage room"/>
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">▶ Watch or download the generated video</a>
+</p>
+
+> **Prompt:** In a cozy, vintage room adorned with floral wallpaper, a cartoon
+> rooster sits comfortably in a floral-patterned armchair, sipping from a bottle
+> of beer. The rooster, with its vibrant red comb and wattle, displays a range of
+> expressions—smiling, nodding, and opening its beak wide in a cheerful manner.
+> The setting includes wooden furniture and another beer bottle on the table,
+> adding to the relaxed atmosphere. The camera captures the rooster from a
+> close-up angle, emphasizing its animated movements and lively demeanor.
+
+Run the exact release command used for the video above:
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+  --np 1 \
+  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \
+  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p/checkpoints/SANA_Video_2.0_5B_720p.pth \
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \
+  --cfg_scale 8 \
+  --flow_shift 12 \
+  --step 50 \
+  --fps 24 \
+  --motion_score 20 \
+  --seed 4 \
+  --work_dir output/sana_video2_t2v_720p_demo
 ```
 
 ### Inference with 🧨 diffusers
@@ -178,6 +224,7 @@ image[0].save("sana.png")
 - [Sana Inference & Training](https://nvlabs.github.io/Sana/docs/sana/)
 - [SANA-Sprint](https://nvlabs.github.io/Sana/docs/sana_sprint/)
 - [SANA-Video](https://nvlabs.github.io/Sana/docs/sana_video/)
+- [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/) ([Project](https://nvlabs.github.io/Sana/Video2/) · [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo))
 - [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/)
 - [SANA-WM](https://nvlabs.github.io/Sana/docs/sana_wm/)
 - [SANA-Streaming](https://nvlabs.github.io/Sana/docs/sana_streaming/)
@@ -232,6 +279,8 @@ We will try our best to achieve
 - [✅] Faster DCAE-Lite [weight](https://huggingface.co/dc-ai/dc-ae-lite-f32c32-diffusers)
 - [✅] Better re-construction F32/F64 [VAEs](https://github.com/dc-ai-projects/DC-Gen)
 - [✅] SANA-Video: Linear DiT Video model, and real-time minute-length video generation
+- [✅] SANA-Video 2.0 training, inference, and 5B/14B model architecture
+- [✅] [SANA-Video 2.0 5B 720p weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p)
 - [✅] RL Post-training: collaborate with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
 - [✅] SANA World Model
 - [✅] SANA-Streaming Video-to-Video Editing

@@ -205,9 +205,22 @@ bash inference_video_scripts/inference_sana_video.sh \
   --num_frames=81 \
   --step=4 \
   --fps=16 \
-  --seed=0 \
+  --seed=4 \
   --work_dir output/sana_video2_t2v_720p_4step_preview
 ```
+
+The command above generated this verified seed-4 preview from the independent
+four-step DMD checkpoint (1280 × 736, 81 frames, 16 FPS, 5.06 seconds):
+
+<p align="center">
+  <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">
+    <img src="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4_poster.png" width="90%" alt="SANA-Video 2.0 5B four-step preview: a cartoon rooster holding a beer bottle in a floral vintage room"/>
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">▶ Watch or download the verified four-step video</a>
+</p>
 
 ### Inference with 🧨 diffusers
 

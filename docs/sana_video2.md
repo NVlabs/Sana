@@ -157,9 +157,18 @@ bash inference_video_scripts/inference_sana_video.sh \
   --num_frames=81 \
   --step=4 \
   --fps=16 \
-  --seed=0 \
+  --seed=4 \
   --work_dir output/sana_video2_t2v_720p_4step_preview
 ```
+
+The command above generated this verified seed-4 preview from the independent
+four-step DMD checkpoint (1280 × 736, 81 frames, 16 FPS, 5.06 seconds):
+
+<video controls muted loop playsinline poster="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4_poster.png" style="width: 100%;">
+  <source src="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4" type="video/mp4">
+</video>
+
+[Open or download the verified four-step video](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4)
 
 ### Text-image-to-video
 

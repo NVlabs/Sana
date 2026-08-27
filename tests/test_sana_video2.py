@@ -270,11 +270,15 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
   --num_frames=81 \\
   --step=4 \\
   --fps=16 \\
-  --seed=0 \\
+  --seed=4 \\
   --work_dir output/sana_video2_t2v_720p_4step_preview"""
     video_url = (
         "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/"
         "Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4"
+    )
+    preview_video_url = (
+        "https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/"
+        "demo/sana_video2_5b_720p_4step_rooster_seed4.mp4"
     )
     demo_url = "https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"
     project_url = "https://nvlabs.github.io/Sana/Video2/"
@@ -291,6 +295,7 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
         assert command in document
         assert preview_command in document
         assert video_url in document
+        assert preview_video_url in document
     linked_documents = release_documents + [
         (repo_root / "docs" / "index.md").read_text(encoding="utf-8"),
         (repo_root / "docs" / "model_zoo.md").read_text(encoding="utf-8"),

@@ -492,6 +492,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#sana-video-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SANA-Video 2.0
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -836,6 +847,8 @@
       
         
       
+        
+      
     
     
     
@@ -898,6 +911,34 @@
     
   
     SANA-Video
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sana_video2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-Video 2.0
   
 
     
@@ -1693,6 +1734,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#sana-video-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SANA-Video 2.0
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2046,6 +2098,38 @@
 </tr>
 </tbody>
 </table>
+<h3 id="sana-video-20"><a href="https://nvlabs.github.io/Sana/Video2/">SANA-Video 2.0</a><a class="headerlink" href="#sana-video-20" title="Permanent link">&para;</a></h3>
+<p><a href="../sana_video2/">Documentation</a> · <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">Online demo</a></p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Reso</th>
+<th>pth link</th>
+<th>diffusers</th>
+<th>Precision</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SANA-Video 2.0 5B</td>
+<td>720p</td>
+<td><a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p">SANA-Video_2.0_5B_720p</a></td>
+<td>---</td>
+<td>bf16 inference</td>
+<td>8s T2V/TI2V ReFL model (193 frames at 24 FPS)</td>
+</tr>
+<tr>
+<td>SANA-Video 2.0 14B</td>
+<td>480p</td>
+<td>Coming soon</td>
+<td>Coming soon</td>
+<td>bf16</td>
+<td>40-layer hybrid-attention model</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="2-make-sure-to-use-correct-precisionfp16bf16fp32-for-training-and-inference">❗ 2. Make sure to use correct precision(fp16/bf16/fp32) for training and inference.<a class="headerlink" href="#2-make-sure-to-use-correct-precisionfp16bf16fp32-for-training-and-inference" title="Permanent link">&para;</a></h2>
 <h3 id="we-provide-two-samples-to-use-fp16-and-bf16-weights-respectively">We provide two samples to use fp16 and bf16 weights, respectively.<a class="headerlink" href="#we-provide-two-samples-to-use-fp16-and-bf16-weights-respectively" title="Permanent link">&para;</a></h3>
@@ -2056,26 +2140,26 @@
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">diffusers</span><span class="w"> </span><span class="kn">import</span> <span class="n">SanaPipeline</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">SanaPipeline</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="s2">&quot;Efficient-Large-Model/Sana_1600M_1024px_diffusers&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">&quot;fp16&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="s2">"Efficient-Large-Model/Sana_1600M_1024px_diffusers"</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">"fp16"</span><span class="p">,</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">,</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">)</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">pipe</span><span class="o">.</span><span class="n">vae</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">pipe</span><span class="o">.</span><span class="n">text_encoder</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">prompt</span> <span class="o">=</span> <span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">prompt</span> <span class="o">=</span> <span class="s1">'a cyberpunk cat with a neon sign that says "Sana"'</span>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
 <a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;sana.png&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"sana.png"</span><span class="p">)</span>
 </code></pre></div>
 <h4 id="2-for-bf16-models">2). For bf16 models<a class="headerlink" href="#2-for-bf16-models" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># run `pip install git+https://github.com/huggingface/diffusers` before use Sana in diffusers</span>
@@ -2083,25 +2167,25 @@
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">diffusers</span><span class="w"> </span><span class="kn">import</span> <span class="n">SanaPAGPipeline</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">SanaPAGPipeline</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  <span class="s2">&quot;Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  <span class="n">variant</span><span class="o">=</span><span class="s2">&quot;bf16&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  <span class="s2">"Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  <span class="n">variant</span><span class="o">=</span><span class="s2">"bf16"</span><span class="p">,</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  <span class="n">pag_applied_layers</span><span class="o">=</span><span class="s2">&quot;transformer_blocks.8&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  <span class="n">pag_applied_layers</span><span class="o">=</span><span class="s2">"transformer_blocks.8"</span><span class="p">,</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">)</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">pipe</span><span class="o">.</span><span class="n">text_encoder</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">pipe</span><span class="o">.</span><span class="n">vae</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">prompt</span> <span class="o">=</span> <span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">prompt</span> <span class="o">=</span> <span class="s1">'a cyberpunk cat with a neon sign that says "Sana"'</span>
 <a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
 <a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
 <a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
 <a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">pag_scale</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
 <a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
 <a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;sana.png&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">'sana.png'</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="3-2k-4k-models">❗ 3. 2K &amp; 4K models<a class="headerlink" href="#3-2k-4k-models" title="Permanent link">&para;</a></h2>
 <p>4K models need VAE tiling to avoid OOM issue.(16 GPU is recommended)</p>
@@ -2112,11 +2196,11 @@
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># 2K model: Efficient-Large-Model/Sana_1600M_2Kpx_BF16_diffusers</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># 4K model:Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">SanaPipeline</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="s2">&quot;Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">&quot;bf16&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="s2">"Efficient-Large-Model/Sana_1600M_4Kpx_BF16_diffusers"</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">"bf16"</span><span class="p">,</span>
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">)</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">)</span>
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
 <a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">pipe</span><span class="o">.</span><span class="n">vae</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">pipe</span><span class="o">.</span><span class="n">text_encoder</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
@@ -2129,17 +2213,17 @@
 <a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>        <span class="n">tile_sample_stride_height</span><span class="o">=</span><span class="mi">896</span><span class="p">,</span>
 <a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>        <span class="n">tile_sample_stride_width</span><span class="o">=</span><span class="mi">896</span><span class="p">,</span>
 <a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    <span class="p">)</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="n">prompt</span> <span class="o">=</span> <span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="n">prompt</span> <span class="o">=</span> <span class="s1">'a cyberpunk cat with a neon sign that says "Sana"'</span>
 <a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
 <a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>    <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
 <a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">4096</span><span class="p">,</span>
 <a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">4096</span><span class="p">,</span>
 <a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>    <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
 <a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>    <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
 <a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;sana_4K.png&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="n">image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"sana_4K.png"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="4-int4-inference">❗ 4. int4 inference<a class="headerlink" href="#4-int4-inference" title="Permanent link">&para;</a></h2>
 <p>This int4 model is quantized with <a href="https://github.com/mit-han-lab/nunchaku">SVDQuant-Nunchaku</a>. You need first follow the <a href="https://github.com/mit-han-lab/nunchaku?tab=readme-ov-file#installation">guidance of installation</a> of nunchaku engine, then you can use the following code snippet to perform inference with int4 Sana model.</p>
@@ -2149,26 +2233,26 @@
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">nunchaku.models.transformer_sana</span><span class="w"> </span><span class="kn">import</span> <span class="n">NunchakuSanaTransformer2DModel</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">transformer</span> <span class="o">=</span> <span class="n">NunchakuSanaTransformer2DModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;mit-han-lab/svdq-int4-sana-1600m&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">transformer</span> <span class="o">=</span> <span class="n">NunchakuSanaTransformer2DModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">"mit-han-lab/svdq-int4-sana-1600m"</span><span class="p">)</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">SanaPipeline</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="s2">&quot;Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="s2">"Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"</span><span class="p">,</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">transformer</span><span class="o">=</span><span class="n">transformer</span><span class="p">,</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">&quot;bf16&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">variant</span><span class="o">=</span><span class="s2">"bf16"</span><span class="p">,</span>
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">)</span>
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
 <a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">pipe</span><span class="o">.</span><span class="n">text_encoder</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">pipe</span><span class="o">.</span><span class="n">vae</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
 <a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
 <a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;A cute 🐼 eating 🎋, ink drawing style&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">"A cute 🐼 eating 🎋, ink drawing style"</span><span class="p">,</span>
 <a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">4.5</span><span class="p">,</span>
 <a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
 <a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span>
 <a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="p">)</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;sana_1600m.png&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"sana_1600m.png"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="5-convert-pth-to-diffusers-safetensor">🔧 5. Convert <code>.pth</code> to diffusers <code>.safetensor</code><a class="headerlink" href="#5-convert-pth-to-diffusers-safetensor" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>tools/convert_scripts/convert_sana_to_diffusers.py<span class="w"> </span><span class="se">\</span>

@@ -643,6 +643,8 @@
       
         
       
+        
+      
     
     
     
@@ -705,6 +707,34 @@
     
   
     SANA-Video
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sana_video2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-Video 2.0
   
 
     
@@ -1849,7 +1879,7 @@
 </table>
 <hr />
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;sglang[diffusion]&#39;</span><span class="w"> </span>--prerelease<span class="o">=</span>allow
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'sglang[diffusion]'</span><span class="w"> </span>--prerelease<span class="o">=</span>allow
 </code></pre></div>
 <p>For more installation methods (e.g. Docker, ROCm/AMD), check the <a href="https://github.com/sgl-project/sglang/tree/main/docs/diffusion/installation.md">SGLang installation guide</a>.</p>
 <hr />
@@ -1858,27 +1888,27 @@
 <p>The simplest way to generate an image:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sglang<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--model-path<span class="w"> </span>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s1">'a cyberpunk cat with a neon sign that says "Sana"'</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span>--save-output
 </code></pre></div>
 <h3 id="2-python-sdk">2. Python SDK<a class="headerlink" href="#2-python-sdk" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sglang.multimodal_gen</span><span class="w"> </span><span class="kn">import</span> <span class="n">DiffGenerator</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">generator</span> <span class="o">=</span> <span class="n">DiffGenerator</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">model_path</span><span class="o">=</span><span class="s2">&quot;Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">model_path</span><span class="o">=</span><span class="s2">"Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers"</span><span class="p">,</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">num_gpus</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">image</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">sampling_params_kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">prompt</span><span class="o">=</span><span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">prompt</span><span class="o">=</span><span class="s1">'a cyberpunk cat with a neon sign that says "Sana"'</span><span class="p">,</span>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">height</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">width</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="n">num_inference_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
 <a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="n">guidance_scale</span><span class="o">=</span><span class="mf">4.5</span><span class="p">,</span>
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
 <a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="n">save_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;outputs/&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="n">output_path</span><span class="o">=</span><span class="s2">"outputs/"</span><span class="p">,</span>
 <a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="p">)</span>
 <a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">)</span>
 </code></pre></div>
@@ -1893,15 +1923,15 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">&quot;http://127.0.0.1:30000/v1/images/generations&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">"http://127.0.0.1:30000/v1/images/generations"</span><span class="p">,</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="s1">&#39;a cyberpunk cat with a neon sign that says &quot;Sana&quot;&#39;</span><span class="p">,</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="s2">&quot;1024x1024&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">&quot;num_inference_steps&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="s2">&quot;guidance_scale&quot;</span><span class="p">:</span> <span class="mf">4.5</span><span class="p">,</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">&quot;response_format&quot;</span><span class="p">:</span> <span class="s2">&quot;b64_json&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="s2">"prompt"</span><span class="p">:</span> <span class="s1">'a cyberpunk cat with a neon sign that says "Sana"'</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">"size"</span><span class="p">:</span> <span class="s2">"1024x1024"</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">"num_inference_steps"</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="s2">"guidance_scale"</span><span class="p">:</span> <span class="mf">4.5</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">"seed"</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">"response_format"</span><span class="p">:</span> <span class="s2">"b64_json"</span><span class="p">,</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">"n"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
 <a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="p">},</span>
 <a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">)</span>
 <a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
@@ -1915,7 +1945,7 @@
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--text-encoder-cpu-offload<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--vae-cpu-offload<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>--pin-cpu-memory<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s2">&quot;A beautiful landscape&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s2">"A beautiful landscape"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span>--save-output
 </code></pre></div>
 <table>
@@ -1950,7 +1980,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sglang<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span>--model-path<span class="w"> </span>Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span>--lora-path<span class="w"> </span>&lt;your-lora-path&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s2">&quot;A beautiful landscape&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span>--prompt<span class="w"> </span><span class="s2">"A beautiful landscape"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span>--save-output
 </code></pre></div>
 <hr />

@@ -795,6 +795,8 @@
       
         
       
+        
+      
     
     
     
@@ -857,6 +859,34 @@
     
   
     SANA-Video
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sana_video2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-Video 2.0
   
 
     
@@ -1742,6 +1772,7 @@
     <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><img src="https://img.shields.io/static/v1?label=Project&message=Sana&color=blue&logo=github-pages" alt="Sana"></a>
   <a href="https://nvlabs.github.io/Sana/Sprint/"><img src="https://img.shields.io/static/v1?label=Project&message=Sprint&color=blue&logo=github-pages" alt="Sprint"></a>
   <a href="https://nvlabs.github.io/Sana/Video/"><img src="https://img.shields.io/static/v1?label=Project&message=Video&color=blue&logo=github-pages" alt="Video"></a>
+  <a href="https://nvlabs.github.io/Sana/Video2/"><img src="https://img.shields.io/static/v1?label=Project&message=Video%202.0&color=76B900&logo=github-pages" alt="SANA-Video 2.0"></a>
 </p>
 
 <p align="center">
@@ -1756,6 +1787,7 @@
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=green" alt="ControlNet"></a>
   <a href="https://nv-sana.mit.edu/sprint/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=Sprint&color=green" alt="Sprint"></a>
   <a href="https://huggingface.co/spaces/Efficient-Large-Model/SanaSprint"><img src="https://img.shields.io/static/v1?label=HF Demo&message=Sprint&color=green" alt="HF Sprint"></a>
+  <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><img src="https://img.shields.io/static/v1?label=HF Demo&message=Video%202.0&color=76B900" alt="HF SANA-Video 2.0"></a>
 </p>
 
 <p align="center">
@@ -1793,6 +1825,10 @@
 <td>Efficient video generation with Block Linear Attention</td>
 </tr>
 <tr>
+<td><strong>Sana-Video 2.0</strong></td>
+<td>5B/14B hybrid-attention video models with Attention Residuals; <a href="https://nvlabs.github.io/Sana/Video2/">project page</a>, <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">online demo</a>, and <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p">5B 720p weights</a> released</td>
+</tr>
+<tr>
 <td><strong>LongSana</strong></td>
 <td>Minute-length real-time video generation (with LongLive)</td>
 </tr>
@@ -1804,6 +1840,7 @@
 <li><strong>DC-AE</strong>: 32× image compression (vs. traditional 8×) to reduce latent tokens</li>
 <li><strong>Block Causal Linear Attention</strong>: Efficient attention for video generation</li>
 <li><strong>Causal Mix-FFN</strong>: Memory-efficient feedforward for long videos</li>
+<li><strong>Hybrid Attention &amp; Attention Residuals</strong>: Gated linear attention with periodic softmax anchors and shared depth-wise residual aggregation</li>
 <li><strong>Flow-DPM-Solver</strong>: Reduce sampling steps with efficient training and sampling</li>
 <li><strong>sCM Distillation</strong>: One/few-step generation with continuous-time consistency distillation</li>
 </ul>
@@ -1814,6 +1851,7 @@
 <li>⚡ <strong>One-step inference</strong> with Sana-Sprint</li>
 <li>💻 <strong>&lt; 8GB VRAM</strong> with 4-bit quantization</li>
 <li>🎬 <strong>Efficient video generation</strong> with Sana-Video</li>
+<li>🎥 <strong>720p, 8-second T2V/TI2V generation</strong> with <a href="sana_video2/">SANA-Video 2.0</a> — <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">try the online demo</a></li>
 <li>⏱️ <strong>27 FPS real-time</strong> minute-length video with LongSana</li>
 <li>📦 <strong>Full training &amp; inference codebase</strong></li>
 </ul>
@@ -1831,12 +1869,12 @@
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">diffusers</span><span class="w"> </span><span class="kn">import</span> <span class="n">SanaPipeline</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">SanaPipeline</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s2">&quot;Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s2">"Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers"</span><span class="p">,</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">)</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span><span class="s2">&quot;a cyberpunk cat&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;sana.png&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">image</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span><span class="s2">"a cyberpunk cat"</span><span class="p">)</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"sana.png"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="links">Links<a class="headerlink" href="#links" title="Permanent link">&para;</a></h2>
 <p align="center">

@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://nvlabs.github.io/Sana/docs/sana_streaming/">
       
       
-        <link rel="prev" href="../sana_video/">
+        <link rel="prev" href="../sana_video2/">
       
       
         <link rel="next" href="../sana_wm/">
@@ -645,6 +645,8 @@
       
         
       
+        
+      
     
     
     
@@ -705,6 +707,34 @@
     
   
     SANA-Video
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sana_video2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-Video 2.0
   
 
     
@@ -2027,7 +2057,7 @@ the YAML only when the videos live under a different local directory:</p>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>`-- videos/
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    `-- example.mp4
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span><span class="nt">&quot;prompt&quot;</span><span class="p">:</span><span class="s2">&quot;Transform the scene into a watercolor painting.&quot;</span><span class="p">,</span><span class="nt">&quot;reverse_prompt&quot;</span><span class="p">:</span><span class="s2">&quot;Transform the watercolor scene back into a realistic video.&quot;</span><span class="p">,</span><span class="nt">&quot;source_video&quot;</span><span class="p">:</span><span class="s2">&quot;videos/example.mp4&quot;</span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span><span class="nt">"prompt"</span><span class="p">:</span><span class="s2">"Transform the scene into a watercolor painting."</span><span class="p">,</span><span class="nt">"reverse_prompt"</span><span class="p">:</span><span class="s2">"Transform the watercolor scene back into a realistic video."</span><span class="p">,</span><span class="nt">"source_video"</span><span class="p">:</span><span class="s2">"videos/example.mp4"</span><span class="p">}</span>
 </code></pre></div>
 <h3 id="train-the-441-stage">Train the 441 stage<a class="headerlink" href="#train-the-441-stage" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">DISABLE_XFORMERS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span>--master_port<span class="o">=</span><span class="m">29500</span><span class="w"> </span><span class="se">\</span>
@@ -2062,7 +2092,7 @@ Hugging Face repos below. Local paths and <code>hf://</code> URIs are both suppo
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--mode<span class="w"> </span>long_streaming<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--config<span class="w"> </span>configs/sana_streaming/sana_streaming_2b_720p.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--model_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Streaming/dit/sana_streaming_ar.pth<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">&quot;Transform the entire scene into a breathtaking Sci-Fi Art digital painting.&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">"Transform the entire scene into a breathtaking Sci-Fi Art digital painting."</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>--video_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Streaming/source/09_style_transfer_source.mp4<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--num_frames<span class="w"> </span><span class="m">969</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span>--step<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
@@ -2080,7 +2110,7 @@ unless <code>--negative_prompt</code> is provided.</p>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--mode<span class="w"> </span>bidirectional_short<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--config<span class="w"> </span>configs/sana_streaming/sana_streaming_bidirectional_2b_720p.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--model_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Streaming_bidirectional/dit/sana_bidirectional_short.pth<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">&quot;Remove the thick, textured gold hoop earrings from the woman&#39;s ears. Carefully reconstruct the exposed earlobes to match her natural skin tone and texture. Ensure the lighting and soft shadows on the newly bare ears blend seamlessly with the rest of her face, leaving no trace or reflection of the metallic jewelry behind.&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">"Remove the thick, textured gold hoop earrings from the woman's ears. Carefully reconstruct the exposed earlobes to match her natural skin tone and texture. Ensure the lighting and soft shadows on the newly bare ears blend seamlessly with the rest of her face, leaving no trace or reflection of the metallic jewelry behind."</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--video_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Streaming/source/00_local_editing_source.mp4<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span>--num_frames<span class="w"> </span><span class="m">81</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span>--step<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>

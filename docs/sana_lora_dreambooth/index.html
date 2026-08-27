@@ -643,6 +643,8 @@
       
         
       
+        
+      
     
     
     
@@ -705,6 +707,34 @@
     
   
     SANA-Video
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sana_video2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SANA-Video 2.0
   
 
     
@@ -1665,11 +1695,11 @@ Note also that we use PEFT library as backend for LoRA training, make sure to ha
 <p>Let's first download it locally:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">snapshot_download</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;data/dreambooth/dog&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">"data/dreambooth/dog"</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">snapshot_download</span><span class="p">(</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="s2">&quot;diffusers/dog-example&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">local_dir</span><span class="o">=</span><span class="n">local_dir</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">ignore_patterns</span><span class="o">=</span><span class="s2">&quot;.gitattributes&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="s2">"diffusers/dog-example"</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">local_dir</span><span class="o">=</span><span class="n">local_dir</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="s2">"dataset"</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">ignore_patterns</span><span class="o">=</span><span class="s2">".gitattributes"</span><span class="p">,</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
 </code></pre></div>
 <p>This will also allow us to push the trained LoRA parameters to the Hugging Face Hub platform.</p>
@@ -1678,29 +1708,29 @@ Note also that we use PEFT library as backend for LoRA training, make sure to ha
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>bash<span class="w"> </span>train_scripts/train_lora.sh
 </code></pre></div>
 <p>or you can run it locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MODEL_NAME</span><span class="o">=</span><span class="s2">&quot;Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers&quot;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">INSTANCE_DIR</span><span class="o">=</span><span class="s2">&quot;data/dreambooth/dog&quot;</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OUTPUT_DIR</span><span class="o">=</span><span class="s2">&quot;trained-sana-lora&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MODEL_NAME</span><span class="o">=</span><span class="s2">"Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">INSTANCE_DIR</span><span class="o">=</span><span class="s2">"data/dreambooth/dog"</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OUTPUT_DIR</span><span class="o">=</span><span class="s2">"trained-sana-lora"</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>accelerate<span class="w"> </span>launch<span class="w"> </span>--num_processes<span class="w"> </span><span class="m">8</span><span class="w"> </span>--main_process_port<span class="w"> </span><span class="m">29500</span><span class="w"> </span>--gpu_ids<span class="w"> </span><span class="m">0</span>,1,2,3<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>train_scripts/train_dreambooth_lora_sana.py<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--pretrained_model_name_or_path<span class="o">=</span><span class="nv">$MODEL_NAME</span><span class="w">  </span><span class="se">\</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--instance_data_dir<span class="o">=</span><span class="nv">$INSTANCE_DIR</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--output_dir<span class="o">=</span><span class="nv">$OUTPUT_DIR</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--mixed_precision<span class="o">=</span><span class="s2">&quot;bf16&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--instance_prompt<span class="o">=</span><span class="s2">&quot;a photo of sks dog&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--mixed_precision<span class="o">=</span><span class="s2">"bf16"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--instance_prompt<span class="o">=</span><span class="s2">"a photo of sks dog"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--resolution<span class="o">=</span><span class="m">1024</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span>--train_batch_size<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span>--gradient_accumulation_steps<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span>--use_8bit_adam<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span>--learning_rate<span class="o">=</span>1e-4<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span>--report_to<span class="o">=</span><span class="s2">&quot;wandb&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span>--lr_scheduler<span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span>--report_to<span class="o">=</span><span class="s2">"wandb"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span>--lr_scheduler<span class="o">=</span><span class="s2">"constant"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">  </span>--lr_warmup_steps<span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span>--max_train_steps<span class="o">=</span><span class="m">500</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span>--validation_prompt<span class="o">=</span><span class="s2">&quot;A photo of sks dog in a pond, yarn art style&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span>--validation_prompt<span class="o">=</span><span class="s2">"A photo of sks dog in a pond, yarn art style"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">  </span>--validation_epochs<span class="o">=</span><span class="m">25</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">  </span>--seed<span class="o">=</span><span class="s2">&quot;0&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">  </span>--seed<span class="o">=</span><span class="s2">"0"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span>--push_to_hub
 </code></pre></div>
 <p>For using <code>push_to_hub</code>, make you're logged into your Hugging Face account:</p>

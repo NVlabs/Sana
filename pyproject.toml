@@ -46,16 +46,13 @@ dependencies = [
     "torchaudio==2.9.1",
     "torchvision==0.24.1",
     "transformers==4.57.3",
-    "triton==3.5.1",
     "wandb",
     "webdataset",
-    "xformers==0.0.33.post2",
     "yapf",
     "spaces",
     "matplotlib",
     "termcolor",
     "pyrallis",
-    "bitsandbytes",
     "fire",
     "moviepy",
     "imageio[pyav,ffmpeg]",
@@ -65,11 +62,16 @@ dependencies = [
     "ml_collections",
     "hpsv2",
     "open_clip_torch",
-    "flash-linear-attention>=0.4.2",
-    "liger_kernel",
     "plyfile",
+    # ---------------------------------------------------------
+    # CUDA-specific dependencies (Skipped natively on macOS)
+    # ---------------------------------------------------------
+    "triton==3.5.1; sys_platform != 'darwin'",
+    "xformers==0.0.33.post2; sys_platform != 'darwin'",
+    "bitsandbytes; sys_platform != 'darwin'",
+    "liger_kernel; sys_platform != 'darwin'",
+    "flash-linear-attention>=0.4.2; sys_platform != 'darwin'",
 ]
-
 
 [project.scripts]
 sana-run = "sana.cli.run:main"

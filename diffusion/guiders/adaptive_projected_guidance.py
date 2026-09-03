@@ -165,7 +165,15 @@ def rescale_noise_cfg(noise_cfg, noise_pred_text, guidance_rescale=0.0):
     std_text = noise_pred_text.std(dim=list(range(1, noise_pred_text.ndim)), keepdim=True)
     std_cfg = noise_cfg.std(dim=list(range(1, noise_cfg.ndim)), keepdim=True)
     # rescale the results from guidance (fixes overexposure)
-    noise_pred_rescaled = noise_cfg * (std_text / std_cfg)
+    # A saturated/constant guided prediction has zero variance.  Dividing by
+    # it produces NaNs that then contaminate the whole denoising trajectory.
+    # Keep such samples unchanged; for non-degenerate samples this is exactly
+    # the original ratio.  Building a finite denominator before the division
+    # also keeps the backward pass free of 0 * inf NaNs.
+    valid_std = std_cfg > torch.finfo(std_cfg.dtype).eps
+    safe_std_cfg = torch.where(valid_std, std_cfg, torch.ones_like(std_cfg))
+    rescale = torch.where(valid_std, std_text / safe_std_cfg, torch.ones_like(std_cfg))
+    noise_pred_rescaled = noise_cfg * rescale
     # mix with the original results from guidance by factor guidance_rescale to avoid "plain looking" images
     noise_cfg = guidance_rescale * noise_pred_rescaled + (1 - guidance_rescale) * noise_cfg
     return noise_cfg

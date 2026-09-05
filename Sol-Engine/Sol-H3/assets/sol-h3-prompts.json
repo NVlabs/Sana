@@ -1,27 +1,14 @@
 {
-  "schema_version": 1,
-  "title": "Sol-H3 Visual A/B Prompt Suite",
+  "schema_version": 2,
+  "title": "Sol-H3 Prompt Showcase",
   "publication": {
     "status": "complete",
     "validated_on": "2026-09-04",
-    "validated_pairs": 20,
-    "validated_files": 40,
+    "validated_examples": 13,
     "media_base_url": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3/blog-assets/",
-    "featured_case_ids": [
-      "02-lunar-teahouse-signal",
-      "03-abyssal-cathedral-rescue",
-      "04-solar-rail-heist",
-      "06-alpine-drone-rescue",
-      "08-hologram-rhythm-switch",
-      "09-rooftop-origami-delivery",
-      "10-glass-phoenix-workshop",
-      "13-library-inside-the-book",
-      "14-ink-storm-duel",
-      "15-dragon-archive-emergency",
-      "16-liquid-metal-chronograph",
-      "18-bioluminescent-night-ride",
-      "20-fold-gate-command"
-    ]
+    "original_videos": 13,
+    "web_videos": 13,
+    "posters": 13
   },
   "source_guide": {
     "name": "MiniMax H3 Prompt Writing Guide — Base Modes",
@@ -34,8 +21,17 @@
     "width": 1344,
     "height": 768,
     "fps": 24,
-    "pairing_rule": "Use the exact same prompt, seed, model base revision, output shape, and export settings for both members of each pair.",
-    "export": {
+    "sol_h3": {
+      "label": "Sol-H3 showcase profile",
+      "num_inference_steps": 4,
+      "adapter": "FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA · dense-datafree",
+      "attention": "Sol-Attn (SOL)",
+      "qkv_communication": "BF16",
+      "attention_output": "BF16",
+      "vae_batching": "per-clip tile batch",
+      "scope": "Showcase settings; the speed benchmark uses Sol-H3’s fastest measured profile."
+    },
+    "original_export": {
       "container": "MP4 faststart",
       "video_codec": "H.264 High",
       "pixel_format": "yuv420p",
@@ -47,46 +43,19 @@
       "crop": false,
       "video_encode_passes": 1
     },
-    "baseline": {
-      "label": "MiniMax-H3 Base · 50-step schedule",
-      "num_inference_steps": 50,
-      "adapter": null,
-      "attention": "dense"
-    },
-    "candidate": {
-      "label": "Ours · Sol-H3 · BF16 visual profile",
-      "num_inference_steps": 4,
-      "adapter": "FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA · dense-datafree",
-      "attention": "Sol-Attn with full centroid residual",
-      "qkv_communication": "BF16",
-      "attention_return": "BF16",
-      "vae_batching": "per-clip tile batch",
-      "correctness_gate": {
-        "reference": "dense SDPA on real QKV with every block routed",
-        "max_abs": 0.25,
-        "mean_abs": 0.002,
-        "rel_l2": 0.005,
-        "rank_policy": "all eight ranks must pass"
-      },
-      "scope": "Visual A/B profile; the separate performance headline reports the measured maximum-throughput profile."
+    "web_playback": {
+      "container": "MP4 faststart",
+      "video_codec": "H.264 High",
+      "pixel_format": "yuv420p",
+      "crf": 18,
+      "preset": "slow",
+      "audio_codec": "AAC",
+      "audio_bitrate": 192000,
+      "resize": false,
+      "crop": false
     }
   },
   "cases": [
-    {
-      "id": "01-neon-skyline-relay",
-      "title": "Neon Skyline Relay",
-      "category": "Live action · cyberpunk parkour",
-      "language": "English",
-      "shots": 3,
-      "seed": 20261001,
-      "prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic night footage in a rain-soaked vertical megacity, framed as a medium-wide rooftop shot. A young female courier with a cropped silver rain jacket, cobalt utility trousers, a glowing amber parcel strapped across her chest, and a quick low alto voice (S1) sprints toward camera between mirrored ventilation towers while magenta signs ripple across puddles. The camera tracks backward with large amplitude at fast speed, holding her face and the parcel sharply centered as she glances at a countdown reflected in her wrist display and says: <d>[English] Thirty seconds. Keep the bridge alive.</d> [Shot 2] At 00:03.200, the camera cuts to a low side angle and trucks right at fast speed as she plants one foot on a wet railing, vaults over a six-meter alley, and passes through a curtain of steam. A compact delivery drone swings beneath her, catches the parcel magnetically for one beat, then returns it to her hand as she lands and slides beneath a descending security shutter. [Shot 3] At 00:06.700, the shot cuts to a high arc around a glass skybridge. She bursts through the doorway, skids to a stop before a waiting engineer, locks the parcel into a circular console, and watches a wave of green power race through the skyline. Breathing hard, she smiles into the reflected city and says: <d>[English] Relay complete.</d> The camera pulls out with large amplitude at slow speed as every tower lights in sequence behind her.\noverall_soundscape: Rain strikes metal roofs and glass in dense stereo while shoes slap through puddles, fabric snaps in the wind, and the drone rotors buzz close to camera. The leap carries a brief rush of air, followed by the shutter clang, the parcel lock clicking into place, and a deep electrical surge traveling across the city.\nnon_diegetic_music: A 148 BPM synthwave pulse built from gated analog bass, clipped electronic drums, and bright arpeggiators. The rhythm drops to a single sub-bass beat during the jump, then returns with widening stereo chords as the skyline powers on.",
-      "videos": {
-        "base_50": "assets/comparisons/01-neon-skyline-relay-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/01-neon-skyline-relay-sol-h3.mp4",
-        "base_50_ready": true,
-        "sol_h3_ready": true
-      }
-    },
     {
       "id": "02-lunar-teahouse-signal",
       "title": "Lunar Teahouse Signal",
@@ -95,9 +64,10 @@
       "shots": 3,
       "seed": 20261002,
       "prompt": "integrated_multimodal_description: [Shot 1] Cinematic live-action fantasy inside a small wooden teahouse suspended beneath a colossal moon, shown in a symmetrical wide shot through open paper doors. An elderly tea master in an indigo robe, with silver hair pinned high and a warm gravelly Mandarin voice (S1), pours glowing tea into two porcelain cups while a young female radio astronomer in a cream flight suit, with a clear fast Mandarin voice (S2), adjusts a brass receiver beside her. The camera pushes in with small amplitude at slow speed as lunar dust drifts upward instead of falling, and the tea master says: <d>[Chinese] 月亮不是沉默，只是等我们听见。</d> [Shot 2] At 00:03.400, the camera cuts to a macro close-up of the tea surface. Concentric ripples become a precise star map, tiny points of light connect across the cup, and the receiver needle snaps toward a distant signal. The astronomer leans into the eyepiece, her face illuminated by moving constellations, and replies: <d>[Chinese] 信号锁定了。</d> [Shot 3] At 00:06.600, the shot cuts outside to a sweeping arc around the teahouse as the vast moon slowly opens into layered mechanical petals, revealing a luminous blue core. The two women step onto the balcony without changing clothes or positions relative to each other; the tea master raises her cup while the astronomer sends one narrow beam from the receiver into the core. The camera pulls out with large amplitude at slow speed until the teahouse becomes a warm point against the unfolding lunar structure.\noverall_soundscape: Porcelain touches wood with delicate clicks above the soft hiss of boiling water and the papery flutter of the doors. A low receiver hum gains harmonics as the signal locks, followed by distant metal plates shifting across the moon and a soft pressure wave moving through airborne dust.\nnon_diegetic_music: Slow guzheng harmonics over sustained glassy synthesizer tones at 68 BPM. A restrained taiko pulse enters when the lunar petals open, then resolves into one long bowed-cymbal shimmer.",
-      "videos": {
-        "base_50": "assets/comparisons/02-lunar-teahouse-signal-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/02-lunar-teahouse-signal-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/02-lunar-teahouse-signal-sol-h3-web.mp4",
+        "poster": "assets/comparisons/02-lunar-teahouse-signal-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/02-lunar-teahouse-signal-sol-h3.mp4"
       }
     },
     {
@@ -108,9 +78,10 @@
       "shots": 3,
       "seed": 20261003,
       "prompt": "integrated_multimodal_description: [Shot 1] Photoreal underwater expedition footage in the midnight zone, beginning with a wide tracking shot behind two divers entering the broken rose window of a submerged stone cathedral. The lead diver, a Black woman in a white pressure suit with orange shoulder lights and a calm contralto heard through helmet radio (S1), sweeps a narrow lamp across floating mosaics; a younger male diver in a graphite suit with a tense tenor radio voice (S2) follows while holding a sealed specimen cylinder. The camera glides forward at slow speed through blue particulate as S2 points toward a trapped manta ray and says: <d>[English] Its wing is caught under the arch.</d> [Shot 2] At 00:03.100, the camera cuts to a close side view and shakes slightly as the cracked arch settles. S1 braces both boots against a column, inflates a compact lifting bladder beneath the stone, and answers: <d>[English] On my mark. Lift, then clear left.</d> The bladder expands, ancient dust erupts, and the ray pulls free with one powerful motion that bends both divers backward. [Shot 3] At 00:06.500, the shot cuts to an exterior ultra-wide view as the manta ray circles the cathedral and releases a trail of bioluminescent plankton. The divers emerge through the window; S1 turns her lamp off, and the living blue trail outlines the entire ruin. S2 laughs once over the radio while the camera pedestals up with large amplitude, revealing a research submersible descending through the darkness above them.\noverall_soundscape: Filtered regulator breaths alternate across the stereo field beneath distant hull groans and the soft crackle of helmet radios. Stone grinds against stone during the lift, bubbles roar past the lens, suit fabric strains, and the freed ray produces a deep watery rush before the scene returns to muffled ocean pressure.\nnon_diegetic_music: Sparse contrabass pulses at 54 BPM with bowed metal, low granular drones, and isolated high piano harmonics. The texture swells during the lift and thins to a single sustained chord as the glowing cathedral is revealed.",
-      "videos": {
-        "base_50": "assets/comparisons/03-abyssal-cathedral-rescue-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/03-abyssal-cathedral-rescue-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/03-abyssal-cathedral-rescue-sol-h3-web.mp4",
+        "poster": "assets/comparisons/03-abyssal-cathedral-rescue-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/03-abyssal-cathedral-rescue-sol-h3.mp4"
       }
     },
     {
@@ -121,22 +92,10 @@
       "shots": 3,
       "seed": 20261004,
       "prompt": "integrated_multimodal_description: [Shot 1] High-contrast live-action action cinema at sunset, opening in a long-lens wide shot of a silver solar maglev racing across a red desert salt flat. A young Arab woman with a braided black scarf, sand-colored riding armor, and a low decisive Arabic voice (S1) drives a narrow electric sand bike alongside the final carriage while a male systems pilot with a bright clipped Arabic voice (S2) appears on her transparent visor. The camera tracks beside her at fast speed as mirrored solar sails flicker overhead and S2 warns: <d>[Arabic] البوابة تغلق خلال عشر ثوان.</d> [Shot 2] At 00:03.000, the camera cuts to a wheel-level close shot. S1 accelerates up a bank of wind-carved salt, launches the bike, releases the handlebars in midair, and catches a folding ladder beneath the train. She shouts: <d>[Arabic] الآن، افتح المسار!</d> Sparks stream from her boots as the riderless bike lands and continues parallel below. [Shot 3] At 00:06.300, the shot switches to a handheld interior view inside a glass cargo car filled with floating photovoltaic tiles. S1 swings through the hatch, rolls across the floor, and presses a copper key into the control spine just before red shutters meet. The tiles rotate from crimson to green, the rear car detaches safely, and the camera arcs outside with large amplitude to show it gliding onto a branching track while the main train vanishes into a dust-lit horizon.\noverall_soundscape: The maglev produces a continuous high electrical whine over heavy desert wind, granular sand strikes the bike fairing, and turbine blades pulse rhythmically overhead. The jump brings cable snaps, boot sparks, the hatch impact, and a resonant mechanical lock followed by the descending pitch of the detached carriage.\nnon_diegetic_music: Fast frame drums and dry hand percussion at 156 BPM layered with distorted electric bass and short brass stabs. The percussion suspends during the airborne grab, then returns in double time as the track divides.",
-      "videos": {
-        "base_50": "assets/comparisons/04-solar-rail-heist-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/04-solar-rail-heist-sol-h3.mp4"
-      }
-    },
-    {
-      "id": "05-midnight-kaiju-ramen",
-      "title": "Midnight Kaiju Ramen",
-      "category": "Stylized 3D CG · comedy",
-      "language": "Japanese",
-      "shots": 3,
-      "seed": 20261005,
-      "prompt": "integrated_multimodal_description: [Shot 1] Polished stylized 3D CG in a tiny midnight ramen stall beneath elevated railway tracks, framed in a cozy medium-wide shot. A stocky middle-aged chef with a red headband, flour-dusted apron, and energetic gravelly Japanese voice (S1) stretches a ribbon of noodles while a knee-high teal baby kaiju with translucent fins and a squeaky youthful voice (S2) sits on the counter watching the steaming pot. The camera pushes in with small amplitude as the chef points his ladle and says: <d>[Japanese] 今夜こそ、完璧な一杯だ。</d> [Shot 2] At 00:03.200, the shot cuts to an overhead close-up as the kaiju sneezes one tiny blue flame. The flame circles the pot like a ribbon, the broth rises into a spinning vortex, noodles and sliced vegetables orbit without spilling, and the chef frantically catches each bowl sliding across the counter. S2 claps its paws and chirps: <d>[Japanese] もっと熱くする？</d> [Shot 3] At 00:06.600, the camera cuts to a low frontal view and pulls back at fast speed as the vortex settles into two immaculate glowing bowls. A commuter train roars overhead, shaking lanterns in sequence; the chef tastes one spoonful, freezes in surprise, then places an oversized gold star sticker on the kaiju's forehead. Laughing, he answers: <d>[Japanese] 君が今日の料理長だ！</d> The kaiju raises the ladle triumphantly while its fins pulse warm orange.\noverall_soundscape: Broth bubbles, noodles slap the wooden counter, ceramic bowls clatter in quick succession, and the elevated train produces a rolling metallic thunder above the stall. The kaiju sneeze pops sharply, flame circles with a soft jet roar, lanterns rattle, and both characters end with breathy laughter.\nnon_diegetic_music: Brisk jazz-funk at 132 BPM with upright bass, brushed drums, muted trumpet, and playful vibraphone accents. A short drum break follows the sneeze before the full groove returns for the final reveal.",
-      "videos": {
-        "base_50": "assets/comparisons/05-midnight-kaiju-ramen-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/05-midnight-kaiju-ramen-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/04-solar-rail-heist-sol-h3-web.mp4",
+        "poster": "assets/comparisons/04-solar-rail-heist-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/04-solar-rail-heist-sol-h3.mp4"
       }
     },
     {
@@ -147,22 +106,10 @@
       "shots": 3,
       "seed": 20261006,
       "prompt": "integrated_multimodal_description: [Shot 1] Photoreal mountain-rescue documentary footage during a blue-hour blizzard, beginning in a wide aerial shot over a knife-edge Alpine ridge. A female rescue pilot in her late thirties, wearing an orange insulated suit and speaking German in a steady low mezzo voice over her helmet microphone (S1), kneels beside a tracked cargo drone as its rotors struggle against crosswind. The camera descends with large amplitude and tracks toward her while she secures a red medical capsule and says: <d>[German] Verbindung stabil. Wir fliegen unter der Wolke.</d> [Shot 2] At 00:03.300, the camera cuts to the drone's forward POV as it dives over the cornice and threads between ice pillars at fast speed. Snow streaks past the lens, the horizon rolls counterclockwise, and S1's gloved hands operate the controller in a picture-in-picture reflection on the navigation glass. A weak male climber with a breathless baritone (S2) answers through a radio beacon: <d>[German] Ich sehe das Licht.</d> [Shot 3] At 00:06.700, the shot cuts to a compressed telephoto view of S2 sheltering beneath a blue tarp on a narrow ledge. The drone brakes inches above him, lowers the capsule on a cable, and projects a warm amber route line across the snow toward an approaching rescue team. S1 exhales and says: <d>[German] Bleib wach. Wir sind bei dir.</d> The camera pulls out slowly as headlamps emerge one by one through the storm.\noverall_soundscape: Blizzard wind buffets microphones with deep gusts while loose ice skitters across rock and the drone rotors change pitch under load. Radio compression crackles around short breaths, the cable motor whirs, the capsule touches stone with a hollow knock, and distant crampons bite into ice.\nnon_diegetic_music: Repeating low cello figures at 76 BPM with muted timpani, restrained electronic pulses, and thin high strings. The pattern accelerates during the dive, then opens into sustained chords as the rescue lights appear.",
-      "videos": {
-        "base_50": "assets/comparisons/06-alpine-drone-rescue-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/06-alpine-drone-rescue-sol-h3.mp4"
-      }
-    },
-    {
-      "id": "07-clockwork-ballroom",
-      "title": "Clockwork Ballroom",
-      "category": "Period fantasy · mechanical dance",
-      "language": "French",
-      "shots": 3,
-      "seed": 20261007,
-      "prompt": "integrated_multimodal_description: [Shot 1] Luxurious live-action period fantasy inside an abandoned oval ballroom filled with frozen brass automatons, opening on a centered medium-wide shot. A young clockmaker in a midnight-blue waistcoat, round spectacles, and soft precise French tenor voice (S1) winds a palm-sized silver key in the back of a life-size dancer wearing an ivory mechanical gown. The camera arcs clockwise with small amplitude at slow speed as dust hangs in sunbeams and he whispers: <d>[French] Une dernière danse, puis le temps repart.</d> [Shot 2] At 00:03.400, the camera cuts to a close view of interlocking gears beneath the dancer's translucent shoulder. The mechanism catches, her glass eyes illuminate amber, and she takes S1's hand. The shot trucks left with large amplitude as they begin a rapid waltz; each turn wakes another automaton, and hundreds of tiny clock hands sweep forward across the walls. The dancer, with a clear bell-like female French voice (S2), says: <d>[French] Alors, ne manquez pas une seconde.</d> [Shot 3] At 00:06.800, the shot transitions to a high crane view as the whole ballroom rotates in concentric rings beneath the pair. S1 releases her hand; she spins alone through a shower of gold dust and lands precisely on the final chime while every automaton bows. The camera pedestals down to their eye level as dawn light floods the windows and the stopped central clock begins moving again.\noverall_soundscape: A close key ratchet, delicate gear ticks, fabric brushing polished wood, and shoe heels marking a clean three-beat pattern fill the hall. The awakened mechanisms build into layered clockwork, then resolve through twelve resonant bell strikes and the heavy first movement of the central pendulum.\nnon_diegetic_music: A 96 BPM chamber waltz led by pizzicato strings, bass clarinet, and celesta. The orchestration adds full bowed strings during the rotating-floor reveal and stops exactly on the final bell before one quiet violin harmonic remains.",
-      "videos": {
-        "base_50": "assets/comparisons/07-clockwork-ballroom-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/07-clockwork-ballroom-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/06-alpine-drone-rescue-sol-h3-web.mp4",
+        "poster": "assets/comparisons/06-alpine-drone-rescue-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/06-alpine-drone-rescue-sol-h3.mp4"
       }
     },
     {
@@ -173,9 +120,10 @@
       "shots": 4,
       "seed": 20261008,
       "prompt": "integrated_multimodal_description: [Shot 1] High-end 3D CG performance film on a black mirror stage suspended above Seoul at night, framed as a wide frontal composition. Three dancers in coordinated white, cyan, and crimson streetwear stand in a tight triangle; the center performer, a young woman with a bright confident Korean voice (S1), taps a glowing ring on her wrist and says: <d>[Korean] 빛을 세 번 접어.</d> The camera pushes in at fast speed as three holographic copies unfold behind each dancer and match their first sharp shoulder hit. [Shot 2] At 00:02.500, the camera cuts to a low tracking shot moving left at fast speed while the group launches into synchronized heel-toe footwork. Each footfall sends a geometric wave across the floor, the holograms lag by exactly one beat, and the skyline bends into luminous ribbons without changing the dancers' identities or clothing. [Shot 3] At 00:05.000, the shot cuts overhead and rolls clockwise as the performers sprint into a circle, slide inward, and exchange positions beneath a descending prism of light. A male dancer with a crisp youthful Korean baritone (S2) calls: <d>[Korean] 지금, 반대로!</d> All six holographic layers reverse direction while the real trio continues forward. [Shot 4] At 00:07.500, the camera cuts to a close arc around S1. She leaps, rotates once, and lands with both palms on the floor; the holograms collapse into her body as one vertical cyan beam erupts upward. The other dancers freeze behind her, and she looks directly into lens and says: <d>[Korean] 완벽해.</d>\noverall_soundscape: Shoes strike the mirror stage with tight impacts, clothing snaps during turns, and hologram transitions produce short glassy sweeps around the stereo field. The prism descends with a low servo hum, followed by a bass-heavy energy burst and the dancers' controlled breathing after the final landing.\nnon_diegetic_music: A 150 BPM electro-pop instrumental with clipped kick drums, syncopated bass, metallic handclaps, and bright granular synth chords. The beat reverses briefly during the overhead rotation and drops out for the final landing before returning as one sustained chord.",
-      "videos": {
-        "base_50": "assets/comparisons/08-hologram-rhythm-switch-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/08-hologram-rhythm-switch-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/08-hologram-rhythm-switch-sol-h3-web.mp4",
+        "poster": "assets/comparisons/08-hologram-rhythm-switch-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/08-hologram-rhythm-switch-sol-h3.mp4"
       }
     },
     {
@@ -186,9 +134,10 @@
       "shots": 3,
       "seed": 20261009,
       "prompt": "integrated_multimodal_description: [Shot 1] Live-action magical realism over sunlit Barcelona rooftops, beginning with a wide handheld shot. A teenage bicycle messenger with curly dark hair, a mustard windbreaker, and a fast playful Spanish voice (S1) pedals up a tiled ramp while holding a sealed crimson envelope between two fingers. The camera tracks backward with large amplitude at fast speed as laundry lines whip overhead and her older dispatcher, heard through a handlebar radio with a dry female Spanish alto voice (S2), asks: <d>[Spanish] ¿Todavía tienes el sobre?</d> S1 grins and replies: <d>[Spanish] Lo tengo. La calle es opcional.</d> [Shot 2] At 00:03.300, the camera cuts to a side view as she jumps from the bicycle onto a rooftop awning. The bicycle folds itself along crisp seams into a giant cobalt origami bird, catches the wind, and glides beside her while she runs across chimneys. She steps onto its paper back, and the shot arcs around them with large amplitude as the city rotates below. [Shot 3] At 00:06.700, the shot cuts to a close tracking view approaching a rooftop greenhouse. The bird dives through an open arch, unfolds back into a bicycle beneath S1, and she brakes at a table where a botanist waits beside one luminous night-blooming flower. S1 slides the envelope under the flowerpot and says: <d>[Spanish] Entrega sin tráfico.</d> The flower opens, releasing a spiral of blue pollen that rises above the glass roof as the camera tilts up.\noverall_soundscape: Bicycle gears chatter over terracotta tiles, tires strike the ramp, laundry flaps in coastal wind, and radio voices carry light compression. Paper folds crack sharply during the transformation, air rushes around the glide, brakes squeal once, and greenhouse glass resonates as the flower opens.\nnon_diegetic_music: Fast nylon-string guitar patterns at 138 BPM layered with electronic hand percussion, warm sub-bass, and short marimba figures. The guitar drops to harmonics during the glide and returns with a final ascending flourish as the pollen rises.",
-      "videos": {
-        "base_50": "assets/comparisons/09-rooftop-origami-delivery-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/09-rooftop-origami-delivery-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/09-rooftop-origami-delivery-sol-h3-web.mp4",
+        "poster": "assets/comparisons/09-rooftop-origami-delivery-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/09-rooftop-origami-delivery-sol-h3.mp4"
       }
     },
     {
@@ -199,35 +148,10 @@
       "shots": 3,
       "seed": 20261010,
       "prompt": "integrated_multimodal_description: [Shot 1] Photoreal artisan film inside a centuries-old Venetian glass workshop before dawn, opening with a warm medium shot. An elderly glassblower with soot-darkened sleeves, a white moustache, and a slow resonant Italian baritone (S1) rotates a glowing amber gather on a steel pipe while his young apprentice in a green apron, with a focused clear Italian voice (S2), shields her face from the furnace. The camera pushes in with small amplitude toward the molten surface as S1 says: <d>[Italian] Il vetro ricorda ogni respiro.</d> [Shot 2] At 00:03.200, the camera cuts to an extreme macro view. S2 blows once into the pipe; the glass expands, folds into translucent wings, and develops hair-thin veins of blue fire while S1 shapes the beak with iron tweezers. She watches the form move independently and whispers: <d>[Italian] Maestro, sta battendo il cuore.</d> Each pulse sends concentric light through stacked jars across the workshop. [Shot 3] At 00:06.600, the shot cuts to a wide view as the glass phoenix opens both wings, steps off the pipe, and flies in one circle beneath the rafters, shedding sparks that cool into tiny colored beads before touching the floor. S1 lowers the pipe, smiles, and answers: <d>[Italian] Allora lascialo volare.</d> The camera follows the phoenix through an open window into pale sunrise, where its transparent body refracts the canal into rainbow fragments.\noverall_soundscape: Furnace flame roars steadily beneath the scrape of metal tools, rotating pipe bearings, measured breaths, and the faint ringing of cooling glass. The phoenix wings produce crystalline chimes, sparks hiss as they harden, and morning water laps against the workshop steps outside.\nnon_diegetic_music: Slow chamber music at 72 BPM with viola, bass flute, celesta, and softly bowed glass rims. The harmony rises by small intervals with each wingbeat and expands into sustained strings as the phoenix reaches the canal.",
-      "videos": {
-        "base_50": "assets/comparisons/10-glass-phoenix-workshop-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/10-glass-phoenix-workshop-sol-h3.mp4"
-      }
-    },
-    {
-      "id": "11-carnival-jaguar-awakens",
-      "title": "Carnival Jaguar Awakens",
-      "category": "Festival fantasy · kinetic creature",
-      "language": "Portuguese",
-      "shots": 3,
-      "seed": 20261011,
-      "prompt": "integrated_multimodal_description: [Shot 1] Saturated live-action festival fantasy in a Rio warehouse moments before a night parade, framed as a sweeping wide shot. A young costume engineer with deep brown skin, a yellow work suit, braided hair tipped with green beads, and a quick warm Portuguese voice (S1) tightens the final copper plate on a six-meter mechanical jaguar covered in mirrored scales. The camera trucks right with large amplitude past rows of dancers as a veteran parade captain with a booming Portuguese baritone (S2) raises one hand and calls: <d>[Portuguese] Equipe, a avenida está esperando!</d> [Shot 2] At 00:03.100, the camera cuts to a low close shot beneath the jaguar's head. S1 connects two luminous cables and says: <d>[Portuguese] Acorda, gigante.</d> Its emerald eyes ignite, articulated paws strike the floor, and thousands of mirrored scales ripple from nose to tail. The creature crouches, then bounds through paper streamers while S1 runs alongside controlling it with two glowing hand rings. [Shot 3] At 00:06.500, the shot cuts outside to a fast aerial arc as the jaguar and dancers burst onto the illuminated avenue. The jaguar leaps over the moving formation without touching anyone, twists in the air, and lands at the center of a perfect sunburst pattern. S2 laughs and shouts: <d>[Portuguese] Agora sim!</d> The camera pulls high above the avenue as gold, cyan, and green costumes pulse outward in concentric waves.\noverall_soundscape: Workshop fans, ratchets, cable clicks, and hundreds of impatient footsteps create a dense indoor texture. The jaguar wakes with servos, metal plates cascading like scales, and heavy padded paw impacts; outside, crowd cheers spread down the avenue while fabric and streamers rush past the camera.\nnon_diegetic_music: A 152 BPM percussion arrangement with surdo-style low drums, sharp repinique figures, electronic bass, and bright brass bursts. The rhythm narrows to handclaps before the leap, then returns at full density on the landing.",
-      "videos": {
-        "base_50": "assets/comparisons/11-carnival-jaguar-awakens-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/11-carnival-jaguar-awakens-sol-h3.mp4"
-      }
-    },
-    {
-      "id": "12-aurora-array-reboot",
-      "title": "Aurora Array Reboot",
-      "category": "Arctic science fiction · volumetric sky",
-      "language": "Russian",
-      "shots": 3,
-      "seed": 20261012,
-      "prompt": "integrated_multimodal_description: [Shot 1] Photoreal arctic science-fiction film during polar night, opening in an ultra-wide static shot of a research station surrounded by twelve frozen radio dishes beneath a vivid green aurora. A middle-aged female physicist in a red parka, frost on her eyelashes, and a measured low Russian voice (S1) kneels at an open junction box while a younger male technician with a rapid nasal Russian tenor (S2) holds a fiber cable against the wind. The camera begins a slow push in as the aurora suddenly collapses into a narrow vertical line and S2 says: <d>[Russian] Поле исчезает. У нас меньше минуты.</d> [Shot 2] At 00:03.300, the camera cuts to a tight handheld view. S1 removes one frozen relay, warms it between both gloves, and bridges the circuit with a copper calibration ring while blue current crawls over the ice without touching her skin. She looks at S2 and says: <d>[Russian] Подай питание на все антенны сразу.</d> He slams a protected switch; dish motors wake sequentially and rotate toward the same point in the sky. [Shot 3] At 00:06.700, the shot cuts to a high aerial orbit as all twelve dishes emit thin white beams that weave into a luminous lattice. The aurora spreads back across the horizon, now forming vast wave patterns synchronized with the turning antennas. S1 stands, exhales a cloud of vapor, and quietly says: <d>[Russian] Сигнал вернулся.</d> The camera pulls beyond the station until the lattice and aurora fill the entire curved horizon.\noverall_soundscape: Katabatic wind scrapes ice across metal, parka fabric cracks in the cold, tools knock inside the junction box, and both researchers breathe heavily through scarves. Relays snap, current buzzes through frost, dish motors rise from low groans to a synchronized hum, and the restored array emits a broad resonant tone.\nnon_diegetic_music: Slow modular-synth pulses at 60 BPM with contrabass, processed choir vowels, and widely spaced metallic strikes. Layers enter one antenna at a time, expanding into a broad chord when the aurora returns.",
-      "videos": {
-        "base_50": "assets/comparisons/12-aurora-array-reboot-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/12-aurora-array-reboot-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/10-glass-phoenix-workshop-sol-h3-web.mp4",
+        "poster": "assets/comparisons/10-glass-phoenix-workshop-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/10-glass-phoenix-workshop-sol-h3.mp4"
       }
     },
     {
@@ -238,9 +162,10 @@
       "shots": 3,
       "seed": 20261013,
       "prompt": "integrated_multimodal_description: [Shot 1] Photoreal macro miniature filmmaking on an old oak library desk, beginning with an extreme close-up of a leather-bound atlas opening by itself. Two thumb-sized explorers climb from a paper doorway: a woman in a teal coat with a lively mid-range English voice (S1) and a man in a rust-orange coat with a cautious soft English baritone (S2). Printed contour lines rise from the page into three-dimensional mountains as the camera pulls out with small amplitude, and S1 points toward a glowing paper lighthouse and says: <d>[English] The missing chapter is signaling from the margin.</d> [Shot 2] At 00:03.300, the camera cuts to a low tracking shot at page level. The explorers ride a brass bookmark like a sled down a folding paper valley while ink rivers flow uphill around them. S2 grips the tassel, ducks under a turning page, and calls: <d>[English] Next time, we take the index.</d> The bookmark jumps a stitched binding and lands beside the lighthouse. [Shot 3] At 00:06.700, the shot cuts to a top-down macro view as S1 opens the lighthouse door and releases hundreds of tiny illuminated letters. They spiral above the atlas, arrange themselves into a new constellation, then settle as a previously blank final page filled with intricate maps. The explorers stand at the center; S1 laughs and replies: <d>[English] The index never has a view like this.</d> The full-size library lamps switch on one by one beyond the desk.\noverall_soundscape: Thick pages flex and scrape, miniature boots tap on paper fibers, the brass bookmark rings against stitched thread, and ink rivers make a soft liquid whisper. A page turns overhead with a deep rushing sound, tiny lighthouse gears click, and released letters flutter like a flock of paper wings.\nnon_diegetic_music: Playful chamber music at 118 BPM with pizzicato violin, bassoon, marimba, and tiny bell accents. The rhythm tumbles rapidly during the sled ride and opens into long string harmonics as the letter constellation forms.",
-      "videos": {
-        "base_50": "assets/comparisons/13-library-inside-the-book-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/13-library-inside-the-book-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/13-library-inside-the-book-sol-h3-web.mp4",
+        "poster": "assets/comparisons/13-library-inside-the-book-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/13-library-inside-the-book-sol-h3.mp4"
       }
     },
     {
@@ -251,9 +176,10 @@
       "shots": 3,
       "seed": 20261014,
       "prompt": "integrated_multimodal_description: [Shot 1] Hand-painted 2D Chinese ink-wash animation on textured rice paper, opening with a wide composition of a lone swordswoman in a white robe with a crimson belt standing on a narrow black brushstroke bridge above an unfinished mountain valley. She has long dark hair tied high and a controlled quiet Mandarin alto voice (S1). Across the bridge, a masked rival in layered charcoal robes with a rough low Mandarin voice (S2) lowers a broad ink-black blade. The camera pushes in at slow speed as rain appears as vertical calligraphy strokes and S2 says: <d>[Chinese] 这一笔，你接不住。</d> [Shot 2] At 00:03.200, the shot cuts to a fast side tracking view. Both fighters sprint, their feet scattering wet ink, and exchange three precise strikes; each blade impact paints a new mountain ridge into the empty background. S1 pivots beneath the rival's sleeve, draws one silver arc through the rain, and answers: <d>[Chinese] 那就换我落笔。</d> [Shot 3] At 00:06.600, the camera cuts overhead and rolls counterclockwise as the silver arc expands into a white crane made of negative space. The crane beats its wings once, separating the fighters without injury, then dissolves into snow across the completed landscape. S2 lowers his blade; S1 sheaths hers, and the bridge transforms from one black stroke into a path leading toward a distant red sun. She says softly: <d>[Chinese] 山水已成。</d>\noverall_soundscape: Brush bristles drag across fibrous paper beneath stylized rain, cloth sleeves snap, feet splash through pools of ink, and blade contacts ring with clean metallic transients. The crane wing produces a broad paper rush, followed by the dry click of a sword entering its sheath and snow settling into near silence.\nnon_diegetic_music: A 104 BPM arrangement of dizi, guqin harmonics, low frame drums, and wooden clappers. Percussion accelerates through the three strikes, then disappears beneath one sustained flute tone as the landscape completes.",
-      "videos": {
-        "base_50": "assets/comparisons/14-ink-storm-duel-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/14-ink-storm-duel-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/14-ink-storm-duel-sol-h3-web.mp4",
+        "poster": "assets/comparisons/14-ink-storm-duel-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/14-ink-storm-duel-sol-h3.mp4"
       }
     },
     {
@@ -264,9 +190,10 @@
       "shots": 3,
       "seed": 20261015,
       "prompt": "integrated_multimodal_description: [Shot 1] Detailed cinematic 3D CG inside an immense circular archive carved into a mountain, framed from a high wide angle as thousands of books orbit a central shaft. A young archivist with copper skin, a green hooded coat, and a crisp thoughtful English alto voice (S1) rides a moving ladder beside a small cobalt dragon with translucent wings and a deep voice far larger than its body (S2). Red warning runes ignite along the balconies while pages lift into the air, and S2 says: <d>[English] The fire index is opening by itself.</d> The camera pedestals down rapidly toward them. [Shot 2] At 00:03.200, the shot cuts to a close tracking view as S1 leaps from the ladder onto a rotating ring of books. She runs against its motion, catches one blazing volume with insulated tongs, and shouts: <d>[English] Seal the east stacks. I will take the spark.</d> S2 dives through a spiral of paper, inhales the escaped blue flame, and swells from cat-size to horse-size while keeping the same scales and face. [Shot 3] At 00:06.500, the camera cuts to an ultra-wide view down the central shaft. The transformed dragon carries S1 upward as she presses the book into a suspended stone lock; every orbiting volume stops, reverses once, and returns to its shelf in a cascading wave. S2 exhales the blue flame into a crystal globe and asks: <d>[English] Late fee?</d> S1 laughs, pats his neck, and replies: <d>[English] Catastrophic.</d> The camera arcs around them as the warning runes cool to green.\noverall_soundscape: Pages flutter in thousands of overlapping layers, ladder wheels race along rails, warning stones throb, and loose books thump into each other. Dragon wings cut the air with leathery beats, blue flame roars inside a deep intake, the stone lock closes with a seismic impact, and shelves click back into place around the chamber.\nnon_diegetic_music: Fast orchestral writing at 144 BPM with low strings, bass trombones, taiko-style drums, and bright celesta runs. The ensemble pauses at the stone-lock impact and returns as a concise brass-and-strings cadence under the final joke.",
-      "videos": {
-        "base_50": "assets/comparisons/15-dragon-archive-emergency-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/15-dragon-archive-emergency-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/15-dragon-archive-emergency-sol-h3-web.mp4",
+        "poster": "assets/comparisons/15-dragon-archive-emergency-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/15-dragon-archive-emergency-sol-h3.mp4"
       }
     },
     {
@@ -277,22 +204,10 @@
       "shots": 3,
       "seed": 20261016,
       "prompt": "integrated_multimodal_description: [Shot 1] Premium photoreal macro product film in a dark graphite studio, opening on a single bead of mercury-colored liquid floating above a circular slab of volcanic glass. A female off-screen narrator with a measured intimate English contralto (S1) says in an off-screen voiceover: <d>[English] Precision begins before the first second moves.</d> while no speaking face appears on screen. A silent gloved craftsperson visible only from the wrists down keeps still as the camera arcs clockwise with small amplitude at slow speed and the liquid stretches into a perfect metallic ring. [Shot 2] At 00:03.300, the shot cuts to an extreme macro cross-section. The ring divides into hundreds of polished components: gears, ruby bearings, a coiled spring, brushed bridges, and two luminous hands assemble layer by layer without collision. The camera pushes through the mechanism as energy travels along each tooth in a thin amber line; S1 says in an off-screen voiceover: <d>[English] Every surface carries the motion forward.</d> while no speaking face appears on screen and the craftsperson remains outside the frame. [Shot 3] At 00:06.700, the shot cuts to a low three-quarter hero view as the completed unbranded chronograph settles onto the volcanic glass. Its case shifts from liquid mirror to satin titanium, condensation rolls away from the crystal, and the second hand begins one smooth sweep. The gloved hand rotates the crown exactly one click, and S1 says in an off-screen voiceover: <d>[English] Time, engineered into flow.</d> while no speaking face appears on screen. A narrow white light travels around the bezel and fades.\noverall_soundscape: A low studio air tone supports microscopic liquid tension, precise metallic ticks, jewel bearings seating with glassy clicks, and the spring winding under gentle mechanical pressure. The finished case touches stone with a dense muted knock, followed by one crown click and a clean continuous movement hum.\nnon_diegetic_music: Minimal electronic composition at 80 BPM using sub-bass pulses, muted prepared-piano strikes, and thin granular high frequencies. Individual layers enter with the assembling components and contract to one sustained tone during the final light sweep.",
-      "videos": {
-        "base_50": "assets/comparisons/16-liquid-metal-chronograph-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/16-liquid-metal-chronograph-sol-h3.mp4"
-      }
-    },
-    {
-      "id": "17-zero-gravity-bakery",
-      "title": "Zero-Gravity Bakery",
-      "category": "Claymation · physical comedy",
-      "language": "English",
-      "shots": 3,
-      "seed": 20261017,
-      "prompt": "integrated_multimodal_description: [Shot 1] Tactile claymation inside a compact orbital bakery with rounded cream walls, opening in a medium-wide static shot. A broad-shouldered baker with a curled red moustache, navy apron, and jovial booming English voice (S1) removes a tray of twelve golden rolls just as the gravity indicator turns from green to blue. A small apprentice with violet hair, oversized mittens, and a quick bright English voice (S2) floats upward beside the counter and says: <d>[English] Chef, the bread is escaping.</d> Every roll rises from the tray in a slow spiral. [Shot 2] At 00:03.200, the camera cuts to a wide tracking shot that rolls clockwise with the rotating room. S1 kicks gently from a cabinet, swims through the air with a butterfly net, and misses three rolls; S2 squeezes a piping bag, drawing a looping strand of pink icing that catches the rolls one by one like beads. S1 tumbles past camera and calls: <d>[English] Excellent technique. Terrible workplace policy.</d> [Shot 3] At 00:06.600, the shot cuts to a close frontal view as gravity returns suddenly. The icing strand lowers all twelve rolls into a perfect tower on one plate while S1 and S2 land safely on padded stools. The tower wobbles, settles, and releases one tiny puff of flour shaped like a star. S2 presents it proudly and says: <d>[English] Orbit cake.</d> S1 stamps an approval card and answers: <d>[English] Put it on the menu.</d>\noverall_soundscape: Oven fans hum, a timer bell rings, clay shoes squeak, cabinet doors tap, and floating rolls make soft doughy bumps against utensils. The piping bag squishes rhythmically, the room mechanism clunks as gravity returns, stools compress with rubbery thuds, and both bakers laugh.\nnon_diegetic_music: Bouncy funk at 126 BPM with pizzicato bass, muted guitar, hand percussion, and short bassoon phrases. The groove rotates through the stereo field during zero gravity and lands on a tight final chord with the bread tower.",
-      "videos": {
-        "base_50": "assets/comparisons/17-zero-gravity-bakery-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/17-zero-gravity-bakery-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/16-liquid-metal-chronograph-sol-h3-web.mp4",
+        "poster": "assets/comparisons/16-liquid-metal-chronograph-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/16-liquid-metal-chronograph-sol-h3.mp4"
       }
     },
     {
@@ -303,22 +218,10 @@
       "shots": 3,
       "seed": 20261018,
       "prompt": "integrated_multimodal_description: [Shot 1] Photoreal nature fantasy at night in a rain-damp forest, beginning with a low wide shot beside a shallow stream. A young Indigenous woman in a dark green riding coat, with long braided hair and a quiet grounded English alto voice (S1), sits on a black horse marked by faint blue bioluminescent patterns. Her younger brother in a brown cloak, with a soft breathless English tenor (S2), rides a chestnut horse behind her. The camera tracks alongside at slow speed as luminous moths gather above the water and S2 asks: <d>[English] Are they showing us the old trail?</d> S1 studies the moving lights and replies: <d>[English] Only if we keep their pace.</d> [Shot 2] At 00:03.400, the shot cuts to a forward tracking view as both horses accelerate between enormous fern fronds. Every hoof impact sends rings of blue light through roots beneath the soil; moths stream ahead, forming a temporary arch across a fallen tree. The riders duck together, clear the obstacle, and emerge onto a steep ridge while the camera rises with large amplitude. [Shot 3] At 00:06.800, the shot cuts to a sweeping aerial arc around the ridge. Below them, thousands of luminous animals move silently through the valley, tracing the shape of a river that disappeared generations ago. S1 raises one hand, both horses slow without changing formation, and she says: <d>[English] Remember where the water wants to return.</d> The camera pulls out as the blue river-shape flows toward the horizon under distant lightning.\noverall_soundscape: Hooves move from wet gravel to soft forest soil, leather tack creaks, rain drips from broad leaves, and both horses breathe in steady rhythm. Moth wings make a fine surrounding shimmer, roots resonate with low pulses after each impact, branches sweep past fabric, and distant thunder rolls across the valley.\nnon_diegetic_music: A 92 BPM score of frame drum, low wooden flute, plucked cello, and slowly widening synthesizer harmonics. Percussion follows the gallop, then drops away beneath sustained tones during the valley reveal.",
-      "videos": {
-        "base_50": "assets/comparisons/18-bioluminescent-night-ride-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/18-bioluminescent-night-ride-sol-h3.mp4"
-      }
-    },
-    {
-      "id": "19-noir-memory-market",
-      "title": "Noir Memory Market",
-      "category": "Neo-noir · monochrome-to-color",
-      "language": "English",
-      "shots": 3,
-      "seed": 20261019,
-      "prompt": "integrated_multimodal_description: [Shot 1] High-grain black-and-white neo-noir on a narrow night market street under hard rain, opening with a medium tracking shot behind an android detective in a long charcoal coat. She has a porcelain face with one hairline gold repair and a low restrained English voice (S1). She says in an off-screen voiceover: <d>[English] In this district, people pawn the memories they cannot carry.</d> while her on-screen lips remain completely closed. The camera trucks left past vendors displaying glowing glass vials as she follows a single red reflection, the only color in the frame. [Shot 2] At 00:03.300, the camera cuts to a close shot inside a cramped stall. An elderly vendor with clouded eyes, ink-stained fingers, and a whispery English baritone (S2) places a cracked vial on velvet and says: <d>[English] This one keeps asking for you.</d> S1 touches the glass; warm color spreads from her fingertip across the stall, and a miniature summer garden unfolds in the air between them. [Shot 3] At 00:06.700, the shot cuts to a handheld POV inside the projected garden as a child runs through tall yellow grass toward S1. The projection flickers, rain from the market falls through it, and S1 closes her hand around the vial before the child reaches her. Back in the stall, only the gold repair on her cheek and the red reflection remain colored. She says softly: <d>[English] Keep it safe until I remember why.</d> The camera pulls through the beaded doorway into rain as the vendor extinguishes one lamp.\noverall_soundscape: Heavy rain rattles canvas roofs, shoes cross shallow water, market awnings creak, and glass vials ring softly against wooden shelves. The memory activates with a warm electrical flutter joined by summer insects and grass movement, then collapses back into rain, one stopper click, and the fading buzz of a lamp.\nnon_diegetic_music: Slow brushed drums at 62 BPM with upright bass, bass clarinet, and isolated detuned piano chords. A thin string harmonic enters as color spreads and bends downward when the projected garden disappears.",
-      "videos": {
-        "base_50": "assets/comparisons/19-noir-memory-market-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/19-noir-memory-market-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/18-bioluminescent-night-ride-sol-h3-web.mp4",
+        "poster": "assets/comparisons/18-bioluminescent-night-ride-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/18-bioluminescent-night-ride-sol-h3.mp4"
       }
     },
     {
@@ -329,9 +232,10 @@
       "shots": 3,
       "seed": 20261020,
       "prompt": "integrated_multimodal_description: [Shot 1] Cinematic photoreal space opera on the observation deck of a research starship, beginning with a wide symmetrical shot through a curved window. A Latina captain in her forties, with short silver-streaked hair, a dark navy uniform, and a firm low Spanish alto voice (S1), stands beside a young male navigation scientist wearing a copper headset and speaking English in a precise light tenor (S2). Ahead, thousands of ice fragments orbit a black circular gate while two suns cast opposing blue and amber shadows. The camera pushes in at slow speed as S2 watches the probability display and says: <d>[English] The corridor exists for eight seconds.</d> [Shot 2] At 00:03.200, the camera cuts to a close arc around S1 as she rotates a transparent command sphere. The ice fragments flatten into concentric rings, the stars behind the gate stretch into white threads, and deck gravity tilts thirty degrees, forcing both officers to brace against the console. S1 answers sharply: <d>[Spanish] Entonces entramos en siete.</d> She drives the sphere forward and the ship accelerates. [Shot 3] At 00:06.500, the shot cuts to an exterior tracking view beside the hull as the starship threads through rotating ice rings and enters the gate. Space folds like layered glass around the ship; blue and amber sunlight swaps sides three times, then resolves into a vast ocean planet beneath a luminous orbital city. Back inside, S2 releases the console and says: <d>[English] New sky confirmed.</d> S1 allows one brief smile and replies: <d>[Spanish] Que empiece el mapa.</d> The camera pulls away from the ship toward the city as the gate seals into a point behind them.\noverall_soundscape: The bridge carries a steady ventilation hum, restrained console tones, uniform fabric movement, and deep hull resonance. Ice fragments scrape past shields in rapid stereo bursts, gravity actuators groan, acceleration drives rise into a layered roar, and the gate closes with one clean pressure-like impact before the bridge ambience returns.\nnon_diegetic_music: A 110 BPM space-opera score with low brass ostinato, pulsing analog synthesizer, wide string clusters, and distant wordless choir. The meter briefly shifts during the three sunlight reversals and resolves into a broad major chord over the ocean planet.",
-      "videos": {
-        "base_50": "assets/comparisons/20-fold-gate-command-h3-base-50.mp4",
-        "sol_h3": "assets/comparisons/20-fold-gate-command-sol-h3.mp4"
+      "media": {
+        "web_mp4": "assets/comparisons/20-fold-gate-command-sol-h3-web.mp4",
+        "poster": "assets/comparisons/20-fold-gate-command-sol-h3-poster.jpg",
+        "original_mp4": "assets/comparisons/20-fold-gate-command-sol-h3.mp4"
       }
     }
   ]

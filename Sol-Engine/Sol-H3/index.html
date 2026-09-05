@@ -4336,7 +4336,7 @@
             <span class="section-kicker">Audited · 2026-09-04</span>
             <h2 id="performance-title">Beyond realtime. Fully accounted.</h2>
           </div>
-          <p>Sol-H3 generates 5 / 10 / 15 seconds of MiniMax-H3 video with native audio in 1.669 / 3.738 / 6.619 seconds: 3.00× / 2.68× / 2.27× realtime.</p>
+          <p>Sol-H3 generates 5 / 10 / 15 seconds of MiniMax-H3 video with native audio in 1.669 / 3.738 / 6.619 seconds: 3.00× / 2.67× / 2.27× realtime.</p>
         </header>
 
         <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="console-title">
@@ -4858,7 +4858,8 @@
         10: {
           frames: 243,
           output: 10,
-          sol: 3.738
+          sol: 3.738,
+          rate: 2.67496
         },
         15: {
           frames: 362,
@@ -4880,7 +4881,7 @@
 
       const selectBenchmark = (duration) => {
         const data = benchmarks[duration];
-        const rate = data.output / data.sol;
+        const rate = data.rate ?? data.output / data.sol;
         tabs.forEach((tab) => tab.setAttribute('aria-selected', String(Number(tab.dataset.duration) === duration)));
         fields.latency.textContent = data.sol.toFixed(3);
         fields.frames.textContent = data.frames;

@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050705">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8f1">
-  <meta name="description" content="Sol-H3 is an AI-native full-stack acceleration system for MiniMax-H3. It infers five seconds of 1344×768 video with native audio in 1.669 seconds—3.00× realtime on 8 NVIDIA B300 GPUs.">
+  <meta name="description" content="Sol-H3 accelerates MiniMax-H3 video generation with native audio, producing five seconds of 1344×768 video in 1.669 seconds—3.00× realtime on 8× NVIDIA B300 GPUs.">
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Sol-H3: AI-Native Full-Stack Acceleration for MiniMax-H3 on NVIDIA Blackwell">
+  <meta property="og:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
   <meta property="og:description" content="Five seconds of world. 1.669 seconds to infer. MiniMax-H3 video with native audio at 3.00× realtime on 8 NVIDIA B300 GPUs.">
   <meta property="og:url" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <meta property="og:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="732">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Sol-H3: AI-Native Full-Stack Acceleration for MiniMax-H3">
+  <meta name="twitter:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
   <meta name="twitter:description" content="Five seconds of world in 1.669 seconds—MiniMax-H3 video with native audio at 3.00× realtime on 8× NVIDIA B300.">
   <meta name="twitter:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
   <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
-  <title>Sol-H3: AI-Native Full-Stack Acceleration for MiniMax-H3 | NVIDIA Research</title>
+  <title>Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System | NVIDIA Research</title>
   <style>
     :root {
       color-scheme: dark;
@@ -403,6 +403,38 @@
     }
 
     .hero-dek strong { color: var(--white); font-weight: 760; }
+
+    .model-compatibility {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      margin-top: 20px;
+      padding: 13px 15px;
+      border: 1px solid var(--line-bright);
+      border-radius: 9px;
+      background: rgba(118, 185, 0, .055);
+      color: var(--fog);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .model-compatibility > strong {
+      color: var(--acid);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .07em;
+      line-height: 1.75;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .model-compatibility p { margin: 0; }
+    .model-compatibility a { color: var(--white); font-weight: 700; }
+
+    @media (max-width: 520px) {
+      .model-compatibility { grid-template-columns: 1fr; gap: 5px; }
+    }
 
     .hero-actions {
       display: flex;
@@ -1680,31 +1712,6 @@
       background: rgba(167, 255, 46, calc(.025 + var(--p) * .035));
     }
 
-    .overlap-viz {
-      right: 26px;
-      bottom: 29px;
-      width: 46%;
-    }
-
-    .overlap-line {
-      position: relative;
-      height: 18px;
-      margin-top: 9px;
-      border-radius: 2px;
-      background: rgba(255, 255, 255, .04);
-    }
-
-    .overlap-line::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: var(--w);
-      border-radius: inherit;
-      background: var(--color);
-      opacity: .7;
-    }
-
-    .overlap-line:last-child { transform: translateX(19%); width: 81%; }
 
     .guard-viz {
       right: 28px;
@@ -1832,27 +1839,6 @@
       letter-spacing: .05em;
     }
 
-    .overlap-lane {
-      position: relative;
-      margin: 0 34px 34px;
-      padding: 23px 24px 23px 152px;
-      border: 1px solid rgba(114, 245, 186, .18);
-      border-radius: 9px;
-      background: rgba(114, 245, 186, .025);
-    }
-
-    .overlap-lane-label {
-      position: absolute;
-      left: 22px;
-      top: 50%;
-      color: var(--mint);
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 8px;
-      font-weight: 800;
-      letter-spacing: .1em;
-      transform: translateY(-50%);
-      text-transform: uppercase;
-    }
 
     .lane-track {
       position: relative;
@@ -1881,14 +1867,6 @@
     .lane-job.encode { left: 0; width: 31%; background: var(--mint); }
     .lane-job.next { left: 24%; width: 74%; background: linear-gradient(90deg, var(--green), var(--acid)); }
 
-    .overlap-caveat {
-      margin: 16px 34px 34px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.6;
-    }
-
-    .overlap-caveat strong { color: var(--fog); }
 
     .production-grid {
       display: grid;
@@ -2176,6 +2154,17 @@
       background: var(--surface);
     }
 
+    .comparison-pane[hidden] { display: none; }
+
+    .comparison-lab[data-layout="single"] .comparison-grid {
+      grid-template-columns: minmax(0, calc(50% - .5px));
+      justify-content: center;
+      background: var(--surface);
+    }
+
+    .comparison-lab[data-layout="single"] .comparison-pane {
+      border-inline: 1px solid var(--line);
+    }
     .comparison-pane-head {
       display: flex;
       min-height: 46px;
@@ -2643,6 +2632,12 @@
       .button { flex: 1 1 150px; }
       .comparison-grid { grid-template-columns: 1fr; }
       .comparison-pane + .comparison-pane { border-top: 1px solid var(--line); }
+      .comparison-lab[data-layout="single"] .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      .comparison-lab[data-layout="single"] .comparison-pane {
+        border-inline: 0;
+      }
       .comparison-window-status { min-width: 0; }
       .comparison-step-badge { display: none; }
       .comparison-prompt summary small { display: none; }
@@ -2692,12 +2687,9 @@
       .tech-card { min-height: 340px; }
       .tech-card > p { max-width: 100%; }
       .tech-viz { opacity: .72; }
-      .fusion-viz, .ulysses-viz, .tile-viz, .adaln-viz, .overlap-viz, .guard-viz { width: 55%; }
+      .fusion-viz, .ulysses-viz, .tile-viz, .adaln-viz, .guard-viz { width: 55%; }
       .pipeline-flow { grid-template-columns: 1fr; padding: 16px; }
       .flow-stage { min-height: 175px; }
-      .overlap-lane { margin: 0 16px 16px; padding: 55px 15px 18px; }
-      .overlap-lane-label { top: 18px; left: 15px; transform: none; }
-      .overlap-caveat { margin: 16px; }
       .spec-grid { grid-template-columns: 1fr; }
       pre { min-height: 0; padding: 20px; font-size: 9px; }
       .truth-copy { padding-left: 24px; }
@@ -2718,7 +2710,7 @@
       .benchmark-card { min-height: 125px; }
       .engine-map { min-height: 450px; transform: scale(.9); margin-block: -22px; }
       .tech-card { min-height: 365px; }
-      .fusion-viz, .ulysses-viz, .tile-viz, .adaln-viz, .overlap-viz, .guard-viz { width: 70%; opacity: .48; }
+      .fusion-viz, .ulysses-viz, .tile-viz, .adaln-viz, .guard-viz { width: 70%; opacity: .48; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -2794,24 +2786,6 @@
     .tech-card > p { max-width: 72%; font-size: 17px; line-height: 1.65; }
     .tech-viz { opacity: .55; }
 
-    .overlap-card {
-      min-height: 390px;
-      display: grid;
-      grid-template-columns: minmax(0, .82fr) minmax(380px, 1.18fr);
-      grid-template-rows: auto auto 1fr auto;
-      column-gap: clamp(38px, 6vw, 90px);
-      align-items: start;
-    }
-    .overlap-card .tech-label { grid-column: 1; grid-row: 1; }
-    .overlap-card h3 { grid-column: 1; grid-row: 2; }
-    .overlap-card > p:not(.overlap-verdict) { grid-column: 1; grid-row: 3; max-width: none; }
-    .overlap-feature { grid-column: 2; grid-row: 1 / 5; align-self: center; display: grid; gap: 16px; }
-    .overlap-feature div { padding: 18px 20px 20px; border: 1px solid var(--line); border-radius: 10px; background: rgba(0, 0, 0, .23); }
-    .overlap-feature span { display: block; color: var(--fog); font-family: "SFMono-Regular", Consolas, monospace; font-size: 14px; font-weight: 750; letter-spacing: .035em; }
-    .overlap-feature i { display: block; width: 73%; height: 16px; margin-top: 14px; border-radius: 3px; background: linear-gradient(90deg, rgba(114, 245, 186, .35), var(--mint)); box-shadow: 0 0 20px rgba(114, 245, 186, .14); }
-    .overlap-feature div:nth-child(2) i { width: 96%; margin-left: 4%; background: linear-gradient(90deg, rgba(167, 255, 46, .32), var(--acid)); box-shadow: 0 0 20px rgba(167, 255, 46, .14); }
-    .tech-card > p.overlap-verdict { grid-column: 1; grid-row: 4; max-width: none; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 16px; }
-    .overlap-verdict strong { color: var(--acid); }
 
     .release-contract { display: flex; flex-wrap: wrap; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: rgba(255, 255, 255, .018); }
     .release-contract span { flex: 1 1 190px; padding: 18px 20px; border-right: 1px solid var(--line); color: var(--fog); font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; font-weight: 700; text-align: center; }
@@ -2829,7 +2803,6 @@
     @media (max-width: 980px) {
       .tech-card.span-6 { grid-column: span 6; }
       .tech-card.span-12 { grid-column: span 12; }
-      .overlap-card { grid-template-columns: minmax(0, .9fr) minmax(320px, 1.1fr); }
     }
 
     @media (max-width: 720px) {
@@ -2866,10 +2839,6 @@
       .tech-card h3 { font-size: clamp(28px, 9vw, 38px); }
       .tech-card > p { max-width: 100%; font-size: 17px; }
       .tech-viz { opacity: .38; }
-      .overlap-card { min-height: 0; display: block; }
-      .overlap-feature { margin-top: 30px; }
-      .overlap-feature span { font-size: 13px; }
-      .tech-card > p.overlap-verdict { margin-top: 24px; font-size: 16px; }
       .release-contract { display: grid; grid-template-columns: 1fr 1fr; }
       .release-contract span { min-width: 0; padding: 16px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; }
       .release-contract span:nth-child(2n) { border-right: 0; }
@@ -2886,7 +2855,6 @@
       .engine-map { transform: none; margin-block: -10px; }
       .gpu-node { width: 50px; height: 27px; font-size: 8.5px; }
       .tech-card { min-height: 390px; }
-      .overlap-card { min-height: 0; }
       .finale-actions .button { width: 100%; flex-basis: 100%; }
     }
 
@@ -2926,7 +2894,7 @@
     section[id] { scroll-margin-top: calc(var(--header-h) + 18px); }
     @media (max-width: 720px) {
       .method-note { font-size: 15px; }
-      .tech-card:not(.overlap-card) { min-height: 320px; }
+      .tech-card { min-height: 320px; }
       .finale { min-height: 520px; }
     }
 
@@ -2973,8 +2941,6 @@
     }
     .video-credit a:hover { color: var(--mint); }
     .hero-stats { width: 100%; margin: 10px auto 0; }
-    .placeholder-link { border-style: dashed; color: var(--muted); cursor: not-allowed; }
-    .placeholder-link:hover { transform: none; border-color: var(--line-bright); background: transparent; }
 
     .collaborator-rail {
       margin-top: 34px;
@@ -3019,7 +2985,7 @@
     .collaborator-heading strong { color: var(--fog); font-weight: 760; }
     .collaborator-logos {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
       margin-top: 8px;
     }
@@ -3081,28 +3047,13 @@
     .partner-hao .partner-logo-box img { width: 100%; height: auto; }
     .partner-reactor .partner-logo-box { background: #e5ddba; }
     .partner-reactor .partner-logo-box img { width: 100%; height: 100%; }
-    .partner-humanize .partner-logo-box img { width: 30px; height: 34px; }
+    .partner-humanize .partner-logo-box img { width: 32px; height: 32px; }
     .partner-kda .partner-logo-box { background: #fff; }
     .partner-kda .partner-logo-box img { width: 100%; height: 100%; }
+    .partner-vdn .partner-logo-box { width: 54px; background: #fff; }
+    .partner-vdn .partner-logo-box img { width: 100%; height: 100%; }
     .partner-reactor .partner-name { font-weight: 540; letter-spacing: .04em; text-transform: lowercase; }
     .partner-kda .partner-name { color: var(--acid); font-family: "SFMono-Regular", Consolas, monospace; letter-spacing: .08em; }
-
-    .related-work {
-      display: grid;
-      grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr);
-      gap: clamp(28px, 5vw, 72px);
-      margin-top: 24px;
-      padding: 28px 30px;
-      align-items: center;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(114, 245, 186, .04), rgba(255, 255, 255, .015));
-    }
-    .related-work h3 { margin: 10px 0 0; font-size: clamp(22px, 2.2vw, 30px); line-height: 1.18; }
-    .related-work h3 a { color: var(--white); text-decoration: none; }
-    .related-work h3 a:hover { color: var(--mint); }
-    .related-work p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
-    .related-work p strong { color: var(--fog); font-weight: 650; }
 
     @media (max-width: 980px) {
       .collaborator-logos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3119,8 +3070,6 @@
       .collaborator-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
       .collaborator-logos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .collaborator-logo { padding-inline: 12px; }
-      .related-work { grid-template-columns: 1fr; gap: 17px; padding: 24px 22px; }
-      .related-work p { font-size: 15px; }
       .finale { min-height: 440px; }
     }
     @media (max-width: 420px) {
@@ -3298,13 +3247,12 @@
     }
     .accel-node.featured span { color: var(--fog); font-size: 12px; }
     .node-attn { --angle: 0deg; }
-    .node-fasth3 { --angle: 45deg; }
-    .node-fused { --angle: 90deg; }
-    .node-ulysses { --angle: 135deg; }
-    .node-layout { --angle: 180deg; }
-    .node-vae { --angle: 225deg; }
-    .node-adaln { --angle: 270deg; }
-    .node-overlap { --angle: 315deg; }
+    .node-fewstep { --angle: 51.43deg; }
+    .node-fused { --angle: 102.86deg; }
+    .node-ulysses { --angle: 154.29deg; }
+    .node-layout { --angle: 205.71deg; }
+    .node-vae { --angle: 257.14deg; }
+    .node-adaln { --angle: 308.57deg; }
     .system-ring .engine-core {
       width: 210px;
       border-color: rgba(167, 255, 46, .58);
@@ -3312,18 +3260,6 @@
     .system-ring .core-copy small { font-size: 11px; }
     .system-ring .core-copy b { font-size: 29px; }
     .system-ring .core-copy span { font-size: 11px; }
-
-    .related-work {
-      grid-template-columns: 180px minmax(0, 1fr);
-      gap: clamp(24px, 4vw, 56px);
-    }
-    .related-work p a {
-      color: var(--fog);
-      font-weight: 680;
-      text-decoration-color: rgba(167, 255, 46, .48);
-      text-underline-offset: 3px;
-    }
-    .related-work p a:hover { color: var(--acid); }
 
     .collaboration-statement {
       max-width: 1120px;
@@ -3342,6 +3278,45 @@
       text-underline-offset: 3px;
     }
     .collaboration-statement a:hover { color: var(--acid); }
+
+    .license-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 13px 15px;
+      border: 1px solid rgba(167, 255, 46, .25);
+      border-radius: 9px;
+      background: rgba(167, 255, 46, .045);
+      color: var(--muted);
+      text-decoration: none;
+      transition: border-color .2s ease, background .2s ease;
+    }
+    .license-strip:hover {
+      border-color: rgba(167, 255, 46, .52);
+      background: rgba(167, 255, 46, .075);
+    }
+    .license-strip strong {
+      flex: 0 0 auto;
+      color: var(--acid);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .license-strip span {
+      color: var(--fog);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .license-strip svg {
+      width: 16px;
+      height: 16px;
+      margin-left: auto;
+      flex: 0 0 auto;
+      color: var(--acid);
+    }
 
     .future-plan {
       position: relative;
@@ -3368,13 +3343,13 @@
     .future-plan .wide-shell { position: relative; z-index: 1; }
     .future-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
       margin-top: clamp(38px, 5vw, 66px);
     }
     .future-card {
       position: relative;
-      min-height: 270px;
+      min-height: 320px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -3456,7 +3431,7 @@
       max-width: 530px;
       margin: 10px 0 0;
       color: var(--white);
-      font-size: clamp(29px, 3vw, 43px);
+      font-size: clamp(27px, 2.5vw, 38px);
       font-weight: 850;
       line-height: 1.04;
       letter-spacing: -.045em;
@@ -3488,6 +3463,11 @@
       content: "↗";
       color: var(--acid);
       font-size: 17px;
+    }
+
+    @media (max-width: 1180px) {
+      .future-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .future-card:last-child { grid-column: 1 / -1; }
     }
 
     .publication-notes {
@@ -3625,9 +3605,13 @@
       .system-ring .engine-core { width: 160px; }
       .system-ring .core-copy b { font-size: 25px; }
 
-      .related-work { grid-template-columns: 1fr; gap: 12px; }
       .collaboration-statement { margin-top: 18px; padding-left: 14px; font-size: 16px; }
+      .license-strip { align-items: flex-start; flex-wrap: wrap; }
+      .license-strip strong { flex-basis: 100%; }
+      .license-strip span { flex: 1 1 240px; font-size: 14px; }
+      .license-strip svg { margin-top: 2px; margin-left: auto; }
       .future-grid { grid-template-columns: 1fr; }
+      .future-card:last-child { grid-column: auto; }
       .future-card { min-height: 250px; }
       .publication-notes { padding: 64px 0; }
       .publication-panel { padding: 25px 22px; }
@@ -3669,13 +3653,12 @@
       .accel-node strong { font-size: 12px; }
       .accel-node span { font-size: 10.5px; }
       .accel-node.featured { top: 7%; left: 50%; width: 150px; min-height: 78px; }
-      .node-fasth3 { top: 20%; left: 20%; }
+      .node-fewstep { top: 20%; left: 20%; }
       .node-fused { top: 20%; left: 80%; }
       .node-ulysses { top: 33%; left: 17%; }
       .node-layout { top: 33%; left: 83%; }
       .node-vae { top: 74%; left: 20%; width: 108px; }
-      .node-adaln { top: 91%; left: 50%; }
-      .node-overlap { top: 74%; left: 80%; width: 108px; }
+      .node-adaln { top: 74%; left: 80%; width: 108px; }
       .system-ring .engine-core { width: 136px; }
       .system-ring .core-copy small { font-size: 10px; letter-spacing: .1em; }
       .system-ring .core-copy b { font-size: 23px; }
@@ -3693,12 +3676,12 @@
       .system-ring .orbit { width: calc(100% - 72px); height: 500px; }
       .accel-node { width: 96px; }
       .accel-node.featured { width: 140px; }
-      .node-fasth3 { left: 18%; }
+      .node-fewstep { left: 18%; }
       .node-fused { left: 82%; }
       .node-ulysses { left: 16%; }
       .node-layout { left: 84%; }
       .node-vae { left: 18%; width: 104px; }
-      .node-overlap { left: 82%; width: 104px; }
+      .node-adaln { left: 82%; width: 104px; }
       .system-ring .engine-core { width: 124px; }
       .system-ring .core-copy b { font-size: 21px; }
     }
@@ -3963,6 +3946,85 @@
       .comparison-case-heading h3 { font-size: clamp(28px, 10vw, 38px); }
     }
 
+    /* Compact editorial rhythm and an accessible section menu. */
+    .nav-menu-toggle {
+      display: none;
+      width: 40px;
+      height: 40px;
+      padding: 10px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(167, 255, 46, .055);
+      color: var(--white);
+      cursor: pointer;
+    }
+    .nav-menu-toggle span {
+      display: block;
+      width: 18px;
+      height: 1.5px;
+      margin: 2.5px auto;
+      border-radius: 2px;
+      background: currentColor;
+      transition: transform .2s ease, opacity .2s ease;
+    }
+    .section { padding: clamp(68px, 7vw, 96px) 0; }
+    .section-head { margin-bottom: clamp(34px, 4vw, 52px); }
+    .future-plan { padding: clamp(64px, 7vw, 96px) 0; }
+    .future-grid { margin-top: clamp(30px, 4vw, 48px); }
+    .future-card { min-height: 290px; }
+    .publication-notes { padding: clamp(56px, 6vw, 84px) 0; }
+    .finale { min-height: 520px; }
+
+    @media (max-width: 980px) {
+      .nav { position: relative; }
+      .nav-menu-toggle {
+        display: inline-block;
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
+      .theme-toggle { margin-left: 0; }
+      .nav-links {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        right: 0;
+        display: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 3px;
+        margin: 0;
+        padding: 10px;
+        border: 1px solid var(--line-bright);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, .28);
+      }
+      .site-header.menu-open .nav-links { display: grid; }
+      .site-header.menu-open .nav-menu-toggle span:nth-child(1) { transform: translateY(4px) rotate(45deg); }
+      .site-header.menu-open .nav-menu-toggle span:nth-child(2) { opacity: 0; }
+      .site-header.menu-open .nav-menu-toggle span:nth-child(3) { transform: translateY(-4px) rotate(-45deg); }
+      .nav-links a {
+        padding: 13px 14px;
+        border-radius: 8px;
+      }
+      .nav-links a:hover,
+      .nav-links a.active { background: rgba(167, 255, 46, .07); }
+      .nav-links a::after { display: none; }
+    }
+
+    @media (max-width: 720px) {
+      .nav { gap: 8px; }
+      .nav-cta { margin-left: 0; }
+      .section { padding: 60px 0; }
+      .future-plan { padding: 60px 0; }
+      .publication-notes { padding: 52px 0; }
+      .finale { min-height: 470px; }
+    }
+
+    @media (max-width: 420px) {
+      .nav-links { grid-template-columns: 1fr; }
+      .nav-menu-toggle,
+      .theme-toggle { width: 38px; height: 38px; }
+    }
   </style>
   <style id="light-theme" media="(prefers-color-scheme: light)">
     /* Automatic light edition. This sheet can also be explicitly enabled or disabled. */
@@ -4047,7 +4109,6 @@
       .duration-tabs { background: rgba(25, 40, 18, .055); }
       .time-track,
       .fusion-stack i,
-      .overlap-line,
       .attn-bar i,
       .lane-track { background: rgba(23, 37, 17, .075); }
 
@@ -4102,8 +4163,7 @@
       .benchmark-console,
       .tech-card,
       .core-block,
-      .collaborator-logo,
-      .related-work { box-shadow: 0 15px 44px rgba(31, 49, 23, .055); }
+      .collaborator-logo { box-shadow: 0 15px 44px rgba(31, 49, 23, .055); }
       .core-block {
         background: linear-gradient(145deg, rgba(65, 111, 0, .075), rgba(255, 255, 255, .82));
       }
@@ -4115,7 +4175,6 @@
       .owner-nvidia-panel img { filter: none; }
       .prefix-viz i { border-color: rgba(0, 107, 74, .25); background: rgba(0, 107, 74, .07); }
       .prefix-viz i:nth-child(-n+2) { background: linear-gradient(180deg, rgba(0, 107, 74, .34), rgba(0, 107, 74, .07)); }
-      .overlap-feature div { background: rgba(25, 40, 18, .045); }
       .release-contract { background: rgba(255, 255, 255, .65); }
       .collaborator-logo { background: rgba(255, 255, 255, .64); }
       .collaborator-logo:hover { background: rgba(65, 111, 0, .07); }
@@ -4128,9 +4187,6 @@
       .partner-logo-box {
         border-color: rgba(22, 38, 16, .1);
         background: rgba(22, 38, 16, .045);
-      }
-      .related-work {
-        background: linear-gradient(135deg, rgba(0, 107, 74, .07), rgba(255, 255, 255, .82));
       }
       .future-plan {
         background:
@@ -4212,12 +4268,16 @@
         <span>Sol-H3</span>
       </a>
       <span class="nav-divider" aria-hidden="true"></span>
-      <span class="version-chip"><i aria-hidden="true"></i>Full-Stack Inference</span>
-      <div class="nav-links">
+      <span class="version-chip"><i aria-hidden="true"></i>MiniMax-H3 Inference</span>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open section menu" aria-controls="nav-links" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
         <a href="#performance">Performance</a>
         <a href="#compare">Showcase</a>
         <a href="#architecture">Dual core</a>
-        <a href="#stack">Full stack</a>
+        <a href="#stack">Acceleration</a>
+        <a href="#future">Future</a>
       </div>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch color theme" title="Switch color theme">
         <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
@@ -4235,10 +4295,10 @@
       <div class="wide-shell hero-shell">
         <div class="hero-grid">
           <div class="hero-copy">
-          <div class="eyebrow">Sol-Engine × Sol-Attn · Full-Stack Inference</div>
+          <div class="eyebrow">Sol-Engine × Sol-Attn · MiniMax-H3 Inference</div>
           <h1 class="hero-product-title" id="hero-title">
             <span class="hero-product-name">Sol-H3</span>
-            <span class="hero-product-claim"><em>AI-Native Full-Stack Acceleration</em> for MiniMax-H3 on NVIDIA Blackwell</span>
+            <span class="hero-product-claim"><em>Speed-of-Light MiniMax-H3</em> on an 8× NVIDIA B300 Blackwell System</span>
           </h1>
           <div class="hero-affiliation" aria-label="NVIDIA Research, Efficient AI Team and Singapore Lab">
             <span>NVIDIA Research, Efficient AI Team &amp; Singapore Lab.</span>
@@ -4248,9 +4308,13 @@
             <span class="hero-result-line accent"><strong>1.669s</strong><small>to infer.</small></span>
           </div>
           <p class="hero-dek">
-            <strong>Sol-H3 brings MiniMax-H3 video with native audio to 3.00× realtime on 8× NVIDIA B300—five seconds at 1344×768 in just 1.669 seconds.</strong>
-            Built on Hao AI Lab @ UCSD’s four-step <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3</a>, Sol-Engine × Sol-Attn co-optimizes sparse attention, fused kernels, Ulysses communication, VAE decoding, and serving as one AI-native full-stack runtime.
+            <strong>Sol-H3 generates MiniMax-H3 video with native audio faster than playback on one 8× NVIDIA B300 system.</strong>
+            Sol-Engine × Sol-Attn brings sparse attention, fused kernels, fast multi-GPU communication, and parallel video decoding into one runtime.
           </p>
+          <div class="model-compatibility">
+            <strong>Plug-and-play LoRAs</strong>
+            <p><a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3</a> is the default, not a requirement. Compatible MiniMax-H3 few-step LoRAs—including <a href="https://huggingface.co/lightx2v/Minimax-h3-Turbo" target="_blank" rel="noopener noreferrer">LightX2V’s open 4-step and 8-step Turbo LoRAs</a>—use the same Sol-H3 engine.</p>
+          </div>
           <div class="hero-actions">
             <a class="button primary" href="#performance">
               See the numbers
@@ -4260,8 +4324,9 @@
               MiniMax-H3 code
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
             </a>
-            <a class="button placeholder-link" href="" aria-disabled="true" data-placeholder-link title="Reactor online demo coming soon">
-              Reactor demo · soon
+            <a class="button" href="assets/sol-h3-prompts.json" download>
+              Prompts &amp; settings
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>
             </a>
           </div>
         </div>
@@ -4269,7 +4334,7 @@
           <div class="hero-visual" aria-label="Full-frame Sol-Engine generation preview">
           <div class="video-terminal">
             <video id="hero-video" poster="sol-h3-poster.jpg" autoplay muted loop controls playsinline preload="metadata" crossorigin="anonymous" aria-label="Sol-Engine generated video preview with playback and seek controls">
-              <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3/blog-assets/hero/sol-h3-niu-lai-promo-landscape-sol-attn-fasth3-hq.mp4" type="video/mp4">
+              <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3/blog-assets/hero/sol-h3-niu-lai-promo-b300-audited-ack-hq.mp4" type="video/mp4">
               Your browser does not support this MP4 preview.
             </video>
             <div class="terminal-top">
@@ -4297,21 +4362,21 @@
                 <span class="owner-team-divider" aria-hidden="true"></span>
                 <span class="owner-project">
                   <img class="owner-sana-logo" src="assets/owner-sana.png" alt="SANA">
-                  <span class="owner-sol-wordmark"><strong>Sol-Engine</strong><small>Full-Stack Runtime</small></span>
+                  <span class="owner-sol-wordmark"><strong>Sol-Engine</strong><small>Video Inference</small></span>
                 </span>
               </span>
             </a>
           </div>
           <div class="collaborator-logos">
-            <a class="collaborator-logo partner-hao" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer" aria-label="Hao AI Lab at UCSD — FastH3 source model">
+            <a class="collaborator-logo partner-hao" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer" aria-label="Hao AI Lab at UCSD — Default few-step model">
               <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-hao-ai-lab.png" alt="Hao AI Lab @ UCSD"></span></span>
-              <span class="partner-role">FastH3 source model</span>
+              <span class="partner-role">Default few-step model</span>
             </a>
             <a class="collaborator-logo partner-reactor" href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer" aria-label="Reactor — online demo coming soon">
               <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-reactor.png" alt=""></span><span class="partner-name">reactor</span></span>
               <span class="partner-role">Online demo · coming</span>
             </a>
-            <a class="collaborator-logo partner-humanize" href="https://github.com/PolyArch/humanize" target="_blank" rel="noopener noreferrer" aria-label="Humanize — operator optimization workflow">
+            <a class="collaborator-logo partner-humanize" href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer" aria-label="Humanize — operator optimization workflow">
               <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-humanize.svg" alt=""></span><span class="partner-name">Humanize</span></span>
               <span class="partner-role">Operator iteration</span>
             </a>
@@ -4319,9 +4384,18 @@
               <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-kda-hanlab.png" alt=""></span><span class="partner-name">KDA</span></span>
               <span class="partner-role">Kernel Design Agents</span>
             </a>
+            <a class="collaborator-logo partner-vdn" href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer" aria-label="Video DeltaNet at UC Berkeley — related MiniMax-H3 research">
+              <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-video-deltanet.png" alt=""></span><span class="partner-name">Video DeltaNet</span></span>
+              <span class="partner-role">UC Berkeley · related work</span>
+            </a>
           </div>
+          <a class="license-strip" href="https://github.com/NVlabs/Sana/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+            <strong>Deployment-friendly · Apache 2.0</strong>
+            <span>A permissive license for research, cloud platforms, and production services.</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+          </a>
           <p class="collaboration-statement">
-            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>, Sol-H3 uses <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab’s FastH3 four-step model</a> and works closely with <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> on a forthcoming online demo, while <a href="https://github.com/PolyArch/humanize" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> help extend Sol-Engine’s operator-optimization workflow. Together, we are shaping a fast, reproducible MiniMax-H3 runtime built for real deployment—not a one-off benchmark.
+            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>, Sol-H3 defaults to <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab’s four-step FastH3</a>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine.
           </p>
         </aside>
       </div>
@@ -4334,15 +4408,15 @@
           <div class="section-index">01</div>
           <div>
             <span class="section-kicker">Audited · 2026-09-04</span>
-            <h2 id="performance-title">Beyond realtime. Fully accounted.</h2>
+            <h2 id="performance-title">Faster than playback.</h2>
           </div>
-          <p>Sol-H3 generates 5 / 10 / 15 seconds of MiniMax-H3 video with native audio in 1.669 / 3.738 / 6.619 seconds: 3.00× / 2.67× / 2.27× realtime.</p>
+          <p>On one 8× NVIDIA B300 system, Sol-H3 generates MiniMax-H3 video with native audio at up to 3.00× realtime.</p>
         </header>
 
         <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="console-title">
           <div class="console-head">
             <div>
-              <div class="console-label">Ours · Sol-H3 · maximum-throughput profile</div>
+              <div class="console-label">Ours · Sol-H3 · fastest measured profile</div>
               <span id="console-title" class="section-kicker console-subtitle">Choose output length</span>
             </div>
             <div class="duration-tabs" role="tablist" aria-label="Video duration">
@@ -4380,13 +4454,13 @@
 
           <div class="console-foot">
             <span><strong>Included</strong> · prompt encode → denoise → video/audio decode</span>
-            <span id="console-status">3.00× realtime · only final MP4 encode excluded</span>
+            <span id="console-status">3.00× realtime · warm median</span>
           </div>
         </article>
 
         <div class="method-note reveal">
           <strong>Measured scope</strong>
-          <span>On one 8× NVIDIA B300 system, Sol-H3 records 1.669 / 3.738 / 6.619s for 5 / 10 / 15s at 124 / 243 / 362 frames. Each result follows one warmup and reports the median of three requests. Timing includes prompt encode, DiT denoise, VAE video decode, and native audio; only final MP4 encoding is excluded.</span>
+          <span>Each output length uses one warmup and the median of three measured requests on one 8× NVIDIA B300 system. Timing includes prompt encoding, diffusion denoising, VAE video decoding, and native audio. Final MP4 file encoding is excluded.</span>
         </div>
       </div>
     </section>
@@ -4396,10 +4470,10 @@
         <header class="section-head reveal">
           <div class="section-index">02</div>
           <div>
-            <span class="section-kicker">Curated showcase · 13 editor's picks</span>
-            <h2 id="comparison-title">Two worlds. One engine.</h2>
+            <span class="section-kicker">Selected Sol-H3 generations</span>
+            <h2 id="comparison-title">Sol-H3 video showcase.</h2>
           </div>
-          <p>Thirteen selected Sol-H3 scenes put motion, continuity, dialogue, ambient sound, and score on screen—two at a time.</p>
+          <p>Browse ten-second Sol-H3 videos with native audio, two examples at a time.</p>
         </header>
 
         <article class="comparison-lab reveal" id="comparison-lab" data-state="loading" aria-labelledby="comparison-showcase-title">
@@ -4407,18 +4481,18 @@
             <div class="comparison-case-heading">
               <div class="comparison-case-topline">
                 <span id="comparison-showcase-count">Loading showcase</span>
-                <span>Sol-H3 visual profile</span>
+                <span>Generated with Sol-H3</span>
               </div>
-              <h3 id="comparison-showcase-title">Editor's picks.</h3>
-              <p>Move through the curated set one scene at a time; two full renders stay visible.</p>
+              <h3 id="comparison-showcase-title">Selected examples.</h3>
+              <p>Use the arrows to move through the next two videos. Each prompt is available below its example.</p>
             </div>
             <div class="comparison-picker">
-              <label>Browse two-up gallery</label>
+              <label>Browse examples</label>
               <div class="comparison-picker-row">
                 <button class="comparison-nav-button" id="comparison-prev" type="button" aria-label="Previous two examples">←</button>
                 <div class="comparison-window-status" aria-live="polite">
                   <strong id="comparison-window-label">Preparing examples</strong>
-                  <small id="comparison-window-count">Window — / —</small>
+                  <small id="comparison-window-count">Page — / —</small>
                 </div>
                 <button class="comparison-nav-button" id="comparison-next" type="button" aria-label="Next two examples">→</button>
               </div>
@@ -4441,7 +4515,7 @@
                 <span id="comparison-left-seed">Seed —</span>
               </div>
               <div class="comparison-media" id="comparison-left-media" data-state="pending">
-                <video id="comparison-left-video" controls playsinline preload="metadata" aria-label="First Sol-H3 showcase video"></video>
+                <video id="comparison-left-video" controls playsinline preload="none" aria-label="First Sol-H3 showcase video"></video>
                 <div class="comparison-placeholder">
                   <span class="render-orbit" aria-hidden="true"></span>
                   <strong id="comparison-left-state">Preparing video</strong>
@@ -4474,7 +4548,7 @@
                 <span id="comparison-right-seed">Seed —</span>
               </div>
               <div class="comparison-media" id="comparison-right-media" data-state="pending">
-                <video id="comparison-right-video" controls playsinline preload="metadata" aria-label="Second Sol-H3 showcase video"></video>
+                <video id="comparison-right-video" controls playsinline preload="none" aria-label="Second Sol-H3 showcase video"></video>
                 <div class="comparison-placeholder">
                   <span class="render-orbit" aria-hidden="true"></span>
                   <strong id="comparison-right-state">Preparing video</strong>
@@ -4501,7 +4575,7 @@
 
         <div class="method-note reveal">
           <strong>Showcase profile</strong>
-          <span>Every sample uses Sol-H3 with the four-step FastH3 Dense/Data-Free adapter, BF16 Sol-Attn, and per-clip tiled VAE at 1344×768 with native audio. The headline latency uses the separate maximum-throughput profile.</span>
+          <span>Each ten-second sample is generated by Sol-H3 at 1344×768 with native audio, using the four-step FastH3 Dense/Data-Free adapter. Showcase settings differ from the speed benchmark above.</span>
         </div>
       </div>
     </section>
@@ -4511,28 +4585,27 @@
         <header class="section-head reveal">
           <div class="section-index">03</div>
           <div>
-            <span class="section-kicker">The dual core</span>
+            <span class="section-kicker">Two core systems</span>
             <h2 id="architecture-title">Sol-Engine × Sol-Attn.</h2>
           </div>
-          <p>Sol-Engine removes full-stack systems waste. Sol-Attn attacks the quadratic hotspot inside denoising.</p>
+          <p>Sol-Engine speeds up the complete inference pipeline. Sol-Attn selects attention blocks while the model runs, with no retraining.</p>
         </header>
 
         <div class="architecture-grid">
-          <div class="engine-map system-ring reveal" role="img" aria-label="Sol-Engine coordinates FastH3, Sol-Attn, fused kernels, eight-GPU Ulysses context parallelism, communication layout fusion, VAE parallelism, AdaLN precomputation, and CPU GPU overlap">
+          <div class="engine-map system-ring reveal" role="img" aria-label="Sol-Engine coordinates plug-and-play few-step LoRAs, Sol-Attn, fused kernels, eight-GPU Ulysses context parallelism, fused data exchange, parallel VAE decoding, and AdaLN precomputation">
             <div class="orbit" aria-hidden="true"></div>
             <div class="orbit inner" aria-hidden="true"></div>
             <div class="acceleration-ring" aria-hidden="true">
-              <span class="accel-node featured node-attn"><strong>Sol-Attn</strong><span>on-the-fly sparse</span></span>
-              <span class="accel-node node-fasth3"><strong>FastH3</strong><span>4-step model</span></span>
+              <span class="accel-node featured node-attn"><strong>Sol-Attn</strong><span>dynamic sparse attention</span></span>
+              <span class="accel-node node-fewstep"><strong>Few-step LoRA</strong><span>plug-and-play</span></span>
               <span class="accel-node node-fused"><strong>Fused kernels</strong><span>norm · RoPE · MLP</span></span>
-              <span class="accel-node node-ulysses"><strong>Ulysses / CP</strong><span>INT8 QKV · FP8 return</span></span>
-              <span class="accel-node node-layout"><strong>Comm + layout</strong><span>pack · A2A · merge</span></span>
-              <span class="accel-node node-vae"><strong>VAE parallel</strong><span>tile · batch · compile</span></span>
+              <span class="accel-node node-ulysses"><strong>8-GPU Ulysses</strong><span>context parallel</span></span>
+              <span class="accel-node node-layout"><strong>Fused data exchange</strong><span>INT8 QKV · FP8 output</span></span>
+              <span class="accel-node node-vae"><strong>Parallel VAE</strong><span>tiles · batches · compile</span></span>
               <span class="accel-node node-adaln"><strong>AdaLN</strong><span>precomputed</span></span>
-              <span class="accel-node node-overlap"><strong>CPU ↔ GPU</strong><span>request overlap</span></span>
             </div>
             <div class="engine-core">
-              <div class="core-copy"><small>8× B300 orchestrator</small><b>Sol-Engine</b><span>full-stack runtime</span></div>
+              <div class="core-copy"><small>8× B300 runtime</small><b>Sol-Engine</b><span>video inference</span></div>
             </div>
           </div>
 
@@ -4540,12 +4613,12 @@
             <article class="core-block">
               <span>01 · Sol-Engine</span>
               <h3>Make the whole system fast.</h3>
-              <p>One resident runtime co-designs kernels, communication, decode, compilation, and serving. The audited latency covers warm inference through decoded output; only final MP4 encoding is outside the number.</p>
+              <p>Sol-Engine keeps the model ready and coordinates GPU kernels, communication across eight GPUs, compilation, and video/audio decoding.</p>
             </article>
             <article class="core-block attention">
               <span>02 · Sol-Attn</span>
-              <h3>Collapse the quadratic hotspot.</h3>
-              <p>At τ=1.0, the first denoise step and first two layers stay dense. Routed blocks go to cuDNN BSA; skipped KV blocks use centroid residuals, with the maximum-throughput profile retaining the proven historical sink-query path.</p>
+              <h3>Select the blocks that matter.</h3>
+              <p>Sol-Attn scores key-value blocks as attention runs. Query-dependent thresholding selects the important blocks for sparse attention, while proxy scores cheaply account for the rest—all in one pass.</p>
             </article>
           </div>
         </div>
@@ -4557,45 +4630,45 @@
         <header class="section-head reveal">
           <div class="section-index">04</div>
           <div>
-            <span class="section-kicker">Seven passes · one runtime</span>
-            <h2 id="stack-title">Optimize what users wait for.</h2>
+            <span class="section-kicker">Six optimizations · one runtime</span>
+            <h2 id="stack-title">How Sol-H3 gets faster.</h2>
           </div>
-          <p>Sol-H3 spans compute, sparse routing, communication, decode, and serving; the headline selects its maximum-throughput path.</p>
+          <p>Sol-H3 speeds up attention, GPU kernels, multi-GPU communication, and video decoding. The benchmark uses its fastest configuration.</p>
         </header>
 
         <div class="bento">
           <article class="tech-card span-6 reveal" data-index="01">
-            <span class="tech-label">Kernel plane</span>
-            <h3>Fused kernels</h3>
-            <p>RMSNorm, modulation, residual gates, QKNorm/RoPE, and SwiGLU stay fused, removing about 178 GB of intermediate traffic per GPU per evaluation. <a href="https://github.com/PolyArch/humanize" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> supported the operator-tuning pass on top of Sol-Engine.</p>
+            <span class="tech-label">GPU kernels</span>
+            <h3>Fuse repeated operations</h3>
+            <p>Sol-H3 combines normalization, conditioning, position encoding (RoPE), and MLP work into fewer GPU kernels. This moves about 178 GB less intermediate data per GPU for a full model evaluation. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> supported this tuning.</p>
             <div class="tech-viz fusion-viz" aria-hidden="true"><div class="fusion-stack"><i></i><i></i><i></i><i></i></div><span class="fusion-arrow"></span><span class="fusion-one"></span></div>
           </article>
 
           <article class="tech-card span-6 reveal" data-index="02">
-            <span class="tech-label">Communication plane</span>
-            <h3>Quantized Ulysses, fused end to end</h3>
-            <p>The maximum-throughput profile fuses pack → all-to-all → decode → merge, moves QKV in INT8, and returns attention in FP8—cutting communication while retaining the eight-GPU Ulysses layout.</p>
+            <span class="tech-label">Multi-GPU communication</span>
+            <h3>Faster 8-GPU data exchange</h3>
+            <p>Sol-H3 fuses packing, the all-to-all GPU exchange, unpacking, and merging. It sends query/key/value (QKV) data in INT8 and returns attention results in FP8, reducing communication among eight GPUs.</p>
             <div class="tech-viz ulysses-viz" aria-hidden="true"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i></div>
           </article>
 
           <article class="tech-card span-7 reveal" data-index="03">
-            <span class="tech-label">Routing plane</span>
-            <h3>Metadata becomes one pass</h3>
-            <p>K-centroid/V-sum, route metadata, and the BSA mask fuse from 1.205872 to 0.285072 ms (−76.4%). Query reuse plus direct AdaLN indexing removes about 400 GPU <code>index_select</code> launches per request; a strided residual view cuts another 19.72% and stays bitwise equal.</p>
+            <span class="tech-label">Sparse-attention setup</span>
+            <h3>Fuse the setup work</h3>
+            <p>Sol-H3 builds key/value summaries, block metadata, and the attention mask together. This cuts setup from 1.206 to 0.285 ms (−76.4%). Reusing query summaries also avoids about 400 small GPU launches per request.</p>
             <div class="tech-viz route-viz" aria-hidden="true"><span><i style="--w:100%"></i><b>1.206 ms</b></span><span><i style="--w:24%"></i><b>0.285 ms</b></span></div>
           </article>
 
           <article class="tech-card span-5 reveal" data-index="04">
-            <span class="tech-label">Sparse-sink plane</span>
-            <h3>Keep critical work dense</h3>
-            <p>The first denoise step and first two layers remain dense. SOL/BSA sends routed blocks through cuDNN BSA and summarizes skipped KV blocks with centroid residuals while the headline profile keeps the historical sink-query path.</p>
+            <span class="tech-label">Sol-Attn</span>
+            <h3>No separate routing pass</h3>
+            <p>SOL chooses blocks and computes attention in the same pass, so it does not store a full score map or a separate block list in GPU memory.</p>
             <div class="tech-viz prefix-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </article>
 
           <article class="tech-card span-7 reveal" data-index="05">
-            <span class="tech-label">Decode plane</span>
-            <h3>VAE tile parallel + batch + compile</h3>
-            <p>Eight-way spatial tiling takes decode from 7.55 to 1.16 s; per-clip tile batching moves 1.1597 to 0.6021 s. The headline profile also enables global VAE batching to keep the decode path maximally occupied.</p>
+            <span class="tech-label">Video decoding</span>
+            <h3>Parallel VAE decoding</h3>
+            <p>Eight GPUs decode video tiles in parallel, reducing latency from 7.55 to 1.16 s. Batching each clip’s tiles lowers it again to 0.602 s; the fastest profile batches VAE work globally.</p>
             <div class="tech-viz tile-viz" aria-hidden="true">
               <i style="--p:1"></i><i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i>
               <i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i>
@@ -4605,9 +4678,9 @@
           </article>
 
           <article class="tech-card span-5 reveal" data-index="06">
-            <span class="tech-label">Conditioning plane</span>
-            <h3>AdaLN precompute</h3>
-            <p>Both conditioning trajectories are computed before denoising and served as indexed reads. The cache frees about 24 GB per GPU and avoids roughly 26 GB of HBM reads per step, with bitwise-consistent output.</p>
+            <span class="tech-label">Conditioning</span>
+            <h3>Precompute AdaLN</h3>
+            <p>Sol-H3 computes adaptive layer-normalization (AdaLN) values before denoising and reuses them from a cache at every step. This frees about 24 GB per GPU and avoids roughly 26 GB of GPU-memory reads per step without changing the output.</p>
             <div class="tech-viz adaln-viz" aria-hidden="true">
               <i style="--p:1"></i><i style="--p:5"></i><i style="--p:2"></i><i style="--p:7"></i><i style="--p:4"></i><i style="--p:9"></i>
               <i style="--p:6"></i><i style="--p:2"></i><i style="--p:8"></i><i style="--p:3"></i><i style="--p:10"></i><i style="--p:4"></i>
@@ -4615,30 +4688,16 @@
             </div>
           </article>
 
-          <article class="tech-card span-12 overlap-card reveal" data-index="07">
-            <span class="tech-label">Media plane</span>
-            <h3>CPU encode × next GPU request</h3>
-            <p>CUDA-to-pinned-memory staging and H.264/AAC export can run while the GPU starts the next queued generation.</p>
-            <div class="overlap-feature" aria-label="CPU encoding of request n overlaps GPU generation of request n plus one">
-              <div><span>CPU encode · request n</span><i></i></div>
-              <div><span>GPU generate · request n+1</span><i></i></div>
-            </div>
-            <p class="overlap-verdict"><strong>Serving optimization, not benchmark padding.</strong> The B300 latency above excludes only final MP4 encoding; overlap is enabled only when the serving profile improves.</p>
-          </article>
         </div>
 
         <div class="release-contract reveal" aria-label="Measured Sol-H3 profile">
           <span>Audited T2V</span>
           <span>5 / 10 / 15 seconds</span>
           <span>1344×768 · 24 FPS</span>
-          <span>INT8 QKV · FP8 return</span>
+          <span>INT8 QKV · FP8 attention output</span>
           <span>8× NVIDIA B300</span>
         </div>
 
-        <aside class="related-work reveal" aria-labelledby="related-work-title">
-          <div><span class="tech-label" id="related-work-title">Related work</span></div>
-          <p>MiniMax-H3 acceleration spans <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3’s four-step distillation</a> and <a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet’s hybrid attention</a>. Sol-H3 composes model, attention, kernel, communication, VAE, and serving work into one Sol-Engine × Sol-Attn runtime.</p>
-        </aside>
       </div>
     </section>
 
@@ -4650,24 +4709,32 @@
             <span class="section-kicker">Future Plan</span>
             <h2 id="future-title">Where Sol-H3 goes next.</h2>
           </div>
-          <p>Two focused extensions carry the same Sol-Engine × Sol-Attn full-stack approach into new ways to create and experience video.</p>
+          <p>Sol-H3 is moving toward reference-guided generation, continuous 24 FPS output, and direct real-time interaction.</p>
         </header>
 
         <div class="future-grid">
           <article class="future-card reveal" data-index="01">
             <span class="future-status">In development</span>
-            <span class="future-label">Reference-conditioned generation</span>
-            <h3>Ref2AV, accelerated end to end.</h3>
-            <p>Extend Sol-H3 to reference-to-video-and-audio generation, co-optimizing the full path from visual conditioning through video and native-audio output.</p>
-            <span class="future-flow">Reference → video + native audio</span>
+            <span class="future-label">Reference-guided generation</span>
+            <h3>Ref2AV</h3>
+            <p>Generate video and native audio from a reference image or video, with Sol-Engine optimizing the complete inference path.</p>
+            <span class="future-flow">Reference → video + audio</span>
           </article>
 
           <article class="future-card reveal" data-index="02">
+            <span class="future-status">Research direction</span>
+            <span class="future-label">Continuous generation</span>
+            <h3>24 FPS live streaming</h3>
+            <p>Generate and deliver video with native audio chunk by chunk, preserve context between chunks, and target smooth 24 FPS playback.</p>
+            <span class="future-flow">Generate → decode → stream</span>
+          </article>
+
+          <article class="future-card reveal" data-index="03">
             <span class="future-status">Coming next</span>
             <span class="future-label">Interactive access</span>
-            <h3>Sol-H3 online, with Reactor.</h3>
-            <p>Bring the release into a hands-on Reactor experience so creators can explore Sol-H3 directly in the browser.</p>
-            <span class="future-flow">Browser → Reactor → Sol-H3</span>
+            <h3>Real-time interactive demo</h3>
+            <p>With Reactor, let users update a prompt or reference input and see the next generated segment respond without restarting the session.</p>
+            <span class="future-flow">New input → next video segment</span>
           </article>
         </div>
       </div>
@@ -4686,16 +4753,17 @@
               <span class="contributor-name">Junsong Chen</span>
               <span class="contributor-name">Yitong Li</span>
               <span class="contributor-name">Haopeng Li</span>
+              <span class="contributor-name">Haocheng Xi</span>
               <span class="contributor-name">Song Han</span>
               <span class="contributor-name">Enze Xie</span>
             </span>
           </div>
           <ul class="acknowledgement-list">
             <li><a class="ack-entity" href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax</a><span class="ack-role">MiniMax-H3 open weights and code.</span></li>
-            <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">FastH3 Preview v1, the four-step model used by Sol-H3.</span></li>
+            <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">FastH3 Preview v1, the default four-step model in this release.</span></li>
             <li><a class="ack-entity" href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a><span class="ack-role">Forthcoming online demo and deployment collaboration.</span></li>
-            <li><span class="ack-entity"><a href="https://github.com/PolyArch/humanize" target="_blank" rel="noopener noreferrer">Humanize</a> + <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a></span><span class="ack-role">Operator and fused-kernel optimization on top of Sol-Engine.</span></li>
-            <li><a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a><span class="ack-role">Ref2AV workflow used by Sol-Engine for the featured sample.</span></li>
+            <li><span class="ack-entity"><a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> + <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a></span><span class="ack-role">Operator and fused-kernel optimization on top of Sol-Engine.</span></li>
+            <li><a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a><span class="ack-role">Open MiniMax-H3 Turbo LoRAs and the Ref2AV workflow used by Sol-Engine.</span></li>
             <li><a class="ack-entity" href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet · UC Berkeley</a><span class="ack-role">Complementary hybrid-attention work for MiniMax-H3.</span></li>
           </ul>
         </article>
@@ -4709,7 +4777,7 @@
           <div class="citation-window">
             <div class="citation-bar"><span>BibTeX · Release + core papers</span><button class="copy-code" type="button" data-copy-target="solh3-citation" aria-live="polite">Copy all BibTeX</button></div>
             <pre><code id="solh3-citation">@misc{solh3_2026,
-  title        = {Sol-H3: AI-Native Full-Stack Acceleration for MiniMax-H3 on NVIDIA Blackwell},
+  title        = {Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System},
   author       = {{NVIDIA Research, Efficient AI Team \&amp; Singapore Lab}},
   year         = {2026},
   howpublished = {\url{https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/}},
@@ -4745,7 +4813,7 @@
     <section class="finale" aria-labelledby="finale-title">
       <div class="finale-rings" aria-hidden="true"></div>
       <div class="finale-copy reveal">
-        <span class="section-kicker">Sol-H3 · Full-Stack Inference</span>
+        <span class="section-kicker">Sol-H3 · MiniMax-H3 Inference</span>
         <h2 id="finale-title">Less waiting.<span>More world.</span></h2>
       </div>
     </section>
@@ -4756,7 +4824,7 @@
       <div class="footer-grid">
         <div class="footer-brand">
           <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>Sol-H3</span></a>
-          <p>An AI-native, full-stack acceleration framework for efficient video diffusion inference.</p>
+          <p>A high-performance inference framework for video diffusion models.</p>
           <div class="footer-affiliation">NVIDIA Research<br>Efficient AI Team &amp; Singapore Lab</div>
         </div>
         <div class="references">
@@ -4767,11 +4835,11 @@
             <li><span>03</span><div><a href="https://huggingface.co/FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA/tree/main/dense-datafree" target="_blank" rel="noopener noreferrer">FastH3 Preview v1 · Dense/Data-Free</a> — the four-step Hao AI Lab @ UCSD adapter used in this release.</div></li>
             <li><span>04</span><div><a href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax-H3</a> — official open-weight base model.</div></li>
             <li><span>05</span><div><a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet on MiniMax H3</a> — a complementary near-lossless hybrid-attention approach.</div></li>
-            <li><span>06</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — Ref2AV inference support used by Sol-Engine for the featured four-step MiniMax-H3 video.</div></li>
+            <li><span>06</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — open MiniMax-H3 Turbo LoRAs and Ref2AV support used by Sol-Engine.</div></li>
           </ol>
         </div>
       </div>
-      <div class="footer-bottom"><span>© 2026 NVIDIA Corporation</span><a href="https://github.com/NVlabs/Sana/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Code license · Apache 2.0</a><span>Benchmarks: warm · synchronized median · MP4 encode excluded</span></div>
+      <div class="footer-bottom"><span>© 2026 NVIDIA Corporation</span><a href="https://github.com/NVlabs/Sana/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Code license · Apache 2.0</a><span>Benchmarks: warm · synchronized median</span></div>
     </div>
   </footer>
 
@@ -4840,6 +4908,28 @@
       document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
 
       const navLinks = [...document.querySelectorAll('.nav-links a')];
+      const navMenuToggle = document.getElementById('nav-menu-toggle');
+      const closeNavMenu = () => {
+        header.classList.remove('menu-open');
+        navMenuToggle.setAttribute('aria-expanded', 'false');
+        navMenuToggle.setAttribute('aria-label', 'Open section menu');
+      };
+      navMenuToggle.addEventListener('click', () => {
+        const open = !header.classList.contains('menu-open');
+        header.classList.toggle('menu-open', open);
+        navMenuToggle.setAttribute('aria-expanded', String(open));
+        navMenuToggle.setAttribute('aria-label', open ? 'Close section menu' : 'Open section menu');
+      });
+      navLinks.forEach((link) => link.addEventListener('click', closeNavMenu));
+      document.addEventListener('click', (event) => {
+        if (!header.contains(event.target)) closeNavMenu();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeNavMenu();
+      });
+      addEventListener('resize', () => {
+        if (innerWidth > 980) closeNavMenu();
+      }, { passive: true });
       const navSections = navLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
       const navObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
@@ -4859,7 +4949,7 @@
           frames: 243,
           output: 10,
           sol: 3.738,
-          rate: 2.67496
+          rateLabel: '2.67'
         },
         15: {
           frames: 362,
@@ -4881,17 +4971,17 @@
 
       const selectBenchmark = (duration) => {
         const data = benchmarks[duration];
-        const rate = data.rate ?? data.output / data.sol;
+        const rate = data.rateLabel ?? (data.output / data.sol).toFixed(2);
         tabs.forEach((tab) => tab.setAttribute('aria-selected', String(Number(tab.dataset.duration) === duration)));
         fields.latency.textContent = data.sol.toFixed(3);
         fields.frames.textContent = data.frames;
-        fields.rate.textContent = `${rate.toFixed(2)}×`;
+        fields.rate.textContent = `${rate}×`;
         const chartMax = Math.max(data.output, data.sol);
         fields.outputBar.style.setProperty('--w', `${data.output / chartMax * 100}%`);
         fields.solBar.style.setProperty('--w', `${data.sol / chartMax * 100}%`);
         fields.clipTime.textContent = `${data.output.toFixed(2)} s`;
         fields.solTime.textContent = `${data.sol.toFixed(3)} s`;
-        fields.status.textContent = `${rate.toFixed(2)}× realtime · only final MP4 encode excluded`;
+        fields.status.textContent = `${rate}× realtime · warm median`;
       };
       tabs.forEach((tab) => tab.addEventListener('click', () => selectBenchmark(Number(tab.dataset.duration))));
       selectBenchmark(5);
@@ -4905,6 +4995,7 @@
           label: document.getElementById('comparison-window-label'),
           window: document.getElementById('comparison-window-count')
         };
+        const comparisonGrid = comparisonLab.querySelector('.comparison-grid');
         const makeSlot = (side) => ({
           pane: document.getElementById(`comparison-${side}-pane`),
           number: document.getElementById(`comparison-${side}-number`),
@@ -4933,35 +5024,37 @@
         const resolveMediaPath = (path) => comparisonMediaBase ? new URL(path, comparisonMediaBase).href : path;
         const resetVideo = (target) => {
           target.video.pause();
-          target.video.onloadedmetadata = null;
           target.video.onerror = null;
           target.video.removeAttribute('src');
+          target.video.removeAttribute('poster');
           target.video.removeAttribute('data-expected');
+          target.video.preload = 'none';
           target.video.load();
         };
         const configureVideo = (caseData, target) => {
           resetVideo(target);
-          const path = caseData.videos?.sol_h3 || '';
-          const resolvedPath = path ? resolveMediaPath(path) : '';
-          const ready = comparisonAllReady || caseData.videos?.sol_h3_ready === true;
-          target.file.textContent = fileName(path);
-          if (!ready || !resolvedPath) {
+          const media = caseData.media || {};
+          const webPath = media.web_mp4 || '';
+          const posterPath = media.poster || '';
+          const originalPath = media.original_mp4 || '';
+          const resolvedVideo = webPath ? resolveMediaPath(webPath) : '';
+          const resolvedPoster = posterPath ? resolveMediaPath(posterPath) : '';
+          target.file.textContent = fileName(originalPath || webPath);
+          if (!comparisonAllReady || !resolvedVideo || !resolvedPoster) {
             target.root.dataset.state = 'pending';
             target.state.textContent = 'Awaiting video upload';
             return;
           }
-          target.root.dataset.state = 'loading';
-          target.state.textContent = 'Loading render';
-          target.video.dataset.expected = resolvedPath;
-          target.video.onloadedmetadata = () => {
-            if (target.video.dataset.expected === resolvedPath) target.root.dataset.state = 'ready';
-          };
+          target.root.dataset.state = 'ready';
+          target.state.textContent = 'Ready to play';
+          target.video.dataset.expected = resolvedVideo;
+          target.video.poster = resolvedPoster;
           target.video.onerror = () => {
-            if (target.video.dataset.expected !== resolvedPath) return;
-            target.root.dataset.state = 'missing';
-            target.state.textContent = 'Video unavailable';
+            if (target.video.dataset.expected !== resolvedVideo) return;
+            target.video.title = 'Playback is unavailable in this browser; the full-resolution poster remains visible.';
           };
-          target.video.src = resolvedPath;
+          target.video.src = resolvedVideo;
+          target.video.preload = 'none';
           target.video.load();
         };
         const renderSlot = (caseData, target, displayIndex) => {
@@ -4979,17 +5072,26 @@
           configureVideo(caseData, target);
         };
         const renderComparison = (index) => {
-          if (comparisonCases.length < 2) return;
-          const lastWindow = comparisonCases.length - 2;
-          activeComparison = Math.min(Math.max(index, 0), lastWindow);
-          const leftCase = comparisonCases[activeComparison];
-          const rightCase = comparisonCases[activeComparison + 1];
-          renderSlot(leftCase, slots.left, activeComparison + 1);
-          renderSlot(rightCase, slots.right, activeComparison + 2);
-          showcaseFields.label.textContent = `Examples ${String(activeComparison + 1).padStart(2, '0')} + ${String(activeComparison + 2).padStart(2, '0')}`;
-          showcaseFields.window.textContent = `Window ${String(activeComparison + 1).padStart(2, '0')} / ${String(lastWindow + 1).padStart(2, '0')}`;
+          if (!comparisonCases.length) return;
+          const pageCount = Math.ceil(comparisonCases.length / 2);
+          const lastPage = pageCount - 1;
+          activeComparison = Math.min(Math.max(index, 0), lastPage);
+          const leftIndex = activeComparison * 2;
+          const rightIndex = leftIndex + 1;
+          const leftCase = comparisonCases[leftIndex];
+          const rightCase = comparisonCases[rightIndex];
+          renderSlot(leftCase, slots.left, leftIndex + 1);
+          slots.right.pane.hidden = !rightCase;
+          comparisonLab.dataset.layout = rightCase ? 'pair' : 'single';
+          comparisonGrid.setAttribute('aria-label', rightCase ? 'Two Sol-H3 showcase examples' : 'One Sol-H3 showcase example');
+          if (rightCase) renderSlot(rightCase, slots.right, rightIndex + 1);
+          else resetVideo(slots.right);
+          const leftLabel = String(leftIndex + 1).padStart(2, '0');
+          const rightLabel = String(rightIndex + 1).padStart(2, '0');
+          showcaseFields.label.textContent = rightCase ? `Examples ${leftLabel} + ${rightLabel}` : `Example ${leftLabel}`;
+          showcaseFields.window.textContent = `Page ${String(activeComparison + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')}`;
           previousComparison.disabled = activeComparison === 0;
-          nextComparison.disabled = activeComparison === lastWindow;
+          nextComparison.disabled = activeComparison === lastPage;
         };
 
         previousComparison.disabled = true;
@@ -5003,28 +5105,32 @@
             return response.json();
           })
           .then((manifest) => {
-            if (!Array.isArray(manifest.cases) || manifest.cases.length !== 20) {
-              throw new Error('Prompt manifest must contain exactly 20 cases');
+            if (!Array.isArray(manifest.cases) || manifest.cases.length === 0) {
+              throw new Error('Prompt manifest must contain at least one example');
             }
+            const ids = manifest.cases.map((caseData) => caseData.id);
+            if (ids.some((id) => typeof id !== 'string' || !id) || new Set(ids).size !== ids.length) {
+              throw new Error('Showcase example IDs must be present and unique');
+            }
+            const mediaIsValid = manifest.cases.every((caseData) => {
+              const media = caseData.media || {};
+              return caseData.title && caseData.prompt && media.web_mp4 && media.poster && media.original_mp4;
+            });
+            if (!mediaIsValid) throw new Error('Every showcase example needs web, poster, and original media paths');
             const publication = manifest.publication || {};
             comparisonMediaBase = publication.media_base_url || '';
+            const count = manifest.cases.length;
             comparisonAllReady = publication.status === 'complete'
-              && publication.validated_pairs === 20
-              && publication.validated_files === 40;
-            if (comparisonAllReady && !comparisonMediaBase.startsWith('https://')) {
+              && publication.validated_examples === count
+              && publication.original_videos === count
+              && publication.web_videos === count
+              && publication.posters === count;
+            if (!comparisonAllReady) throw new Error('Published media counts must match the showcase examples');
+            if (!comparisonMediaBase.startsWith('https://')) {
               throw new Error('Complete publication requires an HTTPS media base URL');
             }
-            const featuredIds = publication.featured_case_ids;
-            if (!Array.isArray(featuredIds) || featuredIds.length !== 13 || new Set(featuredIds).size !== 13) {
-              throw new Error('Showcase must contain exactly 13 unique examples');
-            }
-            const casesById = new Map(manifest.cases.map((caseData) => [caseData.id, caseData]));
-            comparisonCases = featuredIds.map((id) => {
-              const caseData = casesById.get(id);
-              if (!caseData) throw new Error(`Unknown showcase example: ${id}`);
-              return caseData;
-            });
-            showcaseFields.count.textContent = `${comparisonCases.length} selected examples`;
+            comparisonCases = manifest.cases;
+            showcaseFields.count.textContent = comparisonCases.length + ' selected examples';
             comparisonLab.dataset.state = 'ready';
             renderComparison(0);
           })
@@ -5038,9 +5144,6 @@
           });
       }
 
-      document.querySelectorAll('[data-placeholder-link]').forEach((link) => {
-        link.addEventListener('click', (event) => event.preventDefault());
-      });
 
       document.querySelectorAll('.copy-code').forEach((copyButton) => {
         const idleLabel = copyButton.textContent;

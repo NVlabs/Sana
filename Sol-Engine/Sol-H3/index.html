@@ -2892,7 +2892,7 @@
     .collaborator-heading strong { color: var(--fog); font-weight: 760; }
     .collaborator-logos {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
       margin-top: 8px;
     }
@@ -2949,9 +2949,6 @@
       background: rgba(255, 255, 255, .05);
     }
     .partner-logo-box img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-    .partner-hao .partner-lockup { min-height: 41px; }
-    .partner-hao .partner-logo-box { width: 182px; height: 41px; border: 0; border-radius: 0; background: transparent; }
-    .partner-hao .partner-logo-box img { width: 100%; height: auto; }
     .partner-reactor .partner-logo-box { background: #e5ddba; }
     .partner-reactor .partner-logo-box img { width: 100%; height: 100%; }
     .partner-humanize .partner-logo-box img { width: 32px; height: 32px; }
@@ -4232,8 +4229,8 @@
 
           <div class="hero-visual" aria-label="Full-frame Sol-Engine generation preview">
           <div class="video-terminal">
-            <video id="hero-video" poster="sol-h3-poster.jpg" autoplay muted loop controls playsinline preload="metadata" crossorigin="anonymous" aria-label="Sol-Engine generated video preview with playback and seek controls">
-              <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3/blog-assets/hero/sol-h3-niu-lai-promo-b300-audited-ack-hq.mp4" type="video/mp4">
+            <video id="hero-video" poster="sol-h3-poster.jpg?v=v6" autoplay muted loop controls playsinline preload="metadata" crossorigin="anonymous" aria-label="Sol-Engine generated video preview with playback and seek controls">
+              <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3/blog-assets/hero/sol-h3-niu-lai-promo-official-ref2va50-b300-audited-ack-hq.mp4?v=v6" type="video/mp4">
               Your browser does not support this MP4 preview.
             </video>
             <div class="terminal-top">
@@ -4242,7 +4239,7 @@
             </div>
           </div>
           <div class="video-credit">
-            <span class="video-credit-copy">Featured sample · Sol-Engine uses <a href="https://github.com/ModelTC/LightX2V/blob/main/scripts/minimax_h3/run_minimax_h3_ref2av.sh" target="_blank" rel="noopener noreferrer">LightX2V Ref2AV</a>.</span>
+            <span class="video-credit-copy">Featured sample · Official MiniMax-H3 Ref2AV weights · 50 steps.</span>
           </div>
           </div>
         </div>
@@ -4262,10 +4259,6 @@
             </a>
           </div>
           <div class="collaborator-logos">
-            <a class="collaborator-logo partner-hao" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer" aria-label="Hao AI Lab at UCSD — Default few-step model">
-              <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-hao-ai-lab.png" alt="Hao AI Lab @ UCSD"></span></span>
-              <span class="partner-role">Default few-step model</span>
-            </a>
             <a class="collaborator-logo partner-reactor" href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer" aria-label="Reactor — online demo coming soon">
               <span class="partner-lockup"><span class="partner-logo-box"><img src="assets/partner-reactor.png" alt=""></span><span class="partner-name">reactor</span></span>
               <span class="partner-role">Online demo · coming</span>
@@ -4289,7 +4282,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
           </a>
           <p class="collaboration-statement">
-            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>, Sol-H3 defaults to <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab’s four-step FastH3</a>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine. Compatible MiniMax-H3 few-step LoRAs—including <a href="https://huggingface.co/lightx2v/Minimax-h3-Turbo" target="_blank" rel="noopener noreferrer">LightX2V’s open 4-step and 8-step Turbo LoRAs</a>—plug into the same Sol-H3 engine.
+            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine. Compatible MiniMax-H3 few-step LoRAs—including <a href="https://huggingface.co/lightx2v/Minimax-h3-Turbo" target="_blank" rel="noopener noreferrer">LightX2V’s open 4-step and 8-step Turbo LoRAs</a>—plug into the same Sol-H3 engine.
           </p>
         </aside>
       </div>
@@ -4469,7 +4462,7 @@
 
         <div class="method-note reveal">
           <strong>Showcase profile</strong>
-          <span>Each ten-second sample is generated by Sol-H3 at 1344×768 with native audio, using the four-step FastH3 Dense/Data-Free adapter. Showcase settings differ from the speed benchmark above.</span>
+          <span>Each ten-second sample is generated by Sol-H3 at 1344×768 with native audio, using the default four-step Dense/Data-Free adapter.</span>
         </div>
       </div>
     </section>
@@ -4654,11 +4647,11 @@
           </div>
           <ul class="acknowledgement-list">
             <li><a class="ack-entity" href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax</a><span class="ack-role">MiniMax-H3 open weights and code.</span></li>
-            <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">FastH3 Preview v1, the default four-step model in this release.</span></li>
             <li><a class="ack-entity" href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a><span class="ack-role">Forthcoming online demo and deployment collaboration.</span></li>
             <li><span class="ack-entity"><a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> + <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a></span><span class="ack-role">Operator and fused-kernel optimization on top of Sol-Engine.</span></li>
             <li><a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a><span class="ack-role">Open MiniMax-H3 Turbo LoRAs and the Ref2AV workflow used by Sol-Engine.</span></li>
             <li><a class="ack-entity" href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet · UC Berkeley</a><span class="ack-role">Complementary hybrid-attention work for MiniMax-H3.</span></li>
+            <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">Default FastH3 four-step model.</span></li>
           </ul>
         </article>
 
@@ -4726,10 +4719,9 @@
           <ol class="reference-list">
             <li><span>01</span><div><a href="https://arxiv.org/abs/2606.23743" target="_blank" rel="noopener noreferrer">Sol Video Inference Engine: Agent-Native Full-Stack Acceleration</a> — paper and <a href="https://nvlabs.github.io/Sana/Sol-Engine/" target="_blank" rel="noopener noreferrer">project page</a>.</div></li>
             <li><span>02</span><div><a href="https://arxiv.org/abs/2607.24027" target="_blank" rel="noopener noreferrer">Sol-Attn: Accelerating Video Generation Inference via On-the-Fly Attention Sparsification</a>.</div></li>
-            <li><span>03</span><div><a href="https://huggingface.co/FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA/tree/main/dense-datafree" target="_blank" rel="noopener noreferrer">FastH3 Preview v1 · Dense/Data-Free</a> — the four-step Hao AI Lab @ UCSD adapter used in this release.</div></li>
-            <li><span>04</span><div><a href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax-H3</a> — official open-weight base model.</div></li>
-            <li><span>05</span><div><a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet on MiniMax H3</a> — a complementary near-lossless hybrid-attention approach.</div></li>
-            <li><span>06</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — open MiniMax-H3 Turbo LoRAs and Ref2AV support used by Sol-Engine.</div></li>
+            <li><span>03</span><div><a href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax-H3</a> — official open-weight base model.</div></li>
+            <li><span>04</span><div><a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet on MiniMax H3</a> — a complementary near-lossless hybrid-attention approach.</div></li>
+            <li><span>05</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — open MiniMax-H3 Turbo LoRAs and Ref2AV support used by Sol-Engine.</div></li>
           </ol>
         </div>
       </div>

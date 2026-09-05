@@ -224,7 +224,7 @@ image[0].save("sana.png")
 - [Sana Inference & Training](https://nvlabs.github.io/Sana/docs/sana/)
 - [SANA-Sprint](https://nvlabs.github.io/Sana/docs/sana_sprint/)
 - [SANA-Video](https://nvlabs.github.io/Sana/docs/sana_video/)
-- [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/) ([Project](https://nvlabs.github.io/Sana/Video2/) · [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo))
+- [SANA-Video 2.0](https://nvlabs.github.io/Sana/docs/sana_video2/)
 - [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/)
 - [SANA-WM](https://nvlabs.github.io/Sana/docs/sana_wm/)
 - [SANA-Streaming](https://nvlabs.github.io/Sana/docs/sana_streaming/)
@@ -248,13 +248,16 @@ image[0].save("sana.png")
 | **[Sana-1.5 1.6B](https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers)** | 1.0 | 1.2 | 1.6 | 23.3× | <u>5.70</u> | <u>29.12</u> | **0.82** | <u>84.5</u> |
 | **[Sana-1.5 4.8B](https://huggingface.co/Efficient-Large-Model/SANA1.5_4.8B_1024px_diffusers)** | 0.26 | 4.2 | 4.8 | 6.5× | 5.99 | **29.23** | <u>0.81</u> | **84.7** |
 
-### Video Generation (VBench 720p)
+### Video Generation (VBench)
 
-| Models | Latency (s) | Params (B) | VBench Total ↑ | Quality ↑ | Semantic ↑ |
-|--------|-------------|------------|----------------|-----------|------------|
-| Wan-2.1-14B | 1897 | 14 | 83.73 | 85.77 | 75.58 |
-| Wan-2.1-1.3B | 400 | 1.3 | 83.38 | 85.67 | 74.22 |
-| **SANA-Video-2B** | **36** | **2** | **84.05** | 84.63 | **81.73** |
+| Models | Evaluation setting | Latency (s) | Params (B) | VBench Total ↑ | Quality ↑ | Semantic ↑ |
+|--------|--------------------|-------------|------------|----------------|-----------|------------|
+| Wan-2.1-14B | 720p | 1897 | 14 | 83.73 | 85.77 | 75.58 |
+| Wan-2.1-1.3B | 720p | 400 | 1.3 | 83.38 | 85.67 | 74.22 |
+| **SANA-Video-2B** | 720p | **36** | **2** | 84.05 | 84.63 | **81.73** |
+| **[SANA-Video 2.0 5B](https://arxiv.org/abs/2607.21553)** | 480×832×81 | **13.2** | 5 | **84.30** | **85.61** | 79.05 |
+
+SANA-Video 2.0 results follow the paper's 40-step, single-H100 VBench protocol. At 736×1280×81, its end-to-end latency is 30.9 seconds on one H100.
 
 # 💪To-Do List
 

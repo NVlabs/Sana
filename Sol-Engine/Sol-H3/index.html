@@ -404,37 +404,6 @@
 
     .hero-dek strong { color: var(--white); font-weight: 760; }
 
-    .model-compatibility {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 12px;
-      align-items: start;
-      margin-top: 20px;
-      padding: 13px 15px;
-      border: 1px solid var(--line-bright);
-      border-radius: 9px;
-      background: rgba(118, 185, 0, .055);
-      color: var(--fog);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .model-compatibility > strong {
-      color: var(--acid);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .07em;
-      line-height: 1.75;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .model-compatibility p { margin: 0; }
-    .model-compatibility a { color: var(--white); font-weight: 700; }
-
-    @media (max-width: 520px) {
-      .model-compatibility { grid-template-columns: 1fr; gap: 5px; }
-    }
 
     .hero-actions {
       display: flex;
@@ -666,52 +635,6 @@
       background: rgba(167, 255, 46, .42);
     }
 
-    .hero-stats {
-      position: relative;
-      z-index: 6;
-      width: calc(100% - 46px);
-      margin: -28px auto 0;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: rgba(8, 12, 8, .88);
-      box-shadow: 0 20px 55px rgba(0, 0, 0, .42);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    .hero-stat {
-      min-width: 0;
-      padding: 14px 14px 13px;
-      border-right: 1px solid var(--line);
-    }
-
-    .hero-stat:last-child { border-right: 0; }
-
-    .hero-stat b {
-      display: block;
-      color: var(--white);
-      font-size: 19px;
-      font-weight: 820;
-      line-height: 1.05;
-      letter-spacing: -.035em;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .hero-stat:first-child b { color: var(--acid); }
-
-    .hero-stat span {
-      display: block;
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: .085em;
-      line-height: 1.35;
-      text-transform: uppercase;
-    }
 
     .scroll-cue {
       position: absolute;
@@ -2572,7 +2495,6 @@
 
     @media (max-width: 1180px) {
       .hero-grid { grid-template-columns: minmax(0, .94fr) minmax(470px, 1.06fr); gap: 40px; }
-      .hero-stats { width: calc(100% - 28px); }
       .architecture-grid { grid-template-columns: 1fr; }
       .architecture-copy { max-width: 760px; margin: 0 auto; }
       .engine-map { width: min(100%, 720px); margin: 0 auto; }
@@ -2648,10 +2570,6 @@
       .terminal-code { display: none; }
       .terminal-caption strong { font-size: 13px; }
       .sound-toggle { width: 38px; height: 38px; }
-      .hero-stats { width: calc(100% - 18px); grid-template-columns: 1fr 1fr; margin-top: -12px; }
-      .hero-stat { border-bottom: 1px solid var(--line); }
-      .hero-stat:nth-child(2) { border-right: 0; }
-      .hero-stat:nth-child(3), .hero-stat:nth-child(4) { border-bottom: 0; }
       .section { padding: 90px 0; }
       .manifesto { padding-block: 90px; }
       .section-head { grid-template-columns: 1fr; gap: 15px; margin-bottom: 45px; }
@@ -2705,7 +2623,6 @@
     @media (max-width: 420px) {
       .brand { font-size: 11px; }
       .brand-mark { width: 27px; height: 27px; }
-      .hero-stats { width: 100%; }
       .benchmark-cards { grid-template-columns: 1fr; }
       .benchmark-card { min-height: 125px; }
       .engine-map { min-height: 450px; transform: scale(.9); margin-block: -22px; }
@@ -2737,10 +2654,6 @@
     .live-pill, .terminal-code { font-size: 11px; }
     .terminal-caption span { font-size: 11px; }
     .terminal-caption strong { font-size: 17px; }
-    .hero-stats { grid-template-columns: repeat(3, 1fr); }
-    .hero-stat { padding: 17px 18px 16px; }
-    .hero-stat b { font-size: 22px; }
-    .hero-stat span { font-size: 11px; line-height: 1.4; }
     .scroll-cue { display: none; }
 
     .section { padding: clamp(86px, 9vw, 126px) 0; }
@@ -2814,11 +2727,6 @@
       .live-pill { font-size: 10px; }
       .terminal-caption span { font-size: 10px; }
       .terminal-caption strong { font-size: 15px; }
-      .hero-stats { grid-template-columns: repeat(3, 1fr); }
-      .hero-stat { padding: 14px 7px; border-bottom: 0; }
-      .hero-stat:nth-child(2) { border-right: 1px solid var(--line); }
-      .hero-stat b { font-size: 18px; }
-      .hero-stat span { font-size: 10px; letter-spacing: .045em; }
       .section { padding: 76px 0; }
       .section-index, .section-kicker { font-size: 11px; }
       .section-head > p { font-size: 17px; }
@@ -2863,7 +2771,7 @@
     /* Readability floor for every visible label. */
     .hero-title-line.version small { font-size: clamp(12px, .19em, 18px); }
     .live-pill, .terminal-code, .terminal-caption span,
-    .hero-stat span, .section-index, .section-kicker,
+    .section-index, .section-kicker,
     .console-label, .readout-big small, .readout-meta small,
     .time-label, .time-number, .method-note strong,
     .core-copy small, .core-copy span, .attn-satellite,
@@ -2874,7 +2782,7 @@
 
     @media (max-width: 720px) {
       .eyebrow, .live-pill, .terminal-caption span,
-      .hero-stat span, .section-index, .section-kicker,
+      .section-index, .section-kicker,
       .console-label, .duration-tab,
       .readout-big small, .readout-meta small,
       .time-label, .time-number, .method-note strong,
@@ -2940,7 +2848,6 @@
       text-underline-offset: 3px;
     }
     .video-credit a:hover { color: var(--mint); }
-    .hero-stats { width: 100%; margin: 10px auto 0; }
 
     .collaborator-rail {
       margin-top: 34px;
@@ -4101,10 +4008,6 @@
       .live-pill,
       .terminal-code,
       .sound-toggle { color: #fff; }
-      .hero-stats {
-        background: rgba(255, 255, 255, .88);
-        box-shadow: 0 18px 42px rgba(31, 49, 23, .12);
-      }
 
       .duration-tabs { background: rgba(25, 40, 18, .055); }
       .time-track,
@@ -4309,12 +4212,8 @@
           </div>
           <p class="hero-dek">
             <strong>Sol-H3 generates MiniMax-H3 video with native audio faster than playback on one 8× NVIDIA B300 system.</strong>
-            Sol-Engine × Sol-Attn brings sparse attention, fused kernels, fast multi-GPU communication, and parallel video decoding into one runtime.
+            Sol-Engine × Sol-Attn unifies sparse attention, fused kernels, fast multi-GPU communication, parallel video decoding, and more in one runtime.
           </p>
-          <div class="model-compatibility">
-            <strong>Plug-and-play LoRAs</strong>
-            <p><a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3</a> is the default, not a requirement. Compatible MiniMax-H3 few-step LoRAs—including <a href="https://huggingface.co/lightx2v/Minimax-h3-Turbo" target="_blank" rel="noopener noreferrer">LightX2V’s open 4-step and 8-step Turbo LoRAs</a>—use the same Sol-H3 engine.</p>
-          </div>
           <div class="hero-actions">
             <a class="button primary" href="#performance">
               See the numbers
@@ -4324,9 +4223,9 @@
               MiniMax-H3 code
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
             </a>
-            <a class="button" href="assets/sol-h3-prompts.json" download>
-              Prompts &amp; settings
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>
+            <a class="button" href="#future">
+              Reactor demo · coming soon
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
             </a>
           </div>
         </div>
@@ -4343,12 +4242,7 @@
             </div>
           </div>
           <div class="video-credit">
-            <span class="video-credit-copy">Featured sample · Sol-Engine uses <a href="https://github.com/ModelTC/LightX2V/blob/main/scripts/minimax_h3/run_minimax_h3_ref2av.sh" target="_blank" rel="noopener noreferrer">LightX2V Ref2AV</a>. B300 timing is audited below.</span>
-          </div>
-          <div class="hero-stats" aria-label="Headline benchmark results">
-            <div class="hero-stat"><b>3.00×</b><span>Realtime · 5s</span></div>
-            <div class="hero-stat"><b>1.669s</b><span>Measured latency · 5s</span></div>
-            <div class="hero-stat"><b>8× B300</b><span>NVLink / NVSwitch</span></div>
+            <span class="video-credit-copy">Featured sample · Sol-Engine uses <a href="https://github.com/ModelTC/LightX2V/blob/main/scripts/minimax_h3/run_minimax_h3_ref2av.sh" target="_blank" rel="noopener noreferrer">LightX2V Ref2AV</a>.</span>
           </div>
           </div>
         </div>
@@ -4395,7 +4289,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
           </a>
           <p class="collaboration-statement">
-            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>, Sol-H3 defaults to <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab’s four-step FastH3</a>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine.
+            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>, Sol-H3 defaults to <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab’s four-step FastH3</a>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine. Compatible MiniMax-H3 few-step LoRAs—including <a href="https://huggingface.co/lightx2v/Minimax-h3-Turbo" target="_blank" rel="noopener noreferrer">LightX2V’s open 4-step and 8-step Turbo LoRAs</a>—plug into the same Sol-H3 engine.
           </p>
         </aside>
       </div>

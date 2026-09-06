@@ -1472,6 +1472,7 @@
 
     .tech-card {
       position: relative;
+      isolation: isolate;
       overflow: hidden;
       min-height: 330px;
       padding: clamp(24px, 3vw, 35px);
@@ -1495,6 +1496,7 @@
     .tech-card::before {
       content: attr(data-index);
       position: absolute;
+      z-index: 3;
       right: 18px;
       top: 14px;
       color: rgba(167, 255, 46, .12);
@@ -1505,7 +1507,28 @@
       letter-spacing: -.07em;
     }
 
+    .tech-card::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      background: radial-gradient(
+        360px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+        rgba(167, 255, 46, .11),
+        transparent 58%
+      );
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .tech-card:hover::after { opacity: 1; }
+    }
+
     .tech-label {
+      position: relative;
+      z-index: 2;
       color: var(--acid);
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 9px;
@@ -1515,6 +1538,8 @@
     }
 
     .tech-card h3 {
+      position: relative;
+      z-index: 2;
       max-width: 540px;
       margin: 14px 0 0;
       color: var(--white);
@@ -3744,7 +3769,23 @@
     .time-chart { margin-top: 44px; }
     .time-row { grid-template-columns: 112px minmax(0, 1fr) 76px; }
     .time-fill.output { background: rgba(196, 206, 192, .28); }
-    .time-fill.sol { background: linear-gradient(90deg, var(--green), var(--acid)); box-shadow: 0 0 18px rgba(167, 255, 46, .16); }
+    .time-fill.sol {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(90deg, var(--green), var(--acid));
+      box-shadow: 0 0 18px rgba(167, 255, 46, .16);
+    }
+
+    .time-fill.sol::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 2px;
+      height: 100%;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 0 10px 2px rgba(255, 255, 255, .45);
+    }
 
     .tech-card code { color: var(--fog); font-family: "SFMono-Regular", Consolas, monospace; font-size: .92em; }
 
@@ -4075,6 +4116,13 @@
         background: linear-gradient(145deg, rgba(0, 107, 74, .075), rgba(255, 255, 255, .84));
       }
       .tech-card::before { color: rgba(65, 111, 0, .14); }
+      .tech-card::after {
+        background: radial-gradient(
+          360px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+          rgba(65, 111, 0, .09),
+          transparent 58%
+        );
+      }
       .owner-nvidia-panel img { filter: none; }
       .prefix-viz i { border-color: rgba(0, 107, 74, .25); background: rgba(0, 107, 74, .07); }
       .prefix-viz i:nth-child(-n+2) { background: linear-gradient(180deg, rgba(0, 107, 74, .34), rgba(0, 107, 74, .07)); }
@@ -4797,6 +4845,16 @@
       }, { threshold: .11, rootMargin: '0px 0px -5% 0px' });
       document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
 
+      if (!reduceMotion && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        document.querySelectorAll('.tech-card').forEach((card) => {
+          card.addEventListener('pointermove', (event) => {
+            const bounds = card.getBoundingClientRect();
+            card.style.setProperty('--spot-x', `${event.clientX - bounds.left}px`);
+            card.style.setProperty('--spot-y', `${event.clientY - bounds.top}px`);
+          }, { passive: true });
+        });
+      }
+
       const navLinks = [...document.querySelectorAll('.nav-links a')];
       const navMenuToggle = document.getElementById('nav-menu-toggle');
       const closeNavMenu = () => {
@@ -4824,7 +4882,12 @@
       const navObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
-          navLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`));
+          navLinks.forEach((link) => {
+            const isActive = link.getAttribute('href') === `#${entry.target.id}`;
+            link.classList.toggle('active', isActive);
+            if (isActive) link.setAttribute('aria-current', 'location');
+            else link.removeAttribute('aria-current');
+          });
         });
       }, { rootMargin: '-25% 0px -60% 0px', threshold: 0 });
       navSections.forEach((section) => navObserver.observe(section));

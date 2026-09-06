@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="768p, 5-second video with audio on a single NVIDIA DGX Spark in 56 seconds. Sol-H3 pipeline, verified complete hot E2E measurements and original generations.">
+  <meta name="theme-color" content="#050705">
+  <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/">
+  <link rel="icon" href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <link id="light-theme" rel="stylesheet" href="./light.css" media="not all">
+  <title>Sol-H3: Speed-of-Light MiniMax-H3 on Single NVIDIA DGX Spark Blackwell Superchip</title>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header scrolled">
+<nav class="nav" aria-label="Primary navigation">
+<a class="brand" href="#top" aria-label="Sol-H3 home">
+<span class="brand-mark" aria-hidden="true">
+</span>
+<span>Sol-H3</span>
+</a>
+<span class="nav-divider" aria-hidden="true">
+</span>
+<span class="version-chip">
+<i aria-hidden="true">
+</i>Single DGX Spark</span>
+<button type="button" tabindex="0" data-slot="button" aria-label="Open section menu" aria-controls="nav-links" aria-expanded="false" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 bg-primary text-primary-foreground hover:bg-primary/80 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 nav-menu-toggle">
+<span>
+</span>
+<span>
+</span>
+<span>
+</span>
+</button>
+<div class="nav-links" id="nav-links">
+<a href="#performance">Performance</a>
+<a href="#showcase">Showcase</a>
+<a href="#method">Pipeline</a>
+<a href="#optimizations">Acceleration</a>
+</div>
+<button type="button" tabindex="0" data-slot="button" aria-label="Switch to light theme" title="Switch color theme" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 theme-toggle">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun" aria-hidden="true">
+<circle cx="12" cy="12" r="4">
+</circle>
+<path d="M12 2v2">
+</path>
+<path d="M12 20v2">
+</path>
+<path d="m4.93 4.93 1.41 1.41">
+</path>
+<path d="m17.66 17.66 1.41 1.41">
+</path>
+<path d="M2 12h2">
+</path>
+<path d="M20 12h2">
+</path>
+<path d="m6.34 17.66-1.41 1.41">
+</path>
+<path d="m19.07 4.93-1.41 1.41">
+</path>
+</svg>
+</button>
+<a class="nav-cta" href="https://github.com/NVlabs/Sana/tree/sol-engine" target="_blank" rel="noreferrer">
+<span>Codebase</span>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right" aria-hidden="true">
+<path d="M7 7h10v10">
+</path>
+<path d="M7 17 17 7">
+</path>
+</svg>
+</a>
+</nav>
+</header>
+<main id="main">
+<section class="hero" id="top" aria-labelledby="hero-title">
+<div class="wide-shell hero-shell">
+<div class="hero-grid">
+<div class="hero-copy">
+<div class="eyebrow">Sol-Engine × Sol-Attn · MiniMax-H3 Inference</div>
+<h1 class="hero-product-title" id="hero-title">
+<span class="hero-product-name">Sol-H3</span>
+<span class="hero-product-claim">
+<em>Speed-of-Light MiniMax-H3</em> on Single NVIDIA DGX Spark Blackwell Superchip</span>
+</h1>
+<p class="hero-affiliation">
+<strong>NVIDIA Research, Efficient AI Team &amp; Singapore Lab.</strong>
+</p>
+<div class="hero-result-title spark-result" aria-label="768p, five seconds of video, 56 seconds complete hot end-to-end">
+<span class="hero-result-line">
+<strong>768p</strong>
+<small>resolution</small>
+</span>
+<span class="hero-result-line">
+<strong>5s</strong>
+<small>duration</small>
+</span>
+<span class="hero-result-line accent">
+<strong>56s</strong>
+<small>e2e latency</small>
+</span>
+</div>
+<p class="hero-dek">
+<strong>A two-stage pipeline on one Blackwell Superchip NVIDIA DGX Spark.</strong> 384p draft, 768p refinement, a VAE latent adapter and a cached generic prompt for fast stage transfer.</p>
+<div class="hero-actions">
+<a class="button primary" href="#performance">See the numbers <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down" aria-hidden="true">
+<path d="M12 5v14">
+</path>
+<path d="m19 12-7 7-7-7">
+</path>
+</svg>
+</a>
+<a class="button" href="#showcase">Watch the generations <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down" aria-hidden="true">
+<path d="M12 5v14">
+</path>
+<path d="m19 12-7 7-7-7">
+</path>
+</svg>
+</a>
+<a class="button" href="https://github.com/NVlabs/Sana/tree/sol-engine" target="_blank" rel="noreferrer">Codebase <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right" aria-hidden="true">
+<path d="M7 7h10v10">
+</path>
+<path d="M7 17 17 7">
+</path>
+</svg>
+</a>
+</div>
+</div>
+<div class="hero-visual" aria-label="Sol-H3 Spark generation preview">
+<div class="video-terminal">
+<video controls="" class="hero-film" muted="" loop="" playsInline="" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/seaside-coffee.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/sol-h3-showreel.mp4" aria-label="Four Sol-H3 Spark generations: elderly couple, skateboarding, flowing water, and a garden above Earth">
+</video>
+<button type="button" tabindex="0" data-slot="button" aria-label="Play background video" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 button spark-hero-control">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true">
+<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z">
+</path>
+</svg>
+<span>Play</span>
+</button>
+<div class="terminal-top">
+<span class="live-pill">
+<i aria-hidden="true">
+</i>Generated on Spark</span>
+<span class="terminal-code">1344×768 / 24 FPS</span>
+</div>
+</div>
+<div class="video-credit">
+<span class="video-credit-copy">Generated on one DGX Spark · 1344 × 768 · 24 FPS</span>
+</div>
+</div>
+</div>
+<aside class="collaborator-rail" aria-label="Sol-H3 team and collaborators">
+<div class="collaborator-heading">
+<strong>Team &amp; collaborators</strong>
+</div>
+<div class="spark-team-row">
+<a class="owner-lockup" href="https://nvlabs.github.io/Sana/Sol-Engine/" target="_blank" rel="noreferrer">
+<span class="owner-brandline">
+<span class="owner-nvidia-panel">
+<img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/sol-h3/owner-nvidia.svg" alt="NVIDIA"/>
+</span>
+<span class="owner-team-divider" aria-hidden="true">
+</span>
+<span class="owner-project">
+<img class="owner-sana-logo" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/sol-h3/owner-sana.png" alt="SANA"/>
+<span class="owner-sol-wordmark">
+<strong>Sol-Engine</strong>
+<small>Video Inference</small>
+</span>
+</span>
+</span>
+</a>
+<a class="collaborator-logo partner-humanize" href="https://github.com/humanfia/humanize2" target="_blank" rel="noreferrer">
+<span class="partner-lockup">
+<span class="partner-logo-box">
+<img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/sol-h3/partner-humanize.svg" alt=""/>
+</span>
+<span class="partner-name">Humanize</span>
+</span>
+<span class="partner-role">Operator iteration</span>
+</a>
+<a class="collaborator-logo partner-kda" href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noreferrer">
+<span class="partner-lockup">
+<span class="partner-logo-box">
+<img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/sol-h3/partner-kda-hanlab.png" alt=""/>
+</span>
+<span class="partner-name">KDA</span>
+</span>
+<span class="partner-role">Kernel Design Agents</span>
+</a>
+<a class="collaborator-logo partner-fasth3" href="https://haoailab.com/blogs/fasth3-local/" target="_blank" rel="noreferrer">
+<span class="partner-lockup">
+<span class="partner-logo-box">
+<img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/sol-h3/partner-hao-ai-lab.png" alt=""/>
+</span>
+<span class="partner-name">FastH3</span>
+</span>
+<span class="partner-role">Hao AI Lab @ UCSD</span>
+</a>
+</div>
+</aside>
+</div>
+</section>
+<section class="section" id="performance">
+<div class="wide-shell">
+<header class="section-head">
+<div class="section-index">01</div>
+<div>
+<span class="section-kicker">768p · 5-second video · one DGX Spark</span>
+<h2>Less than one minute</h2>
+</div>
+<p>Sol-H3’s two-stage pipeline generates a 768p, five-second video in just 56 seconds on average on one DGX Spark—6.6× faster than the reported FastH3 run.</p>
+</header>
+<article class="benchmark-console benchmark-console-wide">
+<div class="console-head">
+<div class="console-label spark-console-label">Sol-H3 · single Spark · E2E latency</div>
+<span class="comparison-step-badge">768p · audio</span>
+</div>
+<div class="console-readout">
+<div class="readout-big">
+<b>56.17 s</b>
+<small>Sol-H3 mean request latency</small>
+</div>
+<div class="readout-meta">
+<div>
+<b>1344 × 768</b>
+<small>Output resolution</small>
+</div>
+<div>
+<b>121</b>
+<small>Frames at 24 FPS</small>
+</div>
+<div>
+<b>1× Spark</b>
+<small>NVIDIA DGX Spark</small>
+</div>
+<div>
+<b>2</b>
+<small>Generation Stages</small>
+</div>
+</div>
+</div>
+<div class="time-chart spark-time-chart" aria-label="Reported 768p latency: FastH3 Local 374 seconds, cold phased loading; Sol-H3 56.17 seconds, warmed resident request. Different timing regimes.">
+<div class="time-row">
+<span class="time-label">Fast H3</span>
+<div class="time-track">
+<div class="time-fill output" style="width:100%">
+</div>
+</div>
+<span class="time-number">374 s</span>
+</div>
+<div class="time-row">
+<span class="time-label">Sol H3</span>
+<div class="time-track">
+<div class="time-fill sol" style="width:15.0187%">
+</div>
+</div>
+<span class="time-number">56.17 s</span>
+</div>
+</div>
+<div class="console-foot">
+<span>
+<strong>Pipeline:</strong> prompt encode → low res generation → latent transfer → high res refine → decode</span>
+<a href="https://haoailab.com/blogs/fasth3-local/" target="_blank" rel="noreferrer">FastH3 Local source ↗</a>
+</div>
+</article>
+<div class="method-note">
+<strong>Different loading regimes</strong>
+<span>FastH3: 768 × 1344 portrait, 124 frames, full H3 VAE, published cold-process / phased-loading run. Sol-H3: 1344 × 768 landscape, 121 frames, mean of three warm resident requests. This is not a matched cold/hot benchmark or a quality-equivalence claim. FastH3 also offers a server recipe; that server is not measured here.</span>
+</div>
+</div>
+</section>
+<section class="section comparison-section" id="showcase">
+<div class="wide-shell">
+<header class="section-head">
+<div class="section-index">02</div>
+<div>
+<span class="section-kicker">Generated on one Spark</span>
+<h2>Sol-H3 showcase</h2>
+</div>
+<p>Selected generations, from everyday moments to animated worlds.</p>
+</header>
+<div class="spark-gallery">
+<div class="comparison-toolbar">
+<span class="section-kicker">4 clips · 768p · original audio</span>
+<div class="spark-gallery-controls">
+<button type="button" tabindex="0" data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 button">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw" aria-hidden="true">
+<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8">
+</path>
+<path d="M3 3v5h5">
+</path>
+</svg>Play all from start</button>
+<button type="button" tabindex="0" data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 button">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pause" aria-hidden="true">
+<rect x="14" y="3" width="5" height="18" rx="1">
+</rect>
+<rect x="5" y="3" width="5" height="18" rx="1">
+</rect>
+</svg>Pause all</button>
+</div>
+</div>
+<p role="status" class="playback-status">
+</p>
+<div class="comparison-grid">
+<section class="comparison-pane" aria-label="Example 1: Human craft">
+<div class="comparison-pane-head">
+<div class="comparison-pane-label">
+<small>Example 01 · Human craft</small>
+</div>
+</div>
+<div class="comparison-card-meta">
+<span>Sol-H3 · Spark</span>
+<span>768p · 5s</span>
+<span>Seed 260601</span>
+</div>
+<div class="comparison-media" data-state="ready">
+<video controls="" muted="" playsInline="" preload="metadata" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/paper-fox-studio.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/paper-fox-studio.mp4" aria-label="Example 1: Human craft">
+</video>
+</div>
+<details class="comparison-prompt">
+<summary>View exact prompt</summary>
+<div class="comparison-prompt-body">
+<p>integrated_multimodal_description: A photoreal macro film of an adult paper artist at a pale blue studio table, framed from her linen sleeves to her hands. She holds an almost-finished orange origami fox, folds its two small ears upright with deliberate fingertip pressure, then sets it on the table and gently turns it toward the camera. The same sheet remains orange outside and white inside, with crisp consistent creases. A second untouched square stays still beside it. Soft side lighting reveals paper fibers and natural skin texture. One continuous five-second shot, subtle slow push-in, coherent hands and object contact, no lettering or logos. overall_soundscape: Dry paper creases, delicate fingertip taps, a soft sleeve rustle, quiet studio room tone. non_diegetic_music: N/A</p>
+</div>
+</details>
+</section>
+<section class="comparison-pane" aria-label="Example 2: Character animation">
+<div class="comparison-pane-head">
+<div class="comparison-pane-label">
+<small>Example 02 · Character animation</small>
+</div>
+</div>
+<div class="comparison-card-meta">
+<span>Sol-H3 · Spark</span>
+<span>768p · 5s</span>
+<span>Seed 260602</span>
+</div>
+<div class="comparison-media" data-state="ready">
+<video controls="" muted="" playsInline="" preload="metadata" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/neon-dance-duet.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/neon-dance-duet.mp4" aria-label="Example 2: Character animation">
+</video>
+</div>
+<details class="comparison-prompt">
+<summary>View exact prompt</summary>
+<div class="comparison-prompt-body">
+<p>integrated_multimodal_description: A polished 3D animated music-performance shot of two adult dancers on a glossy circular stage, one in a cobalt jacket and the other in a warm orange jacket. Cyan light bars reflect on the dark floor. In a continuous five-second take, they execute three synchronized lateral steps, turn toward each other with a playful shoulder accent, then slide apart into mirrored low poses. Their faces, clothing and number remain consistent; hands stay empty and feet contact the stage. A smooth low camera arc follows the pair, with expressive clean animation and physically plausible clothing motion. No captions or logos. overall_soundscape: Rhythmic shoe taps, sliding soles, fabric swishes and brief excited breaths in a spacious room. non_diegetic_music: An original short percussive electronic groove with a rounded bass pulse.</p>
+</div>
+</details>
+</section>
+<section class="comparison-pane" aria-label="Example 3: Wildlife">
+<div class="comparison-pane-head">
+<div class="comparison-pane-label">
+<small>Example 03 · Wildlife</small>
+</div>
+</div>
+<div class="comparison-card-meta">
+<span>Sol-H3 · Spark</span>
+<span>768p · 5s</span>
+<span>Seed 260603</span>
+</div>
+<div class="comparison-media" data-state="ready">
+<video controls="" muted="" playsInline="" preload="metadata" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/fox-winter-morning.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/fox-winter-morning.mp4" aria-label="Example 3: Wildlife">
+</video>
+</div>
+<details class="comparison-prompt">
+<summary>View exact prompt</summary>
+<div class="comparison-prompt-body">
+<p>integrated_multimodal_description: A cinematic wildlife close tracking shot of a red fox trotting through soft fresh snow at blue dawn. Its copper coat is rim-lit by low peach sunlight, and its white muzzle, dark legs and full tail keep consistent markings. In one five-second shot the fox slows, listens with an ear twitch, and springs over a small fallen branch, landing with a coherent puff of powder. The camera tracks gently at the animal&#x27;s eye level. Detailed moving fur, visible cold breath, shallow natural depth of field, realistic weight and paw contact, no slow motion, no people, no text. overall_soundscape: Crisp pawsteps, a soft snowy landing, winter wind and faint distant birds. non_diegetic_music: N/A</p>
+</div>
+</details>
+</section>
+<section class="comparison-pane" aria-label="Example 4: Everyday life">
+<div class="comparison-pane-head">
+<div class="comparison-pane-label">
+<small>Example 04 · Everyday life</small>
+</div>
+</div>
+<div class="comparison-card-meta">
+<span>Sol-H3 · Spark</span>
+<span>768p · 5s</span>
+<span>Seed 260606</span>
+</div>
+<div class="comparison-media" data-state="ready">
+<video controls="" muted="" playsInline="" preload="metadata" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/seaside-coffee.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/f9de325489994d3d5f8cf607164238b1edb1ee08/Sol-Engine/Sol-H3-Spark/20260907/media/seaside-coffee.mp4" aria-label="Example 4: Everyday life">
+</video>
+</div>
+<details class="comparison-prompt">
+<summary>View exact prompt</summary>
+<div class="comparison-prompt-body">
+<p>integrated_multimodal_description: A naturalistic close medium shot of an elderly couple sitting together at a small seaside cafe table in warm morning sunlight. The woman has silver curls and a blue linen shirt; the man has a neat white beard and a cream cardigan. Two small ceramic coffee cups rest on the table. Over one continuous five-second take, she says something quietly, he turns toward her, and they share an unguarded laugh. Their faces and clothing remain consistent. A sea breeze moves the loose edge of a striped awning, with a softly focused turquoise harbor behind them. Subtle handheld camera, lifelike skin texture, warm intimate documentary feeling, no captions or logos. overall_soundscape: Gentle shared laughter, a few quiet conversational syllables, distant gulls, waves against the harbor and light cafe room tone. non_diegetic_music: N/A</p>
+</div>
+</details>
+</section>
+</div>
+</div>
+<div class="method-note">
+<strong>Generated with Sol-H3</strong>
+<span>Our Spark outputs, with exact prompts available below each video. Playback starts muted.</span>
+</div>
+</div>
+</section>
+<section class="section architecture" id="method">
+<div class="wide-shell">
+<header class="section-head">
+<div class="section-index">03</div>
+<div>
+<span class="section-kicker">The two-stage recipe</span>
+<h2>Generate small. Refine the details.</h2>
+</div>
+<p>Generate the scene on a compact H3 latent canvas, upscale in H3 space, then transfer to LTX for three-step refinement and full Conv VAE decoding.</p>
+</header>
+<div class="bento spark-pipeline">
+<article class="tech-card span-4" data-index="01">
+<span class="tech-label">GENERATE</span>
+<h3>MiniMax H3 · 384p</h3>
+<p class="spark-spec">672 × 384 · 124 frames</p>
+<ul>
+<li>NVFP4 Qwen text encoder</li>
+<li>FP8 DiT · FastH3 VSA · 4 steps</li>
+</ul>
+</article>
+<article class="tech-card span-4" data-index="→">
+<span class="tech-label">LATENT TRANSFER</span>
+<h3>VAE latent adapter</h3>
+<p class="spark-spec">H3 space → LTX space</p>
+<ul>
+<li>MiniMax H3 latent upscaler</li>
+<li>Direct mapping from H3 to LTX latent space</li>
+</ul>
+</article>
+<article class="tech-card span-4" data-index="02">
+<span class="tech-label">REFINE &amp; DECODE</span>
+<h3>LTX · 768p</h3>
+<p class="spark-spec">1344 × 768 · 121 frames</p>
+<ul>
+<li>LTX-2.5 · Sol-Attn · 3 steps</li>
+<li>Cached generic prompt · no runtime text encoder</li>
+</ul>
+</article>
+</div>
+<div class="bento spark-optimizations" id="optimizations" aria-label="Pipeline acceleration details">
+<article class="tech-card span-4 residency-card" data-index="01">
+<span class="tech-label">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-workflow" aria-hidden="true">
+<rect width="8" height="8" x="3" y="3" rx="2">
+</rect>
+<path d="M7 11v4a2 2 0 0 0 2 2h4">
+</path>
+<rect width="8" height="8" x="13" y="13" rx="2">
+</rect>
+</svg>
+</span>
+<h3>Transfer latents, not pixels</h3>
+<p>A learned VAE latent adapter maps the upscaled H3 latent directly into LTX space. Skip the intermediate H3 video decode and LTX video re-encode: neither inter-stage video VAE is needed. Decode only the final refined video with the official Conv VAE.</p>
+</article>
+<article class="tech-card span-4 residency-card" data-index="02">
+<span class="tech-label">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layers" aria-hidden="true">
+<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z">
+</path>
+<path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12">
+</path>
+<path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17">
+</path>
+</svg>
+</span>
+<h3>Cache the prompt</h3>
+<p>The draft latent already gives the refiner a strong visual prior. A generic prompt can therefore guide detail refinement across different scenes. Encode it once through Gemma and its connector, then cache the features to omit both from the runtime. Qwen still encodes each new Stage1 prompt.</p>
+</article>
+<article class="tech-card span-4 residency-card" data-index="03">
+<span class="tech-label">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-memory-stick" aria-hidden="true">
+<path d="M12 12v-2">
+</path>
+<path d="M12 18v-2">
+</path>
+<path d="M16 12v-2">
+</path>
+<path d="M16 18v-2">
+</path>
+<path d="M2 11h1.5">
+</path>
+<path d="M20 18v-2">
+</path>
+<path d="M20.5 11H22">
+</path>
+<path d="M4 18v-2">
+</path>
+<path d="M8 12v-2">
+</path>
+<path d="M8 18v-2">
+</path>
+<rect x="2" y="6" width="20" height="10" rx="2">
+</rect>
+</svg>
+</span>
+<h3>Keep the runtime resident</h3>
+<p>NVFP4 Qwen and an FP8 H3 DiT shrink the weight footprint. Combined with latent-only transfer and cached refinement context, this leaves room for Qwen, both video stages and the final Conv VAE to stay resident on one Spark—ready for the next request.</p>
+</article>
+<article class="tech-card span-4" data-index="04">
+<span class="tech-label">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap" aria-hidden="true">
+<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z">
+</path>
+</svg>
+</span>
+<h3>Keep attention sparse</h3>
+<p>Stage1 uses official 90%-sparse VSA routing with a cuDNN BSA backend, fused merge and regional compilation. Stage2 uses Triton Sol-Attn across the three refiner updates.</p>
+</article>
+<article class="tech-card span-4" data-index="05">
+<span class="tech-label">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-line" aria-hidden="true">
+<path d="M3 7V5a2 2 0 0 1 2-2h2">
+</path>
+<path d="M17 3h2a2 2 0 0 1 2 2v2">
+</path>
+<path d="M21 17v2a2 2 0 0 1-2 2h-2">
+</path>
+<path d="M7 21H5a2 2 0 0 1-2-2v-2">
+</path>
+<path d="M7 12h10">
+</path>
+</svg>
+</span>
+<h3>Decode in the layout the VAE wants</h3>
+<p>A direct NHWC shuffle removes a redundant layout conversion. Keep the official Conv VAE and its original tile sizes. No tiny preview decoder.</p>
+</article>
+<article class="tech-card span-4" data-index="06">
+<span class="tech-label">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cpu" aria-hidden="true">
+<path d="M12 20v2">
+</path>
+<path d="M12 2v2">
+</path>
+<path d="M17 20v2">
+</path>
+<path d="M17 2v2">
+</path>
+<path d="M2 12h2">
+</path>
+<path d="M2 17h2">
+</path>
+<path d="M2 7h2">
+</path>
+<path d="M20 12h2">
+</path>
+<path d="M20 17h2">
+</path>
+<path d="M20 7h2">
+</path>
+<path d="M7 20v2">
+</path>
+<path d="M7 2v2">
+</path>
+<rect x="4" y="4" width="16" height="16" rx="2">
+</rect>
+<rect x="8" y="8" width="8" height="8" rx="1">
+</rect>
+</svg>
+</span>
+<h3>Finish the actual file sooner</h3>
+<p>Write frames in 16-frame chunks and shorten completion polling. Count the final H.264 encode and audio mux in E2E—not just the last model forward.</p>
+</article>
+</div>
+<div class="method-note spark-context">
+<strong>Cached refiner prompt</strong>
+<span>“4K, refined, high quality, cinematic detail, clean textures, natural motion.”<br/>Stage1 still encodes each new prompt. Only Stage2’s post-Gemma / post-connector features are shared.</span>
+</div>
+<details class="comparison-prompt spark-details">
+<summary>Exact configuration</summary>
+<div class="comparison-prompt-body spark-detail-columns">
+<p>
+<strong>Stage1.</strong> Native T2VA, NVFP4-AWQ Qwen, tensorwise FP8 W8A8 H3 DiT after BF16 LoRA merge. FastH3 VSA / DataFree LoRA scale 1.0; 4 updates; 50 BF16 compression gates. Official VSA routing: 90% sparsity, 64-token tiles, prefix exemptions.</p>
+<p>
+<strong>Stage2.</strong> Learned H3 ×2 → H3–LTX adapter. BF16 LTX-2.5 dev, distilled-450 LoRA scale 0.8; 3 joint audio/video updates. Triton Sol-Attn, τ = 1 / 1.25 / 1.5, first layer dense; 141 Sol calls. Not the Step835 one-step model.</p>
+<p>
+<strong>Output.</strong> Official BF16 Conv VAE, original temporal 128/24 and spatial 448/64 × 768/64 tile/overlap; direct NHWC. 121 frames at 24 fps, H.264 CRF 19, original H3 soundtrack encoded to AAC. No TAE.</p>
+</div>
+</details>
+<div class="method-note">
+<strong>Quality &amp; scope</strong>
+<span>Quantization, sparsity and fixed refiner conditioning are deliberate pipeline choices—not globally lossless changes. Later execution optimizations used scoped numerical gates and video comparisons. CuTe 8-bit Sol-Attn is not enabled in these results.</span>
+</div>
+</div>
+</section>
+<section class="publication-notes spark-publications" aria-label="Acknowledgements and citations">
+<div class="wide-shell publication-grid">
+<article class="publication-panel acknowledgements-panel" aria-labelledby="acknowledgements-title">
+<span class="publication-label">Credits</span>
+<h2 id="acknowledgements-title">Acknowledgements</h2>
+<p>We thank the teams and open projects behind this two-stage Spark pipeline.</p>
+<ul class="acknowledgement-list">
+<li>
+<a class="ack-entity" href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noreferrer">MiniMax</a>
+<span class="ack-role">MiniMax-H3 open weights and native video-and-audio generation.</span>
+</li>
+<li>
+<a class="ack-entity" href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/" target="_blank" rel="noreferrer">Sol-Engine &amp; Sol-Attn</a>
+<span class="ack-role">The inference framework, SuperH3 workflow and sparse refinement attention.</span>
+</li>
+<li>
+<a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noreferrer">FastH3 · Hao AI Lab @ UCSD</a>
+<span class="ack-role">The four-step FastH3 VSA model used for our 384p draft stage.</span>
+</li>
+<li>
+<a class="ack-entity" href="https://huggingface.co/Lightricks/LTX-2.5" target="_blank" rel="noreferrer">Lightricks</a>
+<span class="ack-role">LTX-2.5 refinement and the official convolutional video VAE.</span>
+</li>
+<li>
+<a class="ack-entity" href="https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler" target="_blank" rel="noreferrer">LBH-123-AI</a>
+<span class="ack-role">The learned H3 latent upscaler used before the VAE adapter.</span>
+</li>
+<li>
+<a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noreferrer">LightX2V</a>
+<span class="ack-role">Open H3 acceleration work supporting the original Sol-Engine workflow.</span>
+</li>
+<li>
+<span class="ack-entity">
+<a href="https://github.com/humanfia/humanize2" target="_blank" rel="noreferrer">Humanize</a> + <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noreferrer">KDA</a>
+</span>
+<span class="ack-role">Operator and kernel optimization alongside Sol-Engine.</span>
+</li>
+</ul>
+</article>
+<article class="publication-panel citation-panel" aria-labelledby="citations-title">
+<div class="citation-copy">
+<span class="publication-label">Research use</span>
+<h2 id="citations-title">Citations</h2>
+<p>If this project helps your work, please cite the Spark release and the underlying <a href="https://arxiv.org/abs/2606.23743" target="_blank" rel="noreferrer">Sol-Engine</a> and <a href="https://arxiv.org/abs/2607.24027" target="_blank" rel="noreferrer">Sol-Attn</a> papers.</p>
+</div>
+<div class="citation-window">
+<div class="citation-bar">
+<span>BibTeX · Release + core papers</span>
+<button type="button" tabindex="0" data-slot="button" aria-live="polite" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 copy-code">Copy all BibTeX</button>
+</div>
+<pre tabindex="0" aria-label="BibTeX citations">
+<code>@misc{solh3spark2026,
+  title        = {Sol-H3: Speed-of-Light MiniMax-H3 on Single NVIDIA DGX Spark Blackwell Superchip},
+  author       = {{Sol-H3 Team}},
+  year         = {2026},
+  howpublished = {\url{https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/}},
+  note         = {Single-Spark project release}
+}
+
+@misc{li2026solvideoinferenceengine,
+  title         = {Sol Video Inference Engine: Agent-Native Full-Stack Acceleration Framework for Efficient Video Generation},
+  author        = {Yitong Li and Junsong Chen and Haopeng Li and Haozhe Liu and Jincheng Yu and Ligeng Zhu and Ping Luo and Song Han and Enze Xie},
+  year          = {2026},
+  eprint        = {2606.23743},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  doi           = {10.48550/arXiv.2606.23743},
+  url           = {https://arxiv.org/abs/2606.23743}
+}
+
+@misc{li2026solattn,
+  title         = {Sol-Attn: Accelerating Video Generation Inference via On-the-Fly Attention Sparsification},
+  author        = {Haopeng Li and Yitong Li and Junsong Chen and Tian Ye and Haozhe Liu and Jincheng Yu and Duomin Wang and Ruihua Zhang and Zeke Xie and Enze Xie and Song Han},
+  year          = {2026},
+  eprint        = {2607.24027},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  doi           = {10.48550/arXiv.2607.24027},
+  url           = {https://arxiv.org/abs/2607.24027}
+}</code>
+</pre>
+</div>
+</article>
+</div>
+</section>
+</main>
+<footer class="spark-footer wide-shell">
+<a class="brand" href="#top">
+<span class="brand-mark" aria-hidden="true">
+</span>
+<span>Sol-H3</span>
+</a>
+<span>NVIDIA Research · Efficient AI Team &amp; Singapore Lab</span>
+<span>Single NVIDIA DGX Spark · September 2026</span>
+</footer>
+<script src="./script.js" defer></script>
+</body>
+</html>

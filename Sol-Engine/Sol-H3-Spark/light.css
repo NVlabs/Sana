@@ -1,0 +1,212 @@
+/* Reused from NVlabs/Sana Sol-Engine/Sol-H3, page revision 5fc64169817fabfaec31a579e7e18acf1d236a2a. */
+/* Automatic light edition. This sheet can also be explicitly enabled or disabled. */
+      :root {
+        color-scheme: light;
+        --black: #e8eee2;
+        --void: #f5f8f1;
+        --surface: #ffffff;
+        --surface-2: #edf3e8;
+        --surface-3: #e3ebdc;
+        --white: #11170e;
+        --fog: #303a2b;
+        --muted: #596453;
+        --dim: #778171;
+        --line: rgba(38, 61, 24, .16);
+        --line-bright: rgba(65, 111, 0, .4);
+        --green: #527f00;
+        --acid: #416f00;
+        --mint: #006b4a;
+        --amber: #915500;
+        --red: #b83b29;
+        --cyan: #086f82;
+      }
+
+      html { background: var(--void); }
+      body {
+        background:
+          radial-gradient(circle at 82% 4%, rgba(118, 185, 0, .12), transparent 28rem),
+          radial-gradient(circle at 12% 29%, rgba(0, 107, 74, .055), transparent 36rem),
+          var(--void);
+      }
+      body::before { opacity: .024; mix-blend-mode: multiply; }
+      #network { opacity: .14; mix-blend-mode: multiply; }
+      ::selection { color: #fff; }
+
+      .site-header.scrolled {
+        border-bottom-color: var(--line);
+        background: rgba(247, 250, 244, .88);
+      }
+      .nav-cta { background: rgba(65, 111, 0, .07); }
+      .nav-cta:hover { background: rgba(65, 111, 0, .12); }
+      .theme-toggle { background: rgba(65, 111, 0, .055); }
+      .theme-toggle:hover { background: rgba(65, 111, 0, .1); }
+      .brand-mark { box-shadow: inset 0 0 14px rgba(65, 111, 0, .1); }
+
+      .hero::before {
+        border-color: rgba(65, 111, 0, .14);
+        box-shadow: 0 0 0 120px rgba(65, 111, 0, .022), 0 0 0 240px rgba(65, 111, 0, .012);
+      }
+      .hero-result-line.accent strong { text-shadow: 0 0 44px rgba(65, 111, 0, .12); }
+      .button.primary { color: #fff; box-shadow: 0 10px 34px rgba(50, 85, 0, .18); }
+      .button.primary:hover { background: #345c00; }
+
+      .owner-lockup {
+        border-color: rgba(65, 111, 0, .27);
+        background:
+          linear-gradient(115deg, rgba(118, 185, 0, .13), rgba(255, 255, 255, .65) 60%),
+          #fff;
+        box-shadow: 0 14px 38px rgba(32, 51, 20, .075), inset 0 1px 0 #fff;
+      }
+      .owner-lockup:hover {
+        border-color: rgba(65, 111, 0, .54);
+        background:
+          linear-gradient(115deg, rgba(118, 185, 0, .17), rgba(255, 255, 255, .78) 60%),
+          #fff;
+      }
+      .owner-team-divider { background: rgba(22, 38, 16, .18); }
+
+      .video-terminal {
+        border-color: rgba(40, 65, 25, .34);
+        background: #020302;
+        box-shadow: 0 30px 75px rgba(32, 46, 27, .18);
+      }
+      .live-pill,
+      .terminal-code,
+      .sound-toggle { color: #fff; }
+
+      .duration-tabs { background: rgba(25, 40, 18, .055); }
+      .time-track,
+      .fusion-stack i,
+      .attn-bar i,
+      .lane-track { background: rgba(23, 37, 17, .075); }
+
+      .architecture {
+        background:
+          radial-gradient(circle at 28% 52%, rgba(118, 185, 0, .12), transparent 35rem),
+          #eef4e9;
+      }
+      .engine-map.system-ring::before {
+        background: radial-gradient(circle, rgba(65, 111, 0, .16), rgba(65, 111, 0, .045) 43%, transparent 70%);
+        filter: blur(3px);
+      }
+      .system-ring .orbit {
+        border-width: 1.5px;
+        border-color: rgba(65, 111, 0, .52);
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, .72),
+          0 0 30px rgba(65, 111, 0, .12),
+          inset 0 0 28px rgba(65, 111, 0, .045);
+      }
+      .system-ring .orbit.inner {
+        border-style: dashed;
+        border-color: rgba(0, 107, 74, .58);
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, .62),
+          0 0 24px rgba(0, 107, 74, .1);
+      }
+      .system-ring .orbit::before,
+      .system-ring .orbit::after {
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, .82), 0 0 14px rgba(65, 111, 0, .48);
+      }
+      .system-ring .engine-core {
+        background:
+          radial-gradient(circle at 44% 35%, rgba(118, 185, 0, .18), transparent 48%),
+          rgba(253, 255, 251, .97);
+        box-shadow: inset 0 0 45px rgba(65, 111, 0, .08), 0 0 0 14px rgba(65, 111, 0, .025), 0 18px 48px rgba(35, 57, 25, .1);
+      }
+      .accel-node {
+        border-color: rgba(65, 111, 0, .29);
+        background: rgba(253, 255, 251, .98);
+        box-shadow: 0 10px 24px rgba(29, 48, 20, .11), inset 0 1px 0 #fff;
+      }
+      .accel-node.featured {
+        border-color: rgba(0, 107, 74, .62);
+        background:
+          radial-gradient(circle at 50% 0%, rgba(0, 107, 74, .13), transparent 72%),
+          rgba(250, 255, 250, .98);
+        box-shadow: 0 0 0 6px rgba(0, 107, 74, .035), 0 12px 28px rgba(23, 47, 23, .11);
+      }
+      .accel-node::before { box-shadow: 0 0 10px rgba(65, 111, 0, .42); }
+
+      .benchmark-console,
+      .tech-card,
+      .core-block,
+      .collaborator-logo { box-shadow: 0 15px 44px rgba(31, 49, 23, .055); }
+      .core-block {
+        background: linear-gradient(145deg, rgba(65, 111, 0, .075), rgba(255, 255, 255, .82));
+      }
+      .core-block.attention {
+        border-color: rgba(0, 107, 74, .28);
+        background: linear-gradient(145deg, rgba(0, 107, 74, .075), rgba(255, 255, 255, .84));
+      }
+      .tech-card::before { color: rgba(65, 111, 0, .14); }
+      .owner-nvidia-panel img { filter: none; }
+      .prefix-viz i { border-color: rgba(0, 107, 74, .25); background: rgba(0, 107, 74, .07); }
+      .prefix-viz i:nth-child(-n+2) { background: linear-gradient(180deg, rgba(0, 107, 74, .34), rgba(0, 107, 74, .07)); }
+      .release-contract { background: rgba(255, 255, 255, .65); }
+      .collaborator-logo { background: rgba(255, 255, 255, .64); }
+      .collaborator-logo:hover { background: rgba(65, 111, 0, .07); }
+      .collaborator-rail .owner-lockup {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, .64);
+        box-shadow: 0 15px 44px rgba(31, 49, 23, .055);
+      }
+      .collaborator-rail .owner-lockup:hover { background: rgba(65, 111, 0, .07); }
+      .partner-logo-box {
+        border-color: rgba(22, 38, 16, .1);
+        background: rgba(22, 38, 16, .045);
+      }
+      .future-plan {
+        background:
+          radial-gradient(circle at 88% 12%, rgba(118, 185, 0, .11), transparent 28rem),
+          radial-gradient(circle at 10% 88%, rgba(0, 107, 74, .055), transparent 30rem),
+          var(--void);
+      }
+      .future-plan::before {
+        background-image:
+          linear-gradient(rgba(22, 38, 16, .04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(22, 38, 16, .04) 1px, transparent 1px);
+      }
+      .future-card {
+        border-color: rgba(65, 111, 0, .18);
+        background:
+          linear-gradient(145deg, rgba(118, 185, 0, .09), transparent 56%),
+          rgba(255, 255, 255, .78);
+        box-shadow: 0 15px 44px rgba(31, 49, 23, .065);
+      }
+      .future-card::before { color: rgba(65, 111, 0, .11); }
+      .future-card::after {
+        border-color: rgba(65, 111, 0, .16);
+        box-shadow:
+          0 0 0 28px rgba(65, 111, 0, .025),
+          0 0 0 56px rgba(65, 111, 0, .018);
+      }
+      .future-status {
+        border-color: rgba(65, 111, 0, .28);
+        background: rgba(65, 111, 0, .06);
+      }
+      .publication-notes {
+        background:
+          radial-gradient(circle at 8% 18%, rgba(0, 107, 74, .055), transparent 28rem),
+          var(--void);
+      }
+      .publication-panel {
+        background: rgba(255, 255, 255, .72);
+        box-shadow: 0 15px 44px rgba(31, 49, 23, .055);
+      }
+      .acknowledgements-panel {
+        background:
+          linear-gradient(145deg, rgba(65, 111, 0, .07), transparent 62%),
+          rgba(255, 255, 255, .78);
+      }
+
+      .finale {
+        background:
+          radial-gradient(circle at center, rgba(118, 185, 0, .14), transparent 33rem),
+          #eef4e9;
+      }
+      footer { background: #e7ede2; }
+
+    @media (max-width: 520px) {
+      .owner-project { border-top-color: rgba(22, 38, 16, .12); }
+    }

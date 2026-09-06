@@ -5111,5 +5111,17 @@
       }
     })();
   </script>
+  <script>
+    (() => {
+      const path = location.pathname.replace(/\/+$/, '');
+      const isSolH3Page = path === '/Sana/Sol-Engine/Sol-H3' || path === '/Sana/Sol-Engine/Sol-H3/index.html';
+      if (location.hostname !== 'nvlabs.github.io' || !isSolH3Page) return;
+      const tracker = new Image();
+      tracker.referrerPolicy = 'no-referrer';
+      tracker.src = 'https://hits.sh/nvlabs.github.io/Sana/Sol-Engine/Sol-H3.svg';
+      window.solH3PageViewTracker = tracker;
+    })();
+  </script>
+
 </body>
 </html>

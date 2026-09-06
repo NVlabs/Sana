@@ -1,0 +1,37 @@
+{
+  "profile": "MiniMax-H3 four-step T2V/I2V/Ref2VA SOL v2",
+  "delivery_artifact": {
+    "name": "sol_super_accel_1_1_sol_v2_ref2va.zip",
+    "sha256": "1fd3f1e6fe1642e360df433556555162eadcaf1725e9852eb6860ca2b5367b5a"
+  },
+  "sources": [
+    {
+      "repo": "https://github.com/huggingface/diffusers.git",
+      "revision": "abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc",
+      "role": "MiniMax-H3 modular pipeline"
+    },
+    {
+      "repo": "https://github.com/NVlabs/Sana.git",
+      "revision": "cee25847afdd34bc656abcca126262200b088dc8",
+      "role": "released Sol-Attn integration contract"
+    },
+    {
+      "repo": "https://github.com/NVIDIA/cudnn-frontend.git",
+      "revision": "29106622617bfd9031a53099a6fbbc5e74a474e9",
+      "role": "cuDNN frontend and block-sparse attention API"
+    }
+  ],
+  "validation": {
+    "date": "2026-09-06",
+    "hardware": "8x NVIDIA B300 SXM6 AC",
+    "task": "ref2va",
+    "resolution": [768, 1344],
+    "frame_counts": [124, 243, 362],
+    "reference_image": [1104, 832],
+    "prompt_characters": 125,
+    "prompt_tokens": 26,
+    "repeats": 3,
+    "warm_pipeline_median_seconds": [2.191815, 4.347622, 5.946699],
+    "timing_excludes": ["checkpoint loading", "warmup", "MP4 encoding"]
+  }
+}

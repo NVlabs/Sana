@@ -19,6 +19,19 @@ Speedups are measured against the matching baseline runtime on the same hardware
 uses its validated release workload, so the table compares relative acceleration rather than
 absolute latency across GPUs.
 
+## Four-step T2V, I2V, and Ref2VA
+
+The standalone [`super_acceleration_v1_1`](super_acceleration_v1_1/) runtime adds the distilled four-step T2V/I2V path
+and the MiniMax-H3 Ref2VA partition. It supports synchronized video and audio, 5/10/15-second
+outputs at 1344x768, Ulysses sequence parallelism over as many as eight GPUs, and SOL/BSA sparse
+attention. Ref2VA uses the fast reference-image sizing profile by default and retains an explicit
+Diffusers-compatible preprocessing mode.
+
+The Ref2VA delivery profile was validated on 8x NVIDIA B300 with a 832x1104 image reference and a
+125-character / 26-token prompt. The warm pipeline medians over three measured runs were 2.192 s
+for 124 frames, 4.348 s for 243 frames, and 5.947 s for 362 frames. These are absolute latencies;
+no unmatched baseline speedup is claimed.
+
 ## Super acceleration: H3 -> LTX-2.5
 
 The separate [Super Acceleration profile](super_acceleration/) runs MiniMax-H3

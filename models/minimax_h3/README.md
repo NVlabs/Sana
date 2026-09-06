@@ -21,16 +21,21 @@ absolute latency across GPUs.
 
 ## Four-step T2V, I2V, and Ref2VA
 
-The standalone [`super_acceleration_v1_1`](super_acceleration_v1_1/) runtime adds the distilled four-step T2V/I2V path
-and the MiniMax-H3 Ref2VA partition. It supports synchronized video and audio, 5/10/15-second
-outputs at 1344x768, Ulysses sequence parallelism over as many as eight GPUs, and SOL/BSA sparse
-attention. Ref2VA uses the fast reference-image sizing profile by default and retains an explicit
-Diffusers-compatible preprocessing mode.
+The standalone [`super_acceleration_v1_1`](super_acceleration_v1_1/) runtime covers distilled
+four-step T2V, first-frame I2V, and the MiniMax-H3 Ref2VA partition. It supports synchronized video
+and audio, 5/10/15-second outputs at 1344x768, Ulysses sequence parallelism over as many as eight
+GPUs, and SOL/BSA sparse attention. Ref2VA uses the fast reference-image sizing profile by default
+and retains an explicit Diffusers-compatible preprocessing mode.
 
-The Ref2VA delivery profile was validated on 8x NVIDIA B300 with a 832x1104 image reference and a
-125-character / 26-token prompt. The warm pipeline medians over three measured runs were 2.192 s
-for 124 frames, 4.348 s for 243 frames, and 5.947 s for 362 frames. These are absolute latencies;
-no unmatched baseline speedup is claimed.
+Validation on 8x NVIDIA B300 covers all three task paths:
+
+| Task | Validation |
+|---|---|
+| T2V | Warm pipeline medians of 1.669 / 3.738 / 6.619 s for 124 / 243 / 362 frames |
+| I2V | Native first-frame path accepted at 124 frames and in a resident 362-frame T2V-to-I2V regression; no separate I2V headline latency is claimed |
+| Ref2VA | Warm pipeline medians of 2.192 / 4.348 / 5.947 s for 124 / 243 / 362 frames, using an 832x1104 image reference and a 125-character / 26-token prompt |
+
+The latency values exclude checkpoint loading, warmup, and MP4 encoding.
 
 ## Super acceleration: H3 -> LTX-2.5
 

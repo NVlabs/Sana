@@ -10,6 +10,20 @@ Production inference package for MiniMax-H3 with synchronized video and audio ou
 
 The default profile prioritizes speed and uses lossy acceleration. Select `dense` when a dense-attention reference is required or when running on one GPU.
 
+## Validation
+
+All three task paths have been exercised on 8x NVIDIA B300 at 1344x768:
+
+| Task | Result |
+|---|---|
+| T2V | 124 / 243 / 362 frames: 1.669 / 3.738 / 6.619 s warm pipeline medians |
+| I2V | Native first-frame conditioning accepted at 124 frames and in a resident 362-frame regression |
+| Ref2VA | 124 / 243 / 362 frames: 2.192 / 4.348 / 5.947 s warm pipeline medians |
+
+The FastH3 preview adapter is published for T2V. I2V combines that adapter with MiniMax-H3's native
+first-frame conditioning path, so its validation is a deployment compatibility result rather than
+an upstream I2V training claim. Latency excludes checkpoint loading, warmup, and MP4 encoding.
+
 ## Setup
 
 Recommended environment: Linux, Python 3.12, CUDA 13.0, and PyTorch 2.10.

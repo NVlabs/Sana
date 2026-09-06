@@ -21,7 +21,7 @@ absolute latency across GPUs.
 
 ## Four-step T2V, I2V, and Ref2VA
 
-The standalone [`super_acceleration_v1_1`](super_acceleration_v1_1/) runtime covers distilled
+The standalone [`Sol-H3`](Sol-H3/) runtime covers distilled
 four-step T2V, first-frame I2V, and the MiniMax-H3 Ref2VA partition. It supports synchronized video
 and audio, 5/10/15-second outputs at 1344x768, Ulysses sequence parallelism over as many as eight
 GPUs, and SOL/BSA sparse attention. Ref2VA uses the fast reference-image sizing profile by default

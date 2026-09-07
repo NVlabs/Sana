@@ -19,6 +19,24 @@ Speedups are measured against the matching baseline runtime on the same hardware
 uses its validated release workload, so the table compares relative acceleration rather than
 absolute latency across GPUs.
 
+## SOL-H3
+
+The standalone [`Sol-H3`](Sol-H3/) runtime covers distilled
+4-step T2V, first-frame I2V, and the MiniMax-H3 Ref2VA partition. It supports synchronized video
+and audio, 5/10/15-second outputs at 1344x768, Ulysses sequence parallelism over as many as eight
+GPUs, and SOL/BSA sparse attention. Ref2VA uses the fast reference-image sizing profile by default
+and retains an explicit Diffusers-compatible preprocessing mode.
+
+Validation on 8x NVIDIA B300 covers all three task paths:
+
+| Task | Validation |
+|---|---|
+| T2V | Warm 8-GPU pipeline medians of 1.653 / 3.732 / 6.612 s for 124 / 243 / 362 frames; see the full 1/4/8-GPU matrix in [`Sol-H3`](Sol-H3/#t2v-benchmark-matrix) |
+| I2V | Native first-frame path accepted at 124 frames and in a resident 362-frame T2V-to-I2V regression; no separate I2V headline latency is claimed |
+| Ref2VA | Warm pipeline medians of 2.192 / 4.348 / 5.947 s for 124 / 243 / 362 frames, using an 832x1104 image reference and a 125-character / 26-token prompt |
+
+The latency values exclude checkpoint loading, warmup, and MP4 encoding.
+
 ## Super acceleration: H3 -> LTX-2.5
 
 The separate [Super Acceleration profile](super_acceleration/) runs MiniMax-H3

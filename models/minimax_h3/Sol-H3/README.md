@@ -1,4 +1,6 @@
-# MiniMax-H3 SOL v2
+# Sol-H3
+
+[Project page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/)
 
 Production inference package for MiniMax-H3 with synchronized video and audio output.
 
@@ -24,6 +26,10 @@ The FastH3 preview adapter is published for T2V. I2V combines that adapter with 
 first-frame conditioning path, so its validation is a deployment compatibility result rather than
 an upstream I2V training claim. Latency excludes checkpoint loading, warmup, and MP4 encoding.
 
+Kernel validation for this PR is limited to SM103 B300 through the SM100-family backend. The
+reachable SM90 and SM120 paths remain unvalidated pending hardware-specific smoke and numerical
+checks.
+
 ### T2V benchmark matrix
 
 The following results were measured on NVIDIA B300 SXM6 AC GPUs. Each cell is the median of three
@@ -31,17 +37,21 @@ requests after one warmup. All runs use the same prompt and seed at 1344x768 and
 synchronized stereo audio, and include text encoding, DiT denoising, and video/audio VAE decoding.
 Checkpoint loading, warmup/compilation, and MP4 encoding are excluded.
 
-| Runtime | GPUs | Profile | 5 s / 124f | 10 s / 243f | 15 s / 362f |
-|---|---:|---|---:|---:|---:|
-| Official Modular Diffusers | 1 | Base BF16 dense, 50 points / 49 forwards | 159.547 s | 442.533 s | 847.486 s |
-| Official Modular Diffusers | 4 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 48.552 s | 127.461 s | 237.171 s |
-| Official Modular Diffusers | 8 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 30.673 s | 71.316 s | 131.647 s |
-| SGLang | 1 | Base BF16 dense, 50 points / 49 forwards | 129.898 s | 376.942 s | 746.885 s |
-| SGLang | 4 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 35.328 s | 100.440 s | 194.930 s |
-| SGLang | 8 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 18.250 s | 50.660 s | 99.513 s |
-| Sol-H3 | 1 | FastH3, dense, 5 points / 4 forwards | **13.745 s** | **37.813 s** | **52.260 s** |
-| Sol-H3 | 4 | FastH3, SOL/BSA, 5 points / 4 forwards | **2.918 s** | **6.993 s** | **12.542 s** |
-| Sol-H3 | 8 | FastH3, SOL/BSA, 5 points / 4 forwards | **1.653 s** | **3.732 s** | **6.612 s** |
+Official Modular Diffusers and SGLang use the base BF16 dense model with 50 scheduler points (49
+DiT forwards) and Ulysses on 4/8 GPUs. Sol-H3 uses the FastH3 adapter with five scheduler points
+(four DiT forwards), dense attention on one GPU, and SOL/BSA on 4/8 GPUs.
+
+| Runtime | GPUs | 5 s / 124f | 10 s / 243f | 15 s / 362f |
+|---|---:|---:|---:|---:|
+| Official Modular Diffusers | 1 | 159.547 s | 442.533 s | 847.486 s |
+| Official Modular Diffusers | 4 | 48.552 s | 127.461 s | 237.171 s |
+| Official Modular Diffusers | 8 | 30.673 s | 71.316 s | 131.647 s |
+| SGLang | 1 | 129.898 s | 376.942 s | 746.885 s |
+| SGLang | 4 | 35.328 s | 100.440 s | 194.930 s |
+| SGLang | 8 | 18.250 s | 50.660 s | 99.513 s |
+| Sol-H3 | 1 | **13.745 s** | **37.813 s** | **52.260 s** |
+| Sol-H3 | 4 | **2.918 s** | **6.993 s** | **12.542 s** |
+| Sol-H3 | 8 | **1.653 s** | **3.732 s** | **6.612 s** |
 
 The official and SGLang rows are directly comparable. Sol-H3 uses a distilled four-forward adapter
 and its multi-GPU profile uses approximate SOL/BSA attention, so the difference from either

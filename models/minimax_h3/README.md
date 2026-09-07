@@ -19,10 +19,10 @@ Speedups are measured against the matching baseline runtime on the same hardware
 uses its validated release workload, so the table compares relative acceleration rather than
 absolute latency across GPUs.
 
-## Four-step T2V, I2V, and Ref2VA
+## SOL-H3
 
 The standalone [`Sol-H3`](Sol-H3/) runtime covers distilled
-four-step T2V, first-frame I2V, and the MiniMax-H3 Ref2VA partition. It supports synchronized video
+4-step T2V, first-frame I2V, and the MiniMax-H3 Ref2VA partition. It supports synchronized video
 and audio, 5/10/15-second outputs at 1344x768, Ulysses sequence parallelism over as many as eight
 GPUs, and SOL/BSA sparse attention. Ref2VA uses the fast reference-image sizing profile by default
 and retains an explicit Diffusers-compatible preprocessing mode.

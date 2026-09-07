@@ -102,48 +102,6 @@ def _route_and_compact_kernel(
     tl.store(nums_ptr + row, tl.where(is_logical, count, 1))
 
 
-@triton.jit
-def _compact_route_kernel(
-    route_ptr,
-    indices_ptr,
-    nums_ptr,
-    logical_blocks,
-    METADATA_BLOCKS: tl.constexpr,
-    CHUNK: tl.constexpr,
-):
-    """Compact one logical route row into its prompt-stable metadata row."""
-    row = tl.program_id(0)
-    query_block = row % METADATA_BLOCKS
-    batch_head = row // METADATA_BLOCKS
-    is_logical = query_block < logical_blocks
-
-    route_base = (batch_head * logical_blocks + query_block) * logical_blocks
-    output_base = row * METADATA_BLOCKS
-    count = tl.zeros((), dtype=tl.int32)
-
-    for start in range(0, METADATA_BLOCKS, CHUNK):
-        key_blocks = start + tl.arange(0, CHUNK)
-        valid = is_logical & (key_blocks < logical_blocks)
-        selected = tl.load(
-            route_ptr + route_base + key_blocks,
-            mask=valid,
-            other=0,
-        ).to(tl.int32)
-        positions = count + tl.cumsum(selected, axis=0) - 1
-        tl.store(
-            indices_ptr + output_base + positions,
-            key_blocks,
-            mask=valid & (selected != 0),
-        )
-        count += tl.sum(selected, axis=0)
-
-    # Padded query rows are throwaway work, but cuDNN requires every row to
-    # contain at least one key block.  The unused tail of every row may remain
-    # uninitialized because q2k_block_nums is the descriptor's valid extent.
-    tl.store(indices_ptr + output_base, 0, mask=~is_logical)
-    tl.store(nums_ptr + row, tl.where(is_logical, count, 1))
-
-
 @torch.no_grad()
 def route_and_compact(
     scores: torch.Tensor,
@@ -217,46 +175,3 @@ def route_and_compact(
         num_warps=4,
     )
     return route, indices, nums
-
-
-@torch.no_grad()
-def compact_route(
-    route: torch.Tensor,
-    metadata_blocks: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return sorted KV indices and counts without materializing a padded mask.
-
-    ``route`` is the logical ``[B,H,Q,K]`` mask.  The outputs use
-    ``metadata_blocks`` for both block dimensions so their descriptors stay
-    stable across prompt lengths.
-    """
-    if route.ndim != 4 or route.dtype != torch.bool or not route.is_contiguous():
-        raise ValueError("route must be a contiguous bool tensor with shape [B,H,Q,K]")
-    batch, heads, query_blocks, key_blocks = route.shape
-    if query_blocks != key_blocks:
-        raise ValueError("route must be square in its block dimensions")
-    if metadata_blocks < query_blocks:
-        raise ValueError(
-            f"metadata_blocks={metadata_blocks} is smaller than logical blocks={query_blocks}"
-        )
-
-    indices = torch.empty(
-        (batch, heads, metadata_blocks, metadata_blocks),
-        device=route.device,
-        dtype=torch.int32,
-    )
-    nums = torch.empty(
-        (batch, heads, metadata_blocks),
-        device=route.device,
-        dtype=torch.int32,
-    )
-    _compact_route_kernel[(batch * heads * metadata_blocks,)](
-        route,
-        indices,
-        nums,
-        query_blocks,
-        METADATA_BLOCKS=metadata_blocks,
-        CHUNK=128,
-        num_warps=4,
-    )
-    return indices, nums

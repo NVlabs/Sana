@@ -1225,6 +1225,13 @@
 
     .latency-matrix thead th:first-child { width: 138px; }
 
+    .matrix-duration {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+    }
+
     .matrix-duration strong {
       display: block;
       color: var(--white);
@@ -1236,23 +1243,15 @@
     }
 
     .matrix-duration small {
-      display: block;
-      margin-top: 8px;
+      display: inline;
+      margin-top: 0;
+      white-space: nowrap;
       color: var(--muted);
       font-size: 11px;
       letter-spacing: .045em;
       text-transform: uppercase;
     }
 
-    .matrix-duration .matrix-specs {
-      display: block;
-      margin-top: 9px;
-      color: var(--dim);
-      font-size: 10px;
-      font-weight: 650;
-      letter-spacing: .04em;
-      text-transform: none;
-    }
 
     .latency-matrix tbody th,
     .latency-matrix tbody td { border-top: 1px solid var(--line); }
@@ -5027,9 +5026,9 @@
               <thead>
                 <tr>
                   <th scope="col">GPU count</th>
-                  <th scope="col" data-benchmark-duration="5"><span class="matrix-duration"><strong>5s</strong><small>124 frames</small><span class="matrix-specs">1344×768 · 24 FPS · stereo audio</span></span></th>
-                  <th scope="col" data-benchmark-duration="10" hidden><span class="matrix-duration"><strong>10s</strong><small>243 frames</small><span class="matrix-specs">1344×768 · 24 FPS · stereo audio</span></span></th>
-                  <th scope="col" data-benchmark-duration="15" hidden><span class="matrix-duration"><strong>15s</strong><small>362 frames</small><span class="matrix-specs">1344×768 · 24 FPS · stereo audio</span></span></th>
+                  <th scope="col" data-benchmark-duration="5"><span class="matrix-duration"><strong>5s</strong><small>124 frames · 1344×768 · 24 FPS · stereo audio</small></span></th>
+                  <th scope="col" data-benchmark-duration="10" hidden><span class="matrix-duration"><strong>10s</strong><small>243 frames · 1344×768 · 24 FPS · stereo audio</small></span></th>
+                  <th scope="col" data-benchmark-duration="15" hidden><span class="matrix-duration"><strong>15s</strong><small>362 frames · 1344×768 · 24 FPS · stereo audio</small></span></th>
                 </tr>
               </thead>
               <tbody>

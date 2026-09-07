@@ -3029,36 +3029,98 @@
     .release-contract { display: flex; flex-wrap: wrap; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: rgba(255, 255, 255, .018); }
     .release-contract span { flex: 1 1 190px; padding: 18px 20px; border-right: 1px solid var(--line); color: var(--fog); font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; font-weight: 700; text-align: center; }
     .release-contract span:last-child { border-right: 0; }
-    /* Implementation notes continue inside the acceleration chapter. */
-    .implementation-notes {
-      margin-top: clamp(44px, 5vw, 64px);
-      padding-top: clamp(34px, 4vw, 46px);
-      border-top: 1px solid var(--line-bright);
-      scroll-margin-top: calc(var(--header-h) + 18px);
-    }
-
-    .implementation-head {
+    /* Pair each optimization overview directly with its implementation details. */
+    .acceleration-list {
       display: grid;
-      grid-template-columns: minmax(250px, .72fr) minmax(0, 1fr);
-      gap: clamp(24px, 5vw, 72px);
-      align-items: end;
-      margin-bottom: clamp(28px, 4vw, 42px);
+      gap: 14px;
     }
 
-    .implementation-head h3 {
-      margin: 12px 0 0;
-      color: var(--white);
-      font-size: clamp(34px, 4vw, 54px);
-      line-height: 1;
-      letter-spacing: -.045em;
+    .acceleration-pair {
+      display: grid;
+      grid-template-columns: minmax(320px, .72fr) minmax(0, 1.28fr);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+      transition: border-color .3s ease, background .3s ease, transform .3s var(--ease);
     }
 
-    .implementation-head p {
-      max-width: 650px;
-      margin: 0;
-      color: var(--muted);
-      font-size: 17px;
-      line-height: 1.62;
+    .acceleration-pair:hover {
+      transform: translateY(-2px);
+      border-color: rgba(167, 255, 46, .27);
+      background: var(--surface-2);
+    }
+
+    .acceleration-pair.featured {
+      border-color: rgba(114, 245, 186, .32);
+      background: linear-gradient(115deg, rgba(114, 245, 186, .045), var(--surface) 52%);
+    }
+
+    .acceleration-pair > .tech-card {
+      min-height: 245px;
+      padding: clamp(24px, 2.7vw, 34px);
+      box-shadow: none;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .acceleration-pair > .tech-card:hover {
+      transform: none;
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .acceleration-pair > .detail-row {
+      grid-template-columns: minmax(0, 1fr) minmax(175px, .36fr);
+      gap: clamp(22px, 3vw, 38px);
+      align-items: start;
+      padding: clamp(25px, 3vw, 36px);
+      border: 0;
+      border-left: 1px solid var(--line);
+      background: rgba(255, 255, 255, .008);
+    }
+
+    .acceleration-pair .detail-marker { display: none; }
+    .acceleration-pair .detail-copy h3 { font-size: clamp(25px, 2.2vw, 33px); }
+    .acceleration-pair .detail-explanation {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(16px, 2vw, 24px);
+      margin-top: 18px;
+    }
+    .acceleration-pair .detail-part p { font-size: 16px; line-height: 1.62; }
+    .acceleration-pair .detail-evidence {
+      grid-column: auto;
+      padding: 3px 0 3px 20px;
+    }
+    .acceleration-pair .detail-evidence strong { font-size: clamp(27px, 2.5vw, 36px); }
+    .acceleration-pair .detail-evidence small { font-size: 12px; }
+    .acceleration-pair.featured .tech-label,
+    .acceleration-pair.featured .detail-copy h3,
+    .acceleration-pair.featured .detail-part > span,
+    .acceleration-pair.featured .detail-evidence > span,
+    .acceleration-pair.featured .detail-evidence strong { color: var(--mint); }
+
+    @media (max-width: 900px) {
+      .acceleration-pair { grid-template-columns: 1fr; }
+      .acceleration-pair > .tech-card { min-height: 235px; }
+      .acceleration-pair > .detail-row {
+        grid-template-columns: minmax(0, 1fr) minmax(170px, .34fr);
+        border-top: 1px solid var(--line);
+        border-left: 0;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .acceleration-pair > .tech-card { min-height: 270px; }
+      .acceleration-pair > .detail-row { grid-template-columns: 1fr; }
+      .acceleration-pair .detail-explanation { grid-template-columns: 1fr; }
+      .acceleration-pair .detail-evidence {
+        grid-column: auto;
+        padding: 18px 0 0;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+      }
     }
 
     .detail-list { border-top: 1px solid var(--line); }
@@ -3179,12 +3241,6 @@
 
     @media (max-width: 720px) {
 
-      .implementation-head {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        margin-bottom: 28px;
-      }
-      .implementation-head p { max-width: 680px; }
       .tech-summary { max-width: 100%; }
       .detail-row {
         grid-template-columns: 1fr;
@@ -5104,99 +5160,17 @@
             <span class="section-kicker">Six optimizations · one runtime</span>
             <h2 id="stack-title">How Sol-H3 gets faster.</h2>
           </div>
-          <p>Use these six cards as a map of the runtime. Each one links to its implementation note below.</p>
+          <p>Each card pairs one optimization with how it works, why it is faster, and the measured evidence.</p>
         </header>
 
-        <div class="bento">
-          <article class="tech-card span-6 reveal" data-index="01">
-            <span class="tech-label">GPU kernels</span>
-            <h3>Fuse repeated operations</h3>
-            <a class="tech-summary" href="#detail-kernels">
-              <strong>Norm · RoPE · MLP</strong>
-              <span>Read implementation ↓</span>
-            </a>
-            <div class="tech-viz fusion-viz" aria-hidden="true"><div class="fusion-stack"><i></i><i></i><i></i><i></i></div><span class="fusion-arrow"></span><span class="fusion-one"></span></div>
-          </article>
-
-          <article class="tech-card span-6 reveal" data-index="02">
-            <span class="tech-label">Multi-GPU communication</span>
-            <h3>Faster 8-GPU data exchange</h3>
-            <a class="tech-summary" href="#detail-communication">
-              <strong>Pack · all-to-all · merge</strong>
-              <span>Read implementation ↓</span>
-            </a>
-            <div class="tech-viz ulysses-viz" aria-hidden="true"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i></div>
-          </article>
-
-          <article class="tech-card span-6 reveal" data-index="03">
-            <span class="tech-label">Sparse-attention setup</span>
-            <h3>Fuse the setup work</h3>
-            <a class="tech-summary" href="#detail-setup">
-              <strong>K/V summaries · threshold · metadata</strong>
-              <span>Read implementation ↓</span>
-            </a>
-            <div class="tech-viz route-viz" aria-hidden="true"><span><i style="--w:100%"></i><b>Before</b></span><span><i style="--w:24%"></i><b>Fused</b></span></div>
-          </article>
-
-          <article class="tech-card span-6 reveal" data-index="04">
-            <span class="tech-label">Sol-Attn</span>
-            <h3>Sparsify on the fly</h3>
-            <a class="tech-summary" href="#detail-sol-attn">
-              <strong>Query-dependent · one-pass · training-free</strong>
-              <span>Read implementation ↓</span>
-            </a>
-            <div class="tech-viz prefix-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          </article>
-
-          <article class="tech-card span-6 reveal" data-index="05">
-            <span class="tech-label">Video decoding</span>
-            <h3>Parallel VAE decoding</h3>
-            <a class="tech-summary" href="#detail-vae">
-              <strong>Tile parallel · batch · compile</strong>
-              <span>Read implementation ↓</span>
-            </a>
-            <div class="tech-viz tile-viz" aria-hidden="true">
-              <i style="--p:1"></i><i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i>
-              <i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i>
-              <i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i><i style="--p:9"></i>
-              <i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i><i style="--p:9"></i><i style="--p:10"></i>
-            </div>
-          </article>
-
-          <article class="tech-card span-6 reveal" data-index="06">
-            <span class="tech-label">Conditioning</span>
-            <h3>Precompute AdaLN</h3>
-            <a class="tech-summary" href="#detail-adaln">
-              <strong>Precompute · cache · direct lookup</strong>
-              <span>Read implementation ↓</span>
-            </a>
-            <div class="tech-viz adaln-viz" aria-hidden="true">
-              <i style="--p:1"></i><i style="--p:5"></i><i style="--p:2"></i><i style="--p:7"></i><i style="--p:4"></i><i style="--p:9"></i>
-              <i style="--p:6"></i><i style="--p:2"></i><i style="--p:8"></i><i style="--p:3"></i><i style="--p:10"></i><i style="--p:4"></i>
-              <i style="--p:3"></i><i style="--p:8"></i><i style="--p:4"></i><i style="--p:9"></i><i style="--p:5"></i><i style="--p:10"></i>
-            </div>
-          </article>
-
-        </div>
-
-        <div class="release-contract reveal" aria-label="Measured Sol-H3 profile">
-          <span>Audited T2V</span>
-          <span>5 / 10 / 15 seconds</span>
-          <span>1344×768 · 24 FPS</span>
-          <span>INT8 QKV · FP8 attention output</span>
-          <span>8× NVIDIA B300</span>
-        </div>
-
-        <section class="implementation-notes" id="details" aria-labelledby="details-title">
-          <header class="implementation-head reveal">
-            <div>
-              <span class="section-kicker">Implementation notes</span>
-              <h3 id="details-title">Inside each optimization.</h3>
-            </div>
-            <p>How each part works, where the time is saved, and the measured evidence.</p>
-          </header>
-
-          <div class="detail-list">
+        <div class="acceleration-list">
+          <div class="acceleration-pair">
+            <article class="tech-card reveal" data-index="01">
+              <span class="tech-label">GPU kernels</span>
+              <h3>Fuse repeated operations</h3>
+              <div class="tech-summary"><strong>Norm · RoPE · MLP</strong></div>
+              <div class="tech-viz fusion-viz" aria-hidden="true"><div class="fusion-stack"><i></i><i></i><i></i><i></i></div><span class="fusion-arrow"></span><span class="fusion-one"></span></div>
+            </article>
             <article class="detail-row reveal" id="detail-kernels">
               <div class="detail-marker"><strong>01</strong><span>GPU kernels</span></div>
               <div class="detail-copy">
@@ -5208,7 +5182,15 @@
               </div>
               <aside class="detail-evidence"><span>Evidence</span><strong>≈178 GB</strong><small>less intermediate traffic per GPU per evaluation</small></aside>
             </article>
+          </div>
 
+          <div class="acceleration-pair">
+            <article class="tech-card reveal" data-index="02">
+              <span class="tech-label">Multi-GPU communication</span>
+              <h3>Faster 8-GPU data exchange</h3>
+              <div class="tech-summary"><strong>Pack · all-to-all · merge</strong></div>
+              <div class="tech-viz ulysses-viz" aria-hidden="true"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i></div>
+            </article>
             <article class="detail-row reveal" id="detail-communication">
               <div class="detail-marker"><strong>02</strong><span>8-GPU exchange</span></div>
               <div class="detail-copy">
@@ -5220,7 +5202,15 @@
               </div>
               <aside class="detail-evidence"><span>Fastest profile</span><strong>51.6%</strong><small>of the BF16 attention communication payload</small></aside>
             </article>
+          </div>
 
+          <div class="acceleration-pair">
+            <article class="tech-card reveal" data-index="03">
+              <span class="tech-label">Sparse-attention setup</span>
+              <h3>Fuse the setup work</h3>
+              <div class="tech-summary"><strong>K/V summaries · threshold · metadata</strong></div>
+              <div class="tech-viz route-viz" aria-hidden="true"><span><i style="--w:100%"></i><b>Before</b></span><span><i style="--w:24%"></i><b>Fused</b></span></div>
+            </article>
             <article class="detail-row reveal" id="detail-setup">
               <div class="detail-marker"><strong>03</strong><span>Sparse setup</span></div>
               <div class="detail-copy">
@@ -5232,7 +5222,15 @@
               </div>
               <aside class="detail-evidence"><span>Measured setup</span><strong>0.285 ms</strong><small>from 1.206 ms · 76.4% lower</small></aside>
             </article>
+          </div>
 
+          <div class="acceleration-pair featured">
+            <article class="tech-card reveal" data-index="04">
+              <span class="tech-label">Sol-Attn</span>
+              <h3>Sparsify on the fly</h3>
+              <div class="tech-summary"><strong>Query-dependent · one-pass · training-free</strong></div>
+              <div class="tech-viz prefix-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </article>
             <article class="detail-row featured reveal" id="detail-sol-attn">
               <div class="detail-marker"><strong>04</strong><span>Sol-Attn</span></div>
               <div class="detail-copy">
@@ -5244,7 +5242,20 @@
               </div>
               <aside class="detail-evidence"><span>Key property</span><strong>One pass</strong><small>query-dependent · training-free sparsification</small></aside>
             </article>
+          </div>
 
+          <div class="acceleration-pair">
+            <article class="tech-card reveal" data-index="05">
+              <span class="tech-label">Video decoding</span>
+              <h3>Parallel VAE decoding</h3>
+              <div class="tech-summary"><strong>Tile parallel · batch · compile</strong></div>
+              <div class="tech-viz tile-viz" aria-hidden="true">
+                <i style="--p:1"></i><i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i>
+                <i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i>
+                <i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i><i style="--p:9"></i>
+                <i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i><i style="--p:9"></i><i style="--p:10"></i>
+              </div>
+            </article>
             <article class="detail-row reveal" id="detail-vae">
               <div class="detail-marker"><strong>05</strong><span>VAE decoding</span></div>
               <div class="detail-copy">
@@ -5256,7 +5267,19 @@
               </div>
               <aside class="detail-evidence"><span>5s VAE decode</span><strong>0.602 s</strong><small>7.55 → 1.16 s with tiles · then 0.602 s with batching</small></aside>
             </article>
+          </div>
 
+          <div class="acceleration-pair">
+            <article class="tech-card reveal" data-index="06">
+              <span class="tech-label">Conditioning</span>
+              <h3>Precompute AdaLN</h3>
+              <div class="tech-summary"><strong>Precompute · cache · direct lookup</strong></div>
+              <div class="tech-viz adaln-viz" aria-hidden="true">
+                <i style="--p:1"></i><i style="--p:5"></i><i style="--p:2"></i><i style="--p:7"></i><i style="--p:4"></i><i style="--p:9"></i>
+                <i style="--p:6"></i><i style="--p:2"></i><i style="--p:8"></i><i style="--p:3"></i><i style="--p:10"></i><i style="--p:4"></i>
+                <i style="--p:3"></i><i style="--p:8"></i><i style="--p:4"></i><i style="--p:9"></i><i style="--p:5"></i><i style="--p:10"></i>
+              </div>
+            </article>
             <article class="detail-row reveal" id="detail-adaln">
               <div class="detail-marker"><strong>06</strong><span>AdaLN cache</span></div>
               <div class="detail-copy">
@@ -5269,7 +5292,15 @@
               <aside class="detail-evidence"><span>Memory released</span><strong>≈24 GB</strong><small>per GPU · plus ≈400 indexing launches removed</small></aside>
             </article>
           </div>
-        </section>
+        </div>
+
+        <div class="release-contract reveal" aria-label="Measured Sol-H3 profile">
+          <span>Audited T2V</span>
+          <span>5 / 10 / 15 seconds</span>
+          <span>1344×768 · 24 FPS</span>
+          <span>INT8 QKV · FP8 attention output</span>
+          <span>8× NVIDIA B300</span>
+        </div>
       </div>
     </section>
 

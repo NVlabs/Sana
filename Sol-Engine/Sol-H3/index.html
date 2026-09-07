@@ -1217,14 +1217,15 @@
     }
     .latency-fill {
       display: block;
-      width: max(var(--w), 8px);
+      width: var(--w);
+      min-width: 1px;
       height: 100%;
       border-radius: inherit;
     }
     .latency-fill.base { background: var(--dim); }
     .latency-fill.sol {
       position: relative;
-      overflow: hidden;
+      overflow: visible;
       background: linear-gradient(90deg, var(--green), var(--acid));
       box-shadow: 0 0 18px rgba(167, 255, 46, .16);
     }
@@ -1233,8 +1234,9 @@
       position: absolute;
       top: 0;
       right: 0;
-      width: 2px;
+      width: 3px;
       height: 100%;
+      transform: translateX(50%);
       background: rgba(255, 255, 255, .9);
       box-shadow: 0 0 10px 2px rgba(255, 255, 255, .45);
     }
@@ -4521,7 +4523,7 @@
               <div class="console-label">Measured request latency · lower is better</div>
               <h3 id="latency-title">Latency by output length.</h3>
             </div>
-            <span class="latency-direction">Each model · 15s = full bar</span>
+            <span class="latency-direction">Shared scale · 0–131.647 s</span>
           </header>
 
           <div class="latency-groups">
@@ -4535,7 +4537,7 @@
                 </div>
                 <div class="latency-row ours">
                   <span class="latency-model">Sol-H3<small>Ours</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 25.215%"></i></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 1.268%"></i></span>
                   <strong class="latency-number">1.669 s</strong>
                 </div>
                 <small class="latency-settings">124 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
@@ -4553,7 +4555,7 @@
                 </div>
                 <div class="latency-row ours">
                   <span class="latency-model">Sol-H3<small>Ours</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 56.474%"></i></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 2.839%"></i></span>
                   <strong class="latency-number">3.738 s</strong>
                 </div>
                 <small class="latency-settings">243 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
@@ -4571,7 +4573,7 @@
                 </div>
                 <div class="latency-row ours">
                   <span class="latency-model">Sol-H3<small>Ours</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 100%"></i></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 5.028%"></i></span>
                   <strong class="latency-number">6.619 s</strong>
                 </div>
                 <small class="latency-settings">362 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>

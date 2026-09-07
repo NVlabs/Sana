@@ -1312,6 +1312,8 @@
       box-shadow: 0 0 18px rgba(167, 255, 46, .1);
     }
 
+    .matrix-measure.ours { padding-bottom: 24px; }
+
     .matrix-measure + .matrix-measure {
       margin-top: 14px;
       padding-top: 14px;
@@ -1363,29 +1365,42 @@
       grid-column: 2;
       grid-row: 1;
       align-self: center;
-      height: 2px;
+      height: 1px;
       margin-right: 12px;
       margin-left: max(calc(var(--w) + 14px), 44px);
       background: var(--red);
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(255, 101, 76, .2);
       pointer-events: none;
     }
 
     .matrix-speedup::before {
       position: absolute;
       top: 50%;
-      left: 0;
-      width: 0;
-      height: 0;
-      border-top: 6px solid transparent;
-      border-right: 11px solid var(--red);
-      border-bottom: 6px solid transparent;
-      transform: translate(-100%, -50%);
+      left: 1px;
+      width: 8px;
+      height: 8px;
+      border-bottom: 2px solid var(--red);
+      border-left: 2px solid var(--red);
+      transform: translate(-35%, -50%) rotate(45deg);
       content: "";
     }
 
+
+    .matrix-speedup::after {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      width: 2px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--red);
+      transform: translateY(-50%);
+      content: "";
+    }
     .matrix-speedup > strong {
       position: absolute;
-      bottom: 8px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       color: var(--red);

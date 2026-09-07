@@ -6,17 +6,17 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050705">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8f1">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <meta name="description" content="Sol-H3 accelerates MiniMax-H3 video generation with native audio, delivering up to 19.89× speedup over Base H3 across 5s, 10s, and 15s outputs on 8× NVIDIA B300 GPUs.">
+  <meta name="description" content="Sol-H3 accelerates MiniMax-H3 video generation with native audio, delivering up to 15.05× speedup over Base H3 across 5s, 10s, and 15s outputs on 8× NVIDIA B300 GPUs.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
-  <meta property="og:description" content="Five seconds of world in 1.669 seconds. Across 5s–15s outputs, Sol-H3 is 18.38×–19.89× faster than Base H3 on 8× NVIDIA B300 GPUs.">
+  <meta property="og:description" content="Five seconds of world in 1.653 seconds. Across 5s–15s outputs, Sol-H3 is 11.04×–15.05× faster than Base H3 on 8× NVIDIA B300 GPUs.">
   <meta property="og:url" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <meta property="og:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="732">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
-  <meta name="twitter:description" content="Five seconds of world in 1.669 seconds. Sol-H3 delivers up to 19.89× speedup over Base H3 on 8× NVIDIA B300 GPUs.">
+  <meta name="twitter:description" content="Five seconds of world in 1.653 seconds. Sol-H3 delivers up to 15.05× speedup over Base H3 on 8× NVIDIA B300 GPUs.">
   <meta name="twitter:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
   <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <title>Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System | NVIDIA Research</title>
@@ -1290,12 +1290,8 @@
       white-space: nowrap;
     }
 
-    .matrix-measure.pending > span { color: var(--acid); }
-    .matrix-measure.pending > strong {
-      color: var(--dim);
-      font-size: 22px;
-      letter-spacing: 0;
-    }
+    .matrix-measure.ours > span,
+    .matrix-measure.ours > strong { color: var(--acid); }
 
     .matrix-speedup {
       display: flex;
@@ -1312,7 +1308,7 @@
       text-transform: uppercase;
     }
 
-    .matrix-speedup strong { color: var(--dim); }
+    .matrix-speedup strong { color: var(--acid); font-size: 15px; }
 
     @media (max-width: 900px) {
       .latency-head {
@@ -4835,9 +4831,9 @@
           <div class="hero-affiliation" aria-label="NVIDIA Research, Efficient AI Team and Singapore Lab">
             <span>NVIDIA Research, Efficient AI Team &amp; Singapore Lab.</span>
           </div>
-          <div class="hero-result-title" aria-label="Five seconds of world inferred in 1.669 seconds">
+          <div class="hero-result-title" aria-label="Five seconds of world inferred in 1.653 seconds">
             <span class="hero-result-line"><strong>5s</strong><small>of world.</small></span>
-            <span class="hero-result-line accent"><strong>1.669s</strong><small>to infer.</small></span>
+            <span class="hero-result-line accent"><strong>1.653s</strong><small>to infer.</small></span>
           </div>
           <p class="hero-dek">
             <strong>Sol-H3 generates MiniMax-H3 video with native audio faster than playback on one 8× NVIDIA B300 system.</strong>
@@ -4929,7 +4925,7 @@
             <span class="section-kicker">Scaling benchmark · 1 / 4 / 8× NVIDIA B300</span>
             <h2 id="performance-title">Latency across GPU counts.</h2>
           </div>
-          <p>Base H3 dense measurements establish the scaling baseline. Matching Sol-H3 latencies and speedups will fill the reserved slots.</p>
+          <p>Read every 5s, 10s, and 15s result across 1, 4, and 8 B300 GPUs at a glance.</p>
         </header>
 
         <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="latency-title" aria-describedby="benchmark-method">
@@ -4938,12 +4934,12 @@
               <div class="console-label">Measured request latency · lower is better</div>
               <h3 id="latency-title">Video length × GPU count.</h3>
             </div>
-            <span class="latency-direction">Base H3 measured · Sol-H3 pending</span>
+            <span class="latency-direction">Base H3 Dense · Sol-H3</span>
           </header>
 
           <div class="matrix-shell">
             <table class="latency-matrix">
-              <caption class="matrix-caption">Base H3 and pending Sol-H3 latency for 5, 10, and 15 second outputs on one, four, and eight NVIDIA B300 GPUs.</caption>
+              <caption class="matrix-caption">Measured Base H3 Dense and Sol-H3 latency for 5, 10, and 15 second outputs on one, four, and eight NVIDIA B300 GPUs.</caption>
               <thead>
                 <tr>
                   <th scope="col">GPU count</th>
@@ -4957,23 +4953,23 @@
                   <th scope="row"><span class="matrix-gpu"><strong>1×</strong><small>NVIDIA B300</small></span></th>
                   <td data-duration="5s · 124 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>159.547 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>129.898 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · Dense · 4× DiT</small></span><strong>13.745 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>9.45×</strong></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>442.533 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>376.942 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · Dense · 4× DiT</small></span><strong>37.813 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>9.97×</strong></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>847.486 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>746.885 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · Dense · 4× DiT</small></span><strong>52.260 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>14.29×</strong></div>
                     </div>
                   </td>
                 </tr>
@@ -4981,23 +4977,23 @@
                   <th scope="row"><span class="matrix-gpu"><strong>4×</strong><small>NVIDIA B300</small></span></th>
                   <td data-duration="5s · 124 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>48.552 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>35.328 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · SOL · 4× DiT</small></span><strong>2.918 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>12.11×</strong></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>127.461 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>100.440 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · SOL · 4× DiT</small></span><strong>6.993 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>14.36×</strong></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>237.171 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>194.930 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · SOL · 4× DiT</small></span><strong>12.542 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>15.54×</strong></div>
                     </div>
                   </td>
                 </tr>
@@ -5005,23 +5001,23 @@
                   <th scope="row"><span class="matrix-gpu"><strong>8×</strong><small>NVIDIA B300</small></span></th>
                   <td data-duration="5s · 124 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>30.673 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>18.250 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · SOL · 4× DiT</small></span><strong>1.653 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>11.04×</strong></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>71.316 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>50.660 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · SOL · 4× DiT</small></span><strong>3.732 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>13.57×</strong></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>131.647 s</strong></div>
-                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
-                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-measure base"><span>Base H3<small>Dense · 49× DiT</small></span><strong>99.513 s</strong></div>
+                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours · SOL · 4× DiT</small></span><strong>6.612 s</strong></div>
+                      <div class="matrix-speedup"><span>vs Base H3</span><strong>15.05×</strong></div>
                     </div>
                   </td>
                 </tr>
@@ -5032,7 +5028,7 @@
 
         <div class="method-note reveal">
           <strong>Measured scope</strong>
-          <span id="benchmark-method">Base H3 uses dense attention at 1344×768 and 24 FPS with native audio: 124 / 243 / 362 frames for 5s / 10s / 15s outputs. Timing includes prompt encoding, diffusion denoising, VAE video decoding, and native audio; final MP4 encoding is excluded. Sol-H3 cells remain placeholders until matching 1× / 4× / 8× B300 runs are complete.</span>
+          <span id="benchmark-method">All runs use 1344×768, 24 FPS, the same prompt and seed 20260903, and reference-free T2V with stereo audio. Base H3 uses dense attention with a 50-point schedule and 49 DiT evaluations; Sol-H3 uses four DiT evaluations, with Dense attention on 1× B300 and SOL on 4× / 8× B300. Each value is the median of three measured runs after one warmup. Timing includes text encoding, DiT, and video/audio VAE decoding; model loading, compilation warmup, and final MP4 encoding are not timed.</span>
         </div>
       </div>
     </section>

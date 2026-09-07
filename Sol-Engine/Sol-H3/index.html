@@ -915,7 +915,7 @@
       padding: 3px;
       border: 1px solid var(--line);
       border-radius: 9px;
-      background: rgba(0, 0, 0, .25);
+      background: var(--surface-2);
     }
 
     .duration-tab {
@@ -934,6 +934,24 @@
 
     .duration-tab:hover { color: var(--white); }
     .duration-tab[aria-selected="true"] { background: var(--acid); color: #071000; }
+
+    .benchmark-duration-control {
+      display: grid;
+      justify-items: end;
+      gap: 8px;
+    }
+
+    .benchmark-scale {
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .055em;
+      text-transform: uppercase;
+    }
+
+    .latency-matrix [hidden] { display: none !important; }
+    .latency-matrix [data-benchmark-duration]:not([hidden]) { border-right: 0; }
 
     .console-readout {
       display: grid;
@@ -1252,9 +1270,30 @@
 
     .matrix-measure {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: 108px minmax(0, 1fr) 110px;
       gap: 12px;
       align-items: center;
+      --w: 100%;
+    }
+
+    .matrix-measure > span {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .matrix-measure::before {
+      content: "";
+      grid-column: 2;
+      grid-row: 1;
+      width: 100%;
+      height: 18px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--dim) 0 var(--w), var(--line) var(--w) 100%);
+    }
+
+    .matrix-measure.ours::before {
+      background: linear-gradient(90deg, var(--green) 0, var(--acid) var(--w), var(--line) var(--w) 100%);
+      box-shadow: 0 0 18px rgba(167, 255, 46, .1);
     }
 
     .matrix-measure + .matrix-measure {
@@ -1282,11 +1321,14 @@
     }
 
     .matrix-measure > strong {
+      grid-column: 3;
+      grid-row: 1;
       color: var(--white);
       font-size: clamp(19px, 2vw, 26px);
       line-height: 1;
       letter-spacing: -.025em;
       font-variant-numeric: tabular-nums;
+      text-align: right;
       white-space: nowrap;
     }
 
@@ -1327,6 +1369,7 @@
         align-items: flex-start;
         flex-direction: column;
       }
+      .benchmark-duration-control { justify-items: start; }
 
       .latency-matrix,
       .latency-matrix tbody,
@@ -1392,6 +1435,11 @@
 
       .matrix-cell { padding: 14px 18px 19px; }
       .matrix-measure > strong { font-size: 20px; }
+
+      .matrix-measure {
+        grid-template-columns: 82px minmax(0, 1fr) 76px;
+        gap: 8px;
+      }
     }
 
 
@@ -4937,98 +4985,105 @@
             <span class="section-kicker">Scaling benchmark · 1 / 4 / 8× NVIDIA B300</span>
             <h2 id="performance-title">Latency across GPU counts.</h2>
           </div>
-          <p>Read every 5s, 10s, and 15s result across 1, 4, and 8 B300 GPUs at a glance.</p>
+          <p>Choose an output length, then compare 1, 4, and 8 B300 GPUs on one shared latency scale.</p>
         </header>
 
         <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="latency-title" aria-describedby="benchmark-method">
           <header class="latency-head">
             <div>
               <div class="console-label">Measured generation time · seconds</div>
-              <h3 id="latency-title">Video length × GPU count.</h3>
+              <h3 id="latency-title">GPU scaling by output length.</h3>
             </div>
-            <span class="latency-direction">Base H3 Dense · Sol-H3</span>
+            <div class="benchmark-duration-control">
+              <div class="duration-tabs" role="tablist" aria-label="Choose output length">
+                <button class="duration-tab" id="benchmark-duration-5" type="button" role="tab" aria-selected="true" tabindex="0" data-benchmark-duration-control="5" aria-controls="latency-panel">5s</button>
+                <button class="duration-tab" id="benchmark-duration-10" type="button" role="tab" aria-selected="false" tabindex="-1" data-benchmark-duration-control="10" aria-controls="latency-panel">10s</button>
+                <button class="duration-tab" id="benchmark-duration-15" type="button" role="tab" aria-selected="false" tabindex="-1" data-benchmark-duration-control="15" aria-controls="latency-panel">15s</button>
+              </div>
+              <span class="benchmark-scale" id="benchmark-scale">Shared scale · 0–129.898 s</span>
+            </div>
           </header>
 
-          <div class="matrix-shell">
-            <table class="latency-matrix">
+          <div class="matrix-shell" id="latency-panel" role="tabpanel" aria-labelledby="benchmark-duration-5" aria-live="polite">
+            <table class="latency-matrix" id="latency-matrix">
               <caption class="matrix-caption">Measured Base H3 Dense and Sol-H3 latency for 5, 10, and 15 second outputs on one, four, and eight NVIDIA B300 GPUs.</caption>
               <thead>
                 <tr>
                   <th scope="col">GPU count</th>
-                  <th scope="col"><span class="matrix-duration"><strong>5s</strong><small>124 frames</small></span></th>
-                  <th scope="col"><span class="matrix-duration"><strong>10s</strong><small>243 frames</small></span></th>
-                  <th scope="col"><span class="matrix-duration"><strong>15s</strong><small>362 frames</small></span></th>
+                  <th scope="col" data-benchmark-duration="5"><span class="matrix-duration"><strong>5s</strong><small>124 frames</small></span></th>
+                  <th scope="col" data-benchmark-duration="10" hidden><span class="matrix-duration"><strong>10s</strong><small>243 frames</small></span></th>
+                  <th scope="col" data-benchmark-duration="15" hidden><span class="matrix-duration"><strong>15s</strong><small>362 frames</small></span></th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <th scope="row"><span class="matrix-gpu"><strong>1×</strong><small>NVIDIA B300</small></span></th>
-                  <td data-duration="5s · 124 frames">
+                  <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>129.898 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>13.745 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>129.898 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 10.581%;"><span>Sol-H3<small>Ours</small></span><strong>13.745 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>9.45×</strong></div>
                     </div>
                   </td>
-                  <td data-duration="10s · 243 frames">
+                  <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>376.942 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>37.813 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>376.942 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 10.032%;"><span>Sol-H3<small>Ours</small></span><strong>37.813 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>9.97×</strong></div>
                     </div>
                   </td>
-                  <td data-duration="15s · 362 frames">
+                  <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>746.885 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>52.260 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>746.885 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 6.997%;"><span>Sol-H3<small>Ours</small></span><strong>52.260 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>14.29×</strong></div>
                     </div>
                   </td>
                 </tr>
                 <tr>
                   <th scope="row"><span class="matrix-gpu"><strong>4×</strong><small>NVIDIA B300</small></span></th>
-                  <td data-duration="5s · 124 frames">
+                  <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>35.328 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>2.918 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 27.197%;"><span>Base H3<small>Dense</small></span><strong>35.328 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 2.246%;"><span>Sol-H3<small>Ours</small></span><strong>2.918 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>12.11×</strong></div>
                     </div>
                   </td>
-                  <td data-duration="10s · 243 frames">
+                  <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>100.440 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>6.993 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 26.646%;"><span>Base H3<small>Dense</small></span><strong>100.440 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 1.855%;"><span>Sol-H3<small>Ours</small></span><strong>6.993 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>14.36×</strong></div>
                     </div>
                   </td>
-                  <td data-duration="15s · 362 frames">
+                  <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>194.930 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>12.542 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 26.099%;"><span>Base H3<small>Dense</small></span><strong>194.930 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 1.679%;"><span>Sol-H3<small>Ours</small></span><strong>12.542 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>15.54×</strong></div>
                     </div>
                   </td>
                 </tr>
                 <tr>
                   <th scope="row"><span class="matrix-gpu"><strong>8×</strong><small>NVIDIA B300</small></span></th>
-                  <td data-duration="5s · 124 frames">
+                  <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>18.250 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>1.653 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 14.049%;"><span>Base H3<small>Dense</small></span><strong>18.250 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 1.273%;"><span>Sol-H3<small>Ours</small></span><strong>1.653 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>11.04×</strong></div>
                     </div>
                   </td>
-                  <td data-duration="10s · 243 frames">
+                  <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>50.660 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>3.732 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 13.440%;"><span>Base H3<small>Dense</small></span><strong>50.660 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 0.990%;"><span>Sol-H3<small>Ours</small></span><strong>3.732 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>13.57×</strong></div>
                     </div>
                   </td>
-                  <td data-duration="15s · 362 frames">
+                  <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>99.513 s</strong></div>
-                      <div class="matrix-measure ours"><span>Sol-H3<small>Ours</small></span><strong>6.612 s</strong></div>
+                      <div class="matrix-measure base" style="--w: 13.324%;"><span>Base H3<small>Dense</small></span><strong>99.513 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 0.885%;"><span>Sol-H3<small>Ours</small></span><strong>6.612 s</strong></div>
                       <div class="matrix-speedup"><span>vs Base H3</span><strong>15.05×</strong></div>
                     </div>
                   </td>
@@ -5609,6 +5664,46 @@
         });
       }, { rootMargin: '-25% 0px -60% 0px', threshold: 0 });
       navSections.forEach((section) => navObserver.observe(section));
+
+      const benchmarkTabs = [...document.querySelectorAll('[data-benchmark-duration-control]')];
+      const benchmarkCells = [...document.querySelectorAll('[data-benchmark-duration]')];
+      const benchmarkPanel = document.getElementById('latency-panel');
+      const benchmarkScale = document.getElementById('benchmark-scale');
+      const benchmarkScales = {
+        '5': 'Shared scale · 0–129.898 s',
+        '10': 'Shared scale · 0–376.942 s',
+        '15': 'Shared scale · 0–746.885 s'
+      };
+      const setBenchmarkDuration = (duration, moveFocus = false) => {
+        const activeTab = benchmarkTabs.find((tab) => tab.dataset.benchmarkDurationControl === duration);
+        if (!activeTab || !benchmarkPanel || !benchmarkScale) return;
+        benchmarkTabs.forEach((tab) => {
+          const active = tab === activeTab;
+          tab.setAttribute('aria-selected', String(active));
+          tab.tabIndex = active ? 0 : -1;
+        });
+        benchmarkCells.forEach((cell) => {
+          cell.hidden = cell.dataset.benchmarkDuration !== duration;
+        });
+        benchmarkScale.textContent = benchmarkScales[duration];
+        benchmarkPanel.setAttribute('aria-labelledby', activeTab.id);
+        if (moveFocus) activeTab.focus();
+      };
+
+      benchmarkTabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => setBenchmarkDuration(tab.dataset.benchmarkDurationControl));
+        tab.addEventListener('keydown', (event) => {
+          let nextIndex = null;
+          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + benchmarkTabs.length) % benchmarkTabs.length;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % benchmarkTabs.length;
+          if (event.key === 'Home') nextIndex = 0;
+          if (event.key === 'End') nextIndex = benchmarkTabs.length - 1;
+          if (nextIndex === null) return;
+          event.preventDefault();
+          setBenchmarkDuration(benchmarkTabs[nextIndex].dataset.benchmarkDurationControl, true);
+        });
+      });
+
 
       const comparisonLab = document.getElementById('comparison-lab');
       if (comparisonLab) {

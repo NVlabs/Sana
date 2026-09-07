@@ -37,41 +37,31 @@ requests after one warmup. All runs use the same prompt and seed at 1344x768 and
 synchronized stereo audio, and include text encoding, DiT denoising, and video/audio VAE decoding.
 Checkpoint loading, warmup/compilation, and MP4 encoding are excluded.
 
-#### Official Modular Diffusers
+| Engine | GPUs | 5 s / 124f | 10 s / 243f | 15 s / 362f |
+|---:|---:|---:|---:|---:|
+| Sol-H3 | 1 | **13.745 s** | **37.813 s** | **52.260 s** |
+| SGLang | 1 | 129.898 s | 376.942 s | 746.885 s |
+| Diffusers | 1 | 159.547 s | 442.533 s | 847.486 s |
+| Sol-H3 | 4 | **2.918 s** | **6.993 s** | **12.542 s** |
+| Diffusers | 4 | 48.552 s | 127.461 s | 237.171 s |
+| SGLang | 4 | 35.328 s | 100.440 s | 194.930 s |
+| Sol-H3 | 8 | **1.653 s** | **3.732 s** | **6.612 s** |
+| SGLang | 8 | 18.250 s | 50.660 s | 99.513 s |
+| Diffusers | 8 | 30.673 s | 71.316 s | 131.647 s |
 
-Base BF16 dense model with 50 scheduler points (49 DiT forwards); Ulysses on 4/8 GPUs.
-
-| GPUs | 5 s / 124f | 10 s / 243f | 15 s / 362f |
-|---:|---:|---:|---:|
-| 1 | 159.547 s | 442.533 s | 847.486 s |
-| 4 | 48.552 s | 127.461 s | 237.171 s |
-| 8 | 30.673 s | 71.316 s | 131.647 s |
-
-#### SGLang
-
-Base BF16 dense model with 50 scheduler points (49 DiT forwards); Ulysses on 4/8 GPUs.
-
-| GPUs | 5 s / 124f | 10 s / 243f | 15 s / 362f |
-|---:|---:|---:|---:|
-| 1 | 129.898 s | 376.942 s | 746.885 s |
-| 4 | 35.328 s | 100.440 s | 194.930 s |
-| 8 | 18.250 s | 50.660 s | 99.513 s |
-
-#### Sol-H3
-
-FastH3 adapter with five scheduler points (four DiT forwards); dense attention on 1 GPU and
+#### Detailed Settings
+  Diffusers: Base BF16 dense model with 50 scheduler points (49 DiT forwards); Ulysses on 4/8 GPUs.
+  
+  SGLang: Base BF16 dense model with 50 scheduler points (49 DiT forwards); Ulysses on 4/8 GPUs.
+  
+  Sol-H3: FastH3 adapter with five scheduler points (four DiT forwards); dense attention on 1 GPU and
 SOL/BSA on 4/8 GPUs. The multi-GPU profile uses INT8 QKV transport, FP8 output transport, and
 parallel video/audio VAE decoding.
 
-| GPUs | 5 s / 124f | 10 s / 243f | 15 s / 362f |
-|---:|---:|---:|---:|
-| 1 | **13.745 s** | **37.813 s** | **52.260 s** |
-| 4 | **2.918 s** | **6.993 s** | **12.542 s** |
-| 8 | **1.653 s** | **3.732 s** | **6.612 s** |
-
-The official and SGLang rows are directly comparable. Sol-H3 uses a distilled four-forward adapter
+  The official and SGLang rows are directly comparable. Sol-H3 uses a distilled four-forward adapter
 and its multi-GPU profile uses approximate SOL/BSA attention, so the difference from either
 49-forward baseline is not a runtime-only speedup.
+
 
 ## Setup
 

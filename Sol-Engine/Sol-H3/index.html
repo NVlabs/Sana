@@ -4741,7 +4741,7 @@
             <article class="core-block attention">
               <span>02 · Sol-Attn</span>
               <h3>Select the blocks that matter.</h3>
-              <p>Sol-Attn scores key-value blocks as attention runs. Query-dependent thresholding selects the important blocks for sparse attention, while proxy scores cheaply account for the rest—all in one pass.</p>
+              <p>Sol-Attn forms lightweight proxy scores from pooled query and key blocks. A threshold computed for each query block can keep a different number of important key/value blocks. <strong>Selected blocks run exact attention; skipped blocks retain a low-cost approximation from the same score tile.</strong> Because every decision comes from the live Q/K/V tensors, Sol-Attn needs no learned router or retraining.</p>
             </article>
           </div>
         </div>
@@ -4763,35 +4763,35 @@
           <article class="tech-card span-6 reveal" data-index="01">
             <span class="tech-label">GPU kernels</span>
             <h3>Fuse repeated operations</h3>
-            <p>Sol-H3 combines normalization, conditioning, position encoding (RoPE), and MLP work into fewer GPU kernels. This moves about 178 GB less intermediate data per GPU for a full model evaluation. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> supported this tuning.</p>
+            <p>RMSNorm/modulation, partial RoPE, and SwiGLU do little math relative to the wide tensors they repeatedly move, so memory bandwidth—not compute—is the limit. Sol-H3 fuses neighboring work and keeps intermediates in registers instead of writing them to HBM and reading them back. Across 50 blocks, this avoids about 178 GB of intermediate traffic per GPU per evaluation. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> supported this tuning.</p>
             <div class="tech-viz fusion-viz" aria-hidden="true"><div class="fusion-stack"><i></i><i></i><i></i><i></i></div><span class="fusion-arrow"></span><span class="fusion-one"></span></div>
           </article>
 
           <article class="tech-card span-6 reveal" data-index="02">
             <span class="tech-label">Multi-GPU communication</span>
             <h3>Faster 8-GPU data exchange</h3>
-            <p>Sol-H3 fuses packing, the all-to-all GPU exchange, unpacking, and merging. It sends query/key/value (QKV) data in INT8 and returns attention results in FP8, reducing communication among eight GPUs.</p>
+            <p>Ulysses swaps sequence shards for head shards before attention, then reverses the exchange. Sol-H3 writes Q/K/V straight into the all-to-all send layout and decodes the return into merged-head order, removing intermediate copies. Its fastest profile scales every 32 QKV values separately and clamps E4M3 FP8 returns to ±448, nearly halving the payload; BF16 remains available for higher fidelity.</p>
             <div class="tech-viz ulysses-viz" aria-hidden="true"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i></div>
           </article>
 
           <article class="tech-card span-6 reveal" data-index="03">
             <span class="tech-label">Sparse-attention setup</span>
             <h3>Fuse the setup work</h3>
-            <p>Sol-H3 builds key/value summaries, block metadata, and the attention mask together. This cuts setup from 1.206 to 0.285 ms (−76.4%). Reusing query summaries also avoids about 400 small GPU launches per request.</p>
+            <p>For Sol-H3’s cuDNN block-sparse path, setup means building key centroids, value sums, query thresholds, the selection mask, and compact block metadata. One kernel builds each key/value summary pair; the threshold kernel returns the pooled query for reuse; another applies the routing rules and packs the metadata. Together this cuts setup from 1.206 to 0.285 ms (−76.4%).</p>
             <div class="tech-viz route-viz" aria-hidden="true"><span><i style="--w:100%"></i><b>1.206 ms</b></span><span><i style="--w:24%"></i><b>0.285 ms</b></span></div>
           </article>
 
           <article class="tech-card span-6 reveal" data-index="04">
             <span class="tech-label">Sol-Attn</span>
             <h3>Sparsify on the fly</h3>
-            <p>Sol-Attn selects important attention blocks while computing attention, avoiding a separate routing pass and extra score-map or block-list storage in GPU memory.</p>
+            <p>Inside its native kernel, Sol-Attn scans pooled-key chunks within online softmax. The same token-to-block score tile selects important blocks and approximates the rest; only selected blocks enter the exact inner loop. Scores are consumed immediately, so no separate routing pass, full proxy map, or routing-index tensor is written to GPU memory.</p>
             <div class="tech-viz prefix-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </article>
 
           <article class="tech-card span-6 reveal" data-index="05">
             <span class="tech-label">Video decoding</span>
             <h3>Parallel VAE decoding</h3>
-            <p>Eight GPUs decode video tiles in parallel, reducing latency from 7.55 to 1.16 s. Batching each clip’s tiles lowers it again to 0.602 s; the fastest profile batches VAE work globally.</p>
+            <p>At 5s, the VAE splits seven temporal clips into 28 equal spatial tiles each. Tile parallelism spreads them across eight GPUs (7.55 → 1.16 s); per-clip batching combines each GPU’s four tiles into one decoder call (→ 0.602 s). Global mode balances all 196 tiles and runs decode/gather once instead of seven; it remains optional because the larger compiled batch causes a small measured rounding drift.</p>
             <div class="tech-viz tile-viz" aria-hidden="true">
               <i style="--p:1"></i><i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i>
               <i style="--p:2"></i><i style="--p:3"></i><i style="--p:4"></i><i style="--p:5"></i><i style="--p:6"></i><i style="--p:7"></i><i style="--p:8"></i>
@@ -4803,7 +4803,7 @@
           <article class="tech-card span-6 reveal" data-index="06">
             <span class="tech-label">Conditioning</span>
             <h3>Precompute AdaLN</h3>
-            <p>Sol-H3 computes adaptive layer-normalization (AdaLN) values before denoising and reuses them from a cache at every step. This frees about 24 GB per GPU and avoids roughly 26 GB of GPU-memory reads per step without changing the output.</p>
+            <p>Sol-H3 computes adaptive layer-normalization (AdaLN) values before denoising and reuses them from a cache at every step. This frees about 24 GB per GPU and avoids roughly 26 GB of GPU-memory reads per step without changing the output. Direct table lookup also removes about 400 tiny GPU indexing launches from a four-step request.</p>
             <div class="tech-viz adaln-viz" aria-hidden="true">
               <i style="--p:1"></i><i style="--p:5"></i><i style="--p:2"></i><i style="--p:7"></i><i style="--p:4"></i><i style="--p:9"></i>
               <i style="--p:6"></i><i style="--p:2"></i><i style="--p:8"></i><i style="--p:3"></i><i style="--p:10"></i><i style="--p:4"></i>

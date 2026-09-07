@@ -88,19 +88,47 @@
   }
 
   document.querySelectorAll('.spark-gallery').forEach(gallery => {
-    const videos = [...gallery.querySelectorAll('video')];
-    const [start, pause] = gallery.querySelectorAll('.spark-gallery-controls button');
+    const panes = [...gallery.querySelectorAll('.comparison-pane')];
+    const allVideos = [...gallery.querySelectorAll('video')];
+    const [start, pause, previous, next] = gallery.querySelectorAll('.spark-gallery-controls button');
     const status = gallery.querySelector('.playback-status');
     const startMarkup = start.innerHTML;
+    const pageSize = 2;
+    const pageCount = Math.max(1, Math.ceil(panes.length / pageSize));
+    let page = 0;
     let generation = 0;
-    pause.addEventListener('click', () => {
+    const visibleVideos = () => panes
+      .filter(pane => !pane.hidden)
+      .flatMap(pane => [...pane.querySelectorAll('video')]);
+    const pauseAll = () => {
       generation++;
-      videos.forEach(video => video.pause());
+      allVideos.forEach(video => video.pause());
       start.disabled = false;
       start.innerHTML = startMarkup;
-    });
+    };
+    const updatePage = () => {
+      panes.forEach((pane, index) => { pane.hidden = Math.floor(index / pageSize) !== page; });
+      const previousPage = (page - 1 + pageCount) % pageCount + 1;
+      const nextPage = (page + 1) % pageCount + 1;
+      previous.disabled = next.disabled = pageCount < 2;
+      previous.setAttribute('aria-label', `Show showcase page ${previousPage}`);
+      previous.title = `Show showcase page ${previousPage}`;
+      next.setAttribute('aria-label', `Show showcase page ${nextPage}`);
+      next.title = `Show showcase page ${nextPage}`;
+    };
+    const changePage = delta => {
+      pauseAll();
+      status.textContent = '';
+      page = (page + delta + pageCount) % pageCount;
+      updatePage();
+    };
+    pause.addEventListener('click', pauseAll);
+    previous.addEventListener('click', () => changePage(-1));
+    next.addEventListener('click', () => changePage(1));
+    updatePage();
     start.addEventListener('click', async () => {
       const run = ++generation;
+      const videos = visibleVideos();
       start.disabled = true;
       start.textContent = 'Loading…';
       status.textContent = '';

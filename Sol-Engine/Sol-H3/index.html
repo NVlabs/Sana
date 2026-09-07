@@ -5100,6 +5100,51 @@
       </div>
     </section>
 
+    <script>
+      (() => {
+        const tabs = [...document.querySelectorAll('[data-benchmark-duration-control]')];
+        const cells = [...document.querySelectorAll('[data-benchmark-duration]')];
+        const panel = document.getElementById('latency-panel');
+        const scale = document.getElementById('benchmark-scale');
+        const scales = {
+          '5': 'Shared scale · 0–129.898 s',
+          '10': 'Shared scale · 0–376.942 s',
+          '15': 'Shared scale · 0–746.885 s'
+        };
+
+        const selectDuration = (duration, moveFocus = false) => {
+          const activeTab = tabs.find((tab) => tab.dataset.benchmarkDurationControl === duration);
+          if (!activeTab || !panel || !scale) return;
+
+          tabs.forEach((tab) => {
+            const active = tab === activeTab;
+            tab.setAttribute('aria-selected', String(active));
+            tab.tabIndex = active ? 0 : -1;
+          });
+          cells.forEach((cell) => {
+            cell.hidden = cell.dataset.benchmarkDuration !== duration;
+          });
+          scale.textContent = scales[duration];
+          panel.setAttribute('aria-labelledby', activeTab.id);
+          if (moveFocus) activeTab.focus();
+        };
+
+        tabs.forEach((tab, index) => {
+          tab.addEventListener('click', () => selectDuration(tab.dataset.benchmarkDurationControl));
+          tab.addEventListener('keydown', (event) => {
+            let nextIndex = null;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = tabs.length - 1;
+            if (nextIndex === null) return;
+            event.preventDefault();
+            selectDuration(tabs[nextIndex].dataset.benchmarkDurationControl, true);
+          });
+        });
+      })();
+    </script>
+
     <section class="section comparison-section" id="compare" aria-labelledby="comparison-title">
       <div class="wide-shell">
         <header class="section-head reveal">
@@ -5664,46 +5709,6 @@
         });
       }, { rootMargin: '-25% 0px -60% 0px', threshold: 0 });
       navSections.forEach((section) => navObserver.observe(section));
-
-      const benchmarkTabs = [...document.querySelectorAll('[data-benchmark-duration-control]')];
-      const benchmarkCells = [...document.querySelectorAll('[data-benchmark-duration]')];
-      const benchmarkPanel = document.getElementById('latency-panel');
-      const benchmarkScale = document.getElementById('benchmark-scale');
-      const benchmarkScales = {
-        '5': 'Shared scale · 0–129.898 s',
-        '10': 'Shared scale · 0–376.942 s',
-        '15': 'Shared scale · 0–746.885 s'
-      };
-      const setBenchmarkDuration = (duration, moveFocus = false) => {
-        const activeTab = benchmarkTabs.find((tab) => tab.dataset.benchmarkDurationControl === duration);
-        if (!activeTab || !benchmarkPanel || !benchmarkScale) return;
-        benchmarkTabs.forEach((tab) => {
-          const active = tab === activeTab;
-          tab.setAttribute('aria-selected', String(active));
-          tab.tabIndex = active ? 0 : -1;
-        });
-        benchmarkCells.forEach((cell) => {
-          cell.hidden = cell.dataset.benchmarkDuration !== duration;
-        });
-        benchmarkScale.textContent = benchmarkScales[duration];
-        benchmarkPanel.setAttribute('aria-labelledby', activeTab.id);
-        if (moveFocus) activeTab.focus();
-      };
-
-      benchmarkTabs.forEach((tab, index) => {
-        tab.addEventListener('click', () => setBenchmarkDuration(tab.dataset.benchmarkDurationControl));
-        tab.addEventListener('keydown', (event) => {
-          let nextIndex = null;
-          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + benchmarkTabs.length) % benchmarkTabs.length;
-          if (event.key === 'ArrowRight') nextIndex = (index + 1) % benchmarkTabs.length;
-          if (event.key === 'Home') nextIndex = 0;
-          if (event.key === 'End') nextIndex = benchmarkTabs.length - 1;
-          if (nextIndex === null) return;
-          event.preventDefault();
-          setBenchmarkDuration(benchmarkTabs[nextIndex].dataset.benchmarkDurationControl, true);
-        });
-      });
-
 
       const comparisonLab = document.getElementById('comparison-lab');
       if (comparisonLab) {

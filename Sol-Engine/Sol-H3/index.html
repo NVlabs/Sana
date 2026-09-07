@@ -1115,15 +1115,15 @@
     }
     .method-note a:hover { color: var(--acid); }
 
-    /* Static Base H3 vs. Sol-H3 latency comparison. */
+    /* Two-dimensional Base H3 / Sol-H3 scaling matrix. */
     .latency-head {
       display: flex;
       padding-bottom: 27px;
-      border-bottom: 1px solid var(--line);
       align-items: flex-end;
       justify-content: space-between;
       gap: 24px;
     }
+
     .latency-head h3 {
       margin: 9px 0 0;
       color: var(--white);
@@ -1132,6 +1132,7 @@
       line-height: 1;
       letter-spacing: -.045em;
     }
+
     .latency-direction {
       display: inline-flex;
       align-items: center;
@@ -1144,6 +1145,7 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
+
     .latency-direction::before {
       content: "";
       width: 20px;
@@ -1151,132 +1153,237 @@
       background: var(--acid);
       box-shadow: 0 0 10px rgba(167, 255, 46, .45);
     }
-    .latency-group {
-      display: grid;
-      grid-template-columns: 96px minmax(0, 1fr) 142px;
-      gap: clamp(22px, 3vw, 42px);
-      padding: 33px 0;
-      align-items: center;
+
+    .matrix-shell {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, .012);
     }
-    .latency-group + .latency-group { border-top: 1px solid var(--line); }
-    .latency-group:last-child { padding-bottom: 0; }
-    .latency-duration strong,
-    .latency-gain strong {
-      display: block;
-      color: var(--white);
-      font-weight: 870;
-      line-height: .9;
-      letter-spacing: -.055em;
-      font-variant-numeric: tabular-nums;
+
+    .latency-matrix {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+    }
+
+    .matrix-caption {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
       white-space: nowrap;
     }
-    .latency-duration strong { font-size: clamp(38px, 4vw, 54px); }
-    .latency-duration span,
-    .latency-gain span {
+
+    .latency-matrix th,
+    .latency-matrix td {
+      border-right: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .latency-matrix tr > *:last-child { border-right: 0; }
+
+    .latency-matrix thead th {
+      padding: 18px 20px;
+      background: rgba(255, 255, 255, .018);
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .latency-matrix thead th:first-child { width: 138px; }
+
+    .matrix-duration strong {
+      display: block;
+      color: var(--white);
+      font-family: var(--sans, inherit);
+      font-size: clamp(24px, 2.5vw, 34px);
+      line-height: 1;
+      letter-spacing: -.04em;
+      text-transform: none;
+    }
+
+    .matrix-duration small {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .045em;
+      text-transform: uppercase;
+    }
+
+    .latency-matrix tbody th,
+    .latency-matrix tbody td { border-top: 1px solid var(--line); }
+
+    .latency-matrix tbody th {
+      padding: 24px 20px;
+      background: rgba(255, 255, 255, .012);
+    }
+
+    .matrix-gpu strong {
+      display: block;
+      color: var(--white);
+      font-size: clamp(28px, 3vw, 40px);
+      line-height: .95;
+      letter-spacing: -.045em;
+      white-space: nowrap;
+    }
+
+    .matrix-gpu small {
       display: block;
       margin-top: 9px;
       color: var(--muted);
       font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 12px;
-      font-weight: 750;
-      letter-spacing: .1em;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .05em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
-    .latency-row {
+
+    .matrix-cell { padding: 20px; }
+
+    .matrix-measure {
       display: grid;
-      grid-template-columns: 108px minmax(0, 1fr) 88px;
-      gap: 13px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
       align-items: center;
     }
-    .latency-row + .latency-row { margin-top: 12px; }
-    .latency-model,
-    .latency-number {
-      color: var(--muted);
+
+    .matrix-measure + .matrix-measure {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .matrix-measure > span {
+      color: var(--fog);
+      font-size: 14px;
+      font-weight: 760;
+      line-height: 1.2;
+    }
+
+    .matrix-measure > span small {
+      display: block;
+      margin-top: 4px;
+      color: var(--dim);
       font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 12px;
-      font-weight: 750;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .matrix-measure > strong {
+      color: var(--white);
+      font-size: clamp(19px, 2vw, 26px);
+      line-height: 1;
+      letter-spacing: -.025em;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
-    .latency-model small {
-      display: block;
+
+    .matrix-measure.pending > span { color: var(--acid); }
+    .matrix-measure.pending > strong {
       color: var(--dim);
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .matrix-speedup {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 13px;
+      padding-top: 11px;
+      border-top: 1px dashed var(--line);
+      color: var(--dim);
+      font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 10px;
-      font-weight: 650;
-      letter-spacing: .06em;
+      font-weight: 700;
+      letter-spacing: .065em;
       text-transform: uppercase;
     }
-    .latency-number { color: var(--fog); text-align: right; }
-    .latency-row.ours .latency-model,
-    .latency-row.ours .latency-number { color: var(--white); }
-    .latency-track {
-      height: 18px;
-      overflow: hidden;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, .045);
-    }
-    .latency-fill {
-      display: block;
-      width: var(--w);
-      min-width: 1px;
-      height: 100%;
-      border-radius: inherit;
-    }
-    .latency-fill.base { background: var(--dim); }
-    .latency-fill.sol {
-      position: relative;
-      overflow: visible;
-      background: linear-gradient(90deg, var(--green), var(--acid));
-      box-shadow: 0 0 18px rgba(167, 255, 46, .16);
-    }
-    .latency-fill.sol::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 3px;
-      height: 100%;
-      transform: translateX(50%);
-      background: rgba(255, 255, 255, .9);
-      box-shadow: 0 0 10px 2px rgba(255, 255, 255, .45);
-    }
-    .latency-settings {
-      display: block;
-      margin-top: 13px;
-      color: var(--muted);
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 12px;
-      line-height: 1.5;
-      letter-spacing: .025em;
-    }
-    .latency-gain {
-      padding-left: clamp(20px, 2.5vw, 34px);
-      border-left: 1px solid var(--line);
-      text-align: right;
-    }
-    .latency-gain strong { color: var(--acid); font-size: clamp(30px, 3vw, 42px); }
 
-    @media (max-width: 720px) {
-      .latency-head { align-items: flex-start; flex-direction: column; }
-      .latency-group {
-        grid-template-columns: 1fr auto;
-        gap: 20px 16px;
-        padding: 27px 0;
+    .matrix-speedup strong { color: var(--dim); }
+
+    @media (max-width: 900px) {
+      .latency-head {
+        align-items: flex-start;
+        flex-direction: column;
       }
-      .latency-duration { display: flex; align-items: baseline; gap: 9px; }
-      .latency-duration strong { font-size: 40px; }
-      .latency-duration span { margin-top: 0; }
-      .latency-comparison { grid-column: 1 / -1; grid-row: 2; }
-      .latency-gain { grid-column: 2; grid-row: 1; padding-left: 0; border-left: 0; }
-      .latency-gain strong { font-size: 31px; }
-      .latency-gain span { margin-top: 6px; }
-      .latency-row { grid-template-columns: 92px minmax(0, 1fr) 78px; gap: 9px; }
+
+      .latency-matrix,
+      .latency-matrix tbody,
+      .latency-matrix tr {
+        display: block;
+        width: 100%;
+      }
+
+      .latency-matrix thead { display: none; }
+
+      .latency-matrix tbody tr + tr { border-top: 1px solid var(--line-bright); }
+
+      .latency-matrix tbody th {
+        display: block;
+        width: auto;
+        padding: 21px 22px;
+        border-right: 0;
+        border-top: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .matrix-gpu {
+        display: flex;
+        align-items: baseline;
+        gap: 9px;
+      }
+
+      .matrix-gpu small { margin-top: 0; }
+
+      .latency-matrix tbody td {
+        display: grid;
+        grid-template-columns: 128px minmax(0, 1fr);
+        border-top: 0;
+        border-right: 0;
+      }
+
+      .latency-matrix tbody td + td { border-top: 1px solid var(--line); }
+
+      .latency-matrix tbody td::before {
+        content: attr(data-duration);
+        padding: 21px 18px;
+        border-right: 1px solid var(--line);
+        color: var(--fog);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.5;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        white-space: pre-line;
+      }
+
+      .matrix-cell { padding: 18px 20px; }
     }
 
-    @media (max-width: 420px) {
-      .latency-row { grid-template-columns: 82px minmax(0, 1fr) 72px; gap: 7px; }
-      .latency-model, .latency-number, .latency-settings { font-size: 11px; }
-      .latency-model small { font-size: 9px; }
+    @media (max-width: 520px) {
+      .latency-matrix tbody td { grid-template-columns: 1fr; }
+
+      .latency-matrix tbody td::before {
+        padding: 15px 18px 0;
+        border-right: 0;
+      }
+
+      .matrix-cell { padding: 14px 18px 19px; }
+      .matrix-measure > strong { font-size: 20px; }
     }
 
 
@@ -4391,8 +4498,9 @@
       .terminal-code,
       .sound-toggle { color: #fff; }
 
-      .latency-track { background: rgba(23, 37, 17, .075); }
-      .latency-fill.base { background: rgba(23, 37, 17, .36); }
+      .matrix-shell { background: rgba(255, 255, 255, .72); }
+      .latency-matrix thead th,
+      .latency-matrix tbody th { background: rgba(65, 111, 0, .035); }
       .fusion-stack i,
       .attn-bar i,
       .lane-track { background: rgba(23, 37, 17, .075); }
@@ -4686,81 +4794,113 @@
         <header class="section-head reveal">
           <div class="section-index">01</div>
           <div>
-            <span class="section-kicker">Measured · 8× NVIDIA B300</span>
-            <h2 id="performance-title">Base H3 vs. Sol-H3.</h2>
+            <span class="section-kicker">Scaling benchmark · 1 / 4 / 8× NVIDIA B300</span>
+            <h2 id="performance-title">Latency across GPU counts.</h2>
           </div>
-          <p>Across 5s, 10s, and 15s outputs, Sol-H3 delivers 18.38×–19.89× speedup over the Base H3 dense baseline on the same system.</p>
+          <p>Base H3 dense measurements establish the scaling baseline. Matching Sol-H3 latencies and speedups will fill the reserved slots.</p>
         </header>
 
         <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="latency-title" aria-describedby="benchmark-method">
           <header class="latency-head">
             <div>
               <div class="console-label">Measured request latency · lower is better</div>
-              <h3 id="latency-title">Latency by output length.</h3>
+              <h3 id="latency-title">Video length × GPU count.</h3>
             </div>
-            <span class="latency-direction">Shared scale · 0–131.647 s</span>
+            <span class="latency-direction">Base H3 measured · Sol-H3 pending</span>
           </header>
 
-          <div class="latency-groups">
-            <section class="latency-group" aria-labelledby="latency-5s">
-              <div class="latency-duration"><strong id="latency-5s">5s</strong><span>output</span></div>
-              <div class="latency-comparison">
-                <div class="latency-row">
-                  <span class="latency-model">Base H3<small>Dense</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill base" style="--w: 23.299%"></i></span>
-                  <strong class="latency-number">30.673 s</strong>
-                </div>
-                <div class="latency-row ours">
-                  <span class="latency-model">Sol-H3<small>Ours</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 1.268%"></i></span>
-                  <strong class="latency-number">1.669 s</strong>
-                </div>
-                <small class="latency-settings">124 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
-              </div>
-              <div class="latency-gain"><strong>18.38×</strong><span>speedup</span></div>
-            </section>
-
-            <section class="latency-group" aria-labelledby="latency-10s">
-              <div class="latency-duration"><strong id="latency-10s">10s</strong><span>output</span></div>
-              <div class="latency-comparison">
-                <div class="latency-row">
-                  <span class="latency-model">Base H3<small>Dense</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill base" style="--w: 54.172%"></i></span>
-                  <strong class="latency-number">71.316 s</strong>
-                </div>
-                <div class="latency-row ours">
-                  <span class="latency-model">Sol-H3<small>Ours</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 2.839%"></i></span>
-                  <strong class="latency-number">3.738 s</strong>
-                </div>
-                <small class="latency-settings">243 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
-              </div>
-              <div class="latency-gain"><strong>19.08×</strong><span>speedup</span></div>
-            </section>
-
-            <section class="latency-group" aria-labelledby="latency-15s">
-              <div class="latency-duration"><strong id="latency-15s">15s</strong><span>output</span></div>
-              <div class="latency-comparison">
-                <div class="latency-row">
-                  <span class="latency-model">Base H3<small>Dense</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill base" style="--w: 100%"></i></span>
-                  <strong class="latency-number">131.647 s</strong>
-                </div>
-                <div class="latency-row ours">
-                  <span class="latency-model">Sol-H3<small>Ours</small></span>
-                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 5.028%"></i></span>
-                  <strong class="latency-number">6.619 s</strong>
-                </div>
-                <small class="latency-settings">362 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
-              </div>
-              <div class="latency-gain"><strong>19.89×</strong><span>speedup</span></div>
-            </section>
+          <div class="matrix-shell">
+            <table class="latency-matrix">
+              <caption class="matrix-caption">Base H3 and pending Sol-H3 latency for 5, 10, and 15 second outputs on one, four, and eight NVIDIA B300 GPUs.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">GPU count</th>
+                  <th scope="col"><span class="matrix-duration"><strong>5s</strong><small>124 frames</small></span></th>
+                  <th scope="col"><span class="matrix-duration"><strong>10s</strong><small>243 frames</small></span></th>
+                  <th scope="col"><span class="matrix-duration"><strong>15s</strong><small>362 frames</small></span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><span class="matrix-gpu"><strong>1×</strong><small>NVIDIA B300</small></span></th>
+                  <td data-duration="5s · 124 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>159.547 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                  <td data-duration="10s · 243 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>442.533 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                  <td data-duration="15s · 362 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>847.486 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><span class="matrix-gpu"><strong>4×</strong><small>NVIDIA B300</small></span></th>
+                  <td data-duration="5s · 124 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>48.552 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                  <td data-duration="10s · 243 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>127.461 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                  <td data-duration="15s · 362 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>237.171 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><span class="matrix-gpu"><strong>8×</strong><small>NVIDIA B300</small></span></th>
+                  <td data-duration="5s · 124 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>30.673 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                  <td data-duration="10s · 243 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>71.316 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                  <td data-duration="15s · 362 frames">
+                    <div class="matrix-cell">
+                      <div class="matrix-measure base"><span>Base H3<small>Dense</small></span><strong>131.647 s</strong></div>
+                      <div class="matrix-measure pending"><span>Sol-H3<small>Ours</small></span><strong aria-label="Pending">—</strong></div>
+                      <div class="matrix-speedup"><span>Speedup</span><strong aria-label="Pending">—</strong></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </article>
 
         <div class="method-note reveal">
           <strong>Measured scope</strong>
-          <span id="benchmark-method">Base H3 and Sol-H3 use the same 8× NVIDIA B300 system and 1344×768, 24 FPS output settings, with one warmup and the median of three measured requests. Timing includes prompt encoding, diffusion denoising, VAE video decoding, and native audio; final MP4 encoding is excluded. Speedup = Base H3 latency ÷ Sol-H3 latency.</span>
+          <span id="benchmark-method">Base H3 uses dense attention at 1344×768 and 24 FPS with native audio: 124 / 243 / 362 frames for 5s / 10s / 15s outputs. Timing includes prompt encoding, diffusion denoising, VAE video decoding, and native audio; final MP4 encoding is excluded. Sol-H3 cells remain placeholders until matching 1× / 4× / 8× B300 runs are complete.</span>
         </div>
       </div>
     </section>

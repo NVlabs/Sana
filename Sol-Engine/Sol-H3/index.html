@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050705">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8f1">
-  <meta name="description" content="Sol-H3 accelerates MiniMax-H3 video generation with native audio, producing five seconds of 1344×768 video in 1.669 seconds—3.00× realtime on 8× NVIDIA B300 GPUs.">
+  <meta name="description" content="Sol-H3 accelerates MiniMax-H3 video generation with native audio, delivering up to 19.89× speedup over Base H3 across 5s, 10s, and 15s outputs on 8× NVIDIA B300 GPUs.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
-  <meta property="og:description" content="Five seconds of world. 1.669 seconds to infer. MiniMax-H3 video with native audio at 3.00× realtime on 8 NVIDIA B300 GPUs.">
+  <meta property="og:description" content="Five seconds of world in 1.669 seconds. Across 5s–15s outputs, Sol-H3 is 18.38×–19.89× faster than Base H3 on 8× NVIDIA B300 GPUs.">
   <meta property="og:url" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <meta property="og:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="732">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
-  <meta name="twitter:description" content="Five seconds of world in 1.669 seconds—MiniMax-H3 video with native audio at 3.00× realtime on 8× NVIDIA B300.">
+  <meta name="twitter:description" content="Five seconds of world in 1.669 seconds. Sol-H3 delivers up to 19.89× speedup over Base H3 on 8× NVIDIA B300 GPUs.">
   <meta name="twitter:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
   <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <title>Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System | NVIDIA Research</title>
@@ -1113,6 +1113,169 @@
       text-underline-offset: 3px;
     }
     .method-note a:hover { color: var(--acid); }
+
+    /* Static Base H3 vs. Sol-H3 latency comparison. */
+    .latency-head {
+      display: flex;
+      padding-bottom: 27px;
+      border-bottom: 1px solid var(--line);
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .latency-head h3 {
+      margin: 9px 0 0;
+      color: var(--white);
+      font-size: clamp(29px, 3.2vw, 46px);
+      font-weight: 840;
+      line-height: 1;
+      letter-spacing: -.045em;
+    }
+    .latency-direction {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .latency-direction::before {
+      content: "";
+      width: 20px;
+      height: 1px;
+      background: var(--acid);
+      box-shadow: 0 0 10px rgba(167, 255, 46, .45);
+    }
+    .latency-group {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr) 142px;
+      gap: clamp(22px, 3vw, 42px);
+      padding: 33px 0;
+      align-items: center;
+    }
+    .latency-group + .latency-group { border-top: 1px solid var(--line); }
+    .latency-group:last-child { padding-bottom: 0; }
+    .latency-duration strong,
+    .latency-gain strong {
+      display: block;
+      color: var(--white);
+      font-weight: 870;
+      line-height: .9;
+      letter-spacing: -.055em;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .latency-duration strong { font-size: clamp(38px, 4vw, 54px); }
+    .latency-duration span,
+    .latency-gain span {
+      display: block;
+      margin-top: 9px;
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .latency-row {
+      display: grid;
+      grid-template-columns: 108px minmax(0, 1fr) 88px;
+      gap: 13px;
+      align-items: center;
+    }
+    .latency-row + .latency-row { margin-top: 12px; }
+    .latency-model,
+    .latency-number {
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .latency-model small {
+      display: block;
+      color: var(--dim);
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .latency-number { color: var(--fog); text-align: right; }
+    .latency-row.ours .latency-model,
+    .latency-row.ours .latency-number { color: var(--white); }
+    .latency-track {
+      height: 18px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, .045);
+    }
+    .latency-fill {
+      display: block;
+      width: max(var(--w), 8px);
+      height: 100%;
+      border-radius: inherit;
+    }
+    .latency-fill.base { background: var(--dim); }
+    .latency-fill.sol {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(90deg, var(--green), var(--acid));
+      box-shadow: 0 0 18px rgba(167, 255, 46, .16);
+    }
+    .latency-fill.sol::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 2px;
+      height: 100%;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 0 10px 2px rgba(255, 255, 255, .45);
+    }
+    .latency-settings {
+      display: block;
+      margin-top: 13px;
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      letter-spacing: .025em;
+    }
+    .latency-gain {
+      padding-left: clamp(20px, 2.5vw, 34px);
+      border-left: 1px solid var(--line);
+      text-align: right;
+    }
+    .latency-gain strong { color: var(--acid); font-size: clamp(30px, 3vw, 42px); }
+
+    @media (max-width: 720px) {
+      .latency-head { align-items: flex-start; flex-direction: column; }
+      .latency-group {
+        grid-template-columns: 1fr auto;
+        gap: 20px 16px;
+        padding: 27px 0;
+      }
+      .latency-duration { display: flex; align-items: baseline; gap: 9px; }
+      .latency-duration strong { font-size: 40px; }
+      .latency-duration span { margin-top: 0; }
+      .latency-comparison { grid-column: 1 / -1; grid-row: 2; }
+      .latency-gain { grid-column: 2; grid-row: 1; padding-left: 0; border-left: 0; }
+      .latency-gain strong { font-size: 31px; }
+      .latency-gain span { margin-top: 6px; }
+      .latency-row { grid-template-columns: 92px minmax(0, 1fr) 78px; gap: 9px; }
+    }
+
+    @media (max-width: 420px) {
+      .latency-row { grid-template-columns: 82px minmax(0, 1fr) 72px; gap: 7px; }
+      .latency-model, .latency-number, .latency-settings { font-size: 11px; }
+      .latency-model small { font-size: 9px; }
+    }
+
 
     .architecture {
       background:
@@ -4050,8 +4213,8 @@
       .terminal-code,
       .sound-toggle { color: #fff; }
 
-      .duration-tabs { background: rgba(25, 40, 18, .055); }
-      .time-track,
+      .latency-track { background: rgba(23, 37, 17, .075); }
+      .latency-fill.base { background: rgba(23, 37, 17, .36); }
       .fusion-stack i,
       .attn-bar i,
       .lane-track { background: rgba(23, 37, 17, .075); }
@@ -4345,60 +4508,81 @@
         <header class="section-head reveal">
           <div class="section-index">01</div>
           <div>
-            <span class="section-kicker">Audited · 2026-09-04</span>
-            <h2 id="performance-title">Faster than playback.</h2>
+            <span class="section-kicker">Measured · 8× NVIDIA B300</span>
+            <h2 id="performance-title">Base H3 vs. Sol-H3.</h2>
           </div>
-          <p>On one 8× NVIDIA B300 system, Sol-H3 generates MiniMax-H3 video with native audio at up to 3.00× realtime.</p>
+          <p>Across 5s, 10s, and 15s outputs, Sol-H3 delivers 18.38×–19.89× speedup over the Base H3 dense baseline on the same system.</p>
         </header>
 
-        <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="console-title">
-          <div class="console-head">
+        <article class="benchmark-console benchmark-console-wide reveal" aria-labelledby="latency-title" aria-describedby="benchmark-method">
+          <header class="latency-head">
             <div>
-              <div class="console-label">Ours · Sol-H3 · fastest measured profile</div>
-              <span id="console-title" class="section-kicker console-subtitle">Choose output length</span>
+              <div class="console-label">Measured request latency</div>
+              <h3 id="latency-title">Latency by output length.</h3>
             </div>
-            <div class="duration-tabs" role="tablist" aria-label="Video duration">
-              <button class="duration-tab" type="button" role="tab" aria-selected="true" data-duration="5">5s</button>
-              <button class="duration-tab" type="button" role="tab" aria-selected="false" data-duration="10">10s</button>
-              <button class="duration-tab" type="button" role="tab" aria-selected="false" data-duration="15">15s</button>
-            </div>
-          </div>
+            <span class="latency-direction">Lower is better</span>
+          </header>
 
-          <div class="console-readout" aria-live="polite">
-            <div class="readout-big">
-              <b><span id="readout-latency">1.669</span> s</b>
-              <small>Sol-H3 median request latency</small>
-            </div>
-            <div class="readout-meta">
-              <div><b id="readout-frames">124</b><small>Frames</small></div>
-              <div><b id="readout-rate">3.00×</b><small>Realtime</small></div>
-              <div><b>8×</b><small>NVIDIA B300</small></div>
-              <div><b>3</b><small>Measured requests</small></div>
-            </div>
-          </div>
+          <div class="latency-groups">
+            <section class="latency-group" aria-labelledby="latency-5s">
+              <div class="latency-duration"><strong id="latency-5s">5s</strong><span>output</span></div>
+              <div class="latency-comparison">
+                <div class="latency-row">
+                  <span class="latency-model">Base H3<small>Dense</small></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill base" style="--w: 100%"></i></span>
+                  <strong class="latency-number">30.673 s</strong>
+                </div>
+                <div class="latency-row ours">
+                  <span class="latency-model">Sol-H3<small>Ours</small></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 5.441%"></i></span>
+                  <strong class="latency-number">1.669 s</strong>
+                </div>
+                <small class="latency-settings">124 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
+              </div>
+              <div class="latency-gain"><strong>18.38×</strong><span>speedup</span></div>
+            </section>
 
-          <div class="time-chart" aria-label="Nominal output duration and measured Sol-H3 inference latency">
-            <div class="time-row">
-              <span class="time-label">Video</span>
-              <div class="time-track"><div class="time-fill output" id="output-bar" style="--w:100%"></div></div>
-              <span class="time-number" id="clip-time">5.00 s</span>
-            </div>
-            <div class="time-row">
-              <span class="time-label">Ours · Sol-H3</span>
-              <div class="time-track"><div class="time-fill sol" id="sol-bar" style="--w:33.38%"></div></div>
-              <span class="time-number" id="sol-time">1.669 s</span>
-            </div>
-          </div>
+            <section class="latency-group" aria-labelledby="latency-10s">
+              <div class="latency-duration"><strong id="latency-10s">10s</strong><span>output</span></div>
+              <div class="latency-comparison">
+                <div class="latency-row">
+                  <span class="latency-model">Base H3<small>Dense</small></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill base" style="--w: 100%"></i></span>
+                  <strong class="latency-number">71.316 s</strong>
+                </div>
+                <div class="latency-row ours">
+                  <span class="latency-model">Sol-H3<small>Ours</small></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 5.241%"></i></span>
+                  <strong class="latency-number">3.738 s</strong>
+                </div>
+                <small class="latency-settings">243 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
+              </div>
+              <div class="latency-gain"><strong>19.08×</strong><span>speedup</span></div>
+            </section>
 
-          <div class="console-foot">
-            <span><strong>Included</strong> · prompt encode → denoise → video/audio decode</span>
-            <span id="console-status">3.00× realtime · warm median</span>
+            <section class="latency-group" aria-labelledby="latency-15s">
+              <div class="latency-duration"><strong id="latency-15s">15s</strong><span>output</span></div>
+              <div class="latency-comparison">
+                <div class="latency-row">
+                  <span class="latency-model">Base H3<small>Dense</small></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill base" style="--w: 100%"></i></span>
+                  <strong class="latency-number">131.647 s</strong>
+                </div>
+                <div class="latency-row ours">
+                  <span class="latency-model">Sol-H3<small>Ours</small></span>
+                  <span class="latency-track" aria-hidden="true"><i class="latency-fill sol" style="--w: 5.028%"></i></span>
+                  <strong class="latency-number">6.619 s</strong>
+                </div>
+                <small class="latency-settings">362 frames · 1344×768 · 24 FPS · native audio · 8× NVIDIA B300</small>
+              </div>
+              <div class="latency-gain"><strong>19.89×</strong><span>speedup</span></div>
+            </section>
           </div>
         </article>
 
         <div class="method-note reveal">
           <strong>Measured scope</strong>
-          <span>Each output length uses one warmup and the median of three measured requests on one 8× NVIDIA B300 system. Timing includes prompt encoding, diffusion denoising, VAE video decoding, and native audio. Final MP4 file encoding is excluded.</span>
+          <span id="benchmark-method">Base H3 and Sol-H3 use the same 8× NVIDIA B300 system and 1344×768, 24 FPS output settings, with one warmup and the median of three measured requests. Timing includes prompt encoding, diffusion denoising, VAE video decoding, and native audio; final MP4 encoding is excluded. Speedup = Base H3 latency ÷ Sol-H3 latency.</span>
         </div>
       </div>
     </section>
@@ -4891,53 +5075,6 @@
         });
       }, { rootMargin: '-25% 0px -60% 0px', threshold: 0 });
       navSections.forEach((section) => navObserver.observe(section));
-
-      const benchmarks = {
-        5: {
-          frames: 124,
-          output: 5,
-          sol: 1.669
-        },
-        10: {
-          frames: 243,
-          output: 10,
-          sol: 3.738,
-          rateLabel: '2.67'
-        },
-        15: {
-          frames: 362,
-          output: 15,
-          sol: 6.619
-        }
-      };
-      const tabs = [...document.querySelectorAll('.duration-tab')];
-      const fields = {
-        latency: document.getElementById('readout-latency'),
-        frames: document.getElementById('readout-frames'),
-        rate: document.getElementById('readout-rate'),
-        outputBar: document.getElementById('output-bar'),
-        solBar: document.getElementById('sol-bar'),
-        clipTime: document.getElementById('clip-time'),
-        solTime: document.getElementById('sol-time'),
-        status: document.getElementById('console-status')
-      };
-
-      const selectBenchmark = (duration) => {
-        const data = benchmarks[duration];
-        const rate = data.rateLabel ?? (data.output / data.sol).toFixed(2);
-        tabs.forEach((tab) => tab.setAttribute('aria-selected', String(Number(tab.dataset.duration) === duration)));
-        fields.latency.textContent = data.sol.toFixed(3);
-        fields.frames.textContent = data.frames;
-        fields.rate.textContent = `${rate}×`;
-        const chartMax = Math.max(data.output, data.sol);
-        fields.outputBar.style.setProperty('--w', `${data.output / chartMax * 100}%`);
-        fields.solBar.style.setProperty('--w', `${data.sol / chartMax * 100}%`);
-        fields.clipTime.textContent = `${data.output.toFixed(2)} s`;
-        fields.solTime.textContent = `${data.sol.toFixed(3)} s`;
-        fields.status.textContent = `${rate}× realtime · warm median`;
-      };
-      tabs.forEach((tab) => tab.addEventListener('click', () => selectBenchmark(Number(tab.dataset.duration))));
-      selectBenchmark(5);
 
       const comparisonLab = document.getElementById('comparison-lab');
       if (comparisonLab) {

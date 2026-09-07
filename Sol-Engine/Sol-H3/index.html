@@ -3259,6 +3259,26 @@
       line-height: 1.5;
     }
 
+    .detail-evidence .evidence-link {
+      display: inline-block;
+      margin-top: 9px;
+      color: var(--fog);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .035em;
+      text-decoration: underline;
+      text-decoration-color: var(--line-bright);
+      text-underline-offset: 4px;
+      transition: color .2s ease, text-decoration-color .2s ease;
+    }
+
+    .detail-evidence .evidence-link:hover,
+    .detail-evidence .evidence-link:focus-visible {
+      color: var(--mint);
+      text-decoration-color: currentColor;
+    }
+
     @media (max-width: 1120px) {
       .detail-row { grid-template-columns: 110px minmax(0, 1fr); }
       .detail-evidence { grid-column: 2; }
@@ -5205,7 +5225,7 @@
                   <div class="detail-part"><span>Why it is faster</span><p>Sol-Attn consumes each score tile inside online softmax: the same tile selects exact blocks and updates the approximation. It writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
                 </div>
               </div>
-              <aside class="detail-evidence"><span>Video generation</span><strong>Up to 2.1×</strong><small>end-to-end in the Sol-Attn evaluation · versus dense attention</small></aside>
+              <aside class="detail-evidence"><span>Video generation</span><strong>Up to 2.1×</strong><small>end-to-end versus each model's dense-attention pipeline</small><a class="evidence-link" href="https://nvlabs.github.io/Sana/Sol-Attn/#comparison" target="_blank" rel="noopener noreferrer">Models &amp; settings ↗</a></aside>
             </article>
           </div>
 

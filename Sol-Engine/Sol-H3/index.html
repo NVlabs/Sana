@@ -5164,15 +5164,35 @@
         </header>
 
         <div class="acceleration-list">
-          <div class="acceleration-pair">
+          <div class="acceleration-pair featured">
             <article class="tech-card reveal" data-index="01">
+              <span class="tech-label">Sol-Attn</span>
+              <h3>Sparsify on the fly</h3>
+              <div class="tech-summary"><strong>Query-dependent · one-pass · training-free</strong></div>
+              <div class="tech-viz prefix-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </article>
+            <article class="detail-row featured reveal" id="detail-sol-attn">
+              <div class="detail-marker"><strong>01</strong><span>Sol-Attn</span></div>
+              <div class="detail-copy">
+                <h3>Select blocks while attention runs.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>Each 64-token query block sets its own threshold: mean + β × standard deviation over lightweight query–key scores. Blocks above it run exact attention; skipped blocks contribute a low-cost approximation using pooled keys and value sums.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>Sol-Attn consumes each score tile inside online softmax: the same tile selects exact blocks and updates the approximation. It writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>Key property</span><strong>One pass</strong><small>query-dependent · training-free sparsification</small></aside>
+            </article>
+          </div>
+
+          <div class="acceleration-pair">
+            <article class="tech-card reveal" data-index="02">
               <span class="tech-label">GPU kernels</span>
               <h3>Fuse repeated operations</h3>
               <div class="tech-summary"><strong>Norm · RoPE · MLP</strong></div>
               <div class="tech-viz fusion-viz" aria-hidden="true"><div class="fusion-stack"><i></i><i></i><i></i><i></i></div><span class="fusion-arrow"></span><span class="fusion-one"></span></div>
             </article>
             <article class="detail-row reveal" id="detail-kernels">
-              <div class="detail-marker"><strong>01</strong><span>GPU kernels</span></div>
+              <div class="detail-marker"><strong>02</strong><span>GPU kernels</span></div>
               <div class="detail-copy">
                 <h3>Move less data between operations.</h3>
                 <div class="detail-explanation">
@@ -5185,14 +5205,14 @@
           </div>
 
           <div class="acceleration-pair">
-            <article class="tech-card reveal" data-index="02">
+            <article class="tech-card reveal" data-index="03">
               <span class="tech-label">Multi-GPU communication</span>
               <h3>Faster 8-GPU data exchange</h3>
               <div class="tech-summary"><strong>Pack · all-to-all · merge</strong></div>
               <div class="tech-viz ulysses-viz" aria-hidden="true"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i></div>
             </article>
             <article class="detail-row reveal" id="detail-communication">
-              <div class="detail-marker"><strong>02</strong><span>8-GPU exchange</span></div>
+              <div class="detail-marker"><strong>03</strong><span>8-GPU exchange</span></div>
               <div class="detail-copy">
                 <h3>Pack, exchange, and merge directly.</h3>
                 <div class="detail-explanation">
@@ -5205,14 +5225,14 @@
           </div>
 
           <div class="acceleration-pair">
-            <article class="tech-card reveal" data-index="03">
+            <article class="tech-card reveal" data-index="04">
               <span class="tech-label">Sparse-attention setup</span>
               <h3>Fuse the setup work</h3>
               <div class="tech-summary"><strong>K/V summaries · threshold · metadata</strong></div>
               <div class="tech-viz route-viz" aria-hidden="true"><span><i style="--w:100%"></i><b>Before</b></span><span><i style="--w:24%"></i><b>Fused</b></span></div>
             </article>
             <article class="detail-row reveal" id="detail-setup">
-              <div class="detail-marker"><strong>03</strong><span>Sparse setup</span></div>
+              <div class="detail-marker"><strong>04</strong><span>Sparse setup</span></div>
               <div class="detail-copy">
                 <h3>Build the sparse plan in fewer passes.</h3>
                 <div class="detail-explanation">
@@ -5221,26 +5241,6 @@
                 </div>
               </div>
               <aside class="detail-evidence"><span>Measured setup</span><strong>0.285 ms</strong><small>from 1.206 ms · 76.4% lower</small></aside>
-            </article>
-          </div>
-
-          <div class="acceleration-pair featured">
-            <article class="tech-card reveal" data-index="04">
-              <span class="tech-label">Sol-Attn</span>
-              <h3>Sparsify on the fly</h3>
-              <div class="tech-summary"><strong>Query-dependent · one-pass · training-free</strong></div>
-              <div class="tech-viz prefix-viz" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            </article>
-            <article class="detail-row featured reveal" id="detail-sol-attn">
-              <div class="detail-marker"><strong>04</strong><span>Sol-Attn</span></div>
-              <div class="detail-copy">
-                <h3>Select blocks while attention runs.</h3>
-                <div class="detail-explanation">
-                  <div class="detail-part"><span>Mechanism</span><p>Each 64-token query block sets its own threshold: mean + β × standard deviation over lightweight query–key scores. Blocks above it run exact attention; skipped blocks contribute a low-cost approximation using pooled keys and value sums.</p></div>
-                  <div class="detail-part"><span>Why it is faster</span><p>Sol-Attn consumes each score tile inside online softmax: the same tile selects exact blocks and updates the approximation. It writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
-                </div>
-              </div>
-              <aside class="detail-evidence"><span>Key property</span><strong>One pass</strong><small>query-dependent · training-free sparsification</small></aside>
             </article>
           </div>
 

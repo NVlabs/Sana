@@ -3029,12 +3029,36 @@
     .release-contract { display: flex; flex-wrap: wrap; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: rgba(255, 255, 255, .018); }
     .release-contract span { flex: 1 1 190px; padding: 18px 20px; border-right: 1px solid var(--line); color: var(--fog); font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; font-weight: 700; text-align: center; }
     .release-contract span:last-child { border-right: 0; }
-    /* Expanded implementation notes: readable rows, separate from overview cards. */
-    .technical-details {
-      border-block: 1px solid var(--line);
-      background:
-        radial-gradient(circle at 82% 16%, rgba(114, 245, 186, .045), transparent 28rem),
-        rgba(255, 255, 255, .008);
+    /* Implementation notes continue inside the acceleration chapter. */
+    .implementation-notes {
+      margin-top: clamp(44px, 5vw, 64px);
+      padding-top: clamp(34px, 4vw, 46px);
+      border-top: 1px solid var(--line-bright);
+      scroll-margin-top: calc(var(--header-h) + 18px);
+    }
+
+    .implementation-head {
+      display: grid;
+      grid-template-columns: minmax(250px, .72fr) minmax(0, 1fr);
+      gap: clamp(24px, 5vw, 72px);
+      align-items: end;
+      margin-bottom: clamp(28px, 4vw, 42px);
+    }
+
+    .implementation-head h3 {
+      margin: 12px 0 0;
+      color: var(--white);
+      font-size: clamp(34px, 4vw, 54px);
+      line-height: 1;
+      letter-spacing: -.045em;
+    }
+
+    .implementation-head p {
+      max-width: 650px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.62;
     }
 
     .detail-list { border-top: 1px solid var(--line); }
@@ -3154,6 +3178,13 @@
     }
 
     @media (max-width: 720px) {
+
+      .implementation-head {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .implementation-head p { max-width: 680px; }
       .tech-summary { max-width: 100%; }
       .detail-row {
         grid-template-columns: 1fr;
@@ -5156,100 +5187,96 @@
           <span>8× NVIDIA B300</span>
         </div>
 
-      </div>
-    </section>
+        <section class="implementation-notes" id="details" aria-labelledby="details-title">
+          <header class="implementation-head reveal">
+            <div>
+              <span class="section-kicker">Implementation notes</span>
+              <h3 id="details-title">Inside each optimization.</h3>
+            </div>
+            <p>How each part works, where the time is saved, and the measured evidence.</p>
+          </header>
 
-    <section class="section technical-details" id="details" aria-labelledby="details-title">
-      <div class="wide-shell">
-        <header class="section-head reveal">
-          <div class="section-index">05</div>
-          <div>
-            <span class="section-kicker">Six implementation notes</span>
-            <h2 id="details-title">What each optimization does.</h2>
+          <div class="detail-list">
+            <article class="detail-row reveal" id="detail-kernels">
+              <div class="detail-marker"><strong>01</strong><span>GPU kernels</span></div>
+              <div class="detail-copy">
+                <h3>Move less data between operations.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>Sol-H3 fuses three repeated chains: residual + RMSNorm + modulation, QKNorm + partial RoPE, and SwiGLU. Their intermediate tensors stay in registers or on chip instead of returning to GPU memory between operations.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>These operations touch wide tensors but do relatively little math, so memory traffic is often the limit. Fewer reads, writes, and launches save traffic across all 50 transformer blocks.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>Evidence</span><strong>≈178 GB</strong><small>less intermediate traffic per GPU per evaluation</small></aside>
+            </article>
+
+            <article class="detail-row reveal" id="detail-communication">
+              <div class="detail-marker"><strong>02</strong><span>8-GPU exchange</span></div>
+              <div class="detail-copy">
+                <h3>Pack, exchange, and merge directly.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>Ulysses changes sequence shards into head shards before attention, then changes them back. Sol-H3 writes normalized and RoPE-applied Q/K, together with V, directly in destination-major order; one packed all-to-all sends them, and the return is decoded directly into merged-head order.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>This removes separate stack, permute, and contiguous copies. The fastest profile uses one scale per 32 INT8 QKV values and E4M3 FP8 output clamped to ±448; BF16 transport remains available.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>Fastest profile</span><strong>51.6%</strong><small>of the BF16 attention communication payload</small></aside>
+            </article>
+
+            <article class="detail-row reveal" id="detail-setup">
+              <div class="detail-marker"><strong>03</strong><span>Sparse setup</span></div>
+              <div class="detail-copy">
+                <h3>Build the sparse plan in fewer passes.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>One preprocessing kernel computes each key centroid and value sum together. Thresholding also returns the pooled query for reuse; the final compaction step applies threshold, local-band, and exact-prefix rules while emitting the mask and compact block lists.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>The cuDNN block-sparse path receives everything it needs without separately materializing each setup stage. This metadata path is separate from the native one-pass Sol-Attn kernel below; reuse and fusion reduce its temporary traffic and launch overhead.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>Measured setup</span><strong>0.285 ms</strong><small>from 1.206 ms · 76.4% lower</small></aside>
+            </article>
+
+            <article class="detail-row featured reveal" id="detail-sol-attn">
+              <div class="detail-marker"><strong>04</strong><span>Sol-Attn</span></div>
+              <div class="detail-copy">
+                <h3>Select blocks while attention runs.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>Each 64-token query block sets its own threshold: mean + β × standard deviation over lightweight query–key scores. Blocks above it run exact attention; skipped blocks contribute a low-cost approximation using pooled keys and value sums.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>Sol-Attn consumes each score tile inside online softmax: the same tile selects exact blocks and updates the approximation. It writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>Key property</span><strong>One pass</strong><small>query-dependent · training-free sparsification</small></aside>
+            </article>
+
+            <article class="detail-row reveal" id="detail-vae">
+              <div class="detail-marker"><strong>05</strong><span>VAE decoding</span></div>
+              <div class="detail-copy">
+                <h3>Decode spatial tiles in parallel.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>A 5s output has seven temporal clips, each split into a 4 × 7 grid of 28 equal spatial tiles. Sol-H3 distributes them over eight GPUs and batches each GPU’s four tiles into one compiled decoder call.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>Tile parallelism reduces work per GPU; batching replaces many small decoder launches. Optional global mode balances all 196 tiles and gathers once, but remains optional because the larger compiled batch shows small measured rounding drift.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>5s VAE decode</span><strong>0.602 s</strong><small>7.55 → 1.16 s with tiles · then 0.602 s with batching</small></aside>
+            </article>
+
+            <article class="detail-row reveal" id="detail-adaln">
+              <div class="detail-marker"><strong>06</strong><span>AdaLN cache</span></div>
+              <div class="detail-copy">
+                <h3>Compute conditioning once, then reuse it.</h3>
+                <div class="detail-explanation">
+                  <div class="detail-part"><span>Mechanism</span><p>All AdaLN values are knowable before denoising. Sol-H3 projects every block-and-step value up front, caches the full trajectory, and releases the projection weights before the denoising loop.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>Each block reads its cached slice directly instead of running two index selections. Across 50 blocks and four steps, that removes about 400 small launches and avoids roughly 26 GB of GPU-memory reads per step without changing output.</p></div>
+                </div>
+              </div>
+              <aside class="detail-evidence"><span>Memory released</span><strong>≈24 GB</strong><small>per GPU · plus ≈400 indexing launches removed</small></aside>
+            </article>
           </div>
-          <p>How each part works, where the time is saved, and the evidence behind it.</p>
-        </header>
-
-        <div class="detail-list">
-          <article class="detail-row reveal" id="detail-kernels">
-            <div class="detail-marker"><strong>01</strong><span>GPU kernels</span></div>
-            <div class="detail-copy">
-              <h3>Move less data between operations.</h3>
-              <div class="detail-explanation">
-                <div class="detail-part"><span>Mechanism</span><p>Sol-H3 fuses three repeated chains: residual + RMSNorm + modulation, QKNorm + partial RoPE, and SwiGLU. Their intermediate tensors stay in registers or on chip instead of returning to GPU memory between operations.</p></div>
-                <div class="detail-part"><span>Why it is faster</span><p>These operations touch wide tensors but do relatively little math, so memory traffic is often the limit. Fewer reads, writes, and launches save traffic across all 50 transformer blocks.</p></div>
-              </div>
-            </div>
-            <aside class="detail-evidence"><span>Evidence</span><strong>≈178 GB</strong><small>less intermediate traffic per GPU per evaluation</small></aside>
-          </article>
-
-          <article class="detail-row reveal" id="detail-communication">
-            <div class="detail-marker"><strong>02</strong><span>8-GPU exchange</span></div>
-            <div class="detail-copy">
-              <h3>Pack, exchange, and merge directly.</h3>
-              <div class="detail-explanation">
-                <div class="detail-part"><span>Mechanism</span><p>Ulysses changes sequence shards into head shards before attention, then changes them back. Sol-H3 writes normalized and RoPE-applied Q/K, together with V, directly in destination-major order; one packed all-to-all sends them, and the return is decoded directly into merged-head order.</p></div>
-                <div class="detail-part"><span>Why it is faster</span><p>This removes separate stack, permute, and contiguous copies. The fastest profile uses one scale per 32 INT8 QKV values and E4M3 FP8 output clamped to ±448; BF16 transport remains available.</p></div>
-              </div>
-            </div>
-            <aside class="detail-evidence"><span>Fastest profile</span><strong>51.6%</strong><small>of the BF16 attention communication payload</small></aside>
-          </article>
-
-          <article class="detail-row reveal" id="detail-setup">
-            <div class="detail-marker"><strong>03</strong><span>Sparse setup</span></div>
-            <div class="detail-copy">
-              <h3>Build the sparse plan in fewer passes.</h3>
-              <div class="detail-explanation">
-                <div class="detail-part"><span>Mechanism</span><p>One preprocessing kernel computes each key centroid and value sum together. Thresholding also returns the pooled query for reuse; the final compaction step applies threshold, local-band, and exact-prefix rules while emitting the mask and compact block lists.</p></div>
-                <div class="detail-part"><span>Why it is faster</span><p>The cuDNN block-sparse path receives everything it needs without separately materializing each setup stage. This metadata path is separate from the native one-pass Sol-Attn kernel below; reuse and fusion reduce its temporary traffic and launch overhead.</p></div>
-              </div>
-            </div>
-            <aside class="detail-evidence"><span>Measured setup</span><strong>0.285 ms</strong><small>from 1.206 ms · 76.4% lower</small></aside>
-          </article>
-
-          <article class="detail-row featured reveal" id="detail-sol-attn">
-            <div class="detail-marker"><strong>04</strong><span>Sol-Attn</span></div>
-            <div class="detail-copy">
-              <h3>Select blocks while attention runs.</h3>
-              <div class="detail-explanation">
-                <div class="detail-part"><span>Mechanism</span><p>Each 64-token query block sets its own threshold: mean + β × standard deviation over lightweight query–key scores. Blocks above it run exact attention; skipped blocks contribute a low-cost approximation using pooled keys and value sums.</p></div>
-                <div class="detail-part"><span>Why it is faster</span><p>Sol-Attn consumes each score tile inside online softmax: the same tile selects exact blocks and updates the approximation. It writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
-              </div>
-            </div>
-            <aside class="detail-evidence"><span>Key property</span><strong>One pass</strong><small>query-dependent · training-free sparsification</small></aside>
-          </article>
-
-          <article class="detail-row reveal" id="detail-vae">
-            <div class="detail-marker"><strong>05</strong><span>VAE decoding</span></div>
-            <div class="detail-copy">
-              <h3>Decode spatial tiles in parallel.</h3>
-              <div class="detail-explanation">
-                <div class="detail-part"><span>Mechanism</span><p>A 5s output has seven temporal clips, each split into a 4 × 7 grid of 28 equal spatial tiles. Sol-H3 distributes them over eight GPUs and batches each GPU’s four tiles into one compiled decoder call.</p></div>
-                <div class="detail-part"><span>Why it is faster</span><p>Tile parallelism reduces work per GPU; batching replaces many small decoder launches. Optional global mode balances all 196 tiles and gathers once, but remains optional because the larger compiled batch shows small measured rounding drift.</p></div>
-              </div>
-            </div>
-            <aside class="detail-evidence"><span>5s VAE decode</span><strong>0.602 s</strong><small>7.55 → 1.16 s with tiles · then 0.602 s with batching</small></aside>
-          </article>
-
-          <article class="detail-row reveal" id="detail-adaln">
-            <div class="detail-marker"><strong>06</strong><span>AdaLN cache</span></div>
-            <div class="detail-copy">
-              <h3>Compute conditioning once, then reuse it.</h3>
-              <div class="detail-explanation">
-                <div class="detail-part"><span>Mechanism</span><p>All AdaLN values are knowable before denoising. Sol-H3 projects every block-and-step value up front, caches the full trajectory, and releases the projection weights before the denoising loop.</p></div>
-                <div class="detail-part"><span>Why it is faster</span><p>Each block reads its cached slice directly instead of running two index selections. Across 50 blocks and four steps, that removes about 400 small launches and avoids roughly 26 GB of GPU-memory reads per step without changing output.</p></div>
-              </div>
-            </div>
-            <aside class="detail-evidence"><span>Memory released</span><strong>≈24 GB</strong><small>per GPU · plus ≈400 indexing launches removed</small></aside>
-          </article>
-        </div>
+        </section>
       </div>
     </section>
 
     <section class="future-plan" id="future" aria-labelledby="future-title">
       <div class="wide-shell">
         <header class="section-head reveal">
-          <div class="section-index">06</div>
+          <div class="section-index">05</div>
           <div>
             <span class="section-kicker">Future Plan</span>
             <h2 id="future-title">Where Sol-H3 goes next.</h2>

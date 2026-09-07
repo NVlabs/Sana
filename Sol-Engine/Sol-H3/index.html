@@ -2,22 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>document.documentElement.classList.add('js');</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050705">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8f1">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <meta name="description" content="Sol-H3 accelerates MiniMax-H3 video generation with native audio, delivering up to 15.05× speedup over Base H3 across 5s, 10s, and 15s outputs on 8× NVIDIA B300 GPUs.">
+  <link rel="preload" as="image" href="sol-h3-poster.jpg?v=v6" fetchpriority="high">
+  <meta name="description" content="Sol-H3 generates a 5s MiniMax-H3 T2VA output in a 1.653s median on 8× NVIDIA B300, reaching up to 15.05× lower latency as a four-forward profile versus 49-forward Base H3.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
-  <meta property="og:description" content="Five seconds of world in 1.653 seconds. Across 5s–15s outputs, Sol-H3 is 11.04×–15.05× faster than Base H3 on 8× NVIDIA B300 GPUs.">
+  <meta property="og:description" content="A 5s MiniMax-H3 T2VA output in a 1.653s median. The four-forward Sol-H3 profile reaches up to 15.05× lower latency than 49-forward Base H3 on 8× NVIDIA B300.">
   <meta property="og:url" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <meta property="og:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
-  <meta property="og:image:width" content="1280">
-  <meta property="og:image:height" content="732">
+  <meta property="og:image:width" content="1344">
+  <meta property="og:image:height" content="768">
+  <meta property="og:image:alt" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell system">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System">
-  <meta name="twitter:description" content="Five seconds of world in 1.653 seconds. Sol-H3 delivers up to 15.05× speedup over Base H3 on 8× NVIDIA B300 GPUs.">
+  <meta name="twitter:description" content="A 5s MiniMax-H3 T2VA output in a 1.653s median. The four-forward Sol-H3 profile reaches up to 15.05× lower latency than 49-forward Base H3 on 8× NVIDIA B300.">
   <meta name="twitter:image" content="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/sol-h3-poster.jpg">
+  <meta name="twitter:image:alt" content="Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell system">
   <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/">
   <title>Sol-H3: Speed-of-Light MiniMax-H3 on an 8× NVIDIA B300 Blackwell System | NVIDIA Research</title>
   <style>
@@ -1319,9 +1323,9 @@
     .matrix-measure > span:first-child small {
       display: block;
       margin-top: 4px;
-      color: var(--dim);
+      color: var(--muted);
       font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: .07em;
       text-transform: uppercase;
@@ -1457,8 +1461,26 @@
       .matrix-measure > strong { font-size: 20px; }
 
       .matrix-measure {
-        grid-template-columns: 82px minmax(0, 1fr) 76px;
-        gap: 8px;
+        grid-template-columns: minmax(0, 1fr) max-content;
+        grid-template-rows: auto auto auto;
+        gap: 8px 12px;
+      }
+      .matrix-measure > span:first-child {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .matrix-measure > strong {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .matrix-measure::before {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+      .matrix-measure > .matrix-speedup {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin-left: min(max(calc(var(--w) - 8px), 0px), calc(100% - 82px));
       }
     }
 
@@ -2353,7 +2375,7 @@
     }
 
     .comparison-case-topline span + span {
-      color: var(--dim);
+      color: var(--muted);
     }
 
     .comparison-case-heading h3 {
@@ -2374,7 +2396,7 @@
 
     .comparison-picker { min-width: min(100%, 390px); }
 
-    .comparison-picker > label {
+    .comparison-picker-label {
       display: block;
       margin-bottom: 8px;
       color: var(--muted);
@@ -2559,6 +2581,18 @@
     }
 
     .comparison-media[data-state="ready"] .comparison-placeholder { display: none; }
+    .comparison-media[data-state="error"] video { visibility: visible; }
+    .comparison-media[data-state="error"] .comparison-placeholder {
+      align-content: end;
+      background: linear-gradient(to top, rgba(2, 4, 2, .92), rgba(2, 4, 2, .22) 60%, transparent);
+    }
+    .comparison-media[data-state="error"] .render-orbit {
+      border-color: rgba(255, 101, 76, .62);
+    }
+    .comparison-media[data-state="error"] .render-orbit::after {
+      background: var(--red);
+      box-shadow: 0 0 13px rgba(255, 101, 76, .7);
+    }
 
     .render-orbit {
       position: relative;
@@ -2856,20 +2890,20 @@
       border-top: 1px solid var(--line);
       justify-content: space-between;
       gap: 30px;
-      color: var(--dim);
+      color: var(--muted);
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 8px;
       letter-spacing: .08em;
       text-transform: uppercase;
     }
 
-    .reveal {
+    .js .reveal {
       opacity: 0;
       transform: translateY(28px);
       transition: opacity .8s var(--ease), transform .8s var(--ease);
     }
 
-    .reveal.in-view { opacity: 1; transform: translateY(0); }
+    .js .reveal.in-view { opacity: 1; transform: translateY(0); }
 
     @keyframes status-pulse {
       0%, 100% { opacity: .45; transform: scale(.85); }
@@ -3244,7 +3278,7 @@
 
     .detail-marker {
       align-self: start;
-      color: var(--dim);
+      color: var(--muted);
       font-family: "SFMono-Regular", Consolas, monospace;
       text-transform: uppercase;
     }
@@ -3563,7 +3597,7 @@
       align-items: baseline;
       justify-content: space-between;
       gap: 18px;
-      color: var(--dim);
+      color: var(--muted);
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 13px;
       font-weight: 760;
@@ -4169,7 +4203,7 @@
       overflow-wrap: anywhere;
     }
     .footer-bottom a {
-      color: var(--dim);
+      color: var(--muted);
       text-decoration-color: rgba(167, 255, 46, .3);
       text-underline-offset: 3px;
     }
@@ -4882,7 +4916,7 @@
       <div class="nav-links" id="nav-links">
         <a href="#performance">Performance</a>
         <a href="#compare">Showcase</a>
-        <a href="#architecture">Dual core</a>
+        <a href="#architecture">System</a>
         <a href="#stack">Acceleration</a>
         <a href="#future">Future</a>
       </div>
@@ -4891,7 +4925,7 @@
         <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
       </button>
       <a class="nav-cta" href="https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3/Sol-H3" target="_blank" rel="noopener noreferrer">
-        <span>Codebase</span>
+        <span>Sol-H3 Code</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
       </a>
     </nav>
@@ -4916,15 +4950,15 @@
           </div>
           <p class="hero-dek">
             <strong>Sol-H3 generates MiniMax-H3 video with native audio faster than playback on one 8× NVIDIA B300 system.</strong>
-            Sol-Engine × Sol-Attn unifies sparse attention, fused kernels, fast multi-GPU communication, parallel video decoding, and more in one runtime.
+            Sol-Engine × Sol-Attn unifies sparse attention, fused kernels, fast multi-GPU communication, parallel video decoding, and other serving optimizations in one runtime.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3/Sol-H3" target="_blank" rel="noopener noreferrer">
               Sol-H3 code
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
             </a>
-            <a class="button" href="#future">
-              Demo · coming soon
+            <a class="button" href="#real-time-interactive">
+              Real-time interactive
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
             </a>
           </div>
@@ -4932,7 +4966,7 @@
 
           <div class="hero-visual" aria-label="Full-frame Sol-Engine generation preview">
           <div class="video-terminal">
-            <video id="hero-video" poster="sol-h3-poster.jpg?v=v6" autoplay muted loop controls playsinline preload="metadata" crossorigin="anonymous" aria-label="Sol-Engine generated video preview with playback and seek controls">
+            <video id="hero-video" poster="sol-h3-poster.jpg?v=v6" muted loop controls playsinline preload="metadata" crossorigin="anonymous" aria-label="Sol-Engine generated video preview with playback and seek controls">
               <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3/blog-assets/hero/sol-h3-niu-lai-promo-official-ref2va50-b300-audited-ack-hq.mp4?v=v6" type="video/mp4">
               Your browser does not support this MP4 preview.
             </video>
@@ -4942,13 +4976,13 @@
             </div>
           </div>
           <div class="video-credit">
-            <span class="video-credit-copy">Featured sample · Sol-Engine uses <a href="https://huggingface.co/lightx2v/Minimax-h3-Turbo" target="_blank" rel="noopener noreferrer">LightX2V</a>’s Ref2VA Turbo 8-step LoRA with MiniMax-H3.</span>
+            <span class="video-credit-copy">Featured sample · MiniMax-H3 Base Ref2VA at 50 steps, generated through Sol-Engine on 8× NVIDIA B300.</span>
           </div>
           </div>
         </div>
 
         <aside class="collaborator-rail" aria-label="Sol-H3 team and research engineering collaborators">
-          <div class="collaborator-heading"><strong>Team &amp; collaborators</strong><span>Engine · model · online demo · operator tooling</span></div>
+          <div class="collaborator-heading"><strong>Team &amp; collaborators</strong><span>Engine · online demo · operator tooling · related research</span></div>
           <div class="owner-tier">
             <a class="owner-lockup" href="https://nvlabs.github.io/Sana/Sol-Engine/" target="_blank" rel="noopener noreferrer">
               <span class="owner-brandline">
@@ -4980,12 +5014,12 @@
             </a>
           </div>
           <a class="license-strip" href="https://github.com/NVlabs/Sana/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
-            <strong>Deployment-friendly · Apache 2.0</strong>
-            <span>A permissive license for research, cloud platforms, and production services.</span>
+            <strong>Sol-H3 code · Apache 2.0</strong>
+            <span>Permissive code license; model weights and third-party components retain their own terms.</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
           </a>
           <p class="collaboration-statement">
-            One engine supports <strong>Text-to-Video, Image-to-Video, and Reference-to-Video</strong>. Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine. Compatible MiniMax-H3 few-step LoRAs can plug into the same Sol-H3 engine.
+            One engine supports <strong>Text-to-Video, first-frame Image-to-Video, and Reference-to-Video-and-Audio (Ref2VA)</strong>. Compatible MiniMax-H3 few-step LoRAs plug into the same Sol-H3 runtime.
           </p>
         </aside>
       </div>
@@ -4997,7 +5031,7 @@
         <header class="section-head reveal">
           <div class="section-index">01</div>
           <div>
-            <span class="section-kicker">Scaling benchmark · 1 / 4 / 8× NVIDIA B300</span>
+            <span class="section-kicker">Benchmark · 8 / 4 / 1× NVIDIA B300</span>
             <h2 id="performance-title">Latency across GPU counts.</h2>
           </div>
           <p>Choose an output length, then compare Sol-H3 directly with Base H3 across 8, 4, and 1 B300 GPUs.</p>
@@ -5007,7 +5041,7 @@
           <header class="latency-head">
             <div>
               <div class="console-label">Measured generation time · seconds</div>
-              <h3 id="latency-title">GPU scaling by output length.</h3>
+              <h3 id="latency-title">Generation time across GPU counts.</h3>
             </div>
             <div class="benchmark-duration-control">
               <div class="duration-tabs" role="tablist" aria-label="Choose output length">
@@ -5020,7 +5054,7 @@
 
           <div class="matrix-shell" id="latency-panel" role="tabpanel" aria-labelledby="benchmark-duration-5" aria-live="polite">
             <table class="latency-matrix" id="latency-matrix">
-              <caption class="matrix-caption">Measured Base H3 Dense and Sol-H3 latency for 5, 10, and 15 second outputs on one, four, and eight NVIDIA B300 GPUs.</caption>
+              <caption class="matrix-caption">Measured latency for 50-step Base H3 Dense and four-step Sol-H3 at 5, 10, and 15 second output lengths on one, four, and eight NVIDIA B300 GPUs.</caption>
               <thead>
                 <tr>
                   <th scope="col">GPU count</th>
@@ -5100,7 +5134,7 @@
 
         <div class="method-note reveal">
           <strong>Measured scope</strong>
-          <span id="benchmark-method">All runs use 1344×768, 24 FPS, the same prompt and seed 20260903, and reference-free T2V with stereo audio. In this benchmark, Sol-H3 uses Dense attention on 1× B300 and the SOL sparse-attention path on 4× / 8× B300. Each value is the median of three measured runs after one warmup. Timing includes text encoding, DiT, and video/audio VAE decoding; model loading, compilation warmup, and final MP4 encoding are not timed.</span>
+          <span id="benchmark-method">All runs use 1344×768, 24 FPS, the same prompt and seed 20260903, and reference-free T2VA with stereo audio. The complete profiles differ: Base H3 uses 50 scheduler points (49 DiT forwards), while Sol-H3 uses four DiT forwards—not an attention-only runtime change. Sol-H3 uses Dense attention on 1× B300 and SOL with INT8 QKV / FP8 output transport on 4× / 8× B300. Each value is the median of three measured runs after one warmup. Timing includes text encoding, DiT denoising, and video/audio VAE decoding; model loading, compilation warmup, and final MP4 encoding are excluded.</span>
         </div>
       </div>
     </section>
@@ -5161,11 +5195,11 @@
                 <span>Generated with Sol-H3</span>
               </div>
               <h3 id="comparison-showcase-title">Selected examples.</h3>
-              <p>Use the arrows to move through the next two videos. Each prompt is available below its example.</p>
+              <p>Browse two videos at a time with the arrows; each video includes its exact prompt.</p>
             </div>
             <div class="comparison-picker">
-              <label>Browse examples</label>
-              <div class="comparison-picker-row">
+              <span class="comparison-picker-label" id="comparison-picker-label">Browse examples</span>
+              <div class="comparison-picker-row" role="group" aria-labelledby="comparison-picker-label">
                 <button class="comparison-nav-button" id="comparison-prev" type="button" aria-label="Previous two examples">←</button>
                 <div class="comparison-window-status" aria-live="polite">
                   <strong id="comparison-window-label">Preparing examples</strong>
@@ -5191,9 +5225,9 @@
                 <span id="comparison-left-shots">Shots —</span>
                 <span id="comparison-left-seed">Seed —</span>
               </div>
-              <div class="comparison-media" id="comparison-left-media" data-state="pending">
+              <div class="comparison-media" id="comparison-left-media" data-state="loading">
                 <video id="comparison-left-video" controls playsinline preload="none" aria-label="First Sol-H3 showcase video"></video>
-                <div class="comparison-placeholder">
+                <div class="comparison-placeholder" role="status" aria-live="polite">
                   <span class="render-orbit" aria-hidden="true"></span>
                   <strong id="comparison-left-state">Preparing video</strong>
                   <code id="comparison-left-file">—</code>
@@ -5224,9 +5258,9 @@
                 <span id="comparison-right-shots">Shots —</span>
                 <span id="comparison-right-seed">Seed —</span>
               </div>
-              <div class="comparison-media" id="comparison-right-media" data-state="pending">
+              <div class="comparison-media" id="comparison-right-media" data-state="loading">
                 <video id="comparison-right-video" controls playsinline preload="none" aria-label="Second Sol-H3 showcase video"></video>
-                <div class="comparison-placeholder">
+                <div class="comparison-placeholder" role="status" aria-live="polite">
                   <span class="render-orbit" aria-hidden="true"></span>
                   <strong id="comparison-right-state">Preparing video</strong>
                   <code id="comparison-right-file">—</code>
@@ -5252,7 +5286,7 @@
 
         <div class="method-note reveal">
           <strong>Showcase profile</strong>
-          <span>Each ten-second sample is generated by Sol-H3 at 1344×768 with native audio, using <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3 Preview v1</a>’s default four-step Dense/Data-Free adapter.</span>
+          <span>Each ten-second sample is generated by Sol-H3 at 1344×768 with native audio, using Sol-H3’s four-step Dense/Data-Free adapter from <a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3 Preview v1</a>.</span>
         </div>
       </div>
     </section>
@@ -5326,8 +5360,8 @@
               <div class="detail-copy">
                 <h3>Select blocks while attention runs.</h3>
                 <div class="detail-explanation">
-                  <div class="detail-part"><span>Mechanism</span><p>Each 64-token query block sets its own threshold: mean + β × standard deviation over lightweight query–key scores. Blocks above it run exact attention; skipped blocks contribute a low-cost approximation using pooled keys and value sums.</p></div>
-                  <div class="detail-part"><span>Why it is faster</span><p>Sol-Attn consumes each score tile inside online softmax: the same tile selects exact blocks and updates the approximation. It writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
+                  <div class="detail-part"><span>Mechanism</span><p>Each 64-token query block sets its own threshold: mean + τ × standard deviation over lightweight query–key scores. Selected blocks use exact attention; skipped blocks receive an approximate correction from pooled K/V summaries.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>Routing, sparse attention, and approximate correction share one online-softmax pass. Sol-Attn writes no separate router output, full score map, or routing-index tensor, and needs no retraining.</p></div>
                 </div>
               </div>
               <aside class="detail-evidence"><span>Video generation</span><strong>Up to 2.1×</strong><small>end-to-end versus each model's dense-attention pipeline</small><a class="evidence-link" href="https://nvlabs.github.io/Sana/Sol-Attn/#comparison" target="_blank" rel="noopener noreferrer">Models &amp; settings ↗</a></aside>
@@ -5350,7 +5384,7 @@
                   <div class="detail-part"><span>Why it is faster</span><p>These operations touch wide tensors but do relatively little math, so memory traffic is often the limit. Fewer reads, writes, and launches save traffic across all 50 transformer blocks.</p></div>
                 </div>
               </div>
-              <aside class="detail-evidence"><span>Evidence</span><strong>≈178 GB</strong><small>less intermediate traffic per GPU per evaluation</small></aside>
+              <aside class="detail-evidence"><span>Estimated traffic avoided</span><strong>≈178 GB</strong><small>per GPU per DiT evaluation</small></aside>
             </article>
           </div>
 
@@ -5366,8 +5400,8 @@
               <div class="detail-copy">
                 <h3>Pack, exchange, and merge directly.</h3>
                 <div class="detail-explanation">
-                  <div class="detail-part"><span>Mechanism</span><p>Ulysses changes sequence shards into head shards before attention, then changes them back. Sol-H3 writes normalized and RoPE-applied Q/K, together with V, directly in destination-major order; one packed all-to-all sends them, and the return is decoded directly into merged-head order.</p></div>
-                  <div class="detail-part"><span>Why it is faster</span><p>This removes separate stack, permute, and contiguous copies. The fastest profile uses one scale per 32 INT8 QKV values and E4M3 FP8 output clamped to ±448; BF16 transport remains available.</p></div>
+                  <div class="detail-part"><span>Mechanism</span><p>Ulysses redistributes sequence shards by attention head, then restores the original layout. Sol-H3 packs Q/K/V directly for the destination GPU, performs one all-to-all exchange, and merges returned heads without extra full-tensor layout copies.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>This removes separate stack, permute, and contiguous copies. The fastest profile sends QKV in INT8 and attention output in FP8; BF16 transport remains available when higher numerical fidelity is preferred.</p></div>
                 </div>
               </div>
               <aside class="detail-evidence"><span>Fastest profile</span><strong>51.6%</strong><small>of the BF16 attention communication payload</small></aside>
@@ -5387,7 +5421,7 @@
                 <h3>Build the sparse plan in fewer passes.</h3>
                 <div class="detail-explanation">
                   <div class="detail-part"><span>Mechanism</span><p>One preprocessing kernel computes each key centroid and value sum together. Thresholding also returns the pooled query for reuse; the final compaction step applies threshold, local-band, and exact-prefix rules while emitting the mask and compact block lists.</p></div>
-                  <div class="detail-part"><span>Why it is faster</span><p>The cuDNN block-sparse path receives everything it needs without separately materializing each setup stage. This metadata path is separate from the native one-pass Sol-Attn kernel below; reuse and fusion reduce its temporary traffic and launch overhead.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>The default SOL path feeds its fused K/V summaries, mask, and block list directly into cuDNN block-sparse attention. The optional native Sol-Attn kernel combines routing and sparse attention in one pass. Both reduce temporary traffic and launch overhead.</p></div>
                 </div>
               </div>
               <aside class="detail-evidence"><span>Measured setup</span><strong>0.285 ms</strong><small>from 1.206 ms · 76.4% lower</small></aside>
@@ -5411,11 +5445,11 @@
               <div class="detail-copy">
                 <h3>Decode spatial tiles in parallel.</h3>
                 <div class="detail-explanation">
-                  <div class="detail-part"><span>Mechanism</span><p>A 5s output has seven temporal clips, each split into a 4 × 7 grid of 28 equal spatial tiles. Sol-H3 distributes them over eight GPUs and batches each GPU’s four tiles into one compiled decoder call.</p></div>
-                  <div class="detail-part"><span>Why it is faster</span><p>Tile parallelism reduces work per GPU; batching replaces many small decoder launches. Optional global mode balances all 196 tiles and gathers once, but remains optional because the larger compiled batch shows small measured rounding drift.</p></div>
+                  <div class="detail-part"><span>Mechanism</span><p>A 5s output has seven temporal clips and 196 equal spatial tiles. The default path distributes the full tile set over eight GPUs, batches each GPU’s share into one compiled decoder call, and gathers once.</p></div>
+                  <div class="detail-part"><span>Why it is faster</span><p>Tile sharding cuts the work per GPU, while global batching replaces seven per-clip decode-and-gather rounds with one. A per-clip path remains available when matching the initial output exactly matters.</p></div>
                 </div>
               </div>
-              <aside class="detail-evidence"><span>5s VAE decode</span><strong>0.602 s</strong><small>7.55 → 1.16 s with tiles · then 0.602 s with batching</small></aside>
+              <aside class="detail-evidence"><span>5s per-clip VAE A/B</span><strong>0.602 s</strong><small>7.55 → 1.16 s with tile sharding · then 0.602 s with batching</small></aside>
             </article>
           </div>
 
@@ -5445,7 +5479,7 @@
         </div>
 
         <div class="release-contract reveal" aria-label="Measured Sol-H3 profile">
-          <span>Audited T2V</span>
+          <span>Measured T2VA</span>
           <span>5 / 10 / 15 seconds</span>
           <span>1344×768 · 24 FPS</span>
           <span>INT8 QKV · FP8 attention output</span>
@@ -5474,11 +5508,11 @@
             <span class="future-flow">Generate → decode → stream</span>
           </article>
 
-          <article class="future-card reveal" data-index="02">
+          <article class="future-card reveal" id="real-time-interactive" data-index="02">
             <span class="future-status">Coming next</span>
-            <span class="future-label">Interactive access</span>
-            <h3>Real-time interactive demo</h3>
-            <p>With Reactor, let users update a prompt or reference input and see the next generated segment respond without restarting the session.</p>
+            <span class="future-label">Interactive generation</span>
+            <h3>Real-time interactive</h3>
+            <p>Update a prompt or reference input and see the next generated segment respond without restarting the session.</p>
             <span class="future-flow">New input → next video segment</span>
           </article>
         </div>
@@ -5509,13 +5543,13 @@
             <li><span class="ack-entity"><a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> + <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a></span><span class="ack-role">Operator and fused-kernel optimization on top of Sol-Engine.</span></li>
             <li><a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a><span class="ack-role">Open MiniMax-H3 Turbo LoRAs and the Ref2VA workflow used by Sol-Engine.</span></li>
             <li><a class="ack-entity" href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet · UC Berkeley</a><span class="ack-role">Complementary hybrid-attention work for MiniMax-H3.</span></li>
-            <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">Default FastH3 four-step model.</span></li>
+            <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">FastH3 four-step adapter used by default in Sol-H3.</span></li>
           </ul>
         </article>
 
         <article class="publication-panel citation-panel reveal" aria-labelledby="citations-title">
           <div class="citation-copy">
-            <span class="publication-label">Research use</span>
+            <span class="publication-label">How to cite</span>
             <h2 id="citations-title">Citations</h2>
             <p>If Sol-H3 helps your work, please cite this release together with the underlying <a href="https://arxiv.org/abs/2606.23743" target="_blank" rel="noopener noreferrer">Sol-Engine</a> and <a href="https://arxiv.org/abs/2607.24027" target="_blank" rel="noopener noreferrer">Sol-Attn</a> papers.</p>
           </div>
@@ -5569,7 +5603,7 @@
       <div class="footer-grid">
         <div class="footer-brand">
           <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>Sol-H3</span></a>
-          <p>A high-performance inference framework for video diffusion models.</p>
+          <p>A high-performance MiniMax-H3 inference stack.</p>
           <div class="footer-affiliation">NVIDIA Research<br>Efficient AI Team &amp; Singapore Lab</div>
         </div>
         <div class="references">
@@ -5578,8 +5612,8 @@
             <li><span>01</span><div><a href="https://arxiv.org/abs/2606.23743" target="_blank" rel="noopener noreferrer">Sol Video Inference Engine: Agent-Native Full-Stack Acceleration</a> — paper and <a href="https://nvlabs.github.io/Sana/Sol-Engine/" target="_blank" rel="noopener noreferrer">project page</a>.</div></li>
             <li><span>02</span><div><a href="https://arxiv.org/abs/2607.24027" target="_blank" rel="noopener noreferrer">Sol-Attn: Accelerating Video Generation Inference via On-the-Fly Attention Sparsification</a>.</div></li>
             <li><span>03</span><div><a href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax-H3</a> — official open-weight base model.</div></li>
-            <li><span>04</span><div><a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3 Preview v1</a> — the default four-step MiniMax-H3 model used by Sol-H3.</div></li>
-            <li><span>05</span><div><a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet on MiniMax H3</a> — a complementary near-lossless hybrid-attention approach.</div></li>
+            <li><span>04</span><div><a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3 Preview v1</a> — the four-step adapter used by default in Sol-H3.</div></li>
+            <li><span>05</span><div><a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet on MiniMax-H3</a> — a complementary near-lossless hybrid-attention approach.</div></li>
             <li><span>06</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — open MiniMax-H3 Turbo LoRAs and Ref2VA support used by Sol-Engine.</div></li>
           </ol>
         </div>
@@ -5642,15 +5676,20 @@
       onScroll();
       addEventListener('scroll', onScroll, { passive: true });
 
-      const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in-view');
-            revealObserver.unobserve(entry.target);
-          }
-        });
-      }, { threshold: .11, rootMargin: '0px 0px -5% 0px' });
-      document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
+      const revealItems = [...document.querySelectorAll('.reveal')];
+      if ('IntersectionObserver' in window) {
+        const revealObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in-view');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: .11, rootMargin: '0px 0px -5% 0px' });
+        revealItems.forEach((el) => revealObserver.observe(el));
+      } else {
+        revealItems.forEach((el) => el.classList.add('in-view'));
+      }
 
       if (!reduceMotion && matchMedia('(hover: hover) and (pointer: fine)').matches) {
         document.querySelectorAll('.tech-card').forEach((card) => {
@@ -5737,6 +5776,7 @@
         const resolveMediaPath = (path) => comparisonMediaBase ? new URL(path, comparisonMediaBase).href : path;
         const resetVideo = (target) => {
           target.video.pause();
+          target.video.onloadedmetadata = null;
           target.video.onerror = null;
           target.video.removeAttribute('src');
           target.video.removeAttribute('poster');
@@ -5758,16 +5798,24 @@
             target.state.textContent = 'Awaiting video upload';
             return;
           }
-          target.root.dataset.state = 'ready';
-          target.state.textContent = 'Ready to play';
+          target.root.dataset.state = 'loading';
+          target.state.textContent = 'Loading preview';
           target.video.dataset.expected = resolvedVideo;
           target.video.poster = resolvedPoster;
+          target.video.onloadedmetadata = () => {
+            if (target.video.dataset.expected !== resolvedVideo) return;
+            target.root.dataset.state = 'ready';
+            target.state.textContent = 'Ready to play';
+          };
           target.video.onerror = () => {
             if (target.video.dataset.expected !== resolvedVideo) return;
+            target.root.dataset.state = 'error';
+            target.state.textContent = 'Video unavailable';
+            target.file.textContent = 'Poster shown · try again later';
             target.video.title = 'Playback is unavailable in this browser; the full-resolution poster remains visible.';
           };
           target.video.src = resolvedVideo;
-          target.video.preload = 'none';
+          target.video.preload = 'metadata';
           target.video.load();
         };
         const renderSlot = (caseData, target, displayIndex) => {
@@ -5852,8 +5900,14 @@
             showcaseFields.count.textContent = 'Showcase unavailable';
             showcaseFields.label.textContent = 'Check manifest';
             showcaseFields.window.textContent = 'Unable to load examples';
-            slots.left.prompt.textContent = error.message;
-            slots.right.prompt.textContent = error.message;
+            Object.values(slots).forEach((target) => {
+              resetVideo(target);
+              target.root.dataset.state = 'error';
+              target.state.textContent = 'Showcase unavailable';
+              target.file.textContent = 'Please try again later';
+              target.prompt.textContent = error.message;
+              target.video.title = error.message;
+            });
           });
       }
 

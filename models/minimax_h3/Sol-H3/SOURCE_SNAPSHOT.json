@@ -22,22 +22,63 @@
     }
   ],
   "validation": {
-    "date": "2026-09-06",
-    "hardware": "8x NVIDIA B300 SXM6 AC",
+    "date": "2026-09-07",
+    "hardware": "NVIDIA B300 SXM6 AC",
     "resolution": [768, 1344],
     "tasks": {
       "t2v": {
         "frame_counts": [124, 243, 362],
+        "gpu_counts": [1, 4, 8],
+        "seed": 20260903,
+        "warmups": 1,
         "repeats": 3,
-        "warm_pipeline_median_seconds": [1.668541, 3.738369, 6.618841]
+        "warm_pipeline_median_seconds": [1.652535, 3.732244, 6.611551],
+        "benchmark_matrix": {
+          "official_modular_diffusers": {
+            "profile": "base BF16 dense; Ulysses on multiple GPUs",
+            "scheduler_points": 50,
+            "transformer_forwards": 49,
+            "median_seconds_by_gpu_count": {
+              "1": [159.547008, 442.532542, 847.485929],
+              "4": [48.551572, 127.461294, 237.171449],
+              "8": [30.673287, 71.315877, 131.646939]
+            }
+          },
+          "sglang": {
+            "revision": "12eadf86f12aec2e6f81a6e38b61b964a4c6b529",
+            "profile": "base BF16 dense; Ulysses on multiple GPUs",
+            "scheduler_points": 50,
+            "transformer_forwards": 49,
+            "median_seconds_by_gpu_count": {
+              "1": [129.89836, 376.942479, 746.884554],
+              "4": [35.32834, 100.440279, 194.929976],
+              "8": [18.250303, 50.659855, 99.512536]
+            }
+          },
+          "sol_h3_delivery": {
+            "profile": "FastH3 dense-datafree adapter; dense on one GPU and SOL/BSA on multiple GPUs",
+            "scheduler_points": 5,
+            "transformer_forwards": 4,
+            "multi_gpu_qkv_wire_dtype": "int8_qkv",
+            "multi_gpu_output_wire_dtype": "fp8",
+            "multi_gpu_parallel_vae": true,
+            "median_seconds_by_gpu_count": {
+              "1": [13.745314, 37.812601, 52.260076],
+              "4": [2.918487, 6.992866, 12.541783],
+              "8": [1.652535, 3.732244, 6.611551]
+            }
+          }
+        }
       },
       "i2v": {
         "status": "deployment compatibility validated",
+        "gpu_count": 8,
         "frame_counts": [124, 362],
         "note": "FastH3 T2V adapter with native MiniMax-H3 first-frame conditioning; no separate I2V headline latency claimed"
       },
       "ref2va": {
         "frame_counts": [124, 243, 362],
+        "gpu_count": 8,
         "reference_image": [1104, 832],
         "prompt_characters": 125,
         "prompt_tokens": 26,
@@ -45,6 +86,8 @@
         "warm_pipeline_median_seconds": [2.191815, 4.347622, 5.946699]
       }
     },
-    "timing_excludes": ["checkpoint loading", "warmup", "MP4 encoding"]
+    "timing_includes": ["text encoding", "DiT denoising", "video/audio VAE decoding"],
+    "timing_excludes": ["checkpoint loading", "warmup and compilation", "MP4 encoding"],
+    "aggregation": "median of three measured requests after one warmup"
   }
 }

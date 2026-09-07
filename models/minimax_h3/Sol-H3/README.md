@@ -16,13 +16,39 @@ All three task paths have been exercised on 8x NVIDIA B300 at 1344x768:
 
 | Task | Result |
 |---|---|
-| T2V | 124 / 243 / 362 frames: 1.669 / 3.738 / 6.619 s warm pipeline medians |
+| T2V | 124 / 243 / 362 frames: 1.653 / 3.732 / 6.612 s warm 8-GPU pipeline medians |
 | I2V | Native first-frame conditioning accepted at 124 frames and in a resident 362-frame regression |
 | Ref2VA | 124 / 243 / 362 frames: 2.192 / 4.348 / 5.947 s warm pipeline medians |
 
 The FastH3 preview adapter is published for T2V. I2V combines that adapter with MiniMax-H3's native
 first-frame conditioning path, so its validation is a deployment compatibility result rather than
 an upstream I2V training claim. Latency excludes checkpoint loading, warmup, and MP4 encoding.
+
+### T2V benchmark matrix
+
+The following results were measured on NVIDIA B300 SXM6 AC GPUs. Each cell is the median of three
+requests after one warmup. All runs use the same prompt and seed at 1344x768 and 24 FPS, generate
+synchronized stereo audio, and include text encoding, DiT denoising, and video/audio VAE decoding.
+Checkpoint loading, warmup/compilation, and MP4 encoding are excluded.
+
+| Runtime | GPUs | Profile | 5 s / 124f | 10 s / 243f | 15 s / 362f |
+|---|---:|---|---:|---:|---:|
+| Official Modular Diffusers | 1 | Base BF16 dense, 50 points / 49 forwards | 159.547 s | 442.533 s | 847.486 s |
+| Official Modular Diffusers | 4 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 48.552 s | 127.461 s | 237.171 s |
+| Official Modular Diffusers | 8 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 30.673 s | 71.316 s | 131.647 s |
+| SGLang | 1 | Base BF16 dense, 50 points / 49 forwards | 129.898 s | 376.942 s | 746.885 s |
+| SGLang | 4 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 35.328 s | 100.440 s | 194.930 s |
+| SGLang | 8 | Base BF16 dense, Ulysses, 50 points / 49 forwards | 18.250 s | 50.660 s | 99.513 s |
+| Sol-H3 | 1 | FastH3, dense, 5 points / 4 forwards | **13.745 s** | **37.813 s** | **52.260 s** |
+| Sol-H3 | 4 | FastH3, SOL/BSA, 5 points / 4 forwards | **2.918 s** | **6.993 s** | **12.542 s** |
+| Sol-H3 | 8 | FastH3, SOL/BSA, 5 points / 4 forwards | **1.653 s** | **3.732 s** | **6.612 s** |
+
+The official and SGLang rows are directly comparable. Sol-H3 uses a distilled four-forward adapter
+and its multi-GPU profile uses approximate SOL/BSA attention, so the difference from either
+49-forward baseline is not a runtime-only speedup.
+
+The default multi-GPU Sol-H3 profile uses INT8 QKV transport, FP8 output transport, and parallel
+video/audio VAE decoding. The single-GPU profile uses dense BF16 attention.
 
 ## Setup
 

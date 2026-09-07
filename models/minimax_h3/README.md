@@ -31,7 +31,7 @@ Validation on 8x NVIDIA B300 covers all three task paths:
 
 | Task | Validation |
 |---|---|
-| T2V | Warm pipeline medians of 1.669 / 3.738 / 6.619 s for 124 / 243 / 362 frames |
+| T2V | Warm 8-GPU pipeline medians of 1.653 / 3.732 / 6.612 s for 124 / 243 / 362 frames; see the full 1/4/8-GPU matrix in [`Sol-H3`](Sol-H3/#t2v-benchmark-matrix) |
 | I2V | Native first-frame path accepted at 124 frames and in a resident 362-frame T2V-to-I2V regression; no separate I2V headline latency is claimed |
 | Ref2VA | Warm pipeline medians of 2.192 / 4.348 / 5.947 s for 124 / 243 / 362 frames, using an 832x1104 image reference and a 125-character / 26-token prompt |
 

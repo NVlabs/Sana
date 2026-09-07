@@ -948,15 +948,6 @@
       gap: 8px;
     }
 
-    .benchmark-scale {
-      color: var(--muted);
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .055em;
-      text-transform: uppercase;
-    }
-
     .latency-matrix [hidden] { display: none !important; }
     .latency-matrix [data-benchmark-duration]:not([hidden]) { border-right: 0; }
 
@@ -3940,7 +3931,7 @@
     .future-plan .wide-shell { position: relative; z-index: 1; }
     .future-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
       margin-top: clamp(38px, 5vw, 66px);
     }
@@ -4064,7 +4055,6 @@
 
     @media (max-width: 1180px) {
       .future-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .future-card:last-child { grid-column: 1 / -1; }
     }
 
     .publication-notes {
@@ -4995,7 +4985,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
           </a>
           <p class="collaboration-statement">
-            Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine. Any MiniMax-H3 few-step LoRA can plug into the same Sol-H3 engine.
+            One engine supports <strong>Text-to-Video, Image-to-Video, and Reference-to-Video</strong>. Built by <strong>NVIDIA Research’s Efficient AI Team and Singapore Lab</strong>. <a href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a> is collaborating on the online demo. <a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> and <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a> helped tune GPU kernels on Sol-Engine. Compatible MiniMax-H3 few-step LoRAs can plug into the same Sol-H3 engine.
           </p>
         </aside>
       </div>
@@ -5025,7 +5015,6 @@
                 <button class="duration-tab" id="benchmark-duration-10" type="button" role="tab" aria-selected="false" tabindex="-1" data-benchmark-duration-control="10" aria-controls="latency-panel">10s</button>
                 <button class="duration-tab" id="benchmark-duration-15" type="button" role="tab" aria-selected="false" tabindex="-1" data-benchmark-duration-control="15" aria-controls="latency-panel">15s</button>
               </div>
-              <span class="benchmark-scale" id="benchmark-scale">Base H3 = 100% · exact seconds shown</span>
             </div>
           </header>
 
@@ -5045,20 +5034,20 @@
                   <th scope="row"><span class="matrix-gpu"><strong>8×</strong><small>NVIDIA B300</small></span></th>
                   <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>18.250 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 9.058%;"><span>Sol-H3<small>Ours</small></span><strong>1.653 s</strong><span class="matrix-speedup" aria-label="11.04 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>11.04×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>18.250 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 9.058%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>1.653 s</strong><span class="matrix-speedup" aria-label="11.04 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>11.04×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>50.660 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 7.367%;"><span>Sol-H3<small>Ours</small></span><strong>3.732 s</strong><span class="matrix-speedup" aria-label="13.57 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>13.57×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>50.660 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 7.367%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>3.732 s</strong><span class="matrix-speedup" aria-label="13.57 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>13.57×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>99.513 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.644%;"><span>Sol-H3<small>Ours</small></span><strong>6.612 s</strong><span class="matrix-speedup" aria-label="15.05 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>15.05×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>99.513 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 6.644%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>6.612 s</strong><span class="matrix-speedup" aria-label="15.05 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>15.05×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                 </tr>
@@ -5066,20 +5055,20 @@
                   <th scope="row"><span class="matrix-gpu"><strong>4×</strong><small>NVIDIA B300</small></span></th>
                   <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>35.328 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 8.260%;"><span>Sol-H3<small>Ours</small></span><strong>2.918 s</strong><span class="matrix-speedup" aria-label="12.11 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>12.11×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>35.328 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 8.260%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>2.918 s</strong><span class="matrix-speedup" aria-label="12.11 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>12.11×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>100.440 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.962%;"><span>Sol-H3<small>Ours</small></span><strong>6.993 s</strong><span class="matrix-speedup" aria-label="14.36 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>14.36×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>100.440 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 6.962%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>6.993 s</strong><span class="matrix-speedup" aria-label="14.36 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>14.36×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>194.930 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.434%;"><span>Sol-H3<small>Ours</small></span><strong>12.542 s</strong><span class="matrix-speedup" aria-label="15.54 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>15.54×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>194.930 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 6.434%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>12.542 s</strong><span class="matrix-speedup" aria-label="15.54 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>15.54×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                 </tr>
@@ -5087,20 +5076,20 @@
                   <th scope="row"><span class="matrix-gpu"><strong>1×</strong><small>NVIDIA B300</small></span></th>
                   <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>129.898 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 10.581%;"><span>Sol-H3<small>Ours</small></span><strong>13.745 s</strong><span class="matrix-speedup" aria-label="9.45 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>9.45×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>129.898 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 10.581%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>13.745 s</strong><span class="matrix-speedup" aria-label="9.45 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>9.45×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>376.942 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 10.032%;"><span>Sol-H3<small>Ours</small></span><strong>37.813 s</strong><span class="matrix-speedup" aria-label="9.97 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>9.97×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>376.942 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 10.032%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>37.813 s</strong><span class="matrix-speedup" aria-label="9.97 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>9.97×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
-                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>746.885 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.997%;"><span>Sol-H3<small>Ours</small></span><strong>52.260 s</strong><span class="matrix-speedup" aria-label="14.29 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>14.29×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense · 50 steps</small></span><strong>746.885 s</strong></div>
+                      <div class="matrix-measure ours" style="--w: 6.997%;"><span>Sol-H3<small>Ours · 4 steps</small></span><strong>52.260 s</strong><span class="matrix-speedup" aria-label="14.29 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>14.29×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                 </tr>
@@ -5111,7 +5100,7 @@
 
         <div class="method-note reveal">
           <strong>Measured scope</strong>
-          <span id="benchmark-method">All runs use 1344×768, 24 FPS, the same prompt and seed 20260903, and reference-free T2V with stereo audio. Sol-H3 uses Dense attention on 1× B300 and SOL on 4× / 8× B300. Each value is the median of three measured runs after one warmup. Timing includes text encoding, DiT, and video/audio VAE decoding; model loading, compilation warmup, and final MP4 encoding are not timed.</span>
+          <span id="benchmark-method">All runs use 1344×768, 24 FPS, the same prompt and seed 20260903, and reference-free T2V with stereo audio. In this benchmark, Sol-H3 uses Dense attention on 1× B300 and the SOL sparse-attention path on 4× / 8× B300. Each value is the median of three measured runs after one warmup. Timing includes text encoding, DiT, and video/audio VAE decoding; model loading, compilation warmup, and final MP4 encoding are not timed.</span>
         </div>
       </div>
     </section>
@@ -5121,12 +5110,9 @@
         const tabs = [...document.querySelectorAll('[data-benchmark-duration-control]')];
         const cells = [...document.querySelectorAll('[data-benchmark-duration]')];
         const panel = document.getElementById('latency-panel');
-        const scale = document.getElementById('benchmark-scale');
-        const scaleLabel = 'Base H3 = 100% · exact seconds shown';
-
         const selectDuration = (duration, moveFocus = false) => {
           const activeTab = tabs.find((tab) => tab.dataset.benchmarkDurationControl === duration);
-          if (!activeTab || !panel || !scale) return;
+          if (!activeTab || !panel) return;
 
           tabs.forEach((tab) => {
             const active = tab === activeTab;
@@ -5136,7 +5122,6 @@
           cells.forEach((cell) => {
             cell.hidden = cell.dataset.benchmarkDuration !== duration;
           });
-          scale.textContent = scaleLabel;
           panel.setAttribute('aria-labelledby', activeTab.id);
           if (moveFocus) activeTab.focus();
         };
@@ -5477,19 +5462,11 @@
             <span class="section-kicker">Future Plan</span>
             <h2 id="future-title">Where Sol-H3 goes next.</h2>
           </div>
-          <p>Sol-H3 is moving toward reference-guided generation, continuous 24 FPS output, and direct real-time interaction.</p>
+          <p>Sol-H3 is moving toward continuous 24 FPS output and direct real-time interaction.</p>
         </header>
 
         <div class="future-grid">
           <article class="future-card reveal" data-index="01">
-            <span class="future-status">In development</span>
-            <span class="future-label">Reference-guided generation</span>
-            <h3>Ref2AV</h3>
-            <p>Generate video and native audio from a reference image or video, with Sol-Engine optimizing the complete inference path.</p>
-            <span class="future-flow">Reference → video + audio</span>
-          </article>
-
-          <article class="future-card reveal" data-index="02">
             <span class="future-status">Research direction</span>
             <span class="future-label">Continuous generation</span>
             <h3>24 FPS live streaming</h3>
@@ -5497,7 +5474,7 @@
             <span class="future-flow">Generate → decode → stream</span>
           </article>
 
-          <article class="future-card reveal" data-index="03">
+          <article class="future-card reveal" data-index="02">
             <span class="future-status">Coming next</span>
             <span class="future-label">Interactive access</span>
             <h3>Real-time interactive demo</h3>
@@ -5530,7 +5507,7 @@
             <li><a class="ack-entity" href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax</a><span class="ack-role">MiniMax-H3 open weights and code.</span></li>
             <li><a class="ack-entity" href="https://www.reactor.inc/" target="_blank" rel="noopener noreferrer">Reactor</a><span class="ack-role">Forthcoming online demo and deployment collaboration.</span></li>
             <li><span class="ack-entity"><a href="https://github.com/humanfia/humanize2" target="_blank" rel="noopener noreferrer">Humanize</a> + <a href="https://github.com/mit-han-lab/kernel-design-agents" target="_blank" rel="noopener noreferrer">KDA</a></span><span class="ack-role">Operator and fused-kernel optimization on top of Sol-Engine.</span></li>
-            <li><a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a><span class="ack-role">Open MiniMax-H3 Turbo LoRAs and the Ref2AV workflow used by Sol-Engine.</span></li>
+            <li><a class="ack-entity" href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a><span class="ack-role">Open MiniMax-H3 Turbo LoRAs and the Ref2VA workflow used by Sol-Engine.</span></li>
             <li><a class="ack-entity" href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet · UC Berkeley</a><span class="ack-role">Complementary hybrid-attention work for MiniMax-H3.</span></li>
             <li><a class="ack-entity" href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">Hao AI Lab @ UCSD</a><span class="ack-role">Default FastH3 four-step model.</span></li>
           </ul>
@@ -5603,7 +5580,7 @@
             <li><span>03</span><div><a href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax-H3</a> — official open-weight base model.</div></li>
             <li><span>04</span><div><a href="https://haoailab.com/blogs/fasth3-preview/" target="_blank" rel="noopener noreferrer">FastH3 Preview v1</a> — the default four-step MiniMax-H3 model used by Sol-H3.</div></li>
             <li><span>05</span><div><a href="https://openvdn.github.io/h3-vda-blog.html" target="_blank" rel="noopener noreferrer">Video DeltaNet on MiniMax H3</a> — a complementary near-lossless hybrid-attention approach.</div></li>
-            <li><span>06</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — open MiniMax-H3 Turbo LoRAs and Ref2AV support used by Sol-Engine.</div></li>
+            <li><span>06</span><div><a href="https://github.com/ModelTC/LightX2V" target="_blank" rel="noopener noreferrer">LightX2V</a> — open MiniMax-H3 Turbo LoRAs and Ref2VA support used by Sol-Engine.</div></li>
           </ol>
         </div>
       </div>

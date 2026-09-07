@@ -16,6 +16,24 @@
   document.querySelectorAll('.nav-links a').forEach(link => link.addEventListener('click', closeMenu));
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
 
+  const revealSections = [...document.querySelectorAll('[data-reveal]')];
+  if (revealSections.length) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || !('IntersectionObserver' in window)) {
+      revealSections.forEach(section => section.classList.add('reveal', 'in-view'));
+    } else {
+      revealSections.forEach(section => section.classList.add('reveal'));
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('in-view');
+          observer.unobserve(entry.target);
+        });
+      }, {threshold: 0.12, rootMargin: '0px 0px -8% 0px'});
+      requestAnimationFrame(() => revealSections.forEach(section => observer.observe(section)));
+    }
+  }
+
   const theme = document.querySelector('.theme-toggle');
   const lightSheet = document.getElementById('light-theme');
   const sun = theme.innerHTML;
@@ -44,6 +62,30 @@
   const applyMotion = () => { if (reducedMotion.matches) hero.pause(); else void hero.play().catch(heroState); };
   reducedMotion.addEventListener('change', applyMotion);
   applyMotion();
+
+  const lowResolutionPreviews = [...document.querySelectorAll('.latent-window-h3 .latent-preview-frame, .latent-window-ltx .latent-preview-low')];
+  if (lowResolutionPreviews.length) {
+    fetch(lowResolutionPreviews[0].src, {mode: 'cors'})
+      .then(response => {
+        if (!response.ok) throw new Error('Preview image request failed');
+        return response.blob();
+      })
+      .then(blob => createImageBitmap(blob))
+      .then(bitmap => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 224;
+        canvas.height = 128;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+        const lowResolutionSource = canvas.toDataURL('image/jpeg', 0.86);
+        lowResolutionPreviews.forEach(image => { image.src = lowResolutionSource; });
+      })
+      .catch(() => {});
+  }
 
   document.querySelectorAll('.spark-gallery').forEach(gallery => {
     const videos = [...gallery.querySelectorAll('video')];
@@ -91,7 +133,8 @@
   const copy = document.querySelector('.copy-code');
   copy.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(document.querySelector('.citation-window code').textContent);
+      const citations = [...document.querySelectorAll('.citation-window code')].map(code => code.textContent).join('\n\n');
+      await navigator.clipboard.writeText(citations);
       copy.textContent = 'Copied';
     } catch { copy.textContent = 'Select the text to copy'; }
   });

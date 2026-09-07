@@ -1312,8 +1312,6 @@
       box-shadow: 0 0 18px rgba(167, 255, 46, .1);
     }
 
-    .matrix-measure.ours { padding-bottom: 24px; }
-
     .matrix-measure + .matrix-measure {
       margin-top: 14px;
       padding-top: 14px;
@@ -1360,49 +1358,30 @@
     .matrix-measure.ours > strong { color: var(--acid); }
 
     .matrix-measure > .matrix-speedup {
-      position: relative;
       z-index: 2;
       grid-column: 2;
-      grid-row: 1;
-      align-self: center;
-      height: 1px;
-      margin-right: 12px;
-      margin-left: max(calc(var(--w) + 14px), 44px);
-      background: var(--red);
-      border-radius: 999px;
-      box-shadow: 0 0 10px rgba(255, 101, 76, .2);
+      grid-row: 2;
+      justify-self: start;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 7px;
+      margin-left: max(calc(var(--w) - 8px), 0px);
       pointer-events: none;
     }
 
-    .matrix-speedup::before {
-      position: absolute;
-      top: 50%;
-      left: 1px;
-      width: 8px;
-      height: 8px;
-      border-bottom: 2px solid var(--red);
-      border-left: 2px solid var(--red);
-      transform: translate(-35%, -50%) rotate(45deg);
-      content: "";
+    .matrix-speedup svg {
+      width: 25px;
+      height: 16px;
+      flex: 0 0 auto;
+      fill: none;
+      stroke: var(--red);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
-
-    .matrix-speedup::after {
-      position: absolute;
-      top: 50%;
-      right: 0;
-      width: 2px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--red);
-      transform: translateY(-50%);
-      content: "";
-    }
     .matrix-speedup > strong {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
       color: var(--red);
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: clamp(12px, 1.2vw, 16px);
@@ -5067,19 +5046,19 @@
                   <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>18.250 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 9.058%;"><span>Sol-H3<small>Ours</small></span><strong>1.653 s</strong><span class="matrix-speedup" aria-label="11.04 times faster than Base H3"><strong>11.04×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 9.058%;"><span>Sol-H3<small>Ours</small></span><strong>1.653 s</strong><span class="matrix-speedup" aria-label="11.04 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>11.04×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>50.660 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 7.367%;"><span>Sol-H3<small>Ours</small></span><strong>3.732 s</strong><span class="matrix-speedup" aria-label="13.57 times faster than Base H3"><strong>13.57×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 7.367%;"><span>Sol-H3<small>Ours</small></span><strong>3.732 s</strong><span class="matrix-speedup" aria-label="13.57 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>13.57×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>99.513 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.644%;"><span>Sol-H3<small>Ours</small></span><strong>6.612 s</strong><span class="matrix-speedup" aria-label="15.05 times faster than Base H3"><strong>15.05×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 6.644%;"><span>Sol-H3<small>Ours</small></span><strong>6.612 s</strong><span class="matrix-speedup" aria-label="15.05 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>15.05×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                 </tr>
@@ -5088,19 +5067,19 @@
                   <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>35.328 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 8.260%;"><span>Sol-H3<small>Ours</small></span><strong>2.918 s</strong><span class="matrix-speedup" aria-label="12.11 times faster than Base H3"><strong>12.11×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 8.260%;"><span>Sol-H3<small>Ours</small></span><strong>2.918 s</strong><span class="matrix-speedup" aria-label="12.11 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>12.11×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>100.440 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.962%;"><span>Sol-H3<small>Ours</small></span><strong>6.993 s</strong><span class="matrix-speedup" aria-label="14.36 times faster than Base H3"><strong>14.36×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 6.962%;"><span>Sol-H3<small>Ours</small></span><strong>6.993 s</strong><span class="matrix-speedup" aria-label="14.36 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>14.36×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>194.930 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.434%;"><span>Sol-H3<small>Ours</small></span><strong>12.542 s</strong><span class="matrix-speedup" aria-label="15.54 times faster than Base H3"><strong>15.54×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 6.434%;"><span>Sol-H3<small>Ours</small></span><strong>12.542 s</strong><span class="matrix-speedup" aria-label="15.54 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>15.54×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                 </tr>
@@ -5109,19 +5088,19 @@
                   <td data-duration="5s · 124 frames" data-benchmark-duration="5">
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>129.898 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 10.581%;"><span>Sol-H3<small>Ours</small></span><strong>13.745 s</strong><span class="matrix-speedup" aria-label="9.45 times faster than Base H3"><strong>9.45×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 10.581%;"><span>Sol-H3<small>Ours</small></span><strong>13.745 s</strong><span class="matrix-speedup" aria-label="9.45 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>9.45×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="10s · 243 frames" data-benchmark-duration="10" hidden>
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>376.942 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 10.032%;"><span>Sol-H3<small>Ours</small></span><strong>37.813 s</strong><span class="matrix-speedup" aria-label="9.97 times faster than Base H3"><strong>9.97×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 10.032%;"><span>Sol-H3<small>Ours</small></span><strong>37.813 s</strong><span class="matrix-speedup" aria-label="9.97 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>9.97×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                   <td data-duration="15s · 362 frames" data-benchmark-duration="15" hidden>
                     <div class="matrix-cell">
                       <div class="matrix-measure base" style="--w: 100%;"><span>Base H3<small>Dense</small></span><strong>746.885 s</strong></div>
-                      <div class="matrix-measure ours" style="--w: 6.997%;"><span>Sol-H3<small>Ours</small></span><strong>52.260 s</strong><span class="matrix-speedup" aria-label="14.29 times faster than Base H3"><strong>14.29×<span> faster</span></strong></span></div>
+                      <div class="matrix-measure ours" style="--w: 6.997%;"><span>Sol-H3<small>Ours</small></span><strong>52.260 s</strong><span class="matrix-speedup" aria-label="14.29 times faster than Base H3"><svg viewBox="0 0 26 16" aria-hidden="true" focusable="false"><path d="M24 14C14 14 8 10 3.5 3.5M3.5 3.5l1 6M3.5 3.5l6 1"/></svg><strong>14.29×<span> faster</span></strong></span></div>
                     </div>
                   </td>
                 </tr>

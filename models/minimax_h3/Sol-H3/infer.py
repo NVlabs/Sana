@@ -20,6 +20,12 @@ def parse_args() -> argparse.Namespace:
         default="sol_bsa",
         help="Attention backend (default: sol_bsa)",
     )
+    parser.add_argument(
+        "--compute-quant",
+        choices=("none", "mxfp8"),
+        default="none",
+        help="DiT linear compute mode (default: none/BF16)",
+    )
     parser.add_argument("--task", choices=("t2v", "i2v", "ref2va"), required=True)
     parser.add_argument("--prompt")
     parser.add_argument("--prompt-file", type=Path)
@@ -94,6 +100,7 @@ def main() -> int:
         attention_backend=args.attention_backend,
         task=args.task,
         reference_image_resize_mode=args.reference_image_resize_mode,
+        compute_quant=args.compute_quant,
     ) as engine:
         if args.warmup:
             engine.warmup(
@@ -119,6 +126,7 @@ def main() -> int:
                         "duration": args.duration,
                         "seed": args.seed,
                         "attention_backend": args.attention_backend,
+                        "compute_quant": args.compute_quant,
                         "reference_image_resize_mode": (
                             args.reference_image_resize_mode if args.task == "ref2va" else None
                         ),

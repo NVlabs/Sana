@@ -265,7 +265,7 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
   --generator_sigma_profile=sana_shift6_dpm \\
   --cfg_scale=1.0 \\
   --flow_shift=1.0 \\
-  --motion_score=0 \\
+  --motion_score=20 \\
   --negative_prompt=None \\
   --num_frames=81 \\
   --step=4 \\
@@ -296,6 +296,13 @@ def test_release_demo_prompt_command_and_links_stay_in_sync():
         assert preview_command in document
         assert video_url in document
         assert preview_video_url in document
+        assert "81 frames at 16 FPS" in document
+        assert "193 frames at 24 FPS" in document
+        assert "RL LoRA scale 0.7" in document
+    for document in release_documents[1:]:
+        assert 'video_duration="5 seconds"' in document
+        assert "rl_lora_scale=0.7" in document
+        assert "motion_score=20" in document
     linked_documents = release_documents + [
         (repo_root / "docs" / "index.md").read_text(encoding="utf-8"),
         (repo_root / "docs" / "model_zoo.md").read_text(encoding="utf-8"),

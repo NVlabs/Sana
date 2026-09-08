@@ -55,7 +55,7 @@ ______________________________________________________________________
 | Model | Reso | pth link | diffusers | Precision | Description |
 | --- | --- | --- | --- | --- | --- |
 | SANA-Video 2.0 5B | 720p | [SANA-Video_2.0_5B_720p](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) | --- | bf16 inference | 8s T2V/TI2V ReFL model (193 frames at 24 FPS) |
-| SANA-Video 2.0 5B 4-step preview | 720p | [SANA-Video_2.0_5B_720p_4step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | --- | bf16 inference | T2V-only DMD preview (81 frames at 16 FPS) |
+| SANA-Video 2.0 5B 4-step preview | 720p | [SANA-Video_2.0_5B_720p_4step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | --- | bf16 inference | T2V-only DMD preview (81 frames at 16 FPS or 193 frames at 24 FPS) |
 | SANA-Video 2.0 14B | 480p | Coming soon | Coming soon | bf16 | 40-layer hybrid-attention model |
 
 ______________________________________________________________________

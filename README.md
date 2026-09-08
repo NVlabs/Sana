@@ -185,7 +185,10 @@ bash inference_video_scripts/inference_sana_video.sh \
   --work_dir output/sana_video2_t2v_720p_demo
 ```
 
-Run the T2V-only 4-step DMD preview with its fixed training-aligned schedule:
+The online preview supports 5-second (81 frames at 16 FPS) and 8-second
+(193 frames at 24 FPS) outputs, and defaults to RL LoRA scale 0.7. Run the
+T2V-only full DMD checkpoint at its native RL scale 1.0 with the 5-second
+profile using:
 
 ```bash
 bash inference_video_scripts/inference_sana_video.sh \
@@ -200,7 +203,7 @@ bash inference_video_scripts/inference_sana_video.sh \
   --generator_sigma_profile=sana_shift6_dpm \
   --cfg_scale=1.0 \
   --flow_shift=1.0 \
-  --motion_score=0 \
+  --motion_score=20 \
   --negative_prompt=None \
   --num_frames=81 \
   --step=4 \
@@ -209,8 +212,9 @@ bash inference_video_scripts/inference_sana_video.sh \
   --work_dir output/sana_video2_t2v_720p_4step_preview
 ```
 
-The command above generated this verified seed-4 preview from the independent
-four-step DMD checkpoint (1280 × 736, 81 frames, 16 FPS, 5.06 seconds):
+The verified online seed-4 preview below uses the same prompt, temporal profile,
+and motion score, with the Space default RL LoRA scale 0.7 (1280 × 736,
+81 frames, 16 FPS, 5.06 seconds). The model card records its exact API call.
 
 <p align="center">
   <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">

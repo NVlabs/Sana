@@ -38,7 +38,7 @@ Both variants use:
 | Model | Resolution | Checkpoint | Precision |
 | --- | --- | --- | --- |
 | SANA-Video 2.0 5B | 720p, 193 frames at 24 FPS | [SANA-Video_2.0_5B_720p](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) | BF16 inference |
-| SANA-Video 2.0 5B 4-step preview | 720p, 81 frames at 16 FPS | [SANA-Video_2.0_5B_720p_4step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | BF16 inference |
+| SANA-Video 2.0 5B 4-step preview | 720p, 81 frames at 16 FPS or 193 frames at 24 FPS | [SANA-Video_2.0_5B_720p_4step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | BF16 inference |
 | SANA-Video 2.0 14B | 480p | Coming soon | BF16 |
 
 The released 5B checkpoint was jointly post-trained for text-to-video (T2V)
@@ -133,11 +133,13 @@ bash inference_video_scripts/inference_sana_video.sh \
 ### Four-step text-to-video preview
 
 The DMD preview uses four fixed stochastic stages, CFG 1, BF16 latent noise,
-and the `sana_shift6_dpm` sigma profile. It generates 81 frames at 16 FPS
-(about 5.06 seconds) and does not support first-frame conditioning. The
-`flow_shift` argument is retained for CLI consistency but is not applied by
-this sampler. Model construction stays at the source tower's 480 setting;
-`custom_height_width` controls the actual 736×1280 latent and MP4 dimensions.
+and the `sana_shift6_dpm` sigma profile. It supports a 5-second profile
+(81 frames at 16 FPS) and an 8-second profile (193 frames at 24 FPS), and does
+not support first-frame conditioning. The online preview defaults to the
+5-second profile and RL LoRA scale 0.7. The `flow_shift` argument is retained
+for CLI consistency but is not applied by this sampler. Model construction
+stays at the source tower's 480 setting; `custom_height_width` controls the
+actual 736×1280 latent and MP4 dimensions.
 
 ```bash
 bash inference_video_scripts/inference_sana_video.sh \
@@ -152,7 +154,7 @@ bash inference_video_scripts/inference_sana_video.sh \
   --generator_sigma_profile=sana_shift6_dpm \
   --cfg_scale=1.0 \
   --flow_shift=1.0 \
-  --motion_score=0 \
+  --motion_score=20 \
   --negative_prompt=None \
   --num_frames=81 \
   --step=4 \
@@ -161,8 +163,27 @@ bash inference_video_scripts/inference_sana_video.sh \
   --work_dir output/sana_video2_t2v_720p_4step_preview
 ```
 
-The command above generated this verified seed-4 preview from the independent
-four-step DMD checkpoint (1280 × 736, 81 frames, 16 FPS, 5.06 seconds):
+The local command above runs the full checkpoint at its native RL scale 1.0.
+The verified online sample below uses the same prompt, schedule, duration,
+motion score, and seed, with the Space default RL LoRA scale 0.7 (1280 × 736,
+81 frames, 16 FPS, 5.06 seconds). Reproduce those exact online settings with:
+
+```python
+from pathlib import Path
+
+from gradio_client import Client
+
+prompt = Path("asset/samples/sana_video2_5b_720p_demo.txt").read_text().strip()
+video_path, seed = Client("Efficient-Large-Model/sana-video2-5b-720p-demo").predict(
+    prompt=prompt,
+    video_duration="5 seconds",
+    rl_lora_scale=0.7,
+    motion_score=20,
+    seed=4,
+    randomize_seed=False,
+    api_name="/generate",
+)
+```
 
 <video controls muted loop playsinline poster="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4_poster.png" style="width: 100%;">
   <source src="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4" type="video/mp4">

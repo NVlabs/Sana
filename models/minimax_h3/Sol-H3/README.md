@@ -9,8 +9,11 @@ Production inference package for MiniMax-H3 with synchronized video and audio ou
 - 5, 10, or 15 second output
 - 1, 2, 4, or 8 GPUs; validated on 8x NVIDIA B300
 - Fast SOL/BSA profile enabled by default
+- Optional fused MXFP8 DiT compute on SM100-family GPUs
 
-The default profile prioritizes speed and uses lossy acceleration. Select `dense` when a dense-attention reference is required or when running on one GPU.
+The default profile prioritizes speed and uses lossy attention/communication acceleration. Select
+`dense` when a dense-attention reference is required or when running on one GPU. DiT linear compute
+remains BF16 unless `--compute-quant mxfp8` is selected.
 
 ## Validation
 
@@ -57,7 +60,7 @@ Base BF16 dense model with 50 scheduler points (49 DiT forwards); Ulysses on 4/8
 | 4 | 35.328 s | 100.440 s | 194.930 s |
 | 8 | 18.250 s | 50.660 s | 99.513 s |
 
-#### Sol-H3
+#### Sol-H3 (BF16 compute)
 
 FastH3 adapter with five scheduler points (four DiT forwards); dense attention on 1 GPU and
 SOL/BSA on 4/8 GPUs. The multi-GPU profile uses INT8 QKV transport, FP8 output transport, and
@@ -72,6 +75,22 @@ parallel video/audio VAE decoding.
 The official and SGLang rows are directly comparable. Sol-H3 uses a distilled four-forward adapter
 and its multi-GPU profile uses approximate SOL/BSA attention, so the difference from either
 49-forward baseline is not a runtime-only speedup.
+
+### Optional MXFP8 compute
+
+On 8x B300, fused MXFP8 attention and FFN linears in transformer blocks 2 through 46 reduce the
+same 5-second T2V request from 1.655 s to 1.472 s. The selected linear weights occupy 16.65 GiB per
+rank instead of 32.30 GiB.
+
+| Compute | 5 s / 124f median | Latency change | Selected weight storage |
+|---|---:|---:|---:|
+| BF16 | 1.655 s | baseline | 32.30 GiB |
+| MXFP8 | **1.472 s** | **-11.1%** | **16.65 GiB** |
+
+This is a lossy mode: the generated video measured 13.82 dB decoded-RGB PSNR and 0.540 SSIM against
+the BF16 output from the same prompt and seed. One-GPU dense and eight-GPU SOL/BSA T2V paths passed
+end-to-end checks on B300; the table above is the eight-GPU A/B result. T2V, I2V, and Ref2VA all use
+the same task-selected transformer integration. Enable it explicitly with `--compute-quant mxfp8`.
 
 ## Setup
 
@@ -145,6 +164,7 @@ Main options:
 | `--task` | `t2v`, `i2v`, or `ref2va` |
 | `--duration` | `5`, `10`, or `15` |
 | `--attention-backend` | `sol_bsa` (default), `sol`, or `dense` |
+| `--compute-quant` | `none` (BF16 default) or `mxfp8` (lossy, SM100-family only) |
 | `--prompt` / `--prompt-file` | Prompt text or UTF-8 prompt file |
 | `--image` | First frame for `i2v` |
 | `--reference` | Ordered `image:PATH`, `video:PATH`, or `audio:PATH` for `ref2va`; repeat as needed |

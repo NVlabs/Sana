@@ -13,6 +13,8 @@ import torch
 import torch.distributed as dist
 from PIL import Image, ImageOps
 
+from .compute_quant import COMPUTE_QUANT_MODES
+
 
 WIDTH = 1344
 HEIGHT = 768
@@ -117,6 +119,7 @@ class MiniMaxH3Inference:
         attention_backend: str = "sol_bsa",
         task: str = "t2v",
         reference_image_resize_mode: str = "match",
+        compute_quant: str = "none",
     ) -> None:
         self._owns_process_group = False
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
@@ -151,9 +154,17 @@ class MiniMaxH3Inference:
                 "reference_image_resize_mode must be one of "
                 f"{sorted(REFERENCE_IMAGE_RESIZE_MODES)}"
             )
+        compute_quant = compute_quant.lower()
+        if compute_quant not in COMPUTE_QUANT_MODES:
+            raise ValueError(f"compute_quant must be one of {sorted(COMPUTE_QUANT_MODES)}")
+        if compute_quant == "mxfp8":
+            from .compute_quant import validate_platform
+
+            validate_platform()
         self.task = task
         self.attention_backend = attention_backend
         self.reference_image_resize_mode = reference_image_resize_mode
+        self.compute_quant = compute_quant
 
         from diffusers import ComponentsManager, ModularPipeline
 
@@ -228,6 +239,21 @@ class MiniMaxH3Inference:
 
         from . import adaln, fusion_install, sparse_attention, ulysses, vae_parallel
 
+        self.compute_quant_report = None
+        if compute_quant == "mxfp8":
+            from .compute_quant import install as install_compute_quant
+
+            self.compute_quant_report = install_compute_quant(self.transformer)
+            if self.rank == 0:
+                report = self.compute_quant_report
+                ratio = report.original_bytes / report.quantized_bytes
+                print(
+                    "MXFP8 compute: "
+                    f"blocks={report.first_block}..{report.last_block}, "
+                    f"linears={report.quantized_linears}, "
+                    f"storage={report.original_bytes / 2**30:.2f}->"
+                    f"{report.quantized_bytes / 2**30:.2f} GiB ({ratio:.2f}x)"
+                )
         fusion_install.install(self.transformer)
         adaln.enable_adaln_precompute(
             self.transformer,

@@ -327,15 +327,20 @@ def install(transformer, group=None, attention_fn=None):
             batch, rows_local, _ = hidden_states.shape
             heads, head_dim = attn.heads, attn.head_dim
 
-            # Three separate projections, never concatenated. The earlier sweep measured a fused
-            # QKV GEMM as a *loss* here, so three GEMMs is what we run — and once the pack kernel
-            # reads through strides, there is no reason to glue their outputs together either. The
-            # `torch.cat` this replaces wrote and re-read rows x 21504 bfloat16 per block, ~7 ms a
-            # step, purely to satisfy a layout the collective no longer needs.
             rows = batch * rows_local
-            q = attn.to_q(hidden_states).reshape(rows, heads, head_dim)
-            k = attn.to_k(hidden_states).reshape(rows, heads, head_dim)
-            v = attn.to_v(hidden_states).reshape(rows, heads, head_dim)
+            if getattr(attn, "fused_projections", False):
+                # The MXFP8 path shares one activation quantization across q/k/v.
+                # The pack kernel accepts the resulting strided views directly.
+                q, k, v = (
+                    attn.to_qkv(hidden_states)
+                    .reshape(rows, 3, heads, head_dim)
+                    .unbind(1)
+                )
+            else:
+                # Separate BF16 projections avoid an otherwise unnecessary QKV concat.
+                q = attn.to_q(hidden_states).reshape(rows, heads, head_dim)
+                k = attn.to_k(hidden_states).reshape(rows, heads, head_dim)
+                v = attn.to_v(hidden_states).reshape(rows, heads, head_dim)
             wire_dtype = _qkv_wire_dtype(attention_fn)
 
             if rotary_emb is not None:

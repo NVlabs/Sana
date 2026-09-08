@@ -78,7 +78,9 @@ rank instead of 32.30 GiB.
 This is a lossy mode: the generated video measured 13.82 dB decoded-RGB PSNR and 0.540 SSIM against
 the BF16 output from the same prompt and seed. One-GPU dense and eight-GPU SOL/BSA T2V paths passed
 end-to-end checks on B300; the table above is the eight-GPU A/B result. T2V, I2V, and Ref2VA all use
-the same task-selected transformer integration. Enable it explicitly with `--compute-quant mxfp8`.
+the same task-selected transformer integration. With FP8 multi-GPU output transport, quantized
+blocks reuse the received E4M3 data directly for the output projection instead of converting it to
+BF16 and immediately back to MXFP8. Enable the mode explicitly with `--compute-quant mxfp8`.
 
 ## Setup
 

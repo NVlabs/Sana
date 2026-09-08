@@ -226,8 +226,14 @@ def _packed_qkv_all_to_all(q, k, v, world: int, group, packed_send=None,
     return x.reshape(rows_full, heads_local, 3 * head_dim)
 
 
-def _packed_out_all_to_all(out: torch.Tensor, rows_local: int, world: int, group,
-                           wire_dtype: str = "bf16") -> torch.Tensor:
+def _packed_out_all_to_all(
+    out: torch.Tensor,
+    rows_local: int,
+    world: int,
+    group,
+    wire_dtype: str = "bf16",
+    mxfp8_shape: tuple[int, ...] | None = None,
+):
     """The inverse: full sequence with local heads back to local rows with every head.
 
     `out` is `(rows_full, heads_local, head_dim)` contiguous, so the pre-collective step is free —
@@ -238,7 +244,11 @@ def _packed_out_all_to_all(out: torch.Tensor, rows_local: int, world: int, group
     _, heads_local, head_dim = out.shape
     counts = _row_counts(rows_local, world, group)
     if wire_dtype == "fp8":
-        from .comm_quant import dequantize_merge_output_fp8, quantize_output_fp8
+        from .comm_quant import (
+            dequantize_merge_output_fp8,
+            merge_output_fp8_as_mxfp8,
+            quantize_output_fp8,
+        )
 
         if head_dim != 128:
             raise ValueError("FP8 output transport requires head_dim=128")
@@ -256,9 +266,10 @@ def _packed_out_all_to_all(out: torch.Tensor, rows_local: int, world: int, group
             output_split_sizes=[rows_local * block] * world,
             group=group,
         )
-        return dequantize_merge_output_fp8(
-            received.reshape(world, rows_local, heads_local, head_dim), world
-        )
+        received = received.reshape(world, rows_local, heads_local, head_dim)
+        if mxfp8_shape is not None:
+            return merge_output_fp8_as_mxfp8(received, world, mxfp8_shape)
+        return dequantize_merge_output_fp8(received, world)
     if wire_dtype == "int8":
         from .comm_quant import OUTPUT_PACKET, dequantize_merge_output, quantize_output
 
@@ -310,6 +321,11 @@ def install(transformer, group=None, attention_fn=None):
     world = dist.get_world_size(group)
     if world == 1:
         return lambda: None
+
+    reuse_fp8_mxfp8 = os.environ.get("H3_REUSE_OUTPUT_FP8_AS_MXFP8", "1")
+    if reuse_fp8_mxfp8 not in {"0", "1"}:
+        raise ValueError("H3_REUSE_OUTPUT_FP8_AS_MXFP8 must be '0' or '1'")
+    reuse_fp8_mxfp8 = reuse_fp8_mxfp8 == "1"
 
     from .parallel_hooks import with_cp_reapplied
     restores = []
@@ -389,10 +405,22 @@ def install(transformer, group=None, attention_fn=None):
                 out = attention_fn(q, k, v).contiguous()
 
             output_wire_dtype = _output_wire_dtype(attention_fn, wire_dtype)
-            out = _packed_out_all_to_all(
-                out, rows_local, world, group, wire_dtype=output_wire_dtype
+            output_shape = (batch, rows_local, heads * head_dim)
+            reuse_output = (
+                reuse_fp8_mxfp8
+                and output_wire_dtype == "fp8"
+                and getattr(attn.to_out[0], "layout", None) == "MXFP8Swizzled"
             )
-            out = out.reshape(batch, rows_local, heads * head_dim).to(hidden_states.dtype)
+            out = _packed_out_all_to_all(
+                out,
+                rows_local,
+                world,
+                group,
+                wire_dtype=output_wire_dtype,
+                mxfp8_shape=output_shape if reuse_output else None,
+            )
+            if not reuse_output:
+                out = out.reshape(output_shape).to(hidden_states.dtype)
             return attn.to_out[1](attn.to_out[0](out))
 
         return original, forward

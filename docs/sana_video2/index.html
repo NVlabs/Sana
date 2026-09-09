@@ -865,6 +865,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#four-step-text-to-video-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Four-step text-to-video preview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#text-image-to-video" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1707,6 +1718,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#four-step-text-to-video-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Four-step text-to-video preview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#text-image-to-video" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1762,8 +1784,10 @@ for 720p, 8-second generation. The 14B config and checkpoint are not included
 yet.</p>
 <blockquote>
 <p><strong>Release status:</strong> Explore the <a href="https://nvlabs.github.io/Sana/Video2/">project page</a>,
-try the <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">5B 720p online demo</a>,
-or download the <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p">checkpoint</a>.
+try the <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">4-step 5B 720p preview</a>,
+or download the <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p">50-step</a>
+and <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step">4-step preview</a>
+checkpoints.
 The 14B checkpoint is coming soon.</p>
 </blockquote>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
@@ -1827,6 +1851,12 @@ The 14B checkpoint is coming soon.</p>
 <td>BF16 inference</td>
 </tr>
 <tr>
+<td>SANA-Video 2.0 5B 4-step preview</td>
+<td>720p, 81 frames at 16 FPS or 193 frames at 24 FPS</td>
+<td><a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step">SANA-Video_2.0_5B_720p_4step</a></td>
+<td>BF16 inference</td>
+</tr>
+<tr>
 <td>SANA-Video 2.0 14B</td>
 <td>480p</td>
 <td>Coming soon</td>
@@ -1839,10 +1869,15 @@ and text-image-to-video (TI2V) generation with ReFL. It contains only the
 merged model <code>state_dict</code>; optimizer, scheduler, and standalone LoRA state are
 not included. The checkpoint preserves the source EMA tensor values and is
 cast to BF16 by the inference entry point.</p>
+<p>The 4-step research preview is a full-model DMD EMA export initialized from
+the merged ReFL step-500 model. It is T2V-only and is not a LoRA adapter. The
+release artifact contains model tensors only, without optimizer or scheduler
+state.</p>
 <h2 id="code-layout">Code layout<a class="headerlink" href="#code-layout" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Model: <code>diffusion/model/nets/sana_video2.py</code></li>
 <li>Transformer blocks: <code>diffusion/model/nets/sana_video2_blocks.py</code></li>
+<li>Four-step sampler: <code>diffusion/scheduler/fastvideo_dmd_sampler.py</code></li>
 <li>Training: <code>train_video_scripts/train_video_ivjoint_chunk.py</code></li>
 <li>Inference: <code>inference_video_scripts/inference_sana_video.py</code></li>
 <li>Configs: <code>configs/sana_video2/</code></li>
@@ -1867,7 +1902,7 @@ with classifier-free guidance 8, flow shift 12, and 50 sampling steps.</p>
 <h3 id="verified-5b-720p-release-example">Verified 5B 720p release example<a class="headerlink" href="#verified-5b-720p-release-example" title="Permanent link">&para;</a></h3>
 <p>The following sample was generated from the public checkpoint with seed 4. The
 encoded result is 1280 × 736, 193 frames, 24 FPS, and 8.04 seconds long.</p>
-<p><a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">Try SANA-Video 2.0 5B 720p online</a>, or reproduce this sample with the exact command below.</p>
+<p><a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo">Try the SANA-Video 2.0 5B 720p 4-step preview online</a>, or reproduce the original 50-step sample below with its exact command.</p>
 <video controls muted loop playsinline poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" style="width: 100%;">
   <source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4" type="video/mp4">
   <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">Open the generated video.</a>
@@ -1898,36 +1933,89 @@ close-up angle, emphasizing its animated movements and lively demeanor.</p>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span>--seed<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span>--work_dir<span class="w"> </span>output/sana_video2_t2v_720p_demo
 </code></pre></div>
-<h3 id="text-image-to-video">Text-image-to-video<a class="headerlink" href="#text-image-to-video" title="Permanent link">&para;</a></h3>
-<p>Each line in <code>asset/samples/sample_i2v.txt</code> contains a prompt and an input-image
-path separated by <code>&lt;image&gt;</code>.</p>
+<h3 id="four-step-text-to-video-preview">Four-step text-to-video preview<a class="headerlink" href="#four-step-text-to-video-preview" title="Permanent link">&para;</a></h3>
+<p>The DMD preview uses four fixed stochastic stages, CFG 1, BF16 latent noise,
+and the <code>sana_shift6_dpm</code> sigma profile. It supports a 5-second profile
+(81 frames at 16 FPS) and an 8-second profile (193 frames at 24 FPS), and does
+not support first-frame conditioning. The online preview defaults to the
+5-second profile and RL LoRA scale 0.7. The <code>flow_shift</code> argument is retained
+for CLI consistency but is not applied by this sampler. Model construction
+stays at the source tower's 480 setting; <code>custom_height_width</code> controls the
+actual 736×1280 latent and MP4 dimensions.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>inference_video_scripts/inference_sana_video.sh<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--np<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--config<span class="w"> </span>configs/sana_video2/SanaVideo2_5B_720p.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--model_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p/checkpoints/SANA_Video_2.0_5B_720p.pth<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--txt_file<span class="o">=</span>asset/samples/sample_i2v.txt<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--task<span class="o">=</span>ltx<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--cfg_scale<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--flow_shift<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>--step<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span>--fps<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span>--motion_score<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span>--work_dir<span class="w"> </span>output/sana_video2_ti2v_720p
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--model_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/checkpoints/SANA_Video_2.0_5B_720p_4step.pth<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--txt_file<span class="o">=</span>asset/samples/sana_video2_5b_720p_demo.txt<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--task<span class="o">=</span>t2v<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--model.image_size<span class="o">=</span><span class="m">480</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--custom_height_width<span class="o">=</span><span class="s1">'[736,1280]'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>--sampling_algo<span class="o">=</span>fastvideo_dmd_4step<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span>--generator_sigma_profile<span class="o">=</span>sana_shift6_dpm<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span>--cfg_scale<span class="o">=</span><span class="m">1</span>.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span>--flow_shift<span class="o">=</span><span class="m">1</span>.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">  </span>--motion_score<span class="o">=</span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">  </span>--negative_prompt<span class="o">=</span>None<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span>--num_frames<span class="o">=</span><span class="m">81</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">  </span>--step<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">  </span>--fps<span class="o">=</span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">  </span>--seed<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">  </span>--work_dir<span class="w"> </span>output/sana_video2_t2v_720p_4step_preview
+</code></pre></div>
+<p>The local command above runs the full checkpoint at its native RL scale 1.0.
+The verified online sample below uses the same prompt, schedule, duration,
+motion score, and seed, with the Space default RL LoRA scale 0.7 (1280 × 736,
+81 frames, 16 FPS, 5.06 seconds). Reproduce those exact online settings with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">gradio_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">prompt</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"asset/samples/sana_video2_5b_720p_demo.txt"</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">video_path</span><span class="p">,</span> <span class="n">seed</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">"Efficient-Large-Model/sana-video2-5b-720p-demo"</span><span class="p">)</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">video_duration</span><span class="o">=</span><span class="s2">"5 seconds"</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">rl_lora_scale</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">motion_score</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">seed</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">randomize_seed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="n">api_name</span><span class="o">=</span><span class="s2">"/generate"</span><span class="p">,</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">)</span>
+</code></pre></div>
+<video controls muted loop playsinline poster="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4_poster.png" style="width: 100%;">
+  <source src="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4" type="video/mp4">
+</video>
+
+<p><a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">Open or download the verified four-step video</a></p>
+<h3 id="text-image-to-video">Text-image-to-video<a class="headerlink" href="#text-image-to-video" title="Permanent link">&para;</a></h3>
+<p>Each line in <code>asset/samples/sample_i2v.txt</code> contains a prompt and an input-image
+path separated by <code>&lt;image&gt;</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>bash<span class="w"> </span>inference_video_scripts/inference_sana_video.sh<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--np<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--config<span class="w"> </span>configs/sana_video2/SanaVideo2_5B_720p.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--model_path<span class="w"> </span>hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p/checkpoints/SANA_Video_2.0_5B_720p.pth<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--txt_file<span class="o">=</span>asset/samples/sample_i2v.txt<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--task<span class="o">=</span>ltx<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--cfg_scale<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--flow_shift<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--step<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>--fps<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">  </span>--motion_score<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span>--work_dir<span class="w"> </span>output/sana_video2_ti2v_720p
 </code></pre></div>
 <p>Height and width must be divisible by 32, and frame counts must satisfy
 <code>(num_frames - 1) % 8 == 0</code>.</p>
 <h2 id="training">Training<a class="headerlink" href="#training" title="Permanent link">&para;</a></h2>
 <p>The reference configs run video-only FSDP training with gradient checkpointing,
 online Gemma 2 caption encoding, causal LTX 2.3 VAE encoding, and flow matching.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span>--master_port<span class="o">=</span><span class="m">29500</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>train_video_scripts/train_video_ivjoint_chunk.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_video2/SanaVideo2_5B_480p.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span>--master_port<span class="o">=</span><span class="m">29500</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>train_video_scripts/train_video_ivjoint_chunk.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_video2/SanaVideo2_5B_480p.yaml
 </code></pre></div>
 <p>The released 720p config can also be used as the starting point for 5B
 fine-tuning:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span>--master_port<span class="o">=</span><span class="m">29500</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>train_video_scripts/train_video_ivjoint_chunk.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_video2/SanaVideo2_5B_720p.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>torchrun<span class="w"> </span>--nproc_per_node<span class="o">=</span><span class="m">8</span><span class="w"> </span>--master_port<span class="o">=</span><span class="m">29500</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>train_video_scripts/train_video_ivjoint_chunk.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--config_path<span class="w"> </span>configs/sana_video2/SanaVideo2_5B_720p.yaml
 </code></pre></div>
 <p>To resume, pass <code>--resume_from=&lt;checkpoint&gt;</code>. Set <code>model.load_from</code> when
 initializing from a compatible model checkpoint; leave it as <code>null</code> to train

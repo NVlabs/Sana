@@ -12,7 +12,6 @@
   <title>Sol-H3: Speed-of-Light MiniMax-H3 on Single NVIDIA DGX Spark Blackwell Superchip</title>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header scrolled">
 <nav class="nav" aria-label="Primary navigation">
 <a class="brand" href="#top" aria-label="Sol-H3 home">
@@ -474,6 +473,247 @@
 </div>
 <p>The two-stage pipeline is appealing, but a single DGX Spark cannot keep complete MiniMax-H3 and LTX-2.5 stacks resident—even with low-bit quantization.<br/>We address this with two targeted changes. <strong>(1)</strong> A trained VAE Adapter maps H3 latents directly into LTX space, removing the intermediate pixel decode/re-encode and both inter-stage VAE components. <strong>(2)</strong> For Stage 2, the low-resolution latent is already a strong condition, so a cached general prompt removes runtime Gemma loading and inference. Additional optimizations are detailed below.</p>
 </header>
+<figure class="memory-residency" aria-labelledby="memory-residency-title">
+<figcaption class="memory-residency-head">
+<div>
+<span class="memory-residency-kicker">Resident memory · GiB</span>
+<h3 id="memory-residency-title">One shared pool. Three very different outcomes.</h3>
+</div>
+<p>DGX Spark exposes CPU and GPU memory as one 119.68 GiB pool. Crossing the line means the complete pipeline cannot stay resident.</p>
+</figcaption>
+<div class="memory-chart-scroll">
+<div class="memory-chart" style="--capacity-position:70.39772033691406%">
+<div class="memory-scale" aria-hidden="true">
+<span>0</span>
+<span class="memory-capacity-label">DGX Spark · memory capacity</span>
+<span>170 GiB</span>
+</div>
+<div class="memory-scenarios">
+<article class="memory-scenario">
+<header class="memory-scenario-head">
+<div>
+<span>BF16 checkpoint weights alone</span>
+<h4>MiniMax-H3 · default</h4>
+</div>
+<div class="memory-total">
+<strong>133.4 GiB</strong>
+<small class="memory-oom">OOM · 13.7 GiB over</small>
+</div>
+</header>
+<div class="memory-track">
+<div class="memory-capacity-line" aria-hidden="true">
+</div>
+<div class="memory-bar" style="width:78.47058823529413%">
+<span class="memory-segment memory-tone-qwen" style="width:46.55172413793103%;animation-delay:0ms" title="Qwen text encoder: 62.1 GiB" aria-label="Qwen text encoder, 62.1 GiB">
+<b>Qwen</b>
+</span>
+<span class="memory-segment memory-tone-h3" style="width:46.25187406296852%;animation-delay:45ms" title="H3 DiT: 61.7 GiB" aria-label="H3 DiT, 61.7 GiB">
+<b>H3 DiT</b>
+</span>
+<span class="memory-segment memory-tone-audio" style="width:0.4497751124437781%;animation-delay:90ms" title="H3 audio VAE: 0.6 GiB" aria-label="H3 audio VAE, 0.6 GiB">
+</span>
+<span class="memory-segment memory-tone-vae-decoder" style="width:6.746626686656672%;animation-delay:135ms" title="H3 VAE decoder: 9.0 GiB" aria-label="H3 VAE decoder, 9.0 GiB">
+<b>VAE dec.</b>
+</span>
+</div>
+</div>
+<div class="memory-legend" aria-label="MiniMax-H3 · default component breakdown">
+<span>
+<i class="memory-tone-qwen" aria-hidden="true">
+</i>
+<b>Qwen text encoder</b>
+</span>
+<span>
+<i class="memory-tone-h3" aria-hidden="true">
+</i>
+<b>H3 DiT</b>
+</span>
+<span>
+<i class="memory-tone-audio" aria-hidden="true">
+</i>
+<b>H3 audio VAE</b>
+</span>
+<span>
+<i class="memory-tone-vae-decoder" aria-hidden="true">
+</i>
+<b>H3 VAE decoder</b>
+</span>
+</div>
+</article>
+<article class="memory-scenario">
+<header class="memory-scenario-head">
+<div>
+<span>Cross-model latent and prompt reprocessing</span>
+<h4>Naive two-stage pipeline</h4>
+</div>
+<div class="memory-total">
+<strong>142.4 GiB</strong>
+<small class="memory-oom">OOM · 22.7 GiB over</small>
+</div>
+</header>
+<div class="memory-track">
+<div class="memory-capacity-line" aria-hidden="true">
+</div>
+<div class="memory-bar" style="width:83.76470588235294%">
+<span class="memory-segment memory-tone-qwen" style="width:10.252808988764043%;animation-delay:120ms" title="NVFP4 Qwen: 14.6 GiB" aria-label="NVFP4 Qwen, 14.6 GiB">
+<b>Qwen</b>
+</span>
+<span class="memory-segment memory-tone-h3" style="width:16.432584269662918%;animation-delay:165ms" title="FP8 H3 DiT: 23.4 GiB" aria-label="FP8 H3 DiT, 23.4 GiB">
+<b>H3</b>
+</span>
+<span class="memory-segment memory-tone-upscaler" style="width:0.42134831460674155%;animation-delay:210ms" title="H3 latent upscaler: 0.6 GiB" aria-label="H3 latent upscaler, 0.6 GiB">
+</span>
+<span class="memory-segment memory-tone-vae-decoder" style="width:6.320224719101124%;animation-delay:255ms" title="H3 VAE decoder: 9.0 GiB" aria-label="H3 VAE decoder, 9.0 GiB">
+<b>H3 dec.</b>
+</span>
+<span class="memory-segment memory-tone-vae-encoder" style="width:0.42134831460674155%;animation-delay:300ms" title="LTX VAE encoder: 0.6 GiB" aria-label="LTX VAE encoder, 0.6 GiB">
+</span>
+<span class="memory-segment memory-tone-gemma" style="width:10.042134831460674%;animation-delay:345ms" title="Gemma text encoder: 14.3 GiB" aria-label="Gemma text encoder, 14.3 GiB">
+<b>Gemma</b>
+</span>
+<span class="memory-segment memory-tone-connector" style="width:1.3342696629213482%;animation-delay:390ms" title="LTX connector: 1.9 GiB" aria-label="LTX connector, 1.9 GiB">
+</span>
+<span class="memory-segment memory-tone-ltx" style="width:24.85955056179775%;animation-delay:435ms" title="LTX refiner: 35.4 GiB" aria-label="LTX refiner, 35.4 GiB">
+<b>LTX</b>
+</span>
+<span class="memory-segment memory-tone-conv" style="width:0.5617977528089888%;animation-delay:480ms" title="LTX VAE decoder: 0.8 GiB" aria-label="LTX VAE decoder, 0.8 GiB">
+</span>
+<span class="memory-segment memory-tone-runtime" style="width:29.35393258426966%;animation-delay:525ms" title="Runtime, allocator and shared UMA overhead: 41.8 GiB" aria-label="Runtime, allocator and shared UMA overhead, 41.8 GiB">
+<b>Runtime + UMA</b>
+</span>
+</div>
+</div>
+<div class="memory-legend" aria-label="Naive two-stage pipeline component breakdown">
+<span>
+<i class="memory-tone-qwen" aria-hidden="true">
+</i>
+<b>NVFP4 Qwen</b>
+</span>
+<span>
+<i class="memory-tone-h3" aria-hidden="true">
+</i>
+<b>FP8 H3 DiT</b>
+</span>
+<span>
+<i class="memory-tone-upscaler" aria-hidden="true">
+</i>
+<b>H3 latent upscaler</b>
+</span>
+<span>
+<i class="memory-tone-vae-decoder" aria-hidden="true">
+</i>
+<b>H3 VAE decoder</b>
+</span>
+<span>
+<i class="memory-tone-vae-encoder" aria-hidden="true">
+</i>
+<b>LTX VAE encoder</b>
+</span>
+<span>
+<i class="memory-tone-gemma" aria-hidden="true">
+</i>
+<b>Gemma text encoder</b>
+</span>
+<span>
+<i class="memory-tone-connector" aria-hidden="true">
+</i>
+<b>LTX connector</b>
+</span>
+<span>
+<i class="memory-tone-ltx" aria-hidden="true">
+</i>
+<b>LTX refiner</b>
+</span>
+<span>
+<i class="memory-tone-conv" aria-hidden="true">
+</i>
+<b>LTX VAE decoder</b>
+</span>
+<span>
+<i class="memory-tone-runtime" aria-hidden="true">
+</i>
+<b>Runtime, allocator and shared UMA overhead</b>
+</span>
+</div>
+</article>
+<article class="memory-scenario">
+<header class="memory-scenario-head">
+<div>
+<span>Latent transfer + cached Stage 2 prompt</span>
+<h4>Sol-H3 · current</h4>
+</div>
+<div class="memory-total">
+<strong>116.9 GiB</strong>
+<small class="memory-fit">Fits · 2.8 GiB free</small>
+</div>
+</header>
+<div class="memory-track">
+<div class="memory-capacity-line" aria-hidden="true">
+</div>
+<div class="memory-bar" style="width:68.76470588235296%">
+<span class="memory-segment memory-tone-qwen" style="width:12.489307100085542%;animation-delay:240ms" title="NVFP4 Qwen: 14.6 GiB" aria-label="NVFP4 Qwen, 14.6 GiB">
+<b>Qwen</b>
+</span>
+<span class="memory-segment memory-tone-h3" style="width:20.017108639863128%;animation-delay:285ms" title="FP8 H3 DiT: 23.4 GiB" aria-label="FP8 H3 DiT, 23.4 GiB">
+<b>H3</b>
+</span>
+<span class="memory-segment memory-tone-upscaler" style="width:0.5132591958939263%;animation-delay:330ms" title="H3 latent upscaler: 0.6 GiB" aria-label="H3 latent upscaler, 0.6 GiB">
+</span>
+<span class="memory-segment memory-tone-adapter" style="width:0.3421727972626176%;animation-delay:375ms" title="VAE Adapter: 0.4 GiB" aria-label="VAE Adapter, 0.4 GiB">
+</span>
+<span class="memory-segment memory-tone-ltx" style="width:30.28229255774166%;animation-delay:420ms" title="LTX refiner: 35.4 GiB" aria-label="LTX refiner, 35.4 GiB">
+<b>LTX</b>
+</span>
+<span class="memory-segment memory-tone-conv" style="width:0.6843455945252352%;animation-delay:465ms" title="LTX VAE decoder: 0.8 GiB" aria-label="LTX VAE decoder, 0.8 GiB">
+</span>
+<span class="memory-segment memory-tone-runtime" style="width:35.67151411462789%;animation-delay:510ms" title="Runtime, allocator and shared UMA overhead: 41.7 GiB" aria-label="Runtime, allocator and shared UMA overhead, 41.7 GiB">
+<b>Runtime + UMA</b>
+</span>
+</div>
+</div>
+<div class="memory-legend" aria-label="Sol-H3 · current component breakdown">
+<span>
+<i class="memory-tone-qwen" aria-hidden="true">
+</i>
+<b>NVFP4 Qwen</b>
+</span>
+<span>
+<i class="memory-tone-h3" aria-hidden="true">
+</i>
+<b>FP8 H3 DiT</b>
+</span>
+<span>
+<i class="memory-tone-upscaler" aria-hidden="true">
+</i>
+<b>H3 latent upscaler</b>
+</span>
+<span>
+<i class="memory-tone-adapter" aria-hidden="true">
+</i>
+<b>VAE Adapter</b>
+</span>
+<span>
+<i class="memory-tone-ltx" aria-hidden="true">
+</i>
+<b>LTX refiner</b>
+</span>
+<span>
+<i class="memory-tone-conv" aria-hidden="true">
+</i>
+<b>LTX VAE decoder</b>
+</span>
+<span>
+<i class="memory-tone-runtime" aria-hidden="true">
+</i>
+<b>Runtime, allocator and shared UMA overhead</b>
+</span>
+</div>
+</article>
+</div>
+</div>
+</div>
+<p class="memory-method">All values use GiB (bytes ÷ 2³⁰) and are rounded to 0.1. Default H3 is a checkpoint-weight lower bound and already exceeds capacity before runtime memory. The naive row adds cross-model VAE and online text-conditioning storage to the measured Sol-H3 footprint; system, framework and allocator memory is already present when model construction begins. Sol-H3 uses the lowest recorded request-boundary free-memory snapshot; it is not a continuously sampled peak.</p>
+</figure>
 <div class="bento spark-optimizations" aria-label="Pipeline acceleration details">
 <article class="tech-card span-4 residency-card" data-index="01">
 <span class="tech-label">

@@ -1,6 +1,7 @@
 __version__ = "0.2.1.dev0"
 
 from diffusion.scheduler.dpm_solver import DPMS
+from diffusion.scheduler.fastvideo_dmd_sampler import FastVideoDMD4Step
 from diffusion.scheduler.flow_euler_sampler import ChunkFlowEuler, FlowEuler, LTXFlowEuler
 from diffusion.scheduler.iddpm import Scheduler
 from diffusion.scheduler.longlive_flow_euler_sampler import LongLiveFlowEuler

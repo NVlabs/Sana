@@ -72,7 +72,8 @@ def main() -> None:
     account = os.environ["SANA_SLURM_ACCOUNT"]
     partition = os.environ["SANA_SLURM_PARTITION"]
 
-    # Set environment variables
+    # Preserve credentials such as HF_TOKEN for the Slurm job. Hub clients use
+    # HF_TOKEN directly, so no stateful CLI login is needed.
     env = os.environ.copy()
     env["RUN_NAME"] = args.job_name
     env["OUTPUT_DIR"] = output_dir
@@ -102,17 +103,13 @@ def main() -> None:
         conda_path = shutil.which("conda")
         wrapped_cmd = ""
 
-        # HuggingFace login command if HF_TOKEN is set
-        hf_token = os.environ.get("HF_TOKEN", "")
-        hf_login_cmd = f"hf auth login --token {hf_token} && " if hf_token else ""
-
         if conda_path:
             conda_base_path = os.path.dirname(os.path.dirname(conda_path))
             conda_sh_path = os.path.join(conda_base_path, "etc", "profile.d", "conda.sh")
 
             if os.path.exists(conda_sh_path):
                 print(colored(f"Using Conda activation script: {conda_sh_path}", "cyan"))
-                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
+                wrapped_cmd = f'bash -c "source {conda_sh_path} && conda activate {conda_env_name} && {original_cmd}"'
             else:
                 print(
                     colored(
@@ -123,7 +120,9 @@ def main() -> None:
             print(colored("'conda' not found in PATH, falling back to 'conda shell.bash hook'", "yellow"))
 
         if not wrapped_cmd:
-            wrapped_cmd = f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {hf_login_cmd}{original_cmd}"'
+            wrapped_cmd = (
+                f'bash -c "eval \\$(conda shell.bash hook) && conda activate {conda_env_name} && {original_cmd}"'
+            )
 
         cmd += [wrapped_cmd]
     else:

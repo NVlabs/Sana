@@ -7,6 +7,21 @@ on:
         required: false
         type: boolean
         default: false
+      test_target:
+        description: 'Test job to run (requires run_tests)'
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - test-inference
+          - test-training-vae
+          - test-training-fsdp
+          - test-training-video
+          - test-training-sana-wm-stage1
+          - test-training-sana-wm-distill
+          - test-training-longsana
+          - test-training-sol-rl
   pull_request_target:
     types: [labeled, unlabeled, opened, synchronize, reopened]
     paths-ignore:
@@ -39,7 +54,8 @@ jobs:
   test-inference:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-inference')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -85,7 +101,8 @@ jobs:
   test-training-vae:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-vae')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -131,7 +148,8 @@ jobs:
   test-training-fsdp:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-fsdp')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -177,7 +195,8 @@ jobs:
   test-training-video:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-video')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -223,7 +242,8 @@ jobs:
   test-training-sana-wm-stage1:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-stage1')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -265,7 +285,8 @@ jobs:
   test-training-sana-wm-distill:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-distill')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -307,7 +328,8 @@ jobs:
   test-training-longsana:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-longsana')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted
@@ -349,7 +371,8 @@ jobs:
   test-training-sol-rl:
     needs: pre-commit
     if: |
-      github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sol-rl')) ||
       github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
     runs-on:
       - self-hosted

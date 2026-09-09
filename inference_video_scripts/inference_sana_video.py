@@ -34,7 +34,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
+from diffusion import DPMS, FastVideoDMD4Step, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance
@@ -47,6 +47,7 @@ from diffusion.model.builder import (
     vae_encode,
 )
 from diffusion.model.utils import get_weight_dtype, prepare_prompt_ar
+from diffusion.scheduler.fastvideo_dmd_sampler import resolve_fastvideo_dmd_generator_sigmas
 from diffusion.utils.config import SanaVideoConfig, model_video_init_config
 from diffusion.utils.logger import get_root_logger
 from tools.download import find_model
@@ -70,6 +71,43 @@ def get_dict_chunks(data, bs):
             keys = []
     if keys:
         yield keys
+
+
+def _sampler_schedule_suffix(
+    sampling_algo: str,
+    skip_type: str,
+    flow_shift: float,
+    generator_sigma_profile: Optional[str],
+) -> str:
+    if sampling_algo == "fastvideo_dmd_4step":
+        resolve_fastvideo_dmd_generator_sigmas(generator_sigma_profile)
+        return f"_sigmaprofile-{generator_sigma_profile}"
+    if generator_sigma_profile is not None:
+        raise ValueError("generator_sigma_profile is only valid with sampling_algo=fastvideo_dmd_4step")
+    if skip_type != "time_uniform_flow":
+        return f"_skip-{skip_type}"
+    if flow_shift != 1.0:
+        return f"_flowshift{flow_shift}"
+    return ""
+
+
+def _normalize_model_state_dict(checkpoint: dict) -> dict:
+    """Normalize supported inference checkpoint wrappers to ``state_dict``."""
+
+    state_dict = checkpoint
+    if "generator" in state_dict:  # used for loading LongSANA checkpoints
+        state_dict = state_dict["generator"]
+    if "state_dict_ema" in state_dict:
+        state_dict = state_dict["state_dict_ema"]
+    if "state_dict" in state_dict:
+        return state_dict
+
+    normalized = {}
+    for key, value in state_dict.items():
+        if key.startswith("model."):
+            key = key[len("model.") :]
+        normalized[key] = value
+    return {"state_dict": normalized}
 
 
 class DistributePromptsDataset(torch.utils.data.Dataset):
@@ -154,15 +192,19 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                 break
         if exist:
             # make sure the noise is totally same
-            torch.randn(
-                bs,
-                config.vae.vae_latent_dim,
-                latent_size_t,
-                latent_size_h,
-                latent_size_w,
-                device=device,
-                generator=generator,
-            )
+            noise_draws = 4 if args.sampling_algo == "fastvideo_dmd_4step" else 1
+            for _ in range(noise_draws):
+                noise_kwargs = {"dtype": weight_dtype} if args.sampling_algo == "fastvideo_dmd_4step" else {}
+                torch.randn(
+                    bs,
+                    config.vae.vae_latent_dim,
+                    latent_size_t,
+                    latent_size_h,
+                    latent_size_w,
+                    device=device,
+                    generator=generator,
+                    **noise_kwargs,
+                )
             continue
 
         # prepare text feature
@@ -206,6 +248,7 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
         # start sampling
         with torch.no_grad():
             n = bs
+            noise_kwargs = {"dtype": weight_dtype} if args.sampling_algo == "fastvideo_dmd_4step" else {}
             z = torch.randn(
                 n,
                 config.vae.vae_latent_dim,
@@ -214,6 +257,7 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                 latent_size_w,
                 device=device,
                 generator=generator,
+                **noise_kwargs,
             )
             model_kwargs = dict(data_info={"img_hw": hw}, mask=emb_masks)
 
@@ -316,6 +360,21 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     steps=sample_steps,
                     generator=generator,
                 )
+            elif args.sampling_algo == "fastvideo_dmd_4step":
+                if config.task != "t2v":
+                    raise ValueError("fastvideo_dmd_4step currently supports canonical T2V only")
+                flow_solver = FastVideoDMD4Step(
+                    model,
+                    caption_embs,
+                    cfg_scale=cfg_scale,
+                    generator_sigma_profile=args.generator_sigma_profile,
+                    model_kwargs=model_kwargs,
+                )
+                samples = flow_solver.sample(
+                    z,
+                    steps=sample_steps,
+                    generator=generator,
+                )
             else:
                 raise ValueError(f"{args.sampling_algo} is not defined")
 
@@ -358,6 +417,7 @@ class SanaInference(SanaVideoConfig):
     cfg_scale: float = 6.0
     flow_shift: Optional[float] = None
     sampling_algo: Optional[str] = None
+    generator_sigma_profile: Optional[str] = None
     skip_type: str = "time_uniform_flow"  # time_uniform_flow, linear_quadratic
     guidance_type: str = "classifier-free"  # [classifier-free, adaptive_projected_guidance, classifier-free_STG]
     seed: int = 0
@@ -438,6 +498,8 @@ if __name__ == "__main__":
         motion_prompt = f" motion score: {int(args.motion_score)}."
     elif args.motion_score < 0:
         motion_prompt = ""
+    elif args.sampling_algo == "fastvideo_dmd_4step":
+        motion_prompt = " high motion" if args.high_motion else ""
     else:
         motion_prompt = " high motion" if args.high_motion else " low motion"
     if config.negative_prompt is None or config.negative_prompt == "None":
@@ -509,16 +571,7 @@ if __name__ == "__main__":
     )
 
     logger.info(f"Generating sample from ckpt: {args.model_path}")
-    state_dict = find_model(args.model_path)
-    if "generator" in state_dict:  # used for loading LongSANA checkpoints
-        state_dict = state_dict["generator"]
-    if not "state_dict" in state_dict:
-        new_state_dict = dict()
-        for k, v in state_dict.items():
-            if k.startswith("model."):
-                k = k[len("model.") :]
-            new_state_dict[k] = v
-        state_dict = {"state_dict": new_state_dict}
+    state_dict = _normalize_model_state_dict(find_model(args.model_path))
 
     if args.model_path.endswith(".bin"):
         logger.info("Loading fsdp bin checkpoint....")
@@ -536,7 +589,13 @@ if __name__ == "__main__":
 
     args.sampling_algo = config.scheduler.vis_sampler if args.sampling_algo is None else args.sampling_algo
     if config.task == "ltx" or config.task == "ti2v":
+        if args.sampling_algo == "fastvideo_dmd_4step":
+            raise ValueError("fastvideo_dmd_4step currently supports canonical T2V only")
         args.sampling_algo = "flow_euler_ltx"
+    if args.sampling_algo == "fastvideo_dmd_4step":
+        resolve_fastvideo_dmd_generator_sigmas(args.generator_sigma_profile)
+    elif args.generator_sigma_profile is not None:
+        raise ValueError("generator_sigma_profile is only valid with sampling_algo=fastvideo_dmd_4step")
 
     if args.work_dir is None:
         work_dir = (
@@ -593,10 +652,12 @@ if __name__ == "__main__":
             f"_seed{args.seed}_{str(weight_dtype).split('.')[-1]}",
         )
 
-        if args.skip_type != "time_uniform_flow":
-            save_root += f"_skip-{args.skip_type}"
-        if args.skip_type == "time_uniform_flow" and flow_shift != 1.0:
-            save_root += f"_flowshift{flow_shift}"
+        save_root += _sampler_schedule_suffix(
+            sampling_algo=args.sampling_algo,
+            skip_type=args.skip_type,
+            flow_shift=flow_shift,
+            generator_sigma_profile=args.generator_sigma_profile,
+        )
         if args.interval_k > 0:
             save_root += f"_interval_k{int(args.interval_k*1000)}"
         if args.num_cached_blocks > 0:

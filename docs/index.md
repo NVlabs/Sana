@@ -49,7 +49,7 @@ ______________________________________________________________________
 | **Sana-1.5** | Training-time and inference-time compute scaling |
 | **Sana-Sprint** | Few-step generation via sCM (Consistency Model) distillation |
 | **Sana-Video** | Efficient video generation with Block Linear Attention |
-| **Sana-Video 2.0** | 5B/14B hybrid-attention video models with Attention Residuals; [project page](https://nvlabs.github.io/Sana/Video2/), [online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), and [5B 720p weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) released |
+| **Sana-Video 2.0** | 5B/14B hybrid-attention video models with Attention Residuals; [project page](https://nvlabs.github.io/Sana/Video2/), [4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), and [50-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) / [4-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) weights released |
 | **LongSana** | Minute-length real-time video generation (with LongLive) |
 
 ### Key Techniques
@@ -69,7 +69,7 @@ ______________________________________________________________________
 - ⚡ **One-step inference** with Sana-Sprint
 - 💻 **< 8GB VRAM** with 4-bit quantization
 - 🎬 **Efficient video generation** with Sana-Video
-- 🎥 **720p, 8-second T2V/TI2V generation** with [SANA-Video 2.0](sana_video2.md) — [try the online demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
+- 🎥 **720p T2V/TI2V generation** with [SANA-Video 2.0](sana_video2.md) — [try the 4-step T2V preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
 - ⏱️ **27 FPS real-time** minute-length video with LongSana
 - 📦 **Full training & inference codebase**
 

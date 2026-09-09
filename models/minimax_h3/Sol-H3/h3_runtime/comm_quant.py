@@ -28,6 +28,9 @@ QKV_DECODE_WARPS = 4
 OUTPUT_RECORDS_PER_PROGRAM = 16
 
 
+_MXFP8_UNIT_SCALES: dict[tuple[int, int, int], torch.Tensor] = {}
+
+
 @triton.jit
 def _encode_output_kernel(input_ptr, packet_ptr, records,
                           RECORDS: tl.constexpr, PACKET: tl.constexpr,
@@ -137,7 +140,7 @@ def _encode_output_fp8_kernel(input_ptr, packet_ptr, elements, BLOCK: tl.constex
 
 
 @triton.jit
-def _decode_merge_output_fp8_kernel(
+def _merge_output_fp8_kernel(
     packet_ptr,
     output_ptr,
     elements,
@@ -146,6 +149,7 @@ def _decode_merge_output_fp8_kernel(
     inner,
     BLOCK: tl.constexpr,
 ):
+    """Merge rank-major E4M3 bytes into a row-major BF16 or E4M3 output."""
     offsets = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     valid = offsets < elements
     tail = offsets % inner
@@ -187,7 +191,7 @@ def dequantize_merge_output_fp8(packet: torch.Tensor, world: int) -> torch.Tenso
     )
     if output.numel():
         block = 1024
-        _decode_merge_output_fp8_kernel[(triton.cdiv(output.numel(), block),)](
+        _merge_output_fp8_kernel[(triton.cdiv(output.numel(), block),)](
             packet,
             output,
             output.numel(),
@@ -198,6 +202,71 @@ def dequantize_merge_output_fp8(packet: torch.Tensor, world: int) -> torch.Tenso
             num_warps=8,
         )
     return output
+
+
+def merge_output_fp8_as_mxfp8(
+    packet: torch.Tensor,
+    world: int,
+    shape: tuple[int, ...],
+):
+    """Reuse raw FP8 transport bytes as an MXFP8 linear activation.
+
+    The return collective already carries E4M3 values.  With an E8M0 scale of
+    one they are also a valid block-scaled MXFP8 activation, so the only work
+    left is the rank-major to row-major head merge.  This removes both the
+    intermediate BF16 tensor and the following dynamic MXFP8 quantization.
+    """
+    if packet.dtype != torch.uint8 or not packet.is_cuda or not packet.is_contiguous():
+        raise ValueError("FP8 output transport requires contiguous CUDA uint8 packets")
+    if packet.ndim != 4 or packet.shape[0] != world or packet.shape[-1] != VECTOR:
+        raise ValueError(
+            f"expected [{world}, rows, heads_local, {VECTOR}], got {tuple(packet.shape)}"
+        )
+    _, rows, heads_local, _ = packet.shape
+    k = world * heads_local * VECTOR
+    leading_rows = 1
+    for dimension in shape[:-1]:
+        leading_rows *= dimension
+    if not shape or shape[-1] != k or leading_rows != rows:
+        raise ValueError(
+            f"MXFP8 output shape {shape} does not match merged packet shape ({rows}, {k})"
+        )
+
+    from .mxfp8 import MXActivation
+
+    quantized = torch.empty(
+        (rows, k), dtype=torch.float8_e4m3fn, device=packet.device
+    )
+    if quantized.numel():
+        block = 1024
+        # The same merge kernel stores either BF16 or E4M3 according to the
+        # output pointer type. An E4M3 destination preserves the packet bytes.
+        _merge_output_fp8_kernel[(triton.cdiv(quantized.numel(), block),)](
+            packet,
+            quantized,
+            quantized.numel(),
+            world,
+            rows,
+            heads_local * VECTOR,
+            BLOCK=block,
+            num_warps=8,
+        )
+
+    num_groups = k // 32
+    scale_numel = triton.cdiv(rows, 128) * 128 * triton.cdiv(num_groups, 4) * 4
+    device_index = packet.device.index
+    if device_index is None:
+        device_index = torch.cuda.current_device()
+    scale_key = (device_index, rows, k)
+    scale = _MXFP8_UNIT_SCALES.get(scale_key)
+    if scale is None:
+        # E8M0 byte 127 is 2**0. The buffer is immutable and shape-stable for a
+        # resident request, so allocate/fill it only once instead of per block.
+        scale = torch.full(
+            (scale_numel,), 127, dtype=torch.uint8, device=packet.device
+        )
+        _MXFP8_UNIT_SCALES[scale_key] = scale
+    return MXActivation(quantized, scale, shape, torch.bfloat16)
 
 
 @triton.jit

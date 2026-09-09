@@ -26,19 +26,54 @@ from .fusions import (
 )
 
 
+def _accepts_mxfp8(module) -> bool:
+    return getattr(module, "layout", None) == "MXFP8Swizzled"
+
+
 def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
     """Replace the block forward with one that fuses its elementwise chain."""
+    uses_mxfp8 = any(
+        _accepts_mxfp8(getattr(block.attn, "to_qkv", None))
+        or _accepts_mxfp8(block.ff.net[0].proj)
+        or _accepts_mxfp8(block.ff.net[2])
+        for block in transformer.transformer_blocks
+    )
+    if uses_mxfp8:
+        from .mxfp8 import (
+            fused_residual_gate_rmsnorm_modulate_mxfp8,
+            fused_rmsnorm_modulate_mxfp8,
+            fused_swiglu_mxfp8,
+        )
+
     restores = []
     for block in transformer.transformer_blocks:
         original = block.forward
         restores.append((block, "forward", original))
+        attention_mxfp8 = _accepts_mxfp8(getattr(block.attn, "to_qkv", None))
+        ffn_up_mxfp8 = _accepts_mxfp8(block.ff.net[0].proj)
+        ffn_down_mxfp8 = _accepts_mxfp8(block.ff.net[2])
 
-        def make(block=block, original=original):
+        def make(
+            block=block,
+            original=original,
+            attention_mxfp8=attention_mxfp8,
+            ffn_up_mxfp8=ffn_up_mxfp8,
+            ffn_down_mxfp8=ffn_down_mxfp8,
+        ):
             def forward(hidden_states, temb, adaln_indices, rotary_emb, attention_mask=None):
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = block.adaln_proj(temb)
                 eps = block.norm1.eps
 
-                if use_modulate:
+                if use_modulate and attention_mxfp8:
+                    normed = fused_rmsnorm_modulate_mxfp8(
+                        hidden_states,
+                        block.norm1.weight,
+                        scale_msa,
+                        shift_msa,
+                        adaln_indices,
+                        eps,
+                    )
+                elif use_modulate:
                     normed = fused_rmsnorm_modulate(
                         hidden_states, block.norm1.weight, scale_msa, shift_msa, adaln_indices, eps)
                 else:
@@ -48,7 +83,18 @@ def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
 
                 attn_output = block.attn(normed, rotary_emb, attention_mask)
 
-                if use_modulate:
+                if use_modulate and ffn_up_mxfp8:
+                    hidden_states, normed = fused_residual_gate_rmsnorm_modulate_mxfp8(
+                        hidden_states,
+                        attn_output,
+                        gate_msa,
+                        block.norm2.weight,
+                        scale_mlp,
+                        shift_mlp,
+                        adaln_indices,
+                        block.norm2.eps,
+                    )
+                elif use_modulate:
                     # One kernel produces both the new residual and the next half's normalized,
                     # modulated input, which is where most of the saving in this fusion sits.
                     hidden_states, normed = fused_residual_gate_rmsnorm_modulate(
@@ -62,7 +108,10 @@ def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
 
                 if use_swiglu:
                     swiglu, _, out_proj = block.ff.net
-                    ff_output = out_proj(fused_swiglu(swiglu.proj(normed)))
+                    activation = (
+                        fused_swiglu_mxfp8 if ffn_down_mxfp8 else fused_swiglu
+                    )
+                    ff_output = out_proj(activation(swiglu.proj(normed)))
                 else:
                     ff_output = block.ff(normed)
 

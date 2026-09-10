@@ -119,10 +119,12 @@ class Pipeline:
     loading peak. It is reported separately; the first formal request counts.
     """
 
-    def __init__(self, paths, output_root, *, task="t2va", worker_factory=Worker):
+    def __init__(self, paths, output_root, *, task="t2va", ref_image_match=None,
+                 ref_stage1_attn=None, worker_factory=Worker):
         self.paths = paths
         self.task = task
-        self.config = load_recipe(task)
+        self.config = load_recipe(task, ref_image_match=ref_image_match,
+                                  ref_stage1_attn=ref_stage1_attn)
         self.root = Path(output_root).resolve()
         self.root.mkdir(parents=True, exist_ok=False)
         self.worker_factory = worker_factory

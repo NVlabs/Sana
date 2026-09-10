@@ -15,8 +15,10 @@ refine and decode a **1344 × 768, 121-frame video at 24 FPS** with original H3 
 
 FL2VA has also completed first-only, last-only and first+last requests on
 Spark. Ref2VA has completed image-reference and image-plus-audio requests
-with its dedicated checkpoints. Video references and multi-reference
-combinations have not yet been GPU-validated; see [validation](docs/validation.md).
+with its dedicated checkpoints, plus two three-image cases using the reference
+budgets and Stage1 attention policies described below. This is bounded
+functional coverage, not validation of every combination or reference type;
+see [validation](docs/validation.md).
 
 ## The default T2VA recipe
 
@@ -32,11 +34,13 @@ combinations have not yet been GPU-validated; see [validation](docs/validation.m
 | Output | Official Conv VideoVAE, H.264 video and original H3 audio as stereo AAC |
 
 The implemented recipe is recorded in [configs/default.json](configs/default.json).
-It is not a tuning interface: changing this record alone is rejected so that
-the reported settings cannot disagree with the fixed implementation.
+Changing this record alone is rejected so that the reported settings cannot
+disagree with the implementation. Ref2VA exposes only the two supported
+reference-budget and draft-attention selections documented below; their
+resolved settings are recorded in each run's `results.json`.
 Task selection changes native input conditioning and, for Ref2VA, its required
-model partition and LoRA. It is not a collection of ablation switches. There
-is no one-step refiner, TAE decoder or intermediate video decode.
+model partition and LoRA. There is no one-step refiner, TAE decoder or
+intermediate video decode.
 
 ### Why the models can remain resident
 
@@ -115,8 +119,9 @@ pixel-exact endpoint reproduction nor unchanged identity is guaranteed.
 
 Use `--task ref2va` when downloading, preparing paths and running inference.
 This selects **`transformer_ref` and the LightX2V Ref2VA four-step LoRA**, with
-W8A8 FP8 DiT and dense FA4 attention. The T2VA VSA adapter is not reused for
-a different checkpoint family. Stage2 stays on the same three-step Sol recipe.
+W8A8 FP8 DiT. The default is a **Stage1-sized reference budget and dense FA4
+draft attention**. The T2VA VSA adapter is not reused for a different checkpoint
+family. Stage2 stays on the same three-step Sol recipe under either selection.
 
 ```bash
 python infer.py --paths paths-ref2va.json --task ref2va \
@@ -128,11 +133,58 @@ python infer.py --paths paths-ref2va.json --task ref2va \
 References retain command-line order. Supported input types are `image`,
 `video` and `audio`; at least one image or video is required. Native limits
 are nine images, three videos, three audio files and twelve references total.
-Reference images use the pinned native 2048-short-edge preprocessing. Video
+Reference images use the selected per-image area budget below. Video
 references use native frame sampling; embedded video audio contributes an
 audio reference before that video's visual item. Keep the numbered media
 references in the prompt aligned with this ordering. See the
 [official H3 input and prompting guide](https://huggingface.co/MiniMaxAI/MiniMax-H3).
+
+The following options apply **only to Ref2VA** and remain fixed for the entire
+batch or Python `Pipeline` session, not per JSONL row:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--ref-image-match {stage1,stage2}` | `stage1` | Per-image area budget from the 672 × 384 draft or 1344 × 768 final output, respectively |
+| `--ref-stage1-attn {dense,sol}` | `dense` | Dense FA4 or the supported four-step Sol policy for the H3 draft only |
+
+Each reference image is resized independently with scale
+`min(1, sqrt(budget / (width * height)))`, then its dimensions are rounded to
+the nearest multiple of 32. This preserves the image's aspect ratio up to
+alignment, without cropping or intentional pre-alignment enlargement. It
+does **not** force every image to 16:9; rounding can slightly exceed the
+nominal area budget. Qwen and the H3 VAE receive matching prepared images.
+These options do not change the draft/output dimensions or video-reference
+sampling. Smaller references may lose fine identity or accessory details.
+
+For example, select the larger reference budget with Sol draft attention:
+
+```bash
+python infer.py --paths paths-ref2va.json --task ref2va \
+  --ref-image-match stage2 --ref-stage1-attn sol \
+  --reference image:subject.png \
+  --prompt "The subject in <Picture 1> turns toward the camera." \
+  --seed 42 --output-dir outputs/reference-sol
+```
+
+The equivalent Python session selection is:
+
+```python
+from runtime.config import load_paths
+from runtime.pipeline import Pipeline
+
+pipeline = Pipeline(
+    load_paths("paths-ref2va.json", task="ref2va"), "outputs/reference-sol",
+    task="ref2va", ref_image_match="stage2", ref_stage1_attn="sol",
+)
+```
+
+The Stage1 `sol` policy keeps the first of four updates fully dense. In the
+remaining updates, body layer 0 stays dense and the other 49 use Sol with
+thresholds 1 / 1.25 / 1.5. Only text and audio are forced sinks: neither H3
+reference-image tokens nor Qwen visual tokens are sinks. The text/audio query
+subset is recomputed with dense FA4. This is distinct from **Stage2**, which
+always uses its original **three-update Sol** policy, regardless of either
+Ref2VA option. Neither selection guarantees reference-identity preservation.
 
 For batches, add `task` and either `first_frame` / `last_frame` or an ordered
 `references` list to each row. Paths are relative to the JSONL file:
@@ -167,10 +219,13 @@ zero-copy. Both stages and file transfer are included in request latency.
 
 ## Timing
 
-One complete warmup precedes formal requests. Stage2's initial loading peak
-is completed before permanent Qwen residency. Model loading, compilation,
-warmup and initial Qwen residency are reported as startup, not hidden in a
-formal-request average.
+One full-chain warmup uses the first case's input shape; it does not prewarm
+every later reference layout. Stage2's initial loading peak is completed
+before permanent Qwen residency. Work performed during this startup sequence
+is reported separately from formal requests. The permanent Qwen worker is
+then loaded, but its **first encoding is part of the first formal request**;
+that request is not claimed to be fully warm. Later shapes may also incur
+first-use work inside their measured requests.
 
 For every formal request, E2E is the continuous same-host monotonic interval
 from request entry, **before fresh Qwen encoding**, to the completed, muxed

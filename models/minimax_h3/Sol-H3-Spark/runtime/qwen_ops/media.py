@@ -43,12 +43,26 @@ def prepare_keyframe_image(image, height, width, stretch):
     return resized.crop((left, top, left + width, top + height))
 
 
-def resolve_reference_image_size(width, height):
+def reference_target_area(config):
+    resize = config.get("stage1", config).get("reference_image_resize")
+    if resize is None:
+        return None
+    if (resize.get("mode") != "match" or type(resize.get("pixel_budget")) is not int
+            or resize["pixel_budget"] <= 0):
+        raise ValueError("reference-image match requires a positive integer pixel budget")
+    return resize["pixel_budget"]
+
+
+def resolve_reference_image_size(width, height, *, target_area=None):
     if width <= 0 or height <= 0:
         raise ValueError("reference image dimensions must be positive")
     if not 1 / 4 <= width / height <= 4:
         raise ValueError("reference image aspect ratio must be between 1:4 and 4:1")
-    scale = 2048 / min(width, height)
+    # Match each image's own aspect ratio, not the output canvas aspect ratio.
+    # Like the native route, nearest32 alignment follows aspect-preserving scale.
+    if target_area is not None and (type(target_area) is not int or target_area <= 0):
+        raise ValueError("reference-image target area must be a positive integer")
+    scale = 2048 / min(width, height) if target_area is None else min(1.0, math.sqrt(target_area / (width * height)))
     return max(32, round(height * scale / 32) * 32), max(32, round(width * scale / 32) * 32)
 
 
@@ -154,7 +168,7 @@ def decode_reference_video(path):
     return result, float(rate), has_audio
 
 
-def prepare_inputs(case, torch):
+def prepare_inputs(case, torch, *, target_area=None):
     """Build native ``clip.tokenize`` kwargs and JSON-safe preparation facts."""
     task = case.get("task", "t2va")
     if task == "t2va":
@@ -188,7 +202,7 @@ def prepare_inputs(case, torch):
         kind, path = reference["type"], reference["path"]
         if kind == "image":
             image = load_rgb(path)
-            height, width = resolve_reference_image_size(*image.size)
+            height, width = resolve_reference_image_size(*image.size, target_area=target_area)
             image = prepare_reference_image(image, height, width)
             items.append({"type": "image", "data": image_tensor(image)})
             prepared.append({"type": kind, "path": path,

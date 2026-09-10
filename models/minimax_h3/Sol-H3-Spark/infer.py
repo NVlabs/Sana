@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 import signal
 
-from runtime.config import TASKS, load_paths, normalize_case, read_cases
+from runtime.config import (TASKS, REF_IMAGE_MATCH_CHOICES, REF_STAGE1_ATTN_CHOICES,
+                            load_paths, normalize_case, read_cases)
 from runtime.pipeline import Pipeline
 
 
@@ -22,6 +23,10 @@ def main(argv=None):
     parser.add_argument("--last-frame", type=Path, help="FL2VA last-frame image for --prompt")
     parser.add_argument("--reference", action="append", default=[], metavar="TYPE:PATH",
                         help="Ordered Ref2VA image:PATH, video:PATH or audio:PATH; repeat as needed")
+    parser.add_argument("--ref-image-match", choices=REF_IMAGE_MATCH_CHOICES,
+                        help="Ref2VA only: match each image to the stage1 (default) or stage2 pixel area")
+    parser.add_argument("--ref-stage1-attn", choices=REF_STAGE1_ATTN_CHOICES,
+                        help="Ref2VA only: dense FA4 (default) or dense-first Sol-Attn; Stage2 is unchanged")
     parser.add_argument("--output-dir", type=Path, required=True, help="New directory; existing runs are never overwritten")
     args = parser.parse_args(argv)
     try:
@@ -45,6 +50,8 @@ def main(argv=None):
             cases = read_cases(args.prompts, default_task=args.task or "t2va")
             if args.task and cases[0]["task"] != args.task:
                 raise ValueError("--task disagrees with the JSONL task")
+        if cases[0]["task"] != "ref2va" and (args.ref_image_match is not None or args.ref_stage1_attn is not None):
+            raise ValueError("--ref-image-match and --ref-stage1-attn require task ref2va")
     except (ValueError, OSError) as error:
         parser.error(str(error))
     paths = load_paths(args.paths, task=cases[0]["task"])
@@ -54,7 +61,8 @@ def main(argv=None):
 
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
-    pipeline = Pipeline(paths, args.output_dir, task=cases[0]["task"])
+    pipeline = Pipeline(paths, args.output_dir, task=cases[0]["task"],
+                        ref_image_match=args.ref_image_match, ref_stage1_attn=args.ref_stage1_attn)
     try:
         print("Loading models and running one full warmup (reported separately).", flush=True)
         pipeline.start(cases[0])

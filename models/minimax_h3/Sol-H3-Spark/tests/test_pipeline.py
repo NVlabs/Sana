@@ -1,10 +1,13 @@
 """CPU-only tests of orchestration, output ownership and timing boundaries."""
 
 import json
+import contextlib
+import io
 from pathlib import Path
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 from runtime.config import read_cases, normalize_case, load_recipe, load_paths, REQUIRED_PATHS
 from runtime.pipeline import Pipeline, await_json, worker_environment
@@ -15,6 +18,7 @@ class FakeWorker:
 
     def __init__(self, name, root, paths, config):
         self.name = name
+        self.config = config
         self.events.append(("start", name))
         self.pending = None
 
@@ -140,9 +144,97 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(text["stage1"]["lora"], "FastH3_VSA_DataFree")
         self.assertEqual(ref["stage1"]["lora"], "LightX2V_Ref2VA_4step")
         self.assertEqual(ref["stage1"]["attention"], "FA4_dense")
+        self.assertNotIn("attention_policy", ref["stage1"])
+        self.assertEqual(ref["stage1"]["reference_image_resize"], {
+            "mode": "match", "pixel_budget": 672 * 384,
+            "budget_source": "stage1_draft",
+        })
         self.assertNotIn("sparsity", ref["stage1"])
         self.assertEqual(ref["stage2"], text["stage2"])
         self.assertEqual(ref["handoff"], text["handoff"])
+
+    def test_ref2va_matching_and_attention_choices_leave_other_settings_unchanged(self):
+        baseline = load_recipe("ref2va")
+        for match in ("stage1", "stage2"):
+            for attention in ("dense", "sol"):
+                with self.subTest(match=match, attention=attention):
+                    recipe = load_recipe("ref2va", ref_image_match=match, ref_stage1_attn=attention)
+                    source = recipe["stage1"] if match == "stage1" else recipe["output"]
+                    self.assertEqual(recipe["stage1"]["reference_image_resize"], {
+                        "mode": "match", "pixel_budget": source["width"] * source["height"],
+                        "budget_source": "stage1_draft" if match == "stage1" else "final_output",
+                    })
+                    self.assertEqual(recipe["stage1"]["attention"],
+                                     "FA4_dense" if attention == "dense" else "FA4_Sol_text_audio_sink")
+                    if attention == "sol":
+                        self.assertEqual(recipe["stage1"]["attention_policy"], {
+                            "dense_steps": 1, "dense_body_layers": [0],
+                            "tau_by_step": [None, 1.0, 1.25, 1.5],
+                            "sink_token_tags": [1, 2], "dense_sink_queries": True,
+                            "reference_image_sink": False, "qwen_visual_sink": False,
+                            "sink_kv_block_size": 64,
+                        })
+                    for key in ("attention", "attention_policy", "reference_image_resize"):
+                        recipe["stage1"].pop(key, None)
+                    expected = json.loads(json.dumps(baseline))
+                    for key in ("attention", "attention_policy", "reference_image_resize"):
+                        expected["stage1"].pop(key, None)
+                    self.assertEqual(recipe, expected)
+        for task in ("t2va", "fl2va"):
+            for options in ({"ref_image_match": "stage1"}, {"ref_stage1_attn": "dense"}):
+                with self.assertRaisesRegex(ValueError, "require task ref2va"):
+                    load_recipe(task, **options)
+        for options in ({"ref_image_match": "native"}, {"ref_stage1_attn": "vsa"},
+                        {"ref_image_match": ""}, {"ref_stage1_attn": ""}):
+            with self.assertRaises(ValueError):
+                load_recipe("ref2va", **options)
+
+    def test_ref2va_options_reach_all_workers_and_result_recipe(self):
+        case = {"case_id": "reference", "task": "ref2va", "prompt": "A fox.", "seed": 42}
+        with tempfile.TemporaryDirectory() as directory:
+            pipeline = Pipeline({}, Path(directory) / "run", task="ref2va",
+                                ref_image_match="stage2", ref_stage1_attn="sol", worker_factory=FakeWorker)
+            try:
+                pipeline.start(case)
+                for worker in (pipeline.stage1, pipeline.stage2, pipeline.qwen):
+                    self.assertEqual(worker.config, pipeline.config)
+                    self.assertEqual(worker.config["stage1"]["reference_image_resize"]["pixel_budget"], 1344 * 768)
+                    self.assertEqual(worker.config["stage1"]["attention"], "FA4_Sol_text_audio_sink")
+                saved = json.loads((pipeline.root / "results.json").read_text())
+                self.assertEqual(saved["recipe"], pipeline.config)
+            finally:
+                pipeline.close()
+
+    def test_cli_ref2va_options_single_and_inferred_batch_task(self):
+        import infer
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            image = root / "subject.png"
+            image.write_bytes(b"input fixture")
+            batch = root / "cases.jsonl"
+            batch.write_text(json.dumps({"case_id": "reference", "task": "ref2va", "prompt": "A fox.",
+                                         "references": [{"type": "image", "path": str(image)}]}) + "\n")
+            for source in (["--task", "ref2va", "--prompt", "A fox.", "--reference", f"image:{image}"],
+                           ["--prompts", str(batch)]):
+                with mock.patch.object(infer, "load_paths", return_value={}), \
+                     mock.patch.object(infer, "Pipeline") as factory, \
+                     mock.patch.object(infer.signal, "signal"), contextlib.redirect_stdout(io.StringIO()):
+                    factory.return_value.report = {"mean_e2e_s": 1.0}
+                    factory.return_value.generate.return_value = {"status": "PASS"}
+                    factory.return_value.root = root / "run"
+                    infer.main(["--paths", "unused.json", "--output-dir", str(root / "run"), *source,
+                                "--ref-image-match", "stage2", "--ref-stage1-attn", "sol"])
+                    factory.assert_called_once_with({}, root / "run", task="ref2va",
+                                                    ref_image_match="stage2", ref_stage1_attn="sol")
+            for flag, value in (("--ref-image-match", "stage1"), ("--ref-stage1-attn", "dense")):
+                with mock.patch.object(infer, "load_paths") as paths, \
+                     mock.patch.object(infer, "Pipeline") as factory, contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as error:
+                        infer.main(["--paths", "unused.json", "--output-dir", str(root / "bad"),
+                                    "--prompt", "A fox.", flag, value])
+                    self.assertEqual(error.exception.code, 2)
+                    paths.assert_not_called()
+                    factory.assert_not_called()
 
     def test_paths_preserve_venv_interpreter_and_allow_absent_offline_weights(self):
         import sys

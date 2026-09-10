@@ -29,6 +29,14 @@ def vsa_receipt(requests):
 
 
 class Stage1Contracts(unittest.TestCase):
+    def test_native_prompt_normalization_preserves_internal_content(self):
+        original = "\nsubject_definitions:\n<Subject 1> in <Picture 3>.\n\nsummary:\nDialogue.\n"
+        stage1.validate_native_prompt(original.strip(), original)
+        with self.assertRaises(RuntimeError):
+            stage1.validate_native_prompt(original.strip().replace("Picture 3", "Picture 1"), original)
+        with self.assertRaises(RuntimeError):
+            stage1.validate_native_prompt(" ".join(original.split()), original)
+
     def test_exact_timestep_lookup_rejects_schedule_drift(self):
         plan = t2va_lookup_plan([0.0, 0.1, 0.2, 0.3], [0.0, 0.4, 0.5, 0.6])
         self.assertEqual([len(row) for row in plan], [1, 2, 2, 2])

@@ -8,6 +8,8 @@ import re
 
 PACKAGE = Path(__file__).resolve().parents[1]
 TASKS = ("t2va", "fl2va", "ref2va")
+REF_IMAGE_MATCH_CHOICES = ("stage1", "stage2")
+REF_STAGE1_ATTN_CHOICES = ("dense", "sol")
 FROZEN_RECIPE_SHA256 = "f3bec3ed9dee7bc92f6e936937dd1d5828852b4e485469c2e1d13727c4a41aab"
 REQUIRED_PATHS = (
     "stage1_python", "stage2_python", "qwen_python", "h3_model", "vsa_lora",
@@ -17,7 +19,7 @@ REQUIRED_PATHS = (
 )
 
 
-def load_recipe(task="t2va"):
+def load_recipe(task="t2va", *, ref_image_match=None, ref_stage1_attn=None):
     recipe = json.loads((PACKAGE / "configs/default.json").read_text())
     # This is a record of the implemented recipe, not an ablation interface.
     canonical = json.dumps(recipe, sort_keys=True, separators=(",", ":")).encode()
@@ -25,12 +27,36 @@ def load_recipe(task="t2va"):
         raise ValueError("The frozen recipe record was modified; it would not describe this implementation")
     if task not in TASKS:
         raise ValueError(f"task must be one of {TASKS}")
+    if task != "ref2va" and (ref_image_match is not None or ref_stage1_attn is not None):
+        raise ValueError("Reference matching and Stage1 attention options require task ref2va")
     if task != "t2va":
         # Task inputs select a native model family, not an arbitrary tuning arm.
         recipe["stage1"]["task"] = task
         recipe["stage1"]["reference_encode"] = "native_H3_VAE"
     if task == "ref2va":
-        recipe["stage1"].update(lora="LightX2V_Ref2VA_4step", attention="FA4_dense")
+        match = "stage1" if ref_image_match is None else ref_image_match
+        attention = "dense" if ref_stage1_attn is None else ref_stage1_attn
+        if match not in REF_IMAGE_MATCH_CHOICES:
+            raise ValueError(f"ref_image_match must be one of {REF_IMAGE_MATCH_CHOICES}")
+        if attention not in REF_STAGE1_ATTN_CHOICES:
+            raise ValueError(f"ref_stage1_attn must be one of {REF_STAGE1_ATTN_CHOICES}")
+        canvas = recipe["stage1"] if match == "stage1" else recipe["output"]
+        recipe["stage1"].update(
+            lora="LightX2V_Ref2VA_4step",
+            attention="FA4_dense" if attention == "dense" else "FA4_Sol_text_audio_sink",
+            reference_image_resize={
+                "mode": "match", "pixel_budget": canvas["width"] * canvas["height"],
+                "budget_source": "stage1_draft" if match == "stage1" else "final_output",
+            },
+        )
+        if attention == "sol":
+            recipe["stage1"]["attention_policy"] = {
+                "dense_steps": 1, "dense_body_layers": [0],
+                "tau_by_step": [None, 1.0, 1.25, 1.5],
+                "sink_token_tags": [1, 2], "dense_sink_queries": True,
+                "reference_image_sink": False, "qwen_visual_sink": False,
+                "sink_kv_block_size": 64,
+            }
         recipe["stage1"].pop("sparsity")
         recipe["stage1"].pop("tile_size")
     return recipe

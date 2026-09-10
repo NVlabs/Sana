@@ -124,11 +124,12 @@ class QwenMediaContracts(unittest.TestCase):
         self.assertEqual(fps, 24)
         self.assertTrue(has_audio)
 
-    def _run_fake_session(self, case, check):
+    def _run_fake_session(self, case, check, *, target_area=None):
         session = qwen.Session.__new__(qwen.Session)
         session.closed = session.failed = False
         session.completed_requests = 0
         session.model_load_count = 1
+        session.reference_target_area = target_area
         session.clip = FakeComfyClip(check)
         session.normalize = lambda encoded: SimpleNamespace(
             cond=encoded["cond"], minimax_token_tags=encoded["minimax_token_tags"])
@@ -141,7 +142,7 @@ class QwenMediaContracts(unittest.TestCase):
             inference_mode=nullcontext, save=save, cuda=SimpleNamespace(
                 reset_peak_memory_stats=Mock(), synchronize=Mock(),
                 max_memory_allocated=lambda: 0, max_memory_reserved=lambda: 0))
-        output = self.root / "conditioning"
+        output = self.root / f"conditioning-{target_area}"
         receipt = session.run(case, str(output))
         payload, = payloads
         self.assertIs(payload["text_token_tags"], session.clip.tags)
@@ -210,6 +211,35 @@ class QwenMediaContracts(unittest.TestCase):
         self.assertEqual(facts[1]["shape"], [25, 2, 2, 3])
         self.assertEqual(facts[1]["sampled_indices"], [0, 12, 24])
         self.assertTrue(receipt["input_conditioned"])
+
+    def test_ref2va_session_reads_and_propagates_configured_image_budget(self):
+        refs = [{"type": "image", "path": str(index)} for index in range(3)]
+        images = {str(index): Image.new("RGB", size, (index * 70, 31, 15))
+                  for index, size in enumerate(((1344, 768), (768, 1344), (1024, 1024)))}
+        case = {"case_id": "three-images", "task": "ref2va", "prompt": "Original prompt.\n",
+                "seed": 42, "references": refs}
+        for budget, source, shapes in (
+                (672 * 384, "stage1_draft", [[384, 672, 3], [672, 384, 3], [512, 512, 3]]),
+                (1344 * 768, "final_output", [[768, 1344, 3], [1344, 768, 3], [1024, 1024, 3]])):
+            with self.subTest(budget_source=source):
+                config = {"stage1": {"reference_image_resize": {
+                    "mode": "match", "pixel_budget": budget, "budget_source": source}}}
+                session = qwen.Session.__new__(qwen.Session)
+                # Policy is read before any checkpoint access or GPU imports.
+                with self.assertRaises(KeyError):
+                    session.__init__({}, str(self.root), config)
+                self.assertEqual(session.reference_target_area, budget)
+                def check(prompt, kwargs):
+                    self.assertEqual(prompt, case["prompt"])
+                    items = kwargs["minimax_ref_items"]
+                    self.assertEqual([list(item["data"].shape[1:]) for item in items], shapes)
+                    for index, item in enumerate(items):
+                        np.testing.assert_array_equal(item["data"][0, 0, 0],
+                            np.array([index * 70, 31, 15], dtype=np.float32) / 255)
+                with patch.object(media, "load_rgb", side_effect=images.__getitem__):
+                    receipt = self._run_fake_session(case, check, target_area=session.reference_target_area)
+                self.assertEqual([item["path"] for item in receipt["prepared_media"]], ["0", "1", "2"])
+                self.assertEqual([item["shape"] for item in receipt["prepared_media"]], shapes)
 
 
 if __name__ == "__main__":

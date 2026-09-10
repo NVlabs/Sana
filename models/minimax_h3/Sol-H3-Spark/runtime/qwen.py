@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import time
 
-from .qwen_ops.media import input_spec, prepare_inputs
+from .qwen_ops.media import input_spec, prepare_inputs, reference_target_area
 
 
 def atomic_json(path, value):
@@ -141,6 +141,7 @@ def load_resident_checkpoint(checkpoint, torch):
 
 class Session:
     def __init__(self, paths: dict, work_dir: str, config: dict):
+        self.reference_target_area = reference_target_area(config)
         checkpoint = Path(paths['qwen_checkpoint']).expanduser().resolve(strict=True)
         comfy_root = Path(paths['comfy_root']).expanduser().resolve(strict=True)
         self.work_dir = Path(work_dir).resolve()
@@ -251,7 +252,7 @@ class Session:
         try:
             before = self.release_idle_cache()
             torch.cuda.reset_peak_memory_stats()
-            tokenize_kwargs, prepared_media = prepare_inputs(case, torch)
+            tokenize_kwargs, prepared_media = prepare_inputs(case, torch, target_area=self.reference_target_area)
             identity = {'task': case.get('task', 't2va'), 'external_anchor_used': False,
                 'input_conditioned': case.get('task', 't2va') != 't2va',
                 'input_spec': input_spec(case), 'prepared_media': prepared_media}

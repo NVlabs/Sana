@@ -1,4 +1,4 @@
-"""W8A8 FastH3 VSA Stage1: four updates, normalized H3 latent and native PCM."""
+"""W8A8 H3 Stage1: four updates, normalized H3 latent and native PCM."""
 from __future__ import annotations
 
 import dataclasses
@@ -10,8 +10,21 @@ from pathlib import Path
 import time
 
 from .stage1_ops.lookup import install_exact_t2va_lookup, quantized_linear_name
-from .stage1_ops import native, vsa
+from .stage1_ops import native, vsa, sol
 from .stage1_ops.tasks import input_spec, native_inputs, ref_lora_alpha, task_of, validate_prepared_media
+from .qwen_ops.media import reference_target_area, resolve_reference_image_size
+
+
+def install_reference_image_size(reference_module, target_area):
+    """One dedicated worker seam; do not modify the external FastVideo files."""
+    reference_module.resolve_reference_image_size = functools.partial(
+        resolve_reference_image_size, target_area=target_area)
+
+
+def validate_native_prompt(actual, original):
+    # Pinned FastVideo video_generator.py normalizes only boundary whitespace.
+    if actual != original.strip():
+        raise RuntimeError("native H3 prompt mismatch")
 
 def validate_native_attention(before, after, *, require_calls=True):
     if (len(before) != 1 or len(after) != 1 or after[0]["calls"] < before[0]["calls"]
@@ -24,7 +37,8 @@ def validate_native_attention(before, after, *, require_calls=True):
              "resolved_precision_scope": "original constructor config; actual DiT converted to FP8 afterwards; Qwen external NVFP4"}]
 
 
-def install_worker(worker, task="t2va"):
+def install_worker(worker, task="t2va", attention=None, reference_area=None,
+                   reference_budget_source=None):
     import torch
     from fastvideo.pipelines.lazy_module import is_lazy_module
     from fastvideo.layers.lora.linear import BaseLayerWithLoRA
@@ -38,6 +52,12 @@ def install_worker(worker, task="t2va"):
              "fp8_route": "native_FastVideo_tensorwise_W8A8_after_original_BF16_LoRA_merge",
              "qwen_builtin_materializations": 0, "case": None}
     worker._sol_h3_stage1 = state
+    if task == "ref2va" and reference_area is not None:
+        from fastvideo.pipelines.basic.minimax_h3 import reference
+        install_reference_image_size(reference, reference_area)
+        state["reference_image_resize"] = {"mode": "match", "pixel_budget": reference_area,
+                                           "budget_source": reference_budget_source}
+    sol_route = sol.RequestRoute(state) if attention == sol.POLICY else None
     if not is_lazy_module(pipe.modules["transformer"]) or not is_lazy_module(pipe.modules["text_encoder"]):
         raise RuntimeError("existing native lazy construction required")
     # Refuse accidental native Qwen loading, including eager parameter probes.
@@ -115,6 +135,8 @@ def install_worker(worker, task="t2va"):
         original_model_forward = model.forward
         def observed_model_forward(*args, **kwargs):
             state["transformer_forwards"] += 1
+            if sol_route is not None:
+                sol_route.start_forward()
             state["dit_active"] = True
             try:
                 return original_model_forward(*args, **kwargs)
@@ -124,7 +146,10 @@ def install_worker(worker, task="t2va"):
         if len(tagged) != 312:
             raise RuntimeError(f"expected 312 native W8A8 linears, got {len(tagged)}")
         if task == "ref2va":
-            regional.install_dense(model, state)
+            if sol_route is None:
+                regional.install_dense(model, state)
+            else:
+                sol.install(model, state, sol_route)
         else:
             vsa.install_model(model, state)
             regional.install(model, state)
@@ -140,8 +165,7 @@ def install_worker(worker, task="t2va"):
         stage = pipe._stage_name_mapping["conditioning_stage"]
         def condition(batch, args):
             record = state["case"]
-            if batch.prompt != record["case"]["prompt"]:
-                raise RuntimeError("native H3 prompt mismatch")
+            validate_native_prompt(batch.prompt, record["case"]["prompt"])
             payload = record["payload"]
             validate_prepared_media(record["case"], payload, batch)
             cond, tags = payload["prompt_embeds"], payload["text_token_tags"]
@@ -155,6 +179,14 @@ def install_worker(worker, task="t2va"):
             state["conditioning_calls"] += 1
             return batch
         stage.forward = condition
+        if sol_route is not None:
+            from fastvideo.pipelines.basic.minimax_h3.stages.minimax_h3_latent_preparation import MINIMAX_H3_LAYOUT_KEY
+            denoising = pipe._stage_name_mapping["denoising_stage"]
+            original_denoising = denoising.forward
+            def denoise(batch, args):
+                sol_route.prepare(batch.extra[MINIMAX_H3_LAYOUT_KEY])
+                return original_denoising(batch, args)
+            denoising.forward = denoise
         # Preserve native per-stage machinery, retaining only video models;
         # normal process exit still frees them and abort cleanup is unchanged.
         keep = {id(pipe.modules[name]) for name in ("transformer", "vae", "audio_vae")}
@@ -237,6 +269,12 @@ class Session:
         self.root = Path(work_dir).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.task = task_of(config.get("stage1", config))
+        self.attention = config.get("stage1", config).get("attention")
+        self.reference_area = reference_target_area(config)
+        self.reference_budget_source = config.get("stage1", config).get(
+            "reference_image_resize", {}).get("budget_source")
+        if self.attention == sol.POLICY and self.task != "ref2va":
+            raise ValueError("this fixed Sol policy is Ref2VA only")
         self.basic = native.load_official_entry(
             Path(paths["fastvideo_root"]).expanduser().resolve(strict=True))
         profile = self.basic.parse_args([
@@ -249,7 +287,7 @@ class Session:
             profile.vsa = False
             # Compile only after native BF16 LoRA merge and W8A8 conversion.
             profile.inference_torch_compile = False
-            policy = {"attention_backend": "FLASH_ATTN", "selected_attention_backend": "FA4_dense",
+            policy = {"attention_backend": "FLASH_ATTN", "selected_attention_backend": self.attention or "FA4_dense",
                       "compression_gates": "none; dedicated Ref2VA adapter has no VSA training claim"}
         else:
             policy = vsa.configure_profile(profile)
@@ -285,7 +323,9 @@ class Session:
         self.generator = VideoGenerator.from_config(generator_config)
         self.rpc = lambda fn: self.generator.executor.collective_rpc(cloudpickle.dumps(fn))
         try:
-            self.rpc(functools.partial(install_worker, task=self.task))
+            self.rpc(functools.partial(install_worker, task=self.task, attention=self.attention,
+                                      reference_area=self.reference_area,
+                                      reference_budget_source=self.reference_budget_source))
         except BaseException:
             self.generator.shutdown()
             self.closed = True
@@ -322,7 +362,9 @@ class Session:
                 attention_before, self.rpc(native.read_fa4_audit))
             if self.task == "ref2va":
                 if attention_actual[0]["request_fa4_calls"] != 202:
-                    raise RuntimeError("Ref2VA must execute all 202 native dense FA4 calls")
+                    raise RuntimeError("Ref2VA physical FA4 call count must be 202")
+                if self.attention == sol.POLICY:
+                    actual["sol_attention"] = sol.validate_request(actual["sol_attention"])
                 sparse_actual = None
             else:
                 sparse_actual = vsa.validate_request(before["vsa_snapshot"], actual["official_vsa"])

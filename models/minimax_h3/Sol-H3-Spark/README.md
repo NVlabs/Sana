@@ -14,8 +14,9 @@ refine and decode a **1344 × 768, 121-frame video at 24 FPS** with original H3 
 > [validation](docs/validation.md).
 
 FL2VA has also completed first-only, last-only and first+last requests on
-Spark. Ref2VA is implemented but real checkpoint loading and GPU execution
-remain unvalidated; its dedicated weights are required.
+Spark. Ref2VA has completed image-reference and image-plus-audio requests
+with its dedicated checkpoints. Video references and multi-reference
+combinations have not yet been GPU-validated; see [validation](docs/validation.md).
 
 ## The default T2VA recipe
 
@@ -110,7 +111,7 @@ The downstream upscaler, adapter and three-step refinement remain unchanged.
 The 124-frame draft is still converted to a 121-frame final video, so neither
 pixel-exact endpoint reproduction nor unchanged identity is guaranteed.
 
-### Reference generation (Ref2VA; GPU validation pending)
+### Reference generation (Ref2VA)
 
 Use `--task ref2va` when downloading, preparing paths and running inference.
 This selects **`transformer_ref` and the LightX2V Ref2VA four-step LoRA**, with

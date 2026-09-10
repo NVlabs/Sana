@@ -51,9 +51,24 @@ precision change was added. This is a functional integration check on one
 source scene, not a broad quality benchmark or a memory guarantee for every
 input.
 
-Ref2VA GPU inference, real checkpoint loading and memory fit remain unvalidated.
-Its task-specific checkpoints must be available before this mode can be
-promoted as release-validated.
+Ref2VA completed one full warmup followed by two consecutive requests on a
+single DGX Spark: one image reference, then the same image plus an audio
+reference. Both produced final video with audio while the model sessions
+remained resident. Real execution confirmed:
+
+- The dedicated Ref2VA checkpoint and rank-128, alpha-8 four-step LoRA load;
+  all 312 adapter projections merge before W8A8 FP8 conversion.
+- Each draft executes four updates and 202 BF16 FA4 calls with no fallback.
+- Capture excludes 7,168 image-reference rows in both requests and 406
+  audio-reference rows in the image-plus-audio request. Only generated H3
+  latents and generated original H3 audio pass to the unchanged Stage2.
+- H3 video decoding remains bypassed; Stage2 completes its three-update
+  Sol refinement and official Conv decode, producing 1344 × 768, 121-frame
+  H.264 video at 24 FPS with stereo AAC audio.
+
+These are functional checks on one source scene, not an identity or voice
+fidelity benchmark. Video references and multi-reference combinations remain
+GPU-unvalidated; their memory fit cannot be inferred from these two requests.
 
 The native FL2VA first/last inputs guide generated latent tokens; neither H3
 nor the unchanged three-step Stage2 path promises pixel-exact endpoint

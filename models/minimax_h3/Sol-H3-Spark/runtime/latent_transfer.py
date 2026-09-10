@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import re
 
+from .config import TASKS
+
 H3_SHAPE = (1, 24, 37, 24, 42)
 AUDIO_SHAPE = (1, 2, 161333)
 MAX_PAYLOAD_BYTES = 4 * 1024**2
@@ -44,13 +46,13 @@ def load_latent_capture(directory, *, request_id=None):
     path = root / "capture.json"
     row = json.loads(path.read_text())
     if (row.get("status") != "PASS" or row.get("same_request") is not True
-            or row.get("external_anchor_used") is not False or row.get("task") != "t2va"
+            or row.get("external_anchor_used") is not False or row.get("task") not in TASKS
             or row.get("latent_only_transfer") is not True
             or type(row.get("h3_decoder_calls")) is not int or row["h3_decoder_calls"] != 0
             or not isinstance(row.get("prompt"), str) or not row["prompt"].strip()
             or type(row.get("seed")) is not int or type(row.get("source_index")) is not int
             or row["source_index"] < 0):
-        raise ValueError("invalid same-request latent-only T2VA capture identity")
+        raise ValueError("invalid same-request latent-only H3 capture identity")
     validate_request_id(row.get("case_id"))
     if request_id is not None and row.get("request_id") != validate_request_id(request_id):
         raise ValueError("capture belongs to another request")
@@ -73,6 +75,6 @@ def load_payload(row, *, torch_module):
         value = payload[key]
         if (not isinstance(value, torch.Tensor) or tuple(value.shape) != shape
                 or value.dtype != dtype or not bool(torch.isfinite(value).all())):
-            raise ValueError(f"invalid T2VA {key} shape/dtype/finite contract")
+            raise ValueError(f"invalid H3 {key} shape/dtype/finite contract")
         payload[key] = value.contiguous()
     return payload

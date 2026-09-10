@@ -9,14 +9,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 MANIFEST = ROOT / "configs/checkpoints.json"
+TASKS = ("t2va", "fl2va", "ref2va")
 
 
-def checkpoint_paths(output_dir, *, include_offline=True):
-    manifest = json.loads(MANIFEST.read_text())
-    paths = {}
+def selected_entries(manifest, *, task="t2va", include_offline=True):
+    if task not in TASKS:
+        raise ValueError(f"Unknown checkpoint task: {task}")
     for entry in manifest["entries"]:
+        if "tasks" in entry and task not in entry["tasks"]:
+            continue
         if entry.get("offline_only") and not include_offline:
             continue
+        entry = dict(entry)
+        if "task_allow_patterns" in entry:
+            entry["allow_patterns"] = entry["allow_patterns"] + entry["task_allow_patterns"][task]
+        yield entry
+
+
+def checkpoint_paths(output_dir, *, include_offline=True, task="t2va"):
+    manifest = json.loads(MANIFEST.read_text())
+    paths = {}
+    for entry in selected_entries(manifest, task=task, include_offline=include_offline):
         path = Path(output_dir).resolve() / entry["directory"]
         if entry["kind"] == "file":
             path /= entry["filename"]
@@ -38,6 +51,8 @@ def sha256(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "checkpoints")
+    parser.add_argument("--task", choices=TASKS, default="t2va",
+                        help="Select the H3 partition, input VAE and task-specific adapter")
     parser.add_argument("--include-offline", action="store_true",
                         help="Also fetch INT8 Gemma and the INT8 dev connector for one-time cache preparation")
     parser.add_argument("--plan", action="store_true", help="Print the exact download plan without network or writes")
@@ -45,11 +60,10 @@ def main():
                         help="Read complete single-file checkpoints and compare the manifest SHA-256 values")
     args = parser.parse_args()
     manifest = json.loads(MANIFEST.read_text())
-    entries = [item for item in manifest["entries"]
-               if args.include_offline or not item.get("offline_only")]
-    paths = checkpoint_paths(args.output_dir, include_offline=args.include_offline)
+    entries = list(selected_entries(manifest, task=args.task, include_offline=args.include_offline))
+    paths = checkpoint_paths(args.output_dir, include_offline=args.include_offline, task=args.task)
     if args.plan:
-        print(json.dumps({"downloads": entries, "paths": paths,
+        print(json.dumps({"task": args.task, "downloads": entries, "paths": paths,
                           "external_inputs": manifest["external"]}, indent=2))
         return 0
 

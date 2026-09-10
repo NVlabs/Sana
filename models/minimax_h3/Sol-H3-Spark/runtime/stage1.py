@@ -11,6 +11,7 @@ import time
 
 from .stage1_ops.lookup import install_exact_t2va_lookup, quantized_linear_name
 from .stage1_ops import native, vsa
+from .stage1_ops.tasks import input_spec, native_inputs, ref_lora_alpha, task_of, validate_prepared_media
 
 def validate_native_attention(before, after, *, require_calls=True):
     if (len(before) != 1 or len(after) != 1 or after[0]["calls"] < before[0]["calls"]
@@ -23,7 +24,7 @@ def validate_native_attention(before, after, *, require_calls=True):
              "resolved_precision_scope": "original constructor config; actual DiT converted to FP8 afterwards; Qwen external NVFP4"}]
 
 
-def install_worker(worker):
+def install_worker(worker, task="t2va"):
     import torch
     from fastvideo.pipelines.lazy_module import is_lazy_module
     from fastvideo.layers.lora.linear import BaseLayerWithLoRA
@@ -31,7 +32,7 @@ def install_worker(worker):
     from fastvideo.layers.quantization.fp8_config import FP8Config, FP8QuantizeMethod, convert_model_to_fp8
     from .stage1_ops import native as control, capture, vsa, regional
     pipe = worker.pipeline
-    state = {"transformer_materializations": 0, "video_vae_materializations": 0,
+    state = {"task": task, "transformer_materializations": 0, "video_vae_materializations": 0,
              "conditioning_calls": 0, "attention_calls": 0, "compression_gates_unused": 0,
              "transformer_forwards": 0,
              "fp8_route": "native_FastVideo_tensorwise_W8A8_after_original_BF16_LoRA_merge",
@@ -50,7 +51,37 @@ def install_worker(worker):
     def forbidden_video_vae():
         state["video_vae_materializations"] += 1
         raise RuntimeError("latent capture must never materialize the native video VAE")
-    object.__setattr__(vae, "_lazy_loader", forbidden_video_vae)
+    if task == "t2va":
+        object.__setattr__(vae, "_lazy_loader", forbidden_video_vae)
+    else:
+        def record_condition_encoder(model):
+            state["video_vae_materializations"] += 1
+            # Input/reference encoding is permitted; generated-video decoding
+            # remains forbidden in this latent-transfer session.
+            def no_video_decode(*args, **kwargs):
+                raise RuntimeError("Stage1 latent transfer must not decode generated H3 video")
+            model.decode = no_video_decode
+            return model
+        vae.set_materialize_transform(record_condition_encoder)
+    if task == "ref2va":
+        # The pinned compatibility patch exposes this lifecycle option. The
+        # dedicated session never switches/unmerges its constructor adapter.
+        import fastvideo.pipelines.lora_pipeline as lora_pipeline
+        original_lora_layer = lora_pipeline.get_lora_layer
+        def inference_lora_layer(*args, **kwargs):
+            if not kwargs.get("training_mode", False):
+                kwargs["retain_cpu_weight"] = False
+            layer = original_lora_layer(*args, **kwargs)
+            if layer is not None:
+                original_set = layer.set_lora_weights
+                def set_ref_weights(A, B, **options):
+                    # The released adapter stores alpha only in safetensors
+                    # metadata. Native FastVideo reads per-tensor alpha keys.
+                    options["lora_alpha"] = ref_lora_alpha(A.shape[0], options.get("lora_alpha"))
+                    return original_set(A, B, **options)
+                layer.set_lora_weights = set_ref_weights
+            return layer
+        lora_pipeline.get_lora_layer = inference_lora_layer
     def quantize_after_merge(model):
         state["transformer_materializations"] += 1
         if state["transformer_materializations"] != 1:
@@ -62,12 +93,14 @@ def install_worker(worker):
             if isinstance(module, BaseLayerWithLoRA):
                 if not module.merged and not module.disable_lora:
                     raise RuntimeError(f"LoRA not merged before FP8: {name}")
+                if task == "ref2va" and module.merged and (module.lora_alpha, module.lora_rank) != (8, 128):
+                    raise RuntimeError("Ref2VA LoRA alpha/rank scaling drift")
                 parent, _, leaf = name.rpartition(".")
                 setattr(model.get_submodule(parent) if parent else model, leaf, module.base_layer)
                 merged += int(module.merged)
         pipe.lora_layers.clear()
         pipe.lora_adapters.clear()
-        state["fixed_lookup"] = install_exact_t2va_lookup(model, pipe)
+        state["fixed_lookup"] = install_exact_t2va_lookup(model, pipe, task=task)
         tagged = []
         for name, module in model.named_modules():
             if isinstance(module, LinearBase) and quantized_linear_name(name):
@@ -82,12 +115,19 @@ def install_worker(worker):
         original_model_forward = model.forward
         def observed_model_forward(*args, **kwargs):
             state["transformer_forwards"] += 1
-            return original_model_forward(*args, **kwargs)
+            state["dit_active"] = True
+            try:
+                return original_model_forward(*args, **kwargs)
+            finally:
+                state["dit_active"] = False
         model.forward = observed_model_forward
         if len(tagged) != 312:
             raise RuntimeError(f"expected 312 native W8A8 linears, got {len(tagged)}")
-        vsa.install_model(model, state)
-        regional.install(model, state)
+        if task == "ref2va":
+            regional.install_dense(model, state)
+        else:
+            vsa.install_model(model, state)
+            regional.install(model, state)
         return model
     pipe.modules["transformer"].set_materialize_transform(quantize_after_merge)
     control.install_fa4_audit(worker)  # Native FA4 handles the two text-refiner blocks.
@@ -100,14 +140,16 @@ def install_worker(worker):
         stage = pipe._stage_name_mapping["conditioning_stage"]
         def condition(batch, args):
             record = state["case"]
-            if batch.prompt != record["case"]["prompt"] or batch.extra.get(MINIMAX_H3_KEYFRAMES_KEY):
-                raise RuntimeError("native T2VA prompt/keyframe mismatch")
+            if batch.prompt != record["case"]["prompt"]:
+                raise RuntimeError("native H3 prompt mismatch")
             payload = record["payload"]
+            validate_prepared_media(record["case"], payload, batch)
             cond, tags = payload["prompt_embeds"], payload["text_token_tags"]
             if (cond.dtype != torch.bfloat16 or cond.ndim != 3 or cond.shape[0] != 1 or cond.shape[2] != 5120
                     or not bool(torch.isfinite(cond).all()) or tags.dtype != torch.long
-                    or tuple(tags.shape) != (cond.shape[1],) or not bool((tags == MINIMAX_H3_TEXT_TAG).all())):
-                raise RuntimeError("NVFP4 prompt-only feature ABI mismatch")
+                    or tuple(tags.shape) != (cond.shape[1],)
+                    or not bool(((tags == 1) | ((tags == 0) & (task != "t2va"))).all())):
+                raise RuntimeError("NVFP4 task conditioning feature ABI mismatch")
             batch.prompt_embeds = [cond.to(device="cuda:0")]
             batch.extra[MINIMAX_H3_TEXT_TOKEN_TAGS_KEY] = tags
             state["conditioning_calls"] += 1
@@ -131,20 +173,24 @@ def arm_worker(worker, case, conditioning_path, outputdir):
     root = Path(conditioning_path).resolve()
     receipt = json.loads(root.read_text())
     payload_path = root.parent / "conditioning.pt"
-    if (receipt.get("status") != "PASS" or receipt.get("task") != "t2va" or receipt.get("external_anchor_used") is not False
+    task = task_of(case)
+    if task != worker._sol_h3_stage1["task"]:
+        raise RuntimeError("one task/model partition is required per Stage1 session")
+    if (receipt.get("status") != "PASS" or receipt.get("task") != task or receipt.get("external_anchor_used") is not False
             or receipt.get("prompt") != case["prompt"]
             or receipt.get("case_id") != case["case_id"] or receipt.get("seed") != case["seed"]
             or hashlib.sha256(payload_path.read_bytes()).hexdigest() != receipt["payload_sha256"]):
         raise RuntimeError("fresh NVFP4 conditioning receipt mismatch")
     payload = torch.load(payload_path, map_location="cpu", weights_only=True)
-    if payload["prompt"] != case["prompt"] or payload["task"] != "t2va" or payload["external_anchor_used"]:
+    if (payload["prompt"] != case["prompt"] or payload["task"] != task or payload["external_anchor_used"]
+            or (task != "t2va" and payload.get("input_spec") != input_spec(case))):
         raise RuntimeError("NVFP4 payload presentation mismatch")
     target = {**case, "directory": str(outputdir)}
     worker._sol_h3_stage1["case"] = {"case": case, "target": target, "payload": payload}
     if worker.pipeline.post_init_called:
         capture.arm_capture(worker, target)
     result = {key: worker._sol_h3_stage1[key] for key in ("attention_calls", "conditioning_calls", "transformer_forwards")}
-    result["vsa_snapshot"] = vsa.snapshot(worker._sol_h3_stage1)
+    result["vsa_snapshot"] = vsa.snapshot(worker._sol_h3_stage1) if task != "ref2va" else None
     return result
 
 
@@ -154,7 +200,8 @@ def finish_worker_request(worker):
     import torch
     started = time.monotonic_ns()
     video_vae_materialized = object.__getattribute__(worker.pipeline.modules["vae"], "_lazy_module") is not None
-    if video_vae_materialized or worker._sol_h3_stage1["video_vae_materializations"] != 0:
+    if worker._sol_h3_stage1["task"] == "t2va" and (
+            video_vae_materialized or worker._sol_h3_stage1["video_vae_materializations"] != 0):
         raise RuntimeError("latent-only transfer unexpectedly loaded the video VAE")
     def models():
         return {name: id(object.__getattribute__(worker.pipeline.modules[name], "_lazy_module"))
@@ -173,7 +220,8 @@ def finish_worker_request(worker):
                "model_identities_unchanged": identities == models(),
                "started_monotonic_ns": started, "completed_monotonic_ns": time.monotonic_ns(),
                "video_vae_materialized": video_vae_materialized,
-               "placement": "DiT/audio VAE resident; video VAE never materialized"}
+               "placement": "DiT/audio VAE resident; video VAE input encoder only" if video_vae_materialized
+                            else "DiT/audio VAE resident; video VAE never materialized"}
     if after["allocated_bytes"] != before["allocated_bytes"] or not cleanup["model_identities_unchanged"]:
         raise RuntimeError(f"inactive-cache trim unexpectedly changed active storage/models: {cleanup}")
     return {**{key: value for key, value in worker._sol_h3_stage1.items() if key != "case"},
@@ -188,6 +236,7 @@ class Session:
         self.failed = False
         self.root = Path(work_dir).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+        self.task = task_of(config.get("stage1", config))
         self.basic = native.load_official_entry(
             Path(paths["fastvideo_root"]).expanduser().resolve(strict=True))
         profile = self.basic.parse_args([
@@ -196,8 +245,21 @@ class Session:
             "--execution-backend", "mp", "--height", "384", "--width", "672",
             "--num-frames", "124", "--steps", "5", "--lazy-module-load",
             "--no-warmup", "--repeats", "1"])
-        policy = vsa.configure_profile(profile)
-        profile.lora_path = str(Path(paths["vsa_lora"]).expanduser().resolve(strict=True))
+        if self.task == "ref2va":
+            profile.vsa = False
+            # Compile only after native BF16 LoRA merge and W8A8 conversion.
+            profile.inference_torch_compile = False
+            policy = {"attention_backend": "FLASH_ATTN", "selected_attention_backend": "FA4_dense",
+                      "compression_gates": "none; dedicated Ref2VA adapter has no VSA training claim"}
+        else:
+            policy = vsa.configure_profile(profile)
+        lora_key = "ref2va_lora" if self.task == "ref2va" else "vsa_lora"
+        profile.lora_path = str(Path(paths[lora_key]).expanduser().resolve(strict=True))
+        if self.task == "ref2va":
+            from safetensors import safe_open
+            with safe_open(profile.lora_path, framework="pt", device="cpu") as header:
+                if (header.metadata() or {}).get("alpha") != "8":
+                    raise RuntimeError("Ref2VA checkpoint must declare alpha8 metadata")
         profile.lora_strength = 1.0
         self.profile = profile
         # Make the fixed release route independent of inherited VSA selector flags.
@@ -206,6 +268,13 @@ class Session:
         environment = self.basic.configure_environment(profile)
         self.basic.validate_profile_dependencies(profile)
         generator_config = self.basic.build_generator_config(profile)
+        if self.task != "t2va":
+            components = generator_config.pipeline.components
+            if self.task == "ref2va":
+                components = dataclasses.replace(components,
+                    override_pipeline_cls_name="MiniMaxH3Ref2VAModularPipeline")
+            generator_config = dataclasses.replace(generator_config,
+                pipeline=dataclasses.replace(generator_config.pipeline, workload_type="i2v", components=components))
         native.atomic_json(self.root / "resolved_config.json", {
             "profile": vars(profile), "generator": dataclasses.asdict(generator_config),
             "environment": environment, "attention": policy,
@@ -216,7 +285,7 @@ class Session:
         self.generator = VideoGenerator.from_config(generator_config)
         self.rpc = lambda fn: self.generator.executor.collective_rpc(cloudpickle.dumps(fn))
         try:
-            self.rpc(install_worker)
+            self.rpc(functools.partial(install_worker, task=self.task))
         except BaseException:
             self.generator.shutdown()
             self.closed = True
@@ -228,6 +297,8 @@ class Session:
         outputdir = Path(outputdir).resolve()
         outputdir.mkdir(parents=True, exist_ok=False)
         case = {**case, "source_index": case.get("source_index", 0)}
+        if task_of(case) != self.task:
+            raise ValueError("case task differs from the loaded Stage1 session")
         try:
             before = self.rpc(functools.partial(
                 arm_worker, case=case, conditioning_path=str(conditioning_path),
@@ -236,7 +307,7 @@ class Session:
             self.profile.prompt = case["prompt"]
             output = outputdir / "native_384p.mp4"
             request = self.basic.build_request(self.profile, output, case["seed"])
-            request = dataclasses.replace(request, output=dataclasses.replace(
+            request = dataclasses.replace(request, inputs=native_inputs(case), output=dataclasses.replace(
                 request.output, save_video=False, return_frames=False))
             started = time.monotonic_ns()
             self.generator.generate(request)
@@ -249,13 +320,18 @@ class Session:
                 raise RuntimeError(f"four-update native H3 call count mismatch: {actual}")
             attention_actual = validate_native_attention(
                 attention_before, self.rpc(native.read_fa4_audit))
-            sparse_actual = vsa.validate_request(before["vsa_snapshot"], actual["official_vsa"])
-            regional = actual["vsa_regional_compile"]
-            if (regional["body_runtime_calls"] != actual["official_vsa"]["vsa_forward_calls"]
-                    or regional["text_runtime_calls"] != actual["official_vsa"]["dense_text_calls"]
-                    or regional["regions_wrapped"] != 52):
-                raise RuntimeError("regional call counts differ from native VSA")
-            regional["status"] = "PASS_RUNTIME_FULLGRAPH_AND_CALL_COUNTS"
+            if self.task == "ref2va":
+                if attention_actual[0]["request_fa4_calls"] != 202:
+                    raise RuntimeError("Ref2VA must execute all 202 native dense FA4 calls")
+                sparse_actual = None
+            else:
+                sparse_actual = vsa.validate_request(before["vsa_snapshot"], actual["official_vsa"])
+                regional = actual["vsa_regional_compile"]
+                if (regional["body_runtime_calls"] != actual["official_vsa"]["vsa_forward_calls"]
+                        or regional["text_runtime_calls"] != actual["official_vsa"]["dense_text_calls"]
+                        or regional["regions_wrapped"] != 52):
+                    raise RuntimeError("regional call counts differ from native VSA")
+                regional["status"] = "PASS_RUNTIME_FULLGRAPH_AND_CALL_COUNTS"
             capture_path = outputdir / "capture.json"
             capture = json.loads(capture_path.read_text())
             if (capture["status"] != "PASS" or not capture["same_request"]

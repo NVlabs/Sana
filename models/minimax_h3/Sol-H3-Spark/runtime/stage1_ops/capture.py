@@ -1,5 +1,6 @@
-"""Capture normalized H3 latents and native PCM from one prompt-only request."""
+"""Capture generated H3 latents and native PCM, excluding condition prefixes."""
 from pathlib import Path
+from .tasks import input_spec, task_of
 
 def install_capture(worker):
     """Install when native lazy decode stages exist; never decode H3 video."""
@@ -30,8 +31,13 @@ def install_capture(worker):
         target = state["target"] if rank0 else None
         if target is not None:
             layout = batch.extra[MINIMAX_H3_LAYOUT_KEY]
-            if layout.num_condition_video_rows or layout.num_condition_audio_rows:
+            task = task_of(target)
+            if task == "t2va" and (layout.num_condition_video_rows or layout.num_condition_audio_rows):
                 raise RuntimeError("T2VA capture forbids visual/audio condition rows")
+            if task != "t2va" and layout.num_condition_video_rows <= 0:
+                raise RuntimeError("conditioned task has no native visual prefix")
+            state["condition_video_rows"] = int(layout.num_condition_video_rows)
+            state["condition_audio_rows"] = int(layout.num_condition_audio_rows)
             if fastvideo_args.output_type == "latent" or fastvideo_args.video_decode_backend != "h3-vae":
                 raise RuntimeError("native audio decode configuration drift")
             if tuple(batch.raw_latent_shape) != (1, 24, 37, 24, 42):
@@ -75,7 +81,10 @@ def install_capture(worker):
                 **{key: target[key] for key in ("case_id", "prompt", "seed", "source_index")},
                 "request_id": target.get("request_id", target["case_id"]),
                 "status": "PASS", "same_request": True, "external_anchor_used": False,
-                "task": "t2va", "capture_rank": 0,
+                "task": task_of(target), "input_conditioned": task_of(target) != "t2va",
+                "input_spec": input_spec(target), "capture_rank": 0,
+                "condition_video_rows_excluded": state["condition_video_rows"],
+                "condition_audio_rows_excluded": state["condition_audio_rows"],
                 "payload_path": str(payload), "payload_sha256": digest(payload),
                 "generated_first_frame_path": None,
                 "generated_first_frame_sha256": None,

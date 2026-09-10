@@ -67,6 +67,11 @@ def install_fa4_audit(worker):
 
     def observed(*args, **kwargs):
         result = original(*args, **kwargs)
+        stage1 = worker._sol_h3_stage1
+        if stage1["task"] == "ref2va":
+            if not stage1.get("dit_active", False):
+                return result
+            stage1["attention_calls"] += 1
         q = args[0] if args else kwargs["q"]
         if q.device.type != "cuda":
             raise RuntimeError("FA4 actual-call receipt requires CUDA tensors")

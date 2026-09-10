@@ -3,6 +3,22 @@ from types import MethodType, SimpleNamespace
 from typing import Optional
 
 
+def install_dense(model, state):
+    """Use native fullgraph regions for the Ref2VA dense FA4 transformer."""
+    from fastvideo.models.loader import fsdp_load
+    attention = [module for module in model.modules() if type(module).__name__ == "MiniMaxH3Attention"]
+    if len(attention) != 52 or any(module.to_gate_compress is not None for module in attention):
+        raise RuntimeError("Ref2VA requires 52 native dense attention modules and no VSA gates")
+    model.prepare_for_compile()
+    enabled = fsdp_load._enable_regional_attention_compile(model)
+    compiled = fsdp_load._compile_model_regions(model, {"fullgraph": True,
+                                                       "options": {"emulate_precision_casts": True}})
+    if (enabled, compiled) != (52, 52):
+        raise RuntimeError("native Ref2VA regional compile did not cover all 52 regions")
+    state["dense_regional_compile"] = {"regions_wrapped": compiled, "attention_modules_enabled": enabled,
+                                       "fullgraph": True, "attention_backend": "FA4_dense"}
+
+
 def _layer_number(tensor, count):
     # CPU metadata only: never introduce one GPU .item/sync per attention call.
     if tensor.device.type != "cpu" or tensor.ndim != 0:

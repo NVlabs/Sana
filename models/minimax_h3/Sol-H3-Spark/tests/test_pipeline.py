@@ -6,7 +6,7 @@ import tempfile
 import time
 import unittest
 
-from runtime.config import read_cases, load_recipe, load_paths, REQUIRED_PATHS
+from runtime.config import read_cases, normalize_case, load_recipe, load_paths, REQUIRED_PATHS
 from runtime.pipeline import Pipeline, await_json, worker_environment
 
 
@@ -104,6 +104,45 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(recipe["stage2"]["updates"], 3)
         self.assertFalse(recipe["stage2"]["online_text_encoder"])
         self.assertEqual(recipe["output"]["frames"], 121)
+
+    def test_multimodal_case_inputs_are_preserved_in_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for filename in ("first.png", "last.png", "voice.wav"):
+                (root / filename).write_bytes(b"input fixture")
+            case = {"case_id": "guided", "prompt": "A fox turns its head.", "task": "fl2va",
+                    "first_frame": "first.png", "last_frame": "last.png"}
+            normalized = normalize_case(case, base_dir=root)
+            self.assertEqual(normalized["first_frame"], str((root / "first.png").resolve()))
+            self.assertEqual(normalized["last_frame"], str((root / "last.png").resolve()))
+            references = [{"type": "audio", "path": "voice.wav"}, {"type": "image", "path": "first.png"}]
+            ref = normalize_case({"case_id": "ref", "prompt": "A fox.", "task": "ref2va",
+                                  "references": references}, base_dir=root)
+            self.assertEqual([item["type"] for item in ref["references"]], ["audio", "image"])
+            with self.assertRaisesRegex(ValueError, "audio alone"):
+                normalize_case(dict(ref, references=ref["references"][:1]), base_dir=root)
+            with self.assertRaisesRegex(ValueError, "T2VA"):
+                normalize_case(dict(case, task="t2va"), base_dir=root)
+
+    def test_batch_rejects_mixed_model_families_before_workers_start(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "first.png").write_bytes(b"input fixture")
+            path = root / "prompts.jsonl"
+            first = {"case_id": "text", "prompt": "A fox."}
+            second = {"case_id": "guided", "prompt": "A fox.", "task": "fl2va", "first_frame": "first.png"}
+            path.write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n")
+            with self.assertRaisesRegex(ValueError, "one task"):
+                read_cases(path)
+
+    def test_ref2va_uses_its_own_adapter_without_inventing_vsa_gates(self):
+        text, ref = load_recipe(), load_recipe("ref2va")
+        self.assertEqual(text["stage1"]["lora"], "FastH3_VSA_DataFree")
+        self.assertEqual(ref["stage1"]["lora"], "LightX2V_Ref2VA_4step")
+        self.assertEqual(ref["stage1"]["attention"], "FA4_dense")
+        self.assertNotIn("sparsity", ref["stage1"])
+        self.assertEqual(ref["stage2"], text["stage2"])
+        self.assertEqual(ref["handoff"], text["handoff"])
 
     def test_paths_preserve_venv_interpreter_and_allow_absent_offline_weights(self):
         import sys

@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from download_checkpoints import ROOT, checkpoint_paths, sha256
+from download_checkpoints import ROOT, TASKS, checkpoint_paths, sha256
 
 
 def git(*args):
@@ -74,6 +74,8 @@ def prepare_source(entry, source):
 def arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoints", type=Path, default=ROOT / "checkpoints")
+    parser.add_argument("--task", choices=TASKS, default="t2va",
+                        help="Match the task selected for downloading and inference")
     parser.add_argument("--sources", type=Path, default=ROOT / "dependencies")
     parser.add_argument("--paths", type=Path, help="Existing flat JSON path overrides, e.g. cached model locations")
     parser.add_argument("--output", type=Path, default=ROOT / "paths.json")
@@ -104,10 +106,32 @@ def prepare_fa4_namespace(paths):
     cute.symlink_to(source, target_is_directory=True)
 
 
+def missing_h3_components(model_root, task):
+    """Check task-specific sharded files without reading model tensor data."""
+    root = Path(model_root)
+    components = ["transformer_ref" if task == "ref2va" else "transformer"]
+    if task != "t2va":
+        components.append("vae")
+    missing = []
+    for component in components:
+        directory = root / component
+        config = directory / "config.json"
+        index = directory / "diffusion_pytorch_model.safetensors.index.json"
+        for file in (config, index):
+            if not file.is_file():
+                missing.append(str(file))
+        if index.is_file():
+            for filename in sorted(set(json.loads(index.read_text())["weight_map"].values())):
+                file = directory / filename
+                if not file.is_file():
+                    missing.append(str(file))
+    return missing
+
+
 def main():
     args = arguments()
     manifest = json.loads((ROOT / "configs/dependencies.json").read_text())
-    paths = checkpoint_paths(args.checkpoints)
+    paths = checkpoint_paths(args.checkpoints, task=args.task)
     for entry in manifest["sources"]:
         paths[entry["key"]] = str((args.sources / entry["directory"]).resolve())
     paths["fa4_root"] = str((args.sources / "fa4-runtime").resolve())
@@ -135,7 +159,8 @@ def main():
     if not args.plan:
         prepare_fa4_namespace(paths)
 
-    required = ["h3_model", "vsa_lora", "qwen_checkpoint", "transformer", "refiner_lora",
+    lora_key = "ref2va_lora" if args.task == "ref2va" else "vsa_lora"
+    required = ["h3_model", lora_key, "qwen_checkpoint", "transformer", "refiner_lora",
                 "output_video_vae", "audio_vae", "h3_upscaler_source", "h3_upscaler_checkpoint",
                 "adapter_dir", "prompt_cache", "stage1_python", "stage2_python", "qwen_python"]
     required.append("fa4_root")
@@ -147,8 +172,10 @@ def main():
         required.remove("prompt_cache")
         required.extend(["offline_gemma", "offline_connector", "gemma_tokenizer"])
     missing = [key for key in required if key not in paths or not Path(paths[key]).exists()]
+    missing_model_files = missing_h3_components(paths["h3_model"], args.task)
     if args.plan:
-        print(json.dumps({"paths": paths, "missing_inputs": missing,
+        print(json.dumps({"task": args.task, "paths": paths, "missing_inputs": missing,
+                          "missing_model_files": missing_model_files,
                           "source_patches": [item["patch_manifest"] for item in manifest["sources"]
                                              if item.get("patch_manifest")],
                           "unresolved": manifest["unresolved"],
@@ -156,6 +183,8 @@ def main():
         return 0
     if missing:
         raise SystemExit("Missing required inputs: " + ", ".join(missing) + ". See docs/setup.md.")
+    if missing_model_files:
+        raise SystemExit("Missing H3 task component files: " + ", ".join(missing_model_files))
     for key in ("stage1_python", "stage2_python", "qwen_python"):
         if not Path(paths[key]).is_file() or not os.access(paths[key], os.X_OK):
             raise ValueError(f"{key} must be an executable Python interpreter")

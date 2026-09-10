@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 import time
 
+from .qwen_ops.media import input_spec, prepare_inputs
+
 
 def atomic_json(path, value):
     temporary = path.with_suffix('.tmp')
@@ -249,13 +251,17 @@ class Session:
         try:
             before = self.release_idle_cache()
             torch.cuda.reset_peak_memory_stats()
+            tokenize_kwargs, prepared_media = prepare_inputs(case, torch)
+            identity = {'task': case.get('task', 't2va'), 'external_anchor_used': False,
+                'input_conditioned': case.get('task', 't2va') != 't2va',
+                'input_spec': input_spec(case), 'prepared_media': prepared_media}
             with torch.inference_mode():
-                # The same prompt-only tokenizer/encode path as the fresh producer.
-                tokens = self.clip.tokenize(case['prompt'], images=[])
+                # Native Comfy owns visual tokens, temporal patches and tags.
+                tokens = self.clip.tokenize(case['prompt'], **tokenize_kwargs)
                 encoded = self.clip.encode_from_tokens(tokens, return_dict=True)
                 value = self.normalize(encoded)
             torch.cuda.synchronize()
-            payload = {'prompt': case['prompt'], 'task': 't2va', 'external_anchor_used': False,
+            payload = {'prompt': case['prompt'], **identity,
                 'prompt_embeds': value.cond, 'text_token_tags': value.minimax_token_tags}
             path = root / 'conditioning.pt'
             temporary = path.with_suffix('.tmp')
@@ -264,7 +270,7 @@ class Session:
             temporary.replace(path)
             self.completed_requests += 1
             after = self.release_idle_cache()
-            receipt = {'status': 'PASS', 'task': 't2va', 'external_anchor_used': False,
+            receipt = {'status': 'PASS', **identity,
                 'prompt': case['prompt'], 'case_id': case['case_id'], 'seed': case['seed'],
                 'payload': str(path), 'payload_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
                 'shape': list(value.cond.shape), 'dtype': str(value.cond.dtype),

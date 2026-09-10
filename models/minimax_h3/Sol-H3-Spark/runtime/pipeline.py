@@ -119,14 +119,15 @@ class Pipeline:
     loading peak. It is reported separately; the first formal request counts.
     """
 
-    def __init__(self, paths, output_root, *, worker_factory=Worker):
+    def __init__(self, paths, output_root, *, task="t2va", worker_factory=Worker):
         self.paths = paths
+        self.task = task
+        self.config = load_recipe(task)
         self.root = Path(output_root).resolve()
         self.root.mkdir(parents=True, exist_ok=False)
-        self.config = load_recipe()
         self.worker_factory = worker_factory
         self.stage1 = self.stage2 = self.qwen = None
-        self.report = {"status": "STARTING", "recipe": self.config, "requests": [],
+        self.report = {"status": "STARTING", "task": task, "recipe": self.config, "requests": [],
                        "timing": "same-host monotonic request entry to completed muxed MP4",
                        "warmup_excluded": True, "first_formal_request_included": True,
                        "phase_sum_used": False}
@@ -136,6 +137,8 @@ class Pipeline:
         write_json(self.root / "results.json", self.report)
 
     def start(self, case):
+        if case.get("task", "t2va") != self.task:
+            raise ValueError("The request task must match the pipeline's model family")
         started = time.monotonic_ns()
         self.stage1 = self.worker_factory("stage1", self.root / "stage1-worker", self.paths, self.config)
         temporary_qwen = self.worker_factory("qwen", self.root / "warmup-qwen-worker", self.paths, self.config)
@@ -160,9 +163,11 @@ class Pipeline:
     def generate(self, case):
         if self.qwen is None:
             raise RuntimeError("Call start() before generate()")
+        if case.get("task", "t2va") != self.task:
+            raise ValueError("Use a separate pipeline for a different task")
         request = self.root / case["case_id"]
         request.mkdir()
-        row = {"case_id": case["case_id"], "seed": case["seed"], "status": "RUNNING"}
+        row = {"case_id": case["case_id"], "seed": case["seed"], "task": self.task, "status": "RUNNING"}
         self.report["requests"].append(row)
         # This single parent clock includes fresh Qwen, scheduling, transfer and mux.
         started = time.monotonic_ns()

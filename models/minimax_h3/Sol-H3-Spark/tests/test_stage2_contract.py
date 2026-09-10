@@ -95,6 +95,13 @@ class Stage2ContractTests(unittest.TestCase):
             self.assertEqual(transfer.load_latent_capture(root, request_id="warmup-a")["case_id"], "case-a")
             with self.assertRaisesRegex(ValueError, "another request"):
                 transfer.load_latent_capture(root, request_id="formal-a")
+            for task in ("fl2va", "ref2va"):
+                (root / "capture.json").write_text(json.dumps(dict(row, task=task)))
+                self.assertEqual(transfer.load_latent_capture(root)["task"], task)
+            (root / "capture.json").write_text(json.dumps(dict(row, task="unknown")))
+            with self.assertRaisesRegex(ValueError, "capture identity"):
+                transfer.load_latent_capture(root)
+            (root / "capture.json").write_text(json.dumps(row))
             payload.write_bytes(b"changed artifact")
             with self.assertRaisesRegex(ValueError, "SHA"):
                 transfer.load_latent_capture(root, request_id="warmup-a")

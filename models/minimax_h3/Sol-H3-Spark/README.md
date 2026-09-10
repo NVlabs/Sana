@@ -1,19 +1,23 @@
 # Sol-H3 on NVIDIA DGX Spark
 
-A two-stage text-to-video-and-audio pipeline for one NVIDIA DGX Spark.
+A two-stage video-and-audio pipeline for one NVIDIA DGX Spark.
 Generate a 384p draft, upscale and transfer its latent representation, then
 refine and decode a **1344 × 768, 121-frame video at 24 FPS** with original H3 audio.
 
 [Project page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/) ·
 [Environment and weights](docs/setup.md) · [Component terms](THIRD_PARTY_NOTICES.md)
 
-> **Validation:** this entry completed a full warmup and three consecutive
-> requests on one DGX Spark. Offline prompt contexts and Stage1 latent/audio
+> **T2VA validation:** this entry completed a full warmup and three consecutive
+> text-only requests on one DGX Spark. Offline prompt contexts and Stage1 latent/audio
 > payloads match the reference. This used the existing runtime environments;
 > a clean-environment installation has not yet been validated. See
 > [validation](docs/validation.md).
 
-## The recipe
+FL2VA has also completed first-only, last-only and first+last requests on
+Spark. Ref2VA is implemented but real checkpoint loading and GPU execution
+remain unvalidated; its dedicated weights are required.
+
+## The default T2VA recipe
 
 | Component | Fixed configuration |
 | --- | --- |
@@ -29,8 +33,9 @@ refine and decode a **1344 × 768, 121-frame video at 24 FPS** with original H3 
 The implemented recipe is recorded in [configs/default.json](configs/default.json).
 It is not a tuning interface: changing this record alone is rejected so that
 the reported settings cannot disagree with the fixed implementation.
-This entry exposes one recipe, not a collection of ablation switches. There
-is no one-step refiner, TAE decoder, image anchor or intermediate video decode.
+Task selection changes native input conditioning and, for Ref2VA, its required
+model partition and LoRA. It is not a collection of ablation switches. There
+is no one-step refiner, TAE decoder or intermediate video decode.
 
 ### Why the models can remain resident
 
@@ -81,6 +86,68 @@ python infer.py --paths paths.json \
 Each JSONL row has `case_id`, `prompt` and `seed`. The output directory must
 be new. Results are written after each completed request; no existing run is
 overwritten.
+
+### First/last-frame generation (FL2VA)
+
+Prepare the additional input-encoding weights with `--task fl2va` as described
+in [setup](docs/setup.md). Supply a first frame, a last frame, or both:
+
+```bash
+python infer.py --paths paths-fl2va.json --task fl2va \
+  --first-frame first.png --last-frame last.png \
+  --prompt "integrated_multimodal_description: A red fox walks from the woodland edge into the clearing. The camera stays wide. overall_soundscape: Soft wind and leaves rustling." \
+  --seed 42 --output-dir outputs/fox-guided
+```
+
+Inputs use native H3 image preprocessing, Qwen visual conditioning and H3 VAE
+encoding. FL2VA uses the same H3 model family as T2VA; the Spark adaptation
+retains its four-update VSA draft. The VSA LoRA's upstream release claims T2VA,
+so conditioned-image quality is a separate validation target, not an upstream
+guarantee.
+
+H3's first/last frames are **conditioning tokens**, not hard pixel replacement.
+The downstream upscaler, adapter and three-step refinement remain unchanged.
+The 124-frame draft is still converted to a 121-frame final video, so neither
+pixel-exact endpoint reproduction nor unchanged identity is guaranteed.
+
+### Reference generation (Ref2VA; GPU validation pending)
+
+Use `--task ref2va` when downloading, preparing paths and running inference.
+This selects **`transformer_ref` and the LightX2V Ref2VA four-step LoRA**, with
+W8A8 FP8 DiT and dense FA4 attention. The T2VA VSA adapter is not reused for
+a different checkpoint family. Stage2 stays on the same three-step Sol recipe.
+
+```bash
+python infer.py --paths paths-ref2va.json --task ref2va \
+  --reference image:subject.png --reference audio:voice.wav \
+  --prompt "subject_definitions: <Subject 1> is the person in <Picture 1>. <Audio 1> provides the voice reference. detailed_description: <Subject 1> faces the camera and says, <d>[English] Welcome to the garden.</d> overall_soundscape: Quiet outdoor ambience." \
+  --seed 42 --output-dir outputs/reference
+```
+
+References retain command-line order. Supported input types are `image`,
+`video` and `audio`; at least one image or video is required. Native limits
+are nine images, three videos, three audio files and twelve references total.
+Reference images use the pinned native 2048-short-edge preprocessing. Video
+references use native frame sampling; embedded video audio contributes an
+audio reference before that video's visual item. Keep the numbered media
+references in the prompt aligned with this ordering. See the
+[official H3 input and prompting guide](https://huggingface.co/MiniMaxAI/MiniMax-H3).
+
+For batches, add `task` and either `first_frame` / `last_frame` or an ordered
+`references` list to each row. Paths are relative to the JSONL file:
+
+```json
+{"case_id":"guided","task":"fl2va","prompt":"A fox walks into the clearing.","seed":42,"first_frame":"inputs/fox.png"}
+```
+
+```json
+{"case_id":"reference","task":"ref2va","prompt":"The subject in <Picture 1> turns toward the camera.","seed":42,"references":[{"type":"image","path":"inputs/subject.png"}]}
+```
+
+Use one task per batch. Switching task families uses a separate invocation;
+the entry does not swap model partitions mid-request. Input-conditioned tasks
+also need the H3 VAE **encoder**, although H3 video decoding remains bypassed.
+Their additional reference memory is not covered by the T2VA residency result.
 
 ```text
 outputs/examples/

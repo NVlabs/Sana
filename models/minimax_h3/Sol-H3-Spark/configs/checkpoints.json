@@ -20,13 +20,18 @@
         "text_encoder/*.jinja",
         "text_encoder/*.model",
         "text_encoder/*.txt",
-        "vae/config.json",
-        "transformer/*"
+        "vae/config.json"
       ],
-      "note": "Native BF16 Qwen and video VAE weights are excluded; runtime forbids their materialization."
+      "task_allow_patterns": {
+        "t2va": ["transformer/*"],
+        "fl2va": ["transformer/*", "vae/*"],
+        "ref2va": ["transformer_ref/*", "vae/*"]
+      },
+      "note": "Native BF16 Qwen weights are excluded. FL2VA and Ref2VA additionally need the native H3 VAE for input encoding; final video decoding remains LTX Conv VAE."
     },
     {
       "key": "vsa_lora",
+      "tasks": ["t2va", "fl2va"],
       "kind": "file",
       "repo_id": "FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA",
       "revision": "f509e629374cac104e7f62daecce6d1488a3041d",
@@ -35,6 +40,21 @@
       "bytes": 5339117712,
       "sha256": "42dc502a2078f166c396a1fa75f29728d1844363652d345d5ef3e2b444ed6470",
       "license": "MiniMax-H3 Community License Agreement"
+    },
+    {
+      "key": "ref2va_lora",
+      "tasks": ["ref2va"],
+      "kind": "file",
+      "repo_id": "lightx2v/Minimax-h3-Turbo",
+      "revision": "2f015e66b37c585cea9dc4ae6f1850ea8788e742",
+      "directory": "Minimax-h3-Turbo",
+      "filename": "minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors",
+      "bytes": 1383677768,
+      "sha256": "9e642fc8749c74f8da5e2382877ab5c7aa37b9a73b7fd0d6d457bd1b3cb1ae99",
+      "lora_alpha": 8,
+      "lora_rank": 128,
+      "license": "Apache-2.0 declared by the LoRA model card; base model remains subject to MiniMax-H3 terms",
+      "note": "Task-specific four-step Ref2VA LoRA. Not a VSA-distilled checkpoint."
     },
     {
       "key": "qwen_checkpoint",

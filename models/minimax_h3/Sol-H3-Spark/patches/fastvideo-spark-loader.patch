@@ -1,0 +1,188 @@
+diff --git a/fastvideo/layers/lora/linear.py b/fastvideo/layers/lora/linear.py
+index bdff2352..de9c7af4 100644
+--- a/fastvideo/layers/lora/linear.py
++++ b/fastvideo/layers/lora/linear.py
+@@ -26,12 +26,13 @@ class BaseLayerWithLoRA(nn.Module):
+         lora_rank: int | None = None,
+         lora_alpha: int | None = None,
+         training_mode: bool = False,
++        retain_cpu_weight: bool = True,
+     ):
+         super().__init__()
+         self.base_layer: nn.Module = base_layer
+ 
+         self.merged: bool = False
+-        self.cpu_weight = base_layer.weight.to("cpu")
++        self.cpu_weight: torch.Tensor | None = (base_layer.weight.to("cpu") if retain_cpu_weight else None)
+         # indicates adapter weights don't contain this layer
+         # (which shouldn't normally happen, but we want to separate it from the case of erroneous merging)
+         self.disable_lora: bool = False
+@@ -204,6 +205,10 @@ class BaseLayerWithLoRA(nn.Module):
+             if if_merged_only:
+                 return
+             raise ValueError("unmerge_lora_weights called but no LoRA is currently merged")
++        if self.cpu_weight is None:
++            raise RuntimeError(
++                "Constructor-time dense LoRA does not retain a CPU master and cannot be unmerged; "
++                "create a new VideoGenerator instead.")
+ 
+         # avoid precision loss
+         if isinstance(self.base_layer.weight, DTensor):
+@@ -242,8 +247,9 @@ class ColumnParallelLinearWithLoRA(BaseLayerWithLoRA):
+         lora_rank: int | None = None,
+         lora_alpha: int | None = None,
+         training_mode: bool = False,
++        retain_cpu_weight: bool = True,
+     ) -> None:
+-        super().__init__(base_layer, lora_rank, lora_alpha, training_mode)
++        super().__init__(base_layer, lora_rank, lora_alpha, training_mode, retain_cpu_weight)
+ 
+     def forward(self, input_: torch.Tensor) -> torch.Tensor:
+         # duplicate the logic in ColumnParallelLinear
+@@ -273,8 +279,9 @@ class MergedColumnParallelLinearWithLoRA(ColumnParallelLinearWithLoRA):
+         lora_rank: int | None = None,
+         lora_alpha: int | None = None,
+         training_mode: bool = False,
++        retain_cpu_weight: bool = True,
+     ) -> None:
+-        super().__init__(base_layer, lora_rank, lora_alpha, training_mode)
++        super().__init__(base_layer, lora_rank, lora_alpha, training_mode, retain_cpu_weight)
+ 
+     def slice_lora_a_weights(self, A: torch.Tensor) -> torch.Tensor:
+         return A.to(self.base_layer.weight)
+@@ -296,8 +303,9 @@ class QKVParallelLinearWithLoRA(ColumnParallelLinearWithLoRA):
+         lora_rank: int | None = None,
+         lora_alpha: int | None = None,
+         training_mode: bool = False,
++        retain_cpu_weight: bool = True,
+     ) -> None:
+-        super().__init__(base_layer, lora_rank, lora_alpha, training_mode)
++        super().__init__(base_layer, lora_rank, lora_alpha, training_mode, retain_cpu_weight)
+ 
+     def slice_lora_a_weights(self, A: torch.Tensor) -> torch.Tensor:
+         return A
+@@ -328,8 +336,9 @@ class RowParallelLinearWithLoRA(BaseLayerWithLoRA):
+         lora_rank: int | None = None,
+         lora_alpha: int | None = None,
+         training_mode: bool = False,
++        retain_cpu_weight: bool = True,
+     ) -> None:
+-        super().__init__(base_layer, lora_rank, lora_alpha, training_mode)
++        super().__init__(base_layer, lora_rank, lora_alpha, training_mode, retain_cpu_weight)
+ 
+     def forward(self, input_: torch.Tensor):
+         # duplicate the logic in RowParallelLinear
+@@ -372,7 +381,8 @@ class RowParallelLinearWithLoRA(BaseLayerWithLoRA):
+ def get_lora_layer(layer: nn.Module,
+                    lora_rank: int | None = None,
+                    lora_alpha: int | None = None,
+-                   training_mode: bool = False) -> BaseLayerWithLoRA | None:
++                   training_mode: bool = False,
++                   retain_cpu_weight: bool = True) -> BaseLayerWithLoRA | None:
+     supported_layer_types: dict[type[LinearBase], type[BaseLayerWithLoRA]] = {
+         # the order matters
+         # VocabParallelEmbedding: VocabParallelEmbeddingWithLoRA,
+@@ -384,7 +394,11 @@ def get_lora_layer(layer: nn.Module,
+     }
+     for src_layer_type, lora_layer_type in supported_layer_types.items():
+         if isinstance(layer, src_layer_type):  # pylint: disable=unidiomatic-typecheck
+-            ret = lora_layer_type(layer, lora_rank=lora_rank, lora_alpha=lora_alpha, training_mode=training_mode)
++            ret = lora_layer_type(layer,
++                                  lora_rank=lora_rank,
++                                  lora_alpha=lora_alpha,
++                                  training_mode=training_mode,
++                                  retain_cpu_weight=retain_cpu_weight)
+             return ret
+     return None
+ 
+diff --git a/fastvideo/models/loader/lora_patch.py b/fastvideo/models/loader/lora_patch.py
+index 40925020..d252f56b 100644
+--- a/fastvideo/models/loader/lora_patch.py
++++ b/fastvideo/models/loader/lora_patch.py
+@@ -182,7 +182,7 @@ class DenseLoRAPatch:
+             raise ValueError(f"LoRA diff for {param_name} has shape {tuple(delta.shape)}, "
+                              f"but the parameter is {tuple(tensor.shape)}")
+         self._applied.add(param_name)
+-        return tensor.to(torch.float32) + delta.to(torch.float32) * self._strength
++        return tensor.to(torch.float32) + delta.to(device=tensor.device, dtype=torch.float32) * self._strength
+ 
+     def provides(self, param_name: str) -> bool:
+         """Whether the adapter carries this parameter whole, without reading it."""
+diff --git a/fastvideo/pipelines/lora_pipeline.py b/fastvideo/pipelines/lora_pipeline.py
+index 3dbeae64..58aa7beb 100644
+--- a/fastvideo/pipelines/lora_pipeline.py
++++ b/fastvideo/pipelines/lora_pipeline.py
+@@ -269,7 +269,7 @@ class LoRAPipeline(ComposedPipelineBase):
+         self.exclude_lora_layers[transformer_name] = excluded
+         return excluded
+ 
+-    def _apply_constructor_adapter(self) -> None:
++    def _apply_constructor_adapter(self, *, mapping_transformer: nn.Module | None = None) -> None:
+         if self.lora_path is None:
+             return
+         self.cur_adapter_name = ""
+@@ -280,6 +280,7 @@ class LoRAPipeline(ComposedPipelineBase):
+                 self.lora_nickname,
+                 self.lora_path,
+                 strength=self.lora_strength,
++                _constructor_mapping_transformer=mapping_transformer,
+             )
+         finally:
+             self._setting_constructor_adapter = False
+@@ -323,6 +324,7 @@ class LoRAPipeline(ComposedPipelineBase):
+                         lora_rank=self.lora_rank,
+                         lora_alpha=self.lora_alpha,
+                         training_mode=self.training_mode,
++                        retain_cpu_weight=(self.training_mode or self._constructor_dense_lora_path is None),
+                     )
+                     if layer is not None:
+                         block_name_split = name.split(".", 2)
+@@ -357,7 +359,9 @@ class LoRAPipeline(ComposedPipelineBase):
+ 
+                 def _lora_after_load(module: nn.Module, *, _name: str = transformer_name) -> nn.Module:
+                     self._convert_one_transformer(_name, module)
+-                    self._apply_constructor_adapter()
++                    self._apply_constructor_adapter(
++                        mapping_transformer=module if _name == "transformer" else None,
++                    )
+                     return module
+ 
+                 transformer_module.add_release_callback(_drop_lora_refs)
+@@ -369,7 +373,9 @@ class LoRAPipeline(ComposedPipelineBase):
+                          lora_nickname: str,
+                          lora_path: str | None = None,
+                          strength: float = 1.0,
+-                         accumulate: bool = False):  # type: ignore
++                         accumulate: bool = False,
++                         *,
++                         _constructor_mapping_transformer: nn.Module | None = None):  # type: ignore
+         """
+         Load a LoRA adapter into the pipeline and merge it into the transformer.
+         Args:
+@@ -382,6 +388,13 @@ class LoRAPipeline(ComposedPipelineBase):
+ 
+         if not math.isfinite(strength):
+             raise ValueError(f"LoRA strength must be finite, got {strength}")
++        if _constructor_mapping_transformer is not None:
++            if not self._setting_constructor_adapter:
++                raise RuntimeError(
++                    "The concrete transformer mapping override is only valid while applying a constructor adapter")
++            if is_lazy_module(_constructor_mapping_transformer):
++                raise RuntimeError(
++                    "The constructor mapping override must be the in-flight concrete transformer, not a LazyModule")
+ 
+         requested_path = lora_path or self.lora_adapter_paths.get(lora_nickname)
+         exact_current_adapter = (self.cur_adapter_name == lora_nickname and self.cur_adapter_path == requested_path
+@@ -412,8 +425,10 @@ class LoRAPipeline(ComposedPipelineBase):
+             lora_state_dict = load_file(lora_local_path)
+ 
+             # Map the hf layer names to our custom layer names
+-            param_names_mapping_fn = get_param_names_mapping(self.modules["transformer"].param_names_mapping)
+-            lora_param_names_mapping_fn = get_param_names_mapping(self.modules["transformer"].lora_param_names_mapping)
++            mapping_transformer = (_constructor_mapping_transformer
++                                   if _constructor_mapping_transformer is not None else self.modules["transformer"])
++            param_names_mapping_fn = get_param_names_mapping(mapping_transformer.param_names_mapping)
++            lora_param_names_mapping_fn = get_param_names_mapping(mapping_transformer.lora_param_names_mapping)
+ 
+             # Extract alpha values and weights in a single pass
+             to_merge_params: defaultdict[Hashable, dict[Any, Any]] = (defaultdict(dict))

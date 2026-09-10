@@ -10,9 +10,17 @@ hero loop, synchronized showcase playback, prompt details and BibTeX copy.
 All video, poster, logo and favicon assets are hosted in
 [Sana-assets](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/tree/main/Sol-Engine/Sol-H3-Spark/20260907).
 URLs are pinned to dataset commit `f9de325489994d3d5f8cf607164238b1edb1ee08`.
-No access token or authentication is needed to view them. The four-clip hero
-order is elderly couple, skateboarding, flowing water and orbital greenhouse.
-No dragon or eagle clip appears on the page.
+No access token or authentication is needed to view them.
+
+The homepage hero is the 35.333-second animated Sol-H3 on Spark introduction,
+at 1344x768 / 24 FPS with native dialogue and an instrumental music bed. Its
+MP4 and frame-derived poster are pinned to Sana-assets revision
+`e237daa52e404622250583edcff46d027d02241c` under
+`Sol-Engine/Sol-H3-Spark/20260910/hero/`. The film was produced with Base H3
+Ref2VA on HSG (50 scheduler points / 49 DiT evaluations, no LoRA), not with
+the 56-second Spark inference pipeline. Hero labels identify it as an
+introduction rather than a measured Spark generation. The benchmark claims
+and showcase media remain unchanged; the older showreel assets are retained.
 
 ## Content and maintenance
 

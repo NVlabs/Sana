@@ -203,10 +203,9 @@
 </div>
 <p>Sol-H3 generates a 768p, five-second video in 56 seconds on one DGX Spark—6.6× faster than the 4-step LoRA baseline.</p>
 </header>
-<article class="latency-comparison" aria-label="Sol-H3 complete request latency, 56.17 seconds, is 6.6 times faster than the reported 4-step LoRA baseline at 374 seconds">
+<article class="latency-comparison" aria-label="Complete request latency: 4-step LoRA, 374 seconds; 4-step LoRA plus quantization, 152 seconds; Sol-H3, 56 seconds">
 <header class="latency-comparison-head">
 <span>Complete request latency</span>
-<strong>6.6× faster</strong>
 </header>
 <div class="latency-comparison-main">
 <aside class="latency-workload" aria-label="Benchmark workload">
@@ -231,21 +230,6 @@
 </div>
 </aside>
 <div class="latency-bars">
-<div class="latency-side latency-side-sol">
-<div class="latency-row-head">
-<span class="latency-name">Sol-H3</span>
-<strong class="latency-value">56.17 <small>s</small>
-</strong>
-</div>
-<div class="latency-track">
-<div class="latency-fill latency-fill-sol">
-<span class="sol-stage sol-stage-one">
-</span>
-<span class="sol-stage sol-stage-two">
-</span>
-</div>
-</div>
-</div>
 <div class="latency-side latency-side-baseline">
 <div class="latency-row-head">
 <span class="latency-name">4-step LoRA</span>
@@ -254,6 +238,35 @@
 </div>
 <div class="latency-track">
 <div class="latency-fill latency-fill-baseline">
+</div>
+</div>
+</div>
+<div class="latency-side latency-side-baseline">
+<div class="latency-row-head">
+<span class="latency-name">4-step LoRA + quant</span>
+<strong class="latency-value">152 <small>s</small>
+</strong>
+</div>
+<div class="latency-track">
+<div class="latency-fill latency-fill-quant">
+</div>
+</div>
+</div>
+<div class="latency-side latency-side-sol">
+<div class="latency-row-head">
+<span class="latency-name-group">
+<span class="latency-name">Sol-H3</span>
+<span class="latency-speedup">6.6× faster</span>
+</span>
+<strong class="latency-value">56 <small>s</small>
+</strong>
+</div>
+<div class="latency-track">
+<div class="latency-fill latency-fill-sol">
+<span class="sol-stage sol-stage-one">
+</span>
+<span class="sol-stage sol-stage-two">
+</span>
 </div>
 </div>
 </div>
@@ -268,7 +281,7 @@
 <i class="stage-two-swatch">
 </i>Stage 2</span>
 </span>
-<small>Baseline data from <a href="https://haoailab.com/blogs/fasth3-local/" target="_blank" rel="noreferrer">FastH3 Local ↗</a>
+<small><a href="https://haoailab.com/blogs/fasth3-local/" target="_blank" rel="noreferrer">Reference ↗</a>
 </small>
 </footer>
 </article>
@@ -1215,7 +1228,7 @@
 </div>
 <aside class="detail-evidence">
 <span>Complete hot E2E</span>
-<strong>56.17 s</strong>
+<strong>56 s</strong>
 <small>request entry → MP4 with audio</small>
 </aside>
 </article>

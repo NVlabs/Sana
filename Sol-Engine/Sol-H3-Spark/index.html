@@ -523,6 +523,31 @@ body:before,.hero:before,.hero:after{display:none}
 .optimization-details .detail-evidence strong{font-family:var(--font-sans);font-size:clamp(25px,2.2vw,32px);font-variant-numeric:tabular-nums}
 .optimization-details .tech-transfer-note{display:block;margin-top:8px;font:500 12px/1.5 var(--font-sans);color:var(--mint)}
 @media(max-width:760px){.optimization-details{margin-top:24px}.optimization-details>h3{font-size:16px;padding:18px 0;gap:10px}.optimization-details>h3 small{font-size:11px}}
+
+/* Review: foreground-only bars, endpoint values and one baseline-to-Sol curve. */
+.hero-product-name{display:flex;align-items:baseline;gap:15px;white-space:nowrap}
+.hero-spark-suffix{font:550 .26em/1 var(--font-sans);letter-spacing:-.025em;color:var(--muted)}
+.latency-bars{position:relative;gap:40px;padding-right:36px;padding-bottom:32px;--value-space:108px;--value-gap:14px}
+.latency-track{position:relative;width:calc(100% - var(--value-space));height:26px;background:transparent;overflow:visible;margin-top:14px}
+.latency-track .latency-fill{width:var(--bar-share)}
+.latency-track .latency-value{position:absolute;left:calc(var(--bar-share) + var(--value-gap));top:50%;transform:translateY(-50%);font-size:32px;line-height:1;z-index:1}
+.latency-reference{position:absolute;inset:0;pointer-events:none}
+:root[data-preview-theme="light"] .latency-reference{--highlight:#84B736}
+.latency-reference-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;color:var(--highlight)}
+.latency-reference-svg path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.latency-reference-label{position:absolute;display:flex;align-items:baseline;gap:6px;white-space:nowrap;transform:translate(-50%,-100%)}
+.latency-reference-label strong{font:650 25px/1 var(--font-sans);letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--highlight)}
+.latency-reference-label small{font:450 11px/1.2 var(--font-sans);color:var(--muted)}
+.timing-stack{display:flex;width:100%;height:44px;border-radius:7px;overflow:hidden}
+.timing-segment{display:flex;align-items:center;justify-content:center;flex:none;min-width:0;height:100%;color:var(--memory-ink)}
+.timing-segment b{font:650 13px/1 var(--font-sans);font-variant-numeric:tabular-nums}
+.timing-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 35px;padding:0;margin:23px 0 0;list-style:none}
+.timing-legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:10px;font:450 12px/1.5 var(--font-sans);color:var(--muted)}
+.timing-legend i{width:9px;height:9px;border-radius:2px}
+.timing-legend strong{font-size:13px;font-weight:600;color:var(--white);font-variant-numeric:tabular-nums}
+.timing-legend strong small{font-size:inherit;font-weight:450;margin-left:1px}
+@media(max-width:1100px){.hero-product-name{gap:12px}.hero-spark-suffix{font-size:.23em}}
+@media(max-width:760px){.hero-product-name{font-size:clamp(64px,17.8vw,94px);gap:12px}.hero-spark-suffix{font-size:.25em}.latency-bars{gap:40px;padding-right:20px;--value-space:78px;--value-gap:10px}.latency-track{height:22px}.latency-track .latency-value{font-size:26px}.latency-reference-label strong{font-size:20px}.latency-reference-label small{font-size:10px}.timing-stack{height:34px}.timing-segment b{font-size:10px}.timing-legend{grid-template-columns:1fr;gap:11px;margin-top:18px}.timing-legend li{font-size:11px}.timing-legend strong{font-size:12px}}
 </style>
   <title>Sol-H3: Speed-of-Light MiniMax-H3 on Single NVIDIA DGX Spark Blackwell Superchip</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></head>
@@ -593,7 +618,7 @@ body:before,.hero:before,.hero:after{display:none}
 <div class="hero-copy">
 <div class="eyebrow">Sol-Engine × Sol-Attn · MiniMax-H3 Inference</div>
 <h1 class="hero-product-title" id="hero-title">
-<span class="hero-product-name">Sol-H3</span>
+<span class="hero-product-name">Sol-H3<small class="hero-spark-suffix">- Spark</small></span>
 <span class="hero-product-claim">Accelerating MiniMax-H3 768p Video Generation on a Single NVIDIA DGX Spark in <em>1 Minute</em>
 </span>
 </h1>
@@ -616,7 +641,7 @@ body:before,.hero:before,.hero:after{display:none}
 </div>
 <p class="hero-dek">A two-stage pipeline specialized for a single NVIDIA DGX Spark generates a 384p draft and refines it to 768p.</p>
 <div class="hero-actions spark-hero-actions" aria-label="Project links">
-<a class="button spark-code-button" href="https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3/Sol-H3-Spark" target="_blank" rel="noreferrer">Sol-H3 code<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right" aria-hidden="true">
+<a class="button spark-code-button" href="https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3/Sol-H3-Spark" target="_blank" rel="noreferrer">Sol-H3 code - Spark<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right" aria-hidden="true">
 <path d="M7 7h10v10">
 </path>
 <path d="M7 17 17 7">
@@ -634,7 +659,7 @@ body:before,.hero:before,.hero:after{display:none}
 </div>
 <div class="hero-visual" aria-label="Sol-H3 on Spark introduction">
 <div class="video-terminal">
-<video controls="" preload="none" class="hero-film" loop="" playsInline="" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/8ddff2df35a1ef28e5790067a234628f29298370/Sol-Engine/Sol-H3-Spark/20260911/hero/sol-h3-on-spark-original-montage-logos-poster.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/8ddff2df35a1ef28e5790067a234628f29298370/Sol-Engine/Sol-H3-Spark/20260911/hero/sol-h3-on-spark-original-montage-logos.mp4" aria-label="Sol-H3 on Spark: a 35-second animated introduction">
+<video controls="" preload="none" class="hero-film" loop="" playsInline="" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/6b114b40fe4851ba5a012559aa2c8b9c610c373c/Sol-Engine/Sol-H3-Spark/20260911/hero/sol-h3-on-spark-three-act-cow-v1-poster.jpg" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/6b114b40fe4851ba5a012559aa2c8b9c610c373c/Sol-Engine/Sol-H3-Spark/20260911/hero/sol-h3-on-spark-three-act-cow-v1.mp4" aria-label="Sol-H3 on Spark: a 35-second animated introduction">
 </video>
 <button type="button" tabindex="0" data-slot="button" aria-label="Play background video" class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#x27;size-&#x27;])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 button spark-hero-control">
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true">
@@ -728,16 +753,19 @@ body:before,.hero:before,.hero:after{display:none}
 </div></aside>
 <div class="latency-bars">
 <div class="latency-side latency-side-baseline">
-<div class="latency-row-head"><span class="latency-name">4-step LoRA</span><strong class="latency-value">374 <small>s</small></strong></div>
-<div class="latency-track"><div class="latency-fill latency-fill-baseline" style="width:100%"></div></div>
+<div class="latency-row-head"><span class="latency-name">4-step LoRA</span></div>
+<div class="latency-track" style="--bar-share:100%"><div class="latency-fill latency-fill-baseline"></div><strong class="latency-value">374 <small>s</small></strong></div>
 </div>
 <div class="latency-side latency-side-baseline">
-<div class="latency-row-head"><span class="latency-name">4-step LoRA + quant</span><strong class="latency-value">153 <small>s</small></strong></div>
-<div class="latency-track"><div class="latency-fill latency-fill-quant" style="width:40.971640902495544%"></div></div>
+<div class="latency-row-head"><span class="latency-name">4-step LoRA + quant</span></div>
+<div class="latency-track" style="--bar-share:40.971640902495544%"><div class="latency-fill latency-fill-quant"></div><strong class="latency-value">153 <small>s</small></strong></div>
 </div>
 <div class="latency-side latency-side-sol">
-<div class="latency-row-head"><span class="latency-name-group"><span class="latency-name">Sol-H3</span><span class="latency-speedup">Warmed up</span></span><strong class="latency-value">56 <small>s</small></strong></div>
-<div class="latency-track"><div class="latency-fill latency-fill-sol" style="width:15.019593203832441%"><span class="sol-stage sol-stage-one" style="flex:0 0 38.46119016713666%"></span><span class="sol-stage sol-stage-two"></span></div></div>
+<div class="latency-row-head"><span class="latency-name-group"><span class="latency-name">Sol-H3</span></span></div>
+<div class="latency-track" style="--bar-share:15.019593203832441%"><div class="latency-fill latency-fill-sol"><span class="sol-stage sol-stage-one" style="flex:0 0 38.46119016713666%"></span><span class="sol-stage sol-stage-two"></span></div><strong class="latency-value">56 <small>s</small></strong></div>
+</div><div class="latency-reference" role="img" aria-label="Sol-H3 is 6.7 times faster than the referenced 4-step LoRA run: 374 seconds versus 56 seconds" title="4-step LoRA → Sol-H3">
+<svg class="latency-reference-svg" aria-hidden="true"><defs><marker id="latency-arrowhead" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L7 4 L1 7"/></marker></defs><path class="latency-reference-curve" marker-end="url(#latency-arrowhead)"/></svg>
+<span class="latency-reference-label"><strong>6.7× faster</strong></span>
 </div></div></div>
 <footer class="latency-comparison-foot"><span class="stage-legend" aria-label="Sol-H3 stages"><span><i class="stage-one-swatch"></i>Stage 1: 4-step H3 · NVFP4/FP8 quant</span><span><i class="stage-two-swatch"></i>Stage 2: LTX-2.5 3-step refiner</span></span><small><a href="https://haoailab.com/blogs/fasth3-local/" target="_blank" rel="noreferrer">Reference ↗</a></small></footer>
 </article>
@@ -746,14 +774,22 @@ body:before,.hero:before,.hero:after{display:none}
 <p>The two hot measurements reflect production serving: from prompt arrival, including fresh Qwen encoding, to a completed MP4 with audio.</p>
 <figure class="timing-breakdown" aria-labelledby="timing-breakdown-title">
 <figcaption><h3 id="timing-breakdown-title">Where the 56.17 s goes</h3><span>Share of E2E latency</span></figcaption>
-<ol class="timing-bars">
-<li class="timing-component" data-seconds="1.3275745716666667" data-percent="2.363356038976498" title="Qwen prompt encoding: 1.33 s · Measured"><span class="timing-component-label">Qwen prompt encoding</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-qwen" style="width:2.363356038976498%"></span></div><strong>2.4<small>%</small></strong></li>
-<li class="timing-component" data-seconds="19.757245890000004" data-percent="35.17196501365281" title="H3 4-step generation: 19.76 s · Measured"><span class="timing-component-label">H3 4-step generation</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-h3" style="width:35.17196501365281%"></span></div><strong>35.2<small>%</small></strong></li>
-<li class="timing-component" data-seconds="2.1219747503333286" data-percent="3.7775518963578816" title="H3 upscaler + VAE Adapter: 2.12 s · Handoff residual estimate"><span class="timing-component-label">H3 upscaler + VAE Adapter</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-adapter" style="width:3.7775518963578816%"></span></div><strong>3.8<small>%</small></strong></li>
-<li class="timing-component" data-seconds="24.72311666666667" data-percent="44.01223729611924" title="LTX 3-step refinement: 24.72 s · Measured"><span class="timing-component-label">LTX 3-step refinement</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-ltx" style="width:44.01223729611924%"></span></div><strong>44.0<small>%</small></strong></li>
-<li class="timing-component" data-seconds="7.006958333333333" data-percent="12.473828322239044" title="LTX VAE decode: 7.01 s · Measured"><span class="timing-component-label">LTX VAE decode</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-conv" style="width:12.473828322239044%"></span></div><strong>12.5<small>%</small></strong></li>
-<li class="timing-component" data-seconds="0.7163173333333334" data-percent="1.2751923181471865" title="MP4 output + audio mux: 0.72 s · Writer residual"><span class="timing-component-label">MP4 output + audio mux</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-audio" style="width:1.2751923181471865%"></span></div><strong>1.3<small>%</small></strong></li>
-<li class="timing-component" data-seconds="0.5200910369999932" data-percent="0.9258691145073441" title="Request overhead: 0.52 s · Request residual estimate"><span class="timing-component-label">Request overhead</span><div class="timing-component-track" aria-hidden="true"><span class="memory-tone-runtime" style="width:0.9258691145073441%"></span></div><strong>0.9<small>%</small></strong></li>
+<div class="timing-stack" role="img" aria-label="Share of total request latency; component percentages are listed below">
+<span class="timing-segment memory-tone-qwen" data-seconds="1.3275745716666667" data-percent="2.363356038976498" style="width:2.363356038976498%" title="Qwen prompt encoding: 2.4% · 1.33 s · Measured"></span>
+<span class="timing-segment memory-tone-h3" data-seconds="19.757245890000004" data-percent="35.17196501365281" style="width:35.17196501365281%" title="H3 4-step generation: 35.2% · 19.76 s · Measured"><b>35.2%</b></span>
+<span class="timing-segment memory-tone-adapter" data-seconds="2.1219747503333286" data-percent="3.7775518963578816" style="width:3.7775518963578816%" title="H3 upscaler + VAE Adapter: 3.8% · 2.12 s · Handoff residual estimate"></span>
+<span class="timing-segment memory-tone-ltx" data-seconds="24.72311666666667" data-percent="44.01223729611924" style="width:44.01223729611924%" title="LTX 3-step refinement: 44.0% · 24.72 s · Measured"><b>44.0%</b></span>
+<span class="timing-segment memory-tone-conv" data-seconds="7.006958333333333" data-percent="12.473828322239044" style="width:12.473828322239044%" title="LTX VAE decode: 12.5% · 7.01 s · Measured"><b>12.5%</b></span>
+<span class="timing-segment memory-tone-audio" data-seconds="0.7163173333333334" data-percent="1.2751923181471865" style="width:1.2751923181471865%" title="MP4 output + audio mux: 1.3% · 0.72 s · Writer residual"></span>
+<span class="timing-segment memory-tone-runtime" data-seconds="0.5200910369999932" data-percent="0.9258691145073441" style="width:0.9258691145073441%" title="Request overhead: 0.9% · 0.52 s · Request residual estimate"></span>
+</div><ol class="timing-legend">
+<li><i class="memory-tone-qwen" aria-hidden="true"></i><span>Qwen prompt encoding</span><strong>2.4<small>%</small></strong></li>
+<li><i class="memory-tone-h3" aria-hidden="true"></i><span>H3 4-step generation</span><strong>35.2<small>%</small></strong></li>
+<li><i class="memory-tone-adapter" aria-hidden="true"></i><span>H3 upscaler + VAE Adapter</span><strong>3.8<small>%</small></strong></li>
+<li><i class="memory-tone-ltx" aria-hidden="true"></i><span>LTX 3-step refinement</span><strong>44.0<small>%</small></strong></li>
+<li><i class="memory-tone-conv" aria-hidden="true"></i><span>LTX VAE decode</span><strong>12.5<small>%</small></strong></li>
+<li><i class="memory-tone-audio" aria-hidden="true"></i><span>MP4 output + audio mux</span><strong>1.3<small>%</small></strong></li>
+<li><i class="memory-tone-runtime" aria-hidden="true"></i><span>Request overhead</span><strong>0.9<small>%</small></strong></li>
 </ol></figure></div></details>
 </div>
 </section>
@@ -1273,7 +1309,7 @@ non_diegetic_music: None.</p></div></details>
 </div>
 </div>
 </div>
-<p class="memory-method">Official H3 is a checkpoint-weight lower bound and already exceeds capacity before runtime memory. The naive row adds cross-model VAE and online text-conditioning storage to the measured Sol-H3 footprint. The runtime working set is the residual inferred after subtracting the listed model components from the request-boundary footprint; it includes allocator reserve, activations, workspaces, framework and system memory in the shared pool. Sol-H3 uses the lowest recorded request-boundary free-memory snapshot; it is not a continuously sampled peak.</p>
+<p class="memory-method">The full official MiniMax-H3 pipeline cannot fit entirely in DGX Spark’s unified memory. A naive two-stage pipeline requires both complete model stacks, exceeding the memory budget even with low-bit weight quantization. Sol-H3 removes redundant components through VAE-free latent transfer and refiner prompt caching, allowing the two-stage pipeline to stay fully resident and run without out-of-memory errors.</p>
 </figure>
 <div class="optimization-details" aria-labelledby="technical-details-title">
 <h3 id="technical-details-title">Technical details <small>5 optimizations</small></h3>
@@ -1318,9 +1354,9 @@ non_diegetic_music: None.</p></div></details>
 </div>
 </div>
 <aside class="detail-evidence">
-<span>Stage 2 attention</span>
-<strong>Sol-Attn</strong>
-<small>Routing and attention in one pass</small>
+<span>Vs FA4 · kernel</span>
+<strong>3.1×</strong>
+<small>Speedup over FA4</small>
 </aside>
 </article>
 </div>
@@ -1631,6 +1667,7 @@ non_diegetic_music: None.</p></div></details>
 <span class="contributor-name">Junsong Chen</span>
 <span class="contributor-name">Yitong Li</span>
 <span class="contributor-name">Jincheng Yu</span>
+<span class="contributor-name">Jingyu Xin</span>
 <span class="contributor-name">Haocheng Xi</span>
 <span class="contributor-name">Song Han</span>
 <span class="contributor-name">Enze Xie</span>
@@ -1878,6 +1915,42 @@ non_diegetic_music: None.</p></div></details>
       copy.textContent = 'Copied';
     } catch { copy.textContent = 'Select the text to copy'; }
   });
+})();
+
+// One curve from the baseline value to the Sol-H3 value; quant stays unlinked.
+(() => {
+  const chart = document.querySelector('.latency-bars');
+  const reference = chart?.querySelector('.latency-reference');
+  if (!reference) return;
+  const values = [...chart.querySelectorAll('.latency-value')];
+  const svg = reference.querySelector('svg');
+  const curve = reference.querySelector('.latency-reference-curve');
+  const label = reference.querySelector('.latency-reference-label');
+  let frame;
+  const draw = () => {
+    const box = chart.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const first = values[0].getBoundingClientRect();
+    const last = values[2].getBoundingClientRect();
+    const sx = first.left + first.width / 2 - box.left;
+    const sy = first.bottom + 9 - box.top;
+    const ex = last.right + 14 - box.left;
+    const ey = last.top + last.height / 2 - box.top;
+    svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+    curve.setAttribute('d', `M ${sx} ${sy} C ${sx} ${ey}, ${ex + (sx - ex) * .65} ${ey}, ${ex} ${ey}`);
+    // Sit inside the bend, above the final horizontal tangent, not on the line.
+    const t = .58, u = 1 - t;
+    const lx = u*u*u*sx + 3*u*u*t*sx + 3*u*t*t*(ex + (sx-ex)*.65) + t*t*t*ex;
+    const ly = u*u*u*sy + (1-u*u*u)*ey;
+    label.style.left = `${lx - label.offsetWidth/2 - 12}px`;
+    label.style.top = `${ly - 14}px`;
+  };
+  const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(draw); };
+  const observer = new ResizeObserver(schedule);
+  observer.observe(chart);
+  values.forEach(value => observer.observe(value));
+  document.fonts.ready.then(schedule);
+  schedule();
 })();
 </script>
 <!-- Lieflat-inspired research preview. License: ./LIEFLAT-LICENSE.txt; attribution: ./THIRD-PARTY-NOTICES.txt -->

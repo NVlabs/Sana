@@ -7,7 +7,7 @@ Serve this directory over HTTP; no build step or application server is required.
 
 `index.html` is the self-contained HTML/CSS/JavaScript artifact reviewed at
 [the HF preview](https://hp-l33-minimax-h3-dgx-spark.static.hf.space/sol-h3-lieflat/index.html),
-Space revision `cd8470688474dadc9d28b83d17dc7e9f8603adb1`. It retains light/dark
+Space revision `2ad5a0c8004f69435e092f2c24cb88ca3c9f626c`. It retains light/dark
 themes, responsive navigation, two-at-a-time showcase playback and pagination,
 exact prompts, animated pipeline previews, timing details and BibTeX copy.
 The older `style.css`, `light.css` and `script.js` remain for historical reference;
@@ -16,8 +16,11 @@ this release does not load them.
 Both Code buttons link to the
 [Spark-specific pipeline](https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3/Sol-H3-Spark).
 The page reports the recorded 56.17-second resident mean as 56 seconds and
-includes the stage/component timing breakdown. The external 374-second result
-is a reference, not a matched cold/hot speedup claim.
+includes a single percentage-stacked component timing breakdown. Latency values
+sit at the foreground bar ends; the 6.7× annotation links the external
+374-second 4-step LoRA reference to Sol-H3, not to the quantized row. It is not
+a matched cold/hot comparison. The Sol-Attn card's 3.1× figure is a shape-matched
+GB10 kernel benchmark against FA4, not an end-to-end speedup.
 
 ## Assets and showcase
 
@@ -26,10 +29,10 @@ Videos, posters and logos remain hosted on
 Their URLs are pinned to dataset revisions; viewing needs no token. No media
 binaries or credentials are included in this directory.
 
-The homepage uses the supplied `sol-h3-on-spark-original-montage-logos.mp4`
-without transcoding: 35.333 seconds, 1344 × 768, 24 FPS, with audio. The file
+The homepage uses the supplied `sol-h3-on-spark-three-act-cow-v1.mp4`
+without transcoding: 44.958 seconds, 1344 × 768, 24 FPS, with audio. The file
 and its frame-derived poster are pinned to dataset revision
-`8ddff2df35a1ef28e5790067a234628f29298370`, under
+`6b114b40fe4851ba5a012559aa2c8b9c610c373c`, under
 `Sol-Engine/Sol-H3-Spark/20260911/hero/`. The introduction is not a timed
 56-second Spark generation. Audible autoplay remains browser-dependent;
 the hero has a click-to-play control, and showcase playback starts muted.

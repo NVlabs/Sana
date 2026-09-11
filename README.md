@@ -16,6 +16,8 @@
 <p align="center">
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/"><img src="https://img.shields.io/badge/🏠_Homepage-Sol--Engine-76b900?style=flat-square" alt="Homepage"/></a>
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/H3/"><img src="https://img.shields.io/badge/MiniMax--H3-Project_Page-76b900?style=flat-square" alt="MiniMax H3"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/"><img src="https://img.shields.io/badge/Sol--H3-Project_Page-76b900?style=flat-square" alt="Sol-H3"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/"><img src="https://img.shields.io/badge/Sol--H3--Spark-Project_Page-76b900?style=flat-square" alt="Sol-H3-Spark"/></a>
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/LTX25/"><img src="https://img.shields.io/badge/LTX--2.5-Project_Page-76b900?style=flat-square" alt="LTX-2.5"/></a>
   <a href="https://arxiv.org/abs/2606.23743"><img src="https://img.shields.io/badge/📄_arXiv-2606.23743-b31b1b?style=flat-square" alt="arXiv"/></a>
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/"><img src="https://img.shields.io/badge/📖_Docs-github.io-blue?style=flat-square" alt="Docs"/></a>
@@ -38,6 +40,7 @@ support a wider range of models.
 
 ## 📰 News
 
+- **[2026/09/11]** 🔥 **Sol-H3 on NVIDIA DGX Spark** \[[Code](models/minimax_h3/Sol-H3-Spark/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/)\] — production two-stage MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On a single NVIDIA DGX Spark at 1344×768, T2V end-to-end latency is **56 s** for a 5-second output.
 - **[2026/09/08]** 🔥 **Sol-H3** \[[Code](models/minimax_h3/Sol-H3/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/)\] — production MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On 8× NVIDIA B300 at 1344×768, warm BF16-compute T2V latency is **1.653 / 3.732 / 6.612 s** for 5 / 10 / 15-second outputs; optional fused MXFP8 compute reaches **1.472 s** for the 5-second case.
 - **[2026/08/22]** 🔥 **MiniMax-H3 Super Acceleration** [[Code](models/minimax_h3/super_acceleration/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-Super-Acceleration/)] — combines a 4-step MiniMax-H3 draft with a 3-step LTX-2.5 refinement pass, reaching **22.2×** end-to-end speedup for 5-second 768p video and **27.7×** for 10-second video on one NVIDIA GB200.
 - **[2026/08/17]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GeForce RTX 4090** \[[Code](models/minimax_h3/)\] — reaches **4.44×** end-to-end on RTX 4090. Sol-Attn now includes an optimized SM89 CuTe DSL kernel for RTX 4090.

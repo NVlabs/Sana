@@ -1,53 +1,60 @@
 # Sol-H3 on one NVIDIA DGX Spark
 
-Static project page, separate from the existing eight-B300 Sol-H3 release.
-Serve this directory over HTTP; no Node server or build step is required.
-The page retains the blog's dark/light themes, responsive navigation,
-hero loop, synchronized showcase playback, prompt details and BibTeX copy.
-The hero defaults to sound on; showcase videos default to muted. Browsers
-that block audible autoplay retain the hero's click-to-play control.
+Static research project page, separate from the eight-B300 Sol-H3 release.
+Serve this directory over HTTP; no build step or application server is required.
 
-## Assets
+## Reviewed release
 
-All video, poster, logo and favicon assets are hosted in
-[Sana-assets](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/tree/main/Sol-Engine/Sol-H3-Spark/20260907).
-Existing asset URLs retain their pinned dataset revisions. The four new
-showcase examples use revision `efed7c62d78352b703adaf1d5a1d0a8de445c8fd`
-under `Sol-Engine/Sol-H3-Spark/20260910/showcase/`.
-No access token or authentication is needed to view them.
+`index.html` is the self-contained HTML/CSS/JavaScript artifact reviewed at
+[the HF preview](https://hp-l33-minimax-h3-dgx-spark.static.hf.space/sol-h3-lieflat/index.html),
+Space revision `2ad5a0c8004f69435e092f2c24cb88ca3c9f626c`. It retains light/dark
+themes, responsive navigation, two-at-a-time showcase playback and pagination,
+exact prompts, animated pipeline previews, timing details and BibTeX copy.
+The older `style.css`, `light.css` and `script.js` remain for historical reference;
+this release does not load them.
 
-The homepage hero is the 35.333-second animated Sol-H3 on Spark introduction,
-at 1344x768 / 24 FPS with native dialogue and an instrumental music bed. Its
-MP4 and frame-derived poster are pinned to Sana-assets revision
-`e237daa52e404622250583edcff46d027d02241c` under
-`Sol-Engine/Sol-H3-Spark/20260910/hero/`. The film was produced with Base H3
-Ref2VA (50 scheduler points / 49 DiT evaluations, no LoRA), not with
-the 56-second Spark inference pipeline. Hero labels identify it as an
-introduction rather than a measured Spark generation. The benchmark claims
-and existing showcase media remain unchanged; older showreel assets are retained.
+Both Code buttons link to the
+[Spark-specific pipeline](https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3/Sol-H3-Spark).
+The page reports the recorded 56.17-second resident mean as 56 seconds and
+includes a single percentage-stacked component timing breakdown. Latency values
+sit at the foreground bar ends; the 6.7× annotation links the external
+374-second 4-step LoRA reference to Sol-H3, not to the quantized row. It is not
+a matched cold/hot comparison. The Sol-Attn card's 3.1× figure is a shape-matched
+GB10 kernel benchmark against FA4, not an end-to-end speedup.
 
-## Content and maintenance
+## Assets and showcase
 
-`index.html` retains the current blog's rendered content; `style.css` is its
-compiled stylesheet, based on the organization-owned Sol-H3 design, with
-Spark-specific layout changes. `light.css` provides the optional light theme.
-`script.js` implements the standalone playback, navigation and copy controls.
-Keep relative code links and HF-hosted media URLs so the page works under
-`/Sana/Sol-Engine/Sol-H3-Spark/` without a server runtime or root-path rewrite.
+Videos, posters and logos remain hosted on
+[Sana-assets](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets).
+Their URLs are pinned to dataset revisions; viewing needs no token. No media
+binaries or credentials are included in this directory.
 
-The headline is the recorded mean of three warm resident requests (56.17 s).
-The FastH3 comparison cites its published 374 s cold/phased-loading run;
-the visible methodology note explicitly identifies the different timing
-regimes and geometry. It is not a matched benchmark or quality-equivalence
-claim. These values and the frozen three-step pipeline are unchanged here.
+The homepage uses the supplied `sol-h3-on-spark-three-act-cow-v1.mp4`
+without transcoding: 44.958 seconds, 1344 × 768, 24 FPS, with audio. The file
+and its frame-derived poster are pinned to dataset revision
+`6b114b40fe4851ba5a012559aa2c8b9c610c373c`, under
+`Sol-Engine/Sol-H3-Spark/20260911/hero/`. The introduction is not a timed
+56-second Spark generation. Audible autoplay remains browser-dependent;
+the hero has a click-to-play control, and showcase playback starts muted.
 
-## Showcase additions
+The 12 showcase clips are interleaved across six pages:
 
-The first four examples are Snow Leopard Ridge, Wildflower Firefly Portrait,
-Fountain Pen Blue Ink and Astronaut Reentry Cockpit, in that order. The eight
-previous examples follow in their existing order. Pagination remains two
-examples per page, with six pages and muted playback.
+1. Strawberry heist / Mandarin radio reunion
+2. Snow leopard ridge / Wildflower firefly portrait
+3. English seaside conversation / Sky harbor cloud animation
+4. Fountain pen blue ink / Astronaut reentry cockpit
+5. Crystal ball / Film projector
+6. Night-train chess / Orbital greenhouse
 
-The videos use the existing two-stage pipeline. They and their posters are
-hosted on HF under descriptive public paths, with no media binaries committed
-to this branch. The current homepage introduction and timing claims are retained.
+The newer selected stories and posters use dataset revision
+`b122ef1a16cc33f8cc32bc17f40d85326ceadaf8` under
+`Sol-Engine/Sol-H3-Spark/20260910/selected-stories/`. Retained examples keep
+their existing pinned URLs. Previous public assets have not been deleted.
+
+## Design notices
+
+This version includes Lieflat-inspired presentation from the reviewed preview.
+Preserve `LIEFLAT-LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` alongside the HTML.
+The Lieflat-derived material retains its separate PolyForm Noncommercial 1.0.0
+terms; inclusion here does not relicense it under the repository's license.
+Inter is loaded from Google Fonts under the SIL Open Font License 1.1.

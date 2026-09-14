@@ -26,6 +26,10 @@ def parse_args() -> argparse.Namespace:
         default="none",
         help="DiT linear compute mode (default: none/BF16)",
     )
+    parser.add_argument(
+        "--lora-mode", choices=("merged", "separate", "fused"), default="merged",
+        help="LoRA evaluation: weight merge, native branches, or fused branch consumers",
+    )
     parser.add_argument("--task", choices=("t2v", "i2v", "ref2va"), required=True)
     parser.add_argument("--prompt")
     parser.add_argument("--prompt-file", type=Path)
@@ -101,6 +105,7 @@ def main() -> int:
         task=args.task,
         reference_image_resize_mode=args.reference_image_resize_mode,
         compute_quant=args.compute_quant,
+        lora_mode=args.lora_mode,
     ) as engine:
         if args.warmup:
             engine.warmup(
@@ -127,6 +132,7 @@ def main() -> int:
                         "seed": args.seed,
                         "attention_backend": args.attention_backend,
                         "compute_quant": args.compute_quant,
+                        "lora_mode": args.lora_mode,
                         "reference_image_resize_mode": (
                             args.reference_image_resize_mode if args.task == "ref2va" else None
                         ),

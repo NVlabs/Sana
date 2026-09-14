@@ -57,8 +57,9 @@ if HAVE_TRITON:
         n_cols, n_index, eps,
         stride_row, stride_table_row,
         BLOCK: tl.constexpr,
+        lora_ptr, HAS_LORA: tl.constexpr,
     ):
-        row = tl.program_id(0)
+        row = tl.program_id(0).to(tl.int64)
         cols = tl.arange(0, BLOCK)
         mask = cols < n_cols
         offset = row * stride_row + cols
@@ -73,6 +74,10 @@ if HAVE_TRITON:
 
         residual = tl.load(residual_ptr + offset, mask=mask, other=0.0).to(tl.float32)
         branch = tl.load(branch_ptr + offset, mask=mask, other=0.0).to(tl.float32)
+        if HAS_LORA:
+            delta = tl.load(lora_ptr + offset, mask=mask, other=0.0).to(tl.float32)
+            # Match the materialized PEFT sum before the existing fused math.
+            branch = (branch + delta).to(branch_ptr.dtype.element_ty).to(tl.float32)
         gate = tl.load(gate_ptr + table_offset, mask=mask, other=0.0).to(tl.float32)
 
         hidden = residual + gate * branch
@@ -114,12 +119,18 @@ if HAVE_TRITON:
         tl.store(out_ptr + offset, (normed * (1.0 + scale) + shift).to(out_ptr.dtype.element_ty), mask=mask)
 
     @triton.jit
-    def _swiglu_kernel(out_ptr, x_ptr, n_cols, stride_in_row, stride_out_row, BLOCK: tl.constexpr):
-        row = tl.program_id(0)
+    def _swiglu_kernel(out_ptr, x_ptr, n_cols, stride_in_row, stride_out_row, BLOCK: tl.constexpr, lora_ptr, HAS_LORA: tl.constexpr):
+        # A 15-second unsharded FFN exceeds 2**31 input elements.
+        row = tl.program_id(0).to(tl.int64)
         cols = tl.arange(0, BLOCK)
         mask = cols < n_cols
         value = tl.load(x_ptr + row * stride_in_row + cols, mask=mask, other=0.0).to(tl.float32)
         gate = tl.load(x_ptr + row * stride_in_row + n_cols + cols, mask=mask, other=0.0).to(tl.float32)
+        if HAS_LORA:
+            delta_value = tl.load(lora_ptr + row * stride_in_row + cols, mask=mask, other=0.0).to(tl.float32)
+            delta_gate = tl.load(lora_ptr + row * stride_in_row + n_cols + cols, mask=mask, other=0.0).to(tl.float32)
+            value = (value + delta_value).to(x_ptr.dtype.element_ty).to(tl.float32)
+            gate = (gate + delta_gate).to(x_ptr.dtype.element_ty).to(tl.float32)
         out = value * (gate * tl.sigmoid(gate))
         tl.store(out_ptr + row * stride_out_row + cols, out.to(out_ptr.dtype.element_ty), mask=mask)
 
@@ -168,11 +179,14 @@ def fused_rmsnorm_modulate(x, weight, scale, shift, index, eps):
     return out.view_as(x)
 
 
-def fused_residual_gate_rmsnorm_modulate(residual, branch, gate, weight, scale, shift, index, eps):
+def fused_residual_gate_rmsnorm_modulate(residual, branch, gate, weight, scale, shift, index, eps, lora=None):
     """`hidden = residual + gate[index] * branch`, then RMSNorm+modulate. Returns both."""
     cols = residual.shape[-1]
     res_flat = residual.reshape(-1, cols).contiguous()
     br_flat = branch.reshape(-1, cols).contiguous()
+    delta = _lora_input(branch, lora)
+    if delta is not None:
+        delta = delta.reshape(-1, cols).contiguous()
     rows = res_flat.shape[0]
     gate, scale, shift = _row_addressable(gate), _row_addressable(scale), _row_addressable(shift)
     hidden = torch.empty_like(res_flat)
@@ -180,18 +194,23 @@ def fused_residual_gate_rmsnorm_modulate(residual, branch, gate, weight, scale, 
     _residual_gate_rmsnorm_modulate_kernel[(rows,)](
         hidden, normed, res_flat, br_flat, weight, gate, scale, shift, index,
         cols, index.numel(), eps, res_flat.stride(0), gate.stride(0),
+        lora_ptr=delta, HAS_LORA=delta is not None,
         BLOCK=_next_pow2(cols), num_warps=_warps_for(_next_pow2(cols)),
     )
     return hidden.view_as(residual), normed.view_as(residual)
 
 
-def fused_swiglu(x):
+def fused_swiglu(x, lora=None):
     """`value * silu(gate)` over a `(..., 2F)` tensor, one read of 2F and one write of F."""
+    delta = _lora_input(x, lora)
     cols = x.shape[-1] // 2
     flat = x.reshape(-1, x.shape[-1]).contiguous()
+    if delta is not None:
+        delta = delta.reshape_as(flat).contiguous()
     out = torch.empty(flat.shape[0], cols, dtype=x.dtype, device=x.device)
     _swiglu_kernel[(flat.shape[0],)](
         out, flat, cols, flat.stride(0), out.stride(0), BLOCK=_next_pow2(cols), num_warps=_warps_for(_next_pow2(cols)),
+        lora_ptr=delta, HAS_LORA=delta is not None,
     )
     return out.view(*x.shape[:-1], cols)
 
@@ -271,3 +290,50 @@ def fused_qknorm_rope(x, weight, cos, sin, eps):
         BLOCK=_next_pow2(head_dim), num_warps=4,
     )
     return out.view(batch, seq, heads, head_dim)
+
+
+def _lora_input(base, delta):
+    if delta is not None and (base.shape != delta.shape or base.dtype != delta.dtype
+                              or base.device != delta.device):
+        raise ValueError("LoRA base and branch must share shape, dtype and device")
+    return delta
+
+
+if HAVE_TRITON:
+    @triton.jit
+    def _lora_gate_residual_kernel(out_ptr, residual_ptr, base_ptr, delta_ptr,
+                                   gate_ptr, index_ptr, size, cols, n_index,
+                                   stride_gate, BLOCK: tl.constexpr):
+        offset = tl.program_id(0).to(tl.int64) * BLOCK + tl.arange(0, BLOCK)
+        mask = offset < size
+        row, col = offset // cols, offset % cols
+        idx = tl.load(index_ptr + row % n_index, mask=mask, other=0)
+        base = tl.load(base_ptr + offset, mask=mask, other=0).to(tl.float32)
+        delta = tl.load(delta_ptr + offset, mask=mask, other=0).to(tl.float32)
+        branch = (base + delta).to(base_ptr.dtype.element_ty).to(tl.float32)
+        gate = tl.load(gate_ptr + idx * stride_gate + col, mask=mask, other=0).to(tl.float32)
+        # Eager first rounds gate*branch to BF16, then adds the BF16 residual.
+        scaled = (gate * branch).to(base_ptr.dtype.element_ty).to(tl.float32)
+        residual = tl.load(residual_ptr + offset, mask=mask, other=0).to(tl.float32)
+        tl.store(out_ptr + offset, residual + scaled, mask=mask)
+
+
+def fused_lora_gate_residual(residual, base, delta, gate, index):
+    """PEFT sum + indexed gate + residual, preserving both BF16 boundaries."""
+    _lora_input(base, delta)
+    if delta is None:
+        raise ValueError("fused LoRA residual requires a branch")
+    if base.dtype != torch.bfloat16 or gate.dtype != base.dtype or residual.dtype != base.dtype:
+        return residual + gate.index_select(0, index) * (base + delta)
+    if residual.shape != base.shape or not index.numel():
+        raise ValueError("LoRA residual shape or index mismatch")
+    residual, base, delta = (x.contiguous() for x in (residual, base, delta))
+    gate = _row_addressable(gate)
+    out = torch.empty_like(base)
+    if out.numel():
+        _lora_gate_residual_kernel[(triton.cdiv(out.numel(), 1024),)](
+            out, residual, base, delta, gate, index, out.numel(), out.shape[-1],
+            index.numel(), gate.stride(0), BLOCK=1024, num_warps=4,
+            enable_fp_fusion=False,
+        )
+    return out

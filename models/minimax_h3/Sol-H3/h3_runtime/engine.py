@@ -120,7 +120,15 @@ class MiniMaxH3Inference:
         task: str = "t2v",
         reference_image_resize_mode: str = "match",
         compute_quant: str = "none",
+        lora_mode: str = "merged",
     ) -> None:
+        lora_mode = lora_mode.lower()
+        if lora_mode not in {"merged", "separate", "fused"}:
+            raise ValueError("lora_mode must be merged, separate, or fused")
+        if lora_mode != "merged" and compute_quant.lower() != "none":
+            raise ValueError("Separate/fused LoRA requires BF16 linear compute")
+        self.lora_mode = lora_mode
+        self.lora_fusion = None
         self._owns_process_group = False
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         torch.cuda.set_device(local_rank)
@@ -214,9 +222,10 @@ class MiniMaxH3Inference:
         self.pipe.scheduler.set_shift(12.0)
         self.pipe.audio_scheduler.set_shift(3.0)
 
-        from .lora import fuse_lora
+        from .lora import fuse_lora, load_lora_branches
 
-        fuse_lora(
+        load_adapter = fuse_lora if lora_mode == "merged" else load_lora_branches
+        load_adapter(
             self.transformer,
             adapter_path,
             alpha=8 if task == "ref2va" else 64,
@@ -254,7 +263,11 @@ class MiniMaxH3Inference:
                     f"storage={report.original_bytes / 2**30:.2f}->"
                     f"{report.quantized_bytes / 2**30:.2f} GiB ({ratio:.2f}x)"
                 )
-        fusion_install.install(self.transformer)
+        if lora_mode == "fused":
+            from .lora_fusion import install as install_lora_fusion
+
+            self.lora_fusion = install_lora_fusion(self.transformer)
+        fusion_install.install(self.transformer, lora=lora_mode == "fused")
         adaln.enable_adaln_precompute(
             self.transformer,
             verbose=self.rank == 0,
@@ -274,6 +287,7 @@ class MiniMaxH3Inference:
             ulysses.install(
                 self.transformer,
                 attention_fn=self.sparse_attention,
+                lora=lora_mode == "fused",
             )
         vae_parallel.install(
             self.pipe.vae,

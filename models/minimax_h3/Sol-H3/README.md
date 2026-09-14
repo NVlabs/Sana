@@ -15,6 +15,10 @@ The default profile prioritizes speed and uses lossy attention/communication acc
 `dense` when a dense-attention reference is required or when running on one GPU. DiT linear compute
 remains BF16 unless `--compute-quant mxfp8` is selected.
 
+To retain separate LoRA branch arithmetic, use `--lora-mode separate`, or
+`--lora-mode fused` to fuse its BF16 sums into subsequent kernels. See
+[LoRA consumer fusion](LORA_FUSION.md) for requirements and validation.
+
 ## Validation
 
 All three task paths have been exercised on 8x NVIDIA B300 at 1344x768:
@@ -155,6 +159,7 @@ Main options:
 | `--duration` | `5`, `10`, or `15` |
 | `--attention-backend` | `sol_bsa` (default), `sol`, or `dense` |
 | `--compute-quant` | `none` (BF16 default) or `mxfp8` (lossy, SM100-family only) |
+| `--lora-mode` | `merged` (default), `separate`, or `fused`; branch modes require BF16 compute |
 | `--prompt` / `--prompt-file` | Prompt text or UTF-8 prompt file |
 | `--image` | First frame for `i2v` |
 | `--reference` | Ordered `image:PATH`, `video:PATH`, or `audio:PATH` for `ref2va`; repeat as needed |

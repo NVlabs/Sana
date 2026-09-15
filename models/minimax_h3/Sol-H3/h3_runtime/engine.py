@@ -15,7 +15,6 @@ from PIL import Image, ImageOps
 
 from .compute_quant import COMPUTE_QUANT_MODES
 
-
 WIDTH = 1344
 HEIGHT = 768
 FPS = 24
@@ -115,16 +114,37 @@ class MiniMaxH3Inference:
     def __init__(
         self,
         model_path: str,
-        adapter_path: str | Path,
+        adapter_path: str | Path | None,
         attention_backend: str = "sol_bsa",
         task: str = "t2v",
         reference_image_resize_mode: str = "match",
         compute_quant: str = "none",
         lora_mode: str = "merged",
+        num_inference_steps: int | None = None,
+        adapter_alpha: float | None = None,
     ) -> None:
+        # AdaLN tables are built for the first trajectory and retained. Keep
+        # the scheduler-point count fixed for the lifetime of this engine.
+        if num_inference_steps is None:
+            if adapter_path is None:
+                raise ValueError("Base inference requires an explicit num_inference_steps")
+            num_inference_steps = INFERENCE_STEPS
+        if (
+            isinstance(num_inference_steps, bool)
+            or not isinstance(num_inference_steps, int)
+            or num_inference_steps < 2
+        ):
+            raise ValueError("num_inference_steps must be an integer >= 2 (scheduler points, not forwards)")
+        if adapter_alpha is not None and (not math.isfinite(adapter_alpha) or adapter_alpha <= 0):
+            raise ValueError("adapter_alpha must be finite and positive")
+        if adapter_path is None and adapter_alpha is not None:
+            raise ValueError("adapter_alpha requires an adapter")
+        self._num_inference_steps = num_inference_steps
         lora_mode = lora_mode.lower()
         if lora_mode not in {"merged", "separate", "fused"}:
             raise ValueError("lora_mode must be merged, separate, or fused")
+        if adapter_path is None and lora_mode != "merged":
+            raise ValueError("Base inference does not use a LoRA branch mode")
         if lora_mode != "merged" and compute_quant.lower() != "none":
             raise ValueError("Separate/fused LoRA requires BF16 linear compute")
         self.lora_mode = lora_mode
@@ -224,13 +244,17 @@ class MiniMaxH3Inference:
 
         from .lora import fuse_lora, load_lora_branches
 
-        load_adapter = fuse_lora if lora_mode == "merged" else load_lora_branches
-        load_adapter(
-            self.transformer,
-            adapter_path,
-            alpha=8 if task == "ref2va" else 64,
-            scale=1.0,
-        )
+        if adapter_path is not None:
+            load_adapter = fuse_lora if lora_mode == "merged" else load_lora_branches
+            load_adapter(
+                self.transformer,
+                adapter_path,
+                alpha=(
+                    adapter_alpha if adapter_alpha is not None
+                    else (8 if task == "ref2va" else 64)
+                ),
+                scale=1.0,
+            )
 
         if self.world_size > 1:
             from diffusers.models._modeling_parallel import ContextParallelConfig
@@ -298,6 +322,11 @@ class MiniMaxH3Inference:
         self._adaln_checked = False
 
     @property
+    def num_inference_steps(self) -> int:
+        """Fixed scheduler-point count; DiT forwards are one fewer."""
+        return self._num_inference_steps
+
+    @property
     def is_rank_zero(self) -> bool:
         return self.rank == 0
 
@@ -355,7 +384,7 @@ class MiniMaxH3Inference:
             "height": HEIGHT,
             "width": WIDTH,
             "num_frames": DURATION_FRAMES[duration],
-            "num_inference_steps": INFERENCE_STEPS,
+            "num_inference_steps": self.num_inference_steps,
             "generator": torch.Generator().manual_seed(int(seed)),
             "output_type": "pt",
         }

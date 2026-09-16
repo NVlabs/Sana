@@ -308,7 +308,7 @@ def _packed_out_all_to_all(
     return merge_heads(x.reshape(world, rows_local, heads_local, head_dim))
 
 
-def install(transformer, group=None, attention_fn=None):
+def install(transformer, group=None, attention_fn=None, lora: bool = False):
     """Replace each attention forward with the packed Ulysses path.
 
     ``attention_fn`` receives full-sequence ``(tokens, local_heads, head_dim)``
@@ -333,7 +333,7 @@ def install(transformer, group=None, attention_fn=None):
     def make(attn):
         original = attn.forward
 
-        def forward(hidden_states, rotary_emb=None, attention_mask=None):
+        def forward(hidden_states, rotary_emb=None, attention_mask=None, *, return_lora_parts=False):
             if attention_mask is not None:
                 # The packed path assumes one attention document. diffusers builds the sequence
                 # without padding rows so this holds, and the CP plan asserts it, but a caller that
@@ -344,6 +344,7 @@ def install(transformer, group=None, attention_fn=None):
             heads, head_dim = attn.heads, attn.head_dim
 
             rows = batch * rows_local
+            qkv_delta = None
             if getattr(attn, "fused_projections", False):
                 # The MXFP8 path shares one activation quantization across q/k/v.
                 # The pack kernel accepts the resulting strided views directly.
@@ -352,6 +353,18 @@ def install(transformer, group=None, attention_fn=None):
                     .reshape(rows, 3, heads, head_dim)
                     .unbind(1)
                 )
+            elif lora and rotary_emb is not None:
+                from .lora_fusion import split_linear, mark
+                q, dq = split_linear(attn.to_q, hidden_states)
+                k, dk = split_linear(attn.to_k, hidden_states)
+                v, dv = split_linear(attn.to_v, hidden_states)
+                if all(d is not None for d in (dq, dk, dv)):
+                    qkv_delta = tuple(d.reshape(rows, heads, head_dim) for d in (dq, dk, dv))
+                    mark(attn.to_q, "qkv_pack")
+                else:
+                    q, k, v = (base if delta is None else base + delta
+                               for base, delta in ((q, dq), (k, dk), (v, dv)))
+                q, k, v = (x.reshape(rows, heads, head_dim) for x in (q, k, v))
             else:
                 # Separate BF16 projections avoid an otherwise unnecessary QKV concat.
                 q = attn.to_q(hidden_states).reshape(rows, heads, head_dim)
@@ -375,7 +388,7 @@ def install(transformer, group=None, attention_fn=None):
                     q, k, v,
                     attn.norm_q.weight, attn.norm_k.weight,
                     cos, sin, attn.norm_q.eps, attn.norm_k.eps, world,
-                    wire_dtype=wire_dtype,
+                    wire_dtype=wire_dtype, lora=qkv_delta,
                 )
                 packed = _packed_qkv_all_to_all(
                     q, k, v, world=world, group=group, packed_send=packed_send,
@@ -421,6 +434,10 @@ def install(transformer, group=None, attention_fn=None):
             )
             if not reuse_output:
                 out = out.reshape(output_shape).to(hidden_states.dtype)
+            if return_lora_parts:
+                from .lora_fusion import split_linear
+                base, delta = split_linear(attn.to_out[0], out)
+                return (base, delta) if delta is not None else (attn.to_out[1](base), None)
             return attn.to_out[1](attn.to_out[0](out))
 
         return original, forward

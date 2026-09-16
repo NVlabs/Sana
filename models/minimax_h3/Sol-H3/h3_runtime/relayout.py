@@ -85,6 +85,7 @@ def _qknorm_rope_pack_qkv_kernel(
     stride_q_row, stride_q_head,
     stride_k_row, stride_k_head,
     stride_v_row, stride_v_head,
+    dq_ptr, dk_ptr, dv_ptr, HAS_LORA: tl.constexpr,
     WIRE_INT8: tl.constexpr,
     RECORDS: tl.constexpr,
     BLOCK: tl.constexpr,
@@ -117,6 +118,11 @@ def _qknorm_rope_pack_qkv_kernel(
 
     q = tl.load(q_ptr + q_base + cols[None, :], mask=mask, other=0.0).to(tl.float32)
     k = tl.load(k_ptr + k_base + cols[None, :], mask=mask, other=0.0).to(tl.float32)
+    if HAS_LORA:
+        dq = tl.load(dq_ptr + q_base + cols[None, :], mask=mask, other=0.0).to(tl.float32)
+        dk = tl.load(dk_ptr + k_base + cols[None, :], mask=mask, other=0.0).to(tl.float32)
+        q = (q + dq).to(q_ptr.dtype.element_ty).to(tl.float32)
+        k = (k + dk).to(k_ptr.dtype.element_ty).to(tl.float32)
     q_inv_rms = tl.math.rsqrt(tl.sum(q * q, axis=1) / head_dim + q_eps)
     k_inv_rms = tl.math.rsqrt(tl.sum(k * k, axis=1) / head_dim + k_eps)
 
@@ -128,6 +134,11 @@ def _qknorm_rope_pack_qkv_kernel(
     partner_mask = record_valid[:, None] & in_rotary
     q_partner = tl.load(q_ptr + q_base + partner, mask=partner_mask, other=0.0).to(tl.float32)
     k_partner = tl.load(k_ptr + k_base + partner, mask=partner_mask, other=0.0).to(tl.float32)
+    if HAS_LORA:
+        dq_partner = tl.load(dq_ptr + q_base + partner, mask=partner_mask, other=0.0).to(tl.float32)
+        dk_partner = tl.load(dk_ptr + k_base + partner, mask=partner_mask, other=0.0).to(tl.float32)
+        q_partner = (q_partner + dq_partner).to(q_ptr.dtype.element_ty).to(tl.float32)
+        k_partner = (k_partner + dk_partner).to(k_ptr.dtype.element_ty).to(tl.float32)
     q_partner_weight = tl.load(q_weight_ptr + partner, mask=partner_mask, other=0.0).to(tl.float32)
     k_partner_weight = tl.load(k_weight_ptr + partner, mask=partner_mask, other=0.0).to(tl.float32)
     q_partner_normed = q_partner * q_inv_rms[:, None] * q_partner_weight
@@ -142,6 +153,9 @@ def _qknorm_rope_pack_qkv_kernel(
     q_out = tl.where(in_rotary, q_normed * cos + q_rotated * sin, q_normed)
     k_out = tl.where(in_rotary, k_normed * cos + k_rotated * sin, k_normed)
     v_out = tl.load(v_ptr + v_base + cols[None, :], mask=mask, other=0.0)
+    if HAS_LORA:
+        dv = tl.load(dv_ptr + v_base + cols[None, :], mask=mask, other=0.0).to(tl.float32)
+        v_out = (v_out.to(tl.float32) + dv).to(v_ptr.dtype.element_ty)
 
     head_slot = (destination * rows + row) * heads_local + local_head
     # Preserve the existing BF16 arithmetic boundary before quantization.
@@ -233,7 +247,7 @@ def can_qknorm_rope_pack(q, k, v, cos, sin, world: int) -> bool:
 
 def qknorm_rope_pack_qkv_destination_major(
     q, k, v, q_weight, k_weight, cos, sin, q_eps: float, k_eps: float, world: int,
-    wire_dtype: str = "bf16",
+    wire_dtype: str = "bf16", lora=None,
 ) -> torch.Tensor:
     """Q/K RMSNorm + partial RoPE + QKV destination-major pack in one kernel.
 
@@ -247,6 +261,13 @@ def qknorm_rope_pack_qkv_destination_major(
             "combined qknorm/rope/pack requires CUDA 3D QKV tensors, contiguous 2D rotary "
             "tables matching rows, an even rotary width, and heads divisible by world"
         )
+    dq = dk = dv = None
+    if lora is not None:
+        dq, dk, dv = lora
+        for base, delta in zip((q, k, v), lora):
+            if (base.shape != delta.shape or base.stride() != delta.stride()
+                    or base.dtype != delta.dtype or base.device != delta.device):
+                raise ValueError("QKV LoRA branches must match base shape, strides, dtype and device")
     rows, heads, head_dim = q.shape
     heads_local = heads // world
     if wire_dtype not in {"bf16", "int8_qkv"}:
@@ -280,6 +301,7 @@ def qknorm_rope_pack_qkv_destination_major(
         q.stride(0), q.stride(1),
         k.stride(0), k.stride(1),
         v.stride(0), v.stride(1),
+        dq_ptr=dq, dk_ptr=dk, dv_ptr=dv, HAS_LORA=lora is not None,
         WIRE_INT8=wire_dtype == "int8_qkv",
         RECORDS=records, BLOCK=block, num_warps=warps,
     )

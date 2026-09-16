@@ -234,3 +234,72 @@ def fuse_lora(
         device=str(device),
         fuse_s=time.perf_counter() - started,
     )
+
+
+@torch.no_grad()
+def load_lora_branches(transformer, path: str | Path, *, alpha: int = 8, scale: float = 1.0):
+    """Load the public adapter formats into native PEFT Linear branches.
+
+    Validate every tensor before installing wrappers. Hybrid ``.diff`` updates
+    apply to the base parameters in FP32, as in ``fuse_lora``; A/B remain separate.
+    """
+    from peft import LoraConfig
+    from peft.tuners.lora import Linear
+
+    if alpha < 1 or not torch.isfinite(torch.tensor(scale)) or scale < 0:
+        raise ValueError("LoRA alpha must be positive and scale finite and non-negative")
+    path = Path(path).expanduser().resolve()
+    with safe_open(path, framework="pt", device="cpu") as checkpoint:
+        metadata = checkpoint.metadata() or {}
+        hybrid = metadata.get("format") == "fastvideo-lora-v2"
+        pairs, diffs = _payload(list(checkpoint.keys()), path, hybrid=hybrid)
+        if hybrid:
+            counts = (int(metadata.get("low_rank_tensors", len(pairs) * 2)),
+                      int(metadata.get("diff_tensors", len(diffs))),
+                      int(metadata.get("set_weight_tensors", 0)))
+            if counts != (len(pairs) * 2, len(diffs), 0):
+                raise ValueError("FastVideo adapter metadata/payload mismatch")
+        validated, diff_targets, ranks = [], [], set()
+        for name, (a_key, b_key) in pairs.items():
+            if not hybrid and not name.endswith(LORA_TARGET_MODULES):
+                raise ValueError(f"Unsupported LoRA target module: {name}")
+            module = transformer.get_submodule(name)
+            if type(module) is not torch.nn.Linear or module.weight.dtype != torch.bfloat16:
+                raise ValueError(f"Separate LoRA requires an unwrapped BF16 Linear: {name}")
+            a_shape = checkpoint.get_slice(a_key).get_shape()
+            b_shape = checkpoint.get_slice(b_key).get_shape()
+            if (len(a_shape) != 2 or len(b_shape) != 2 or a_shape[0] < 1
+                    or a_shape[0] != b_shape[1] or tuple(module.weight.shape) != (b_shape[0], a_shape[1])):
+                raise ValueError(f"LoRA/base shape mismatch: {name}")
+            ranks.add(a_shape[0])
+            validated.append((name, module, a_key, b_key))
+        for name, (key, _) in diffs.items():
+            parameter = transformer.get_parameter(name)
+            if tuple(parameter.shape) != tuple(checkpoint.get_slice(key).get_shape()):
+                raise ValueError(f"Adapter diff/base mismatch: {name}")
+            diff_targets.append((parameter, key))
+        if len(ranks) != 1:
+            raise ValueError("Mixed LoRA ranks are unsupported")
+        rank = ranks.pop()
+        if hybrid and int(metadata.get("rank", rank)) != rank:
+            raise ValueError("FastVideo metadata rank does not match tensor rank")
+        applied_alpha = rank if hybrid else alpha
+        config = LoraConfig(r=rank, lora_alpha=applied_alpha, lora_dropout=0)
+        replacements = []
+        for name, module, a_key, b_key in validated:
+            wrapper = Linear(module, adapter_name="default", config=config,
+                             r=rank, lora_alpha=applied_alpha, lora_dropout=0)
+            wrapper = wrapper.to(device=module.weight.device, dtype=module.weight.dtype)
+            wrapper.lora_A["default"].weight.copy_(checkpoint.get_tensor(a_key))
+            wrapper.lora_B["default"].weight.copy_(checkpoint.get_tensor(b_key))
+            wrapper.scaling["default"] *= float(scale)
+            replacements.append((name, wrapper.requires_grad_(False).eval()))
+        for parameter, key in diff_targets:
+            delta = checkpoint.get_tensor(key).to(device=parameter.device, dtype=torch.float32)
+            parameter.copy_(parameter.float().add(delta, alpha=float(scale)).to(parameter.dtype))
+        for name, wrapper in replacements:
+            parent, _, leaf = name.rpartition(".")
+            setattr(transformer.get_submodule(parent), leaf, wrapper)
+    transformer.requires_grad_(False).eval()
+    return {"pairs": len(replacements), "diffs": len(diff_targets), "rank": rank,
+            "effective_scale": float(scale) * applied_alpha / rank}

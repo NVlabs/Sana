@@ -22,7 +22,7 @@ import torch
 
 from .fusions import (
     HAVE_TRITON, fused_qknorm_rope, fused_residual_gate_rmsnorm_modulate,
-    fused_rmsnorm_modulate, fused_swiglu,
+    fused_rmsnorm_modulate, fused_swiglu, fused_lora_gate_residual,
 )
 
 
@@ -30,7 +30,7 @@ def _accepts_mxfp8(module) -> bool:
     return getattr(module, "layout", None) == "MXFP8Swizzled"
 
 
-def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
+def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool, lora: bool = False) -> list:
     """Replace the block forward with one that fuses its elementwise chain."""
     uses_mxfp8 = any(
         _accepts_mxfp8(getattr(block.attn, "to_qkv", None))
@@ -44,6 +44,8 @@ def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
             fused_rmsnorm_modulate_mxfp8,
             fused_swiglu_mxfp8,
         )
+
+    from .lora_fusion import split_linear, mark
 
     restores = []
     for block in transformer.transformer_blocks:
@@ -81,7 +83,12 @@ def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
                     normed = normed * (1.0 + scale_msa.index_select(0, adaln_indices)) \
                         + shift_msa.index_select(0, adaln_indices)
 
-                attn_output = block.attn(normed, rotary_emb, attention_mask)
+                attn_delta = None
+                if lora:
+                    attn_output, attn_delta = block.attn(
+                        normed, rotary_emb, attention_mask, return_lora_parts=True)
+                else:
+                    attn_output = block.attn(normed, rotary_emb, attention_mask)
 
                 if use_modulate and ffn_up_mxfp8:
                     hidden_states, normed = fused_residual_gate_rmsnorm_modulate_mxfp8(
@@ -99,8 +106,12 @@ def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
                     # modulated input, which is where most of the saving in this fusion sits.
                     hidden_states, normed = fused_residual_gate_rmsnorm_modulate(
                         hidden_states, attn_output, gate_msa, block.norm2.weight,
-                        scale_mlp, shift_mlp, adaln_indices, block.norm2.eps)
+                        scale_mlp, shift_mlp, adaln_indices, block.norm2.eps, lora=attn_delta)
+                    if attn_delta is not None:
+                        mark(block.attn.to_out[0], "attention_output")
                 else:
+                    if attn_delta is not None:
+                        attn_output = attn_output + attn_delta
                     hidden_states = hidden_states + gate_msa.index_select(0, adaln_indices) * attn_output
                     normed = block.norm2(hidden_states)
                     normed = normed * (1.0 + scale_mlp.index_select(0, adaln_indices)) \
@@ -111,7 +122,20 @@ def _patch_blocks(transformer, use_modulate: bool, use_swiglu: bool) -> list:
                     activation = (
                         fused_swiglu_mxfp8 if ffn_down_mxfp8 else fused_swiglu
                     )
-                    ff_output = out_proj(activation(swiglu.proj(normed)))
+                    if lora:
+                        up, delta = split_linear(swiglu.proj, normed)
+                        activated = fused_swiglu(up, lora=delta)
+                        if delta is not None:
+                            mark(swiglu.proj, "swiglu")
+                        # Drop the wide buffers before the next GEMMs.
+                        del up, delta
+                        ff_output, ff_delta = split_linear(out_proj, activated)
+                        if ff_delta is not None:
+                            mark(out_proj, "ffn_output")
+                            return fused_lora_gate_residual(
+                                hidden_states, ff_output, ff_delta, gate_mlp, adaln_indices)
+                    else:
+                        ff_output = out_proj(activation(swiglu.proj(normed)))
                 else:
                     ff_output = block.ff(normed)
 
@@ -134,7 +158,7 @@ def _patch_attention(transformer) -> list:
         restores.append((attn, "forward", original))
 
         def make(attn=attn):
-            def forward(hidden_states, rotary_emb=None, attention_mask=None):
+            def forward(hidden_states, rotary_emb=None, attention_mask=None, *, return_lora_parts=False):
                 processor = attn.processor
                 if attn.fused_projections:
                     query, key, value = attn.to_qkv(hidden_states).chunk(3, dim=-1)
@@ -160,6 +184,13 @@ def _patch_attention(transformer) -> list:
                     backend=processor._attention_backend, parallel_config=processor._parallel_config,
                 )
                 hidden_states = hidden_states.flatten(2, 3).type_as(query)
+                if return_lora_parts:
+                    from .lora_fusion import split_linear
+                    base, delta = split_linear(attn.to_out[0], hidden_states)
+                    if delta is not None:
+                        # install() verifies the following dropout is an identity in eval.
+                        return base, delta
+                    return attn.to_out[1](base), None
                 return attn.to_out[1](attn.to_out[0](hidden_states))
 
             return forward
@@ -168,8 +199,10 @@ def _patch_attention(transformer) -> list:
     return restores
 
 
-def install(transformer, modulate: bool = True, swiglu: bool = True, qknorm_rope: bool = True):
+def install(transformer, modulate: bool = True, swiglu: bool = True, qknorm_rope: bool = True, lora: bool = False):
     """Install the requested fusions. Returns an uninstall callable."""
+    if lora and not qknorm_rope:
+        raise ValueError("LoRA consumer fusion requires qknorm_rope=True for the attention wrapper")
     if not HAVE_TRITON:
         raise RuntimeError("triton is unavailable, so no fusion can be installed")
 
@@ -179,7 +212,7 @@ def install(transformer, modulate: bool = True, swiglu: bool = True, qknorm_rope
 
     def do_install():
         if modulate or swiglu:
-            restores.extend(_patch_blocks(transformer, modulate, swiglu))
+            restores.extend(_patch_blocks(transformer, modulate, swiglu, lora=lora))
         if qknorm_rope:
             restores.extend(_patch_attention(transformer))
 

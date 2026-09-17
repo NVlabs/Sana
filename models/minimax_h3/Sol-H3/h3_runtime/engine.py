@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,6 @@ import torch.distributed as dist
 from PIL import Image, ImageOps
 
 from .compute_quant import COMPUTE_QUANT_MODES
-
 
 WIDTH = 1344
 HEIGHT = 768
@@ -64,6 +64,23 @@ def _state_value(state: Any, name: str) -> Any:
         if value is not None:
             return value
     return getattr(state, name, None)
+
+
+def _register_text_encoder(
+    pipe: Any,
+    factory: Callable[[torch.device], torch.nn.Module] | None,
+    device: torch.device,
+) -> torch.nn.Module | None:
+    """Build and register a custom conditioner before default components load."""
+    if factory is None:
+        return None
+    text_encoder = factory(device)
+    if not isinstance(text_encoder, torch.nn.Module):
+        raise TypeError("text_encoder_factory must return a torch.nn.Module")
+    pipe.register_components(text_encoder=text_encoder)
+    if getattr(pipe, "text_encoder", None) is not text_encoder:
+        raise RuntimeError("pipeline did not register the custom text_encoder component")
+    return text_encoder
 
 
 @dataclass
@@ -121,6 +138,7 @@ class MiniMaxH3Inference:
         reference_image_resize_mode: str = "match",
         compute_quant: str = "none",
         lora_mode: str = "merged",
+        text_encoder_factory: Callable[[torch.device], torch.nn.Module] | None = None,
     ) -> None:
         lora_mode = lora_mode.lower()
         if lora_mode not in {"merged", "separate", "fused"}:
@@ -203,6 +221,11 @@ class MiniMaxH3Inference:
             self.pipe = ModularPipeline.from_pretrained(
                 model_path, components_manager=manager
             )
+        self.custom_text_encoder = _register_text_encoder(
+            self.pipe,
+            text_encoder_factory,
+            self.device,
+        )
         load_kwargs = {"dtype": torch.bfloat16}
         if task == "ref2va":
             # Resolve every Ref2VA component below the selected model root. This

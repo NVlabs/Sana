@@ -1,0 +1,165 @@
+# HyperFlow for Sol-Engine
+
+Eight-step MiniMax-H3 video and audio generation using HyperFlow 1.0 and the
+existing [Sol-H3 runtime](../Sol-H3/). This integration targets the resident
+**8 x NVIDIA B200** configuration and provides T2V, first-frame I2V, and
+image-reference Ref2VA at 1344 x 768 and 24 FPS.
+
+HyperFlow's two-time conditioning and checkpoint schedule are preserved. T2V
+and I2V share the upstream `transformer`; Ref2VA keeps its distinct
+`transformer_ref`. The text/image conditioner, tokenizers, schedulers, video
+VAE, and audio VAE are shared. Both DiTs remain resident after initialization.
+
+## Scope
+
+| Task | Input | Output presets |
+|---|---|---|
+| `t2v` | Text | 5 / 10 / 15 seconds, with audio |
+| `i2v` | Text and one first-frame image | Same |
+| `ref2va` | Text and 1–9 ordered image references | Same |
+
+The frame counts are 124 / 243 / 362, following the model's temporal alignment;
+the encoded duration is therefore slightly longer than the nominal preset.
+Every request uses eight DiT forwards. The CLI does not expose a step override.
+DiT linear compute uses BF16 with unmerged LoRA branches; MXFP8 is not enabled.
+
+The accelerated runner is limited to the above profile. Other GPU counts,
+resolutions, last-frame conditioning, and reference audio/video are not exposed
+or claimed as validated by this runner. The unmodified `hyperflow_h3/` source
+retains the upstream workflow building blocks. Multiple image references are
+accepted by the interface; the recorded GPU smoke checks used one reference.
+
+## Setup
+
+Use Linux, Python 3.12, a working CUDA 13 toolchain/driver, and eight B200 GPUs
+connected by NVLink/NVSwitch. Run from this directory in a checkout of Sana's
+`sol-engine` branch, with the sibling `Sol-H3/` directory present. The package
+base commit and source hashes are in [PROVENANCE.json](PROVENANCE.json).
+
+```bash
+cd models/minimax_h3/HyperFlow
+python -m venv .venv
+source .venv/bin/activate
+pip install --index-url https://download.pytorch.org/whl/cu130 \
+  torch==2.10.0+cu130 torchvision==0.25.0+cu130 torchaudio==2.10.0+cu130
+pip install -r requirements.txt
+```
+
+The dependency file pins the Diffusers revision used with HyperFlow. The
+shared Sol-H3 runtime has one compatibility fallback for this revision; its
+fusion and attention kernels are reused without a second copy. Use this
+environment for HyperFlow instead of installing both model directories'
+different Diffusers pins together. Install FFmpeg for MP4/audio export.
+
+Provide a local MiniMax-H3 snapshot containing the normal shared components
+and **both** `transformer/` and `transformer_ref/`. Do not replace the latter
+with a link to the former. Also provide the HyperFlow adapter separately:
+
+```text
+minimax_h3_hyperflow_8step_v1.0.safetensors
+SHA256: 4d7dec1363ebcb9fd63117621b65f8bd19fecacf7ba41f38dd098be363d3972d
+```
+
+Weights are not included. This source snapshot does not establish a working
+public HyperFlow weight download URL; obtain the matching adapter from its
+authors and verify the hash. Model and adapter terms apply independently of
+the code license. The loader reads the adapter's schedule and conditioning
+metadata, rather than substituting Sol-H3's four-step adapter.
+
+## Command-line inference
+
+Set paths to your local files:
+
+```bash
+export H3_MODEL=/path/to/MiniMax-H3
+export H3_ADAPTER=/path/to/minimax_h3_hyperflow_8step_v1.0.safetensors
+
+torchrun --standalone --nproc_per_node=8 infer.py \
+  --model "$H3_MODEL" --adapter "$H3_ADAPTER" \
+  --task t2v --duration 5 --seed 42 --warmup \
+  --prompt "A fox walks through a snowy forest, with soft footsteps and wind." \
+  --output outputs/t2v.mp4
+
+torchrun --standalone --nproc_per_node=8 infer.py \
+  --model "$H3_MODEL" --adapter "$H3_ADAPTER" \
+  --task i2v --image /path/to/first-frame.png --duration 10 --seed 42 --warmup \
+  --prompt "The subject slowly turns toward the camera in natural light." \
+  --output outputs/i2v.mp4
+
+torchrun --standalone --nproc_per_node=8 infer.py \
+  --model "$H3_MODEL" --adapter "$H3_ADAPTER" \
+  --task ref2va --reference-image /path/to/subject.png --duration 15 --seed 42 --warmup \
+  --prompt "The subject in <Picture 1> walks through a sunlit room." \
+  --output outputs/ref2va.mp4
+```
+
+Repeat `--reference-image` in the order referred to by `<Picture 1>`,
+`<Picture 2>`, etc. `--prompt-file` accepts a UTF-8 file instead of `--prompt`.
+Each launch initializes both DiTs; use the Python interface to amortize that
+cost across requests. `--warmup` runs an additional request with the same task,
+duration, prompt, and references before the reported request.
+
+The printed `generation_seconds` includes conditioning, denoising, video/audio
+VAE decoding, and completion synchronization. It excludes checkpoint loading,
+the optional warmup request, and MP4 encoding. Without warmup, compilation can
+be included in the reported time. See [VALIDATION.md](VALIDATION.md) before
+interpreting historical checks as a performance or quality benchmark.
+
+## Resident Python interface
+
+Launch your script with `torchrun --standalone --nproc_per_node=8`. Every rank
+must call initialization and generation in the same order; only rank zero
+receives the returned media. Requests are serial because they share schedulers
+and request state.
+
+```python
+from sol_hyperflow import HyperFlowInference
+
+with HyperFlowInference(model_path, adapter_path) as engine:
+    for prompt in prompts:
+        media = engine.generate(prompt, task="t2v", duration=5, seed=42)
+        if media is not None:
+            media.save(output_path_for(prompt))
+```
+
+Pass a PIL image as `image=` for I2V or a list of PIL images as `references=`
+for Ref2VA. The engine releases a process group only when it created that group.
+
+## Optimizations and numerical behavior
+
+| Change | Principle and scope |
+|---|---|
+| Shared resident components | Load common encoders and VAEs once per rank; retain distinct base weights for the two DiTs. |
+| Paired AdaLN tables | Precompute modulation for every `(t, endpoint)` pair and all four conditioning variants: none, image, audio, image+audio. Release the original modulation projections afterward. This is deterministic precomputation, not reuse of approximate denoising features. Unsupported schedules fail explicitly. |
+| Conditioner pruning | Keep 51 of 64 language layers so `hidden_states[50]` remains the selected **pre-normalization** feature; remove the unused vocabulary head. Text and image embedding equality is checked during initialization. The recorded B200 check freed 14,233,381,376 bytes per rank. |
+| BF16 LoRA consumer fusion | Reuse [Sana PR #503](https://github.com/NVlabs/Sana/pull/503): keep the adapter branches separate and consume their sums in fused QKV, attention-output, SwiGLU, and FFN-output kernels. Historical native/fused checks were bitwise equal for the tested cases. `--lora-mode separate` disables these consumer fusions for comparison. |
+| Sequence parallelism and kernel fusion | Reuse Sol-H3's Ulysses implementation and fused normalization/rotary/activation kernels. Shared VAE optimizations parallelize decoding and image encoding. |
+| SOL/BSA attention and transport | The default profile uses approximate sparse attention, INT8 QKV transport, and FP8 output transport. These are lossy optimizations; BF16 DiT linears do not make the whole pipeline numerically lossless. |
+| Reference sizing | Cap reference-image area at 1344 x 768 without upscaling. This reduces reference tokens and changes preprocessing compared with the upstream short-edge rule. |
+
+For the sparse policy, T2V/I2V keep the first denoising step and first two layers
+dense (336 sparse and 64 dense attention calls per rank). Ref2VA uses 400 sparse
+calls. `--attention-backend dense` selects all 400 dense calls, but does not by
+itself disable compressed Ulysses transport. To also select BF16 transport:
+
+```bash
+export H3_ULYSSES_COMM_DTYPE=bf16
+export H3_ULYSSES_OUTPUT_DTYPE=bf16
+# Add --attention-backend dense to the inference command.
+```
+
+This still retains the eight-step adapter, fused kernels, and reference sizing;
+it is not an unmodified upstream baseline. Reference-video KV caching and
+prompt rewriting are not part of this integration.
+
+## Source and tests
+
+- `hyperflow_h3/`: six original HyperFlow 1.0 modules, unchanged, with their
+  original attribution and SHA256 hashes retained.
+- `sol_hyperflow/`: resident loading, conditioning cache, memory pruning, and
+  request lifecycle integration with Sol-H3.
+- `infer.py`: public CLI. `validate_runtime.py`: optional eight-GPU checks.
+- `tests/`: CPU contract and synthetic numerical tests; no checkpoint required.
+
+See [VALIDATION.md](VALIDATION.md) for commands, results, and limitations, and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for source attribution.

@@ -30,7 +30,14 @@ import torch
 from torch import nn
 
 from diffusers.models.transformers.transformer_minimax_h3 import MINIMAX_H3_MODALITY_NUM
-from diffusers.modular_pipelines.minimax_h3.packing import MINIMAX_H3_KEYFRAME_NOISE_AUG
+try:
+    from diffusers.modular_pipelines.minimax_h3.packing import MINIMAX_H3_KEYFRAME_NOISE_AUG
+except ModuleNotFoundError as error:
+    if error.name != "diffusers.modular_pipelines.minimax_h3.packing":
+        raise
+    # Diffusers >=0.40 stores this legacy default in pipeline configuration.
+    # HyperFlow builds its paired-time tables from the actual pipeline value.
+    MINIMAX_H3_KEYFRAME_NOISE_AUG = 0.999
 
 
 class _StepCursor:

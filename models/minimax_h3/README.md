@@ -37,6 +37,16 @@ Validation on 8x NVIDIA B300 covers all three task paths:
 
 The latency values exclude checkpoint loading, warmup, and MP4 encoding.
 
+## HyperFlow
+
+The [HyperFlow integration](HyperFlow/) adds the upstream eight-step HyperFlow
+adapter and two-time conditioning to Sol-Engine. Its resident 8x B200 profile
+supports T2V, first-frame I2V, and image-reference Ref2VA at 1344x768 with audio
+and 5/10/15-second presets. It preserves the distinct T2V/I2V and Ref2VA DiTs,
+shares their encoders and VAEs, and reuses Sol-H3's BF16 LoRA consumer fusion,
+sequence parallelism, sparse attention, and VAE optimizations. See its
+[validation notes](HyperFlow/VALIDATION.md) for the tested scope.
+
 ## Super acceleration: H3 -> LTX-2.5
 
 The separate [Super Acceleration profile](super_acceleration/) runs MiniMax-H3

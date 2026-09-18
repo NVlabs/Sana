@@ -36,6 +36,16 @@ pip install git+https://github.com/huggingface/diffusers
 
 ## Quick Start with Diffusers
 
+The repository includes the same example as `scripts/inference_diffusers.py`.
+After installing the latest Diffusers source, run:
+
+```bash
+python scripts/inference_diffusers.py --prompt 'a cyberpunk cat with a neon sign that says "Sana"'
+```
+
+You can override the model, output path, dimensions, and generation settings with
+the script's command-line options.
+
 ```python
 import torch
 from diffusers import SanaPipeline

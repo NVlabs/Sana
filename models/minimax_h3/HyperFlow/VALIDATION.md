@@ -1,6 +1,6 @@
 # Validation record
 
-## Source-package checks — 2026-09-17
+## Source-package checks — 2026-09-19
 
 **54 CPU tests passed**: 41 tests in this directory and 13 existing Sol-H3 LoRA
 tests. The tests ran with `CUDA_VISIBLE_DEVICES=''`, one CPU thread, no model
@@ -37,6 +37,29 @@ Coverage includes:
 Both CLI `--help` commands work without importing CUDA dependencies. All 22
 Python files parse successfully; original HyperFlow source hashes match, and
 the patch passes whitespace checks. These checks do not execute CUDA kernels.
+
+## Official public release — 2026-09-19
+
+The six vendored modules match
+[`Video-Rebirth/hyperflow` at `1dd2f342`](https://github.com/Video-Rebirth/hyperflow/tree/1dd2f342aba5ab51da02b62885939655e8e268da/src/hyperflow_h3).
+Compared with the previously tested source snapshot, only the module docstring
+in `__init__.py` changed; the executable Python code is unchanged.
+
+The official adapter is now available from
+[`videorebirth/hyperflow`](https://huggingface.co/videorebirth/hyperflow).
+Its complete-file SHA256 is
+`9297f4505bfdef59c3014d11274411809c19b0abfe26161cab2b425a696df447`.
+The earlier validation snapshot has complete-file SHA256
+`4d7dec1363ebcb9fd63117621b65f8bd19fecacf7ba41f38dd098be363d3972d`.
+
+Full-file streaming checks verified that all **632 tensor names, dtypes, shapes,
+offsets, and tensor-payload bytes match**. Their tensor payloads share SHA256
+`8759644bc34309d0d322294876598a6be2867968b09c087b5220a03197b3b9a1`.
+The public file omits an unused provenance metadata entry; inference metadata
+is unchanged. See [public-checkpoint.json](validation/public-checkpoint.json).
+This establishes checkpoint equivalence for the historical checks below;
+it is not a new GPU benchmark. The README uses the official download repository,
+an immutable revision, and the public checksum.
 
 ## Historical B200 checks — 2026-09-16
 

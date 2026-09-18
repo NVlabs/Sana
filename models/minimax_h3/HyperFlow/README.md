@@ -1,6 +1,7 @@
 # HyperFlow for Sol-Engine
 
-Eight-step MiniMax-H3 video and audio generation using HyperFlow 1.0 and the
+Eight-step MiniMax-H3 video and audio generation using
+[Video Rebirth's HyperFlow 1.0](https://github.com/Video-Rebirth/hyperflow) and the
 existing [Sol-H3 runtime](../Sol-H3/). This integration targets the resident
 **8 x NVIDIA B200** configuration and provides T2V, first-frame I2V, and
 image-reference Ref2VA at 1344 x 768 and 24 FPS.
@@ -51,28 +52,46 @@ fusion and attention kernels are reused without a second copy. Use this
 environment for HyperFlow instead of installing both model directories'
 different Diffusers pins together. Install FFmpeg for MP4/audio export.
 
-Provide a local MiniMax-H3 snapshot containing the normal shared components
-and **both** `transformer/` and `transformer_ref/`. Do not replace the latter
-with a link to the former. Also provide the HyperFlow adapter separately:
+### Download the checkpoints
+
+Download the base model from [MiniMaxAI/MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)
+and the official adapter from [videorebirth/hyperflow](https://huggingface.co/videorebirth/hyperflow).
+The following commands pin the base revision recorded in the adapter header
+and the public HyperFlow release revision:
+
+```bash
+hf download MiniMaxAI/MiniMax-H3 \
+  --revision 83db0c0efe6ef9824e0e194be110346c0a9542ed \
+  --local-dir checkpoints/MiniMax-H3
+
+hf download videorebirth/hyperflow \
+  minimax_h3_hyperflow_8step_v1.0.safetensors hyperflow.json LICENSE \
+  --revision a83ec7ad08afdbb0438615cfcfcb89320667a093 \
+  --local-dir checkpoints/hyperflow
+```
+
+Keep the normal shared components and **both** `transformer/` and
+`transformer_ref/` in the base snapshot. Do not replace the latter with a link
+to the former. The official adapter's filename and SHA256 are:
 
 ```text
 minimax_h3_hyperflow_8step_v1.0.safetensors
-SHA256: 4d7dec1363ebcb9fd63117621b65f8bd19fecacf7ba41f38dd098be363d3972d
+SHA256: 9297f4505bfdef59c3014d11274411809c19b0abfe26161cab2b425a696df447
 ```
 
-Weights are not included. This source snapshot does not establish a working
-public HyperFlow weight download URL; obtain the matching adapter from its
-authors and verify the hash. Model and adapter terms apply independently of
-the code license. The loader reads the adapter's schedule and conditioning
-metadata, rather than substituting Sol-H3's four-step adapter.
+This hash is published in the upstream
+[hyperflow.json manifest](https://huggingface.co/videorebirth/hyperflow/blob/a83ec7ad08afdbb0438615cfcfcb89320667a093/hyperflow.json).
+Weights are downloaded separately and governed by their upstream model license;
+the integration code is Apache-2.0. The loader reads the HyperFlow adapter's
+eight-step schedule and conditioning metadata.
 
 ## Command-line inference
 
-Set paths to your local files:
+Use the local files downloaded above:
 
 ```bash
-export H3_MODEL=/path/to/MiniMax-H3
-export H3_ADAPTER=/path/to/minimax_h3_hyperflow_8step_v1.0.safetensors
+export H3_MODEL="$PWD/checkpoints/MiniMax-H3"
+export H3_ADAPTER="$PWD/checkpoints/hyperflow/minimax_h3_hyperflow_8step_v1.0.safetensors"
 
 torchrun --standalone --nproc_per_node=8 infer.py \
   --model "$H3_MODEL" --adapter "$H3_ADAPTER" \
@@ -154,8 +173,9 @@ prompt rewriting are not part of this integration.
 
 ## Source and tests
 
-- `hyperflow_h3/`: six original HyperFlow 1.0 modules, unchanged, with their
-  original attribution and SHA256 hashes retained.
+- `hyperflow_h3/`: six unchanged modules from the official
+  [HyperFlow release](https://github.com/Video-Rebirth/hyperflow/tree/1dd2f342aba5ab51da02b62885939655e8e268da/src/hyperflow_h3),
+  with original attribution and SHA256 hashes recorded.
 - `sol_hyperflow/`: resident loading, conditioning cache, memory pruning, and
   request lifecycle integration with Sol-H3.
 - `infer.py`: public CLI. `validate_runtime.py`: optional eight-GPU checks.

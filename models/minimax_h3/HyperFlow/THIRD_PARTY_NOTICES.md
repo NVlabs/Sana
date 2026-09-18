@@ -1,33 +1,22 @@
 # Source notices
 
-The six files under `hyperflow_h3/` retain their original notices:
-Copyright 2026 The HyperFlow authors, Apache License 2.0. Their exact input
-hashes and snapshot provenance are recorded in `PROVENANCE.json`.
+The six files under `hyperflow_h3/` are copied unchanged from
+[Video-Rebirth/hyperflow](https://github.com/Video-Rebirth/hyperflow) at commit
+`1dd2f342aba5ab51da02b62885939655e8e268da`, under Apache License 2.0.
+They retain their original Copyright 2026 The HyperFlow authors notices.
+Exact source hashes are recorded in `PROVENANCE.json`.
 
-The retained headers identify these derived portions of Diffusers:
+The complete upstream notices are reproduced in
+[HYPERFLOW_THIRD_PARTY_NOTICES.md](HYPERFLOW_THIRD_PARTY_NOTICES.md), including
+attributions for the derived Diffusers scheduler, modular pipeline, and attention
+processor code. The source headers also acknowledge AnyFlow and NVIDIA Sol-Attn.
 
-- `schedule.py`: `MiniMaxH3Scheduler.set_timesteps`, Copyright 2025 The MiniMax
-  authors and The HuggingFace Team; and
-  `MiniMaxH3SetTimestepsStep.build_row_timesteps`, Copyright 2026 The MiniMax and
-  HuggingFace Teams. Apache License 2.0.
-- `blocks.py`: subclasses/reworks `MiniMaxH3SetTimestepsStep` and
-  `MiniMaxH3LoopDenoiser`, Copyright 2026 The MiniMax and HuggingFace Teams.
-  Apache License 2.0.
-- `sol_attn.py`: derives its attention processor from
-  `MiniMaxH3AttnProcessor.__call__`, Copyright 2025 The MiniMax Team and The
-  HuggingFace Team. Apache License 2.0.
+The optimized entry point reuses `../Sol-H3/h3_runtime/`, including LoRA consumer
+fusion from NVlabs/Sana PR #503. Its kernels and third-party notices remain in
+their existing locations. The guarded `packing` import compatibility fallback
+is the sole change to that shared runtime in this integration.
 
-The two-time conditioning follows AnyFlow (Gu et al., 2026), as noted in
-`embedder.py`. The source's optional sparse attention interface acknowledges
-NVIDIA Sol-Attn (Li et al., 2026).
-
-The optimized entry point reuses `../Sol-H3/h3_runtime/`, including the existing
-LoRA consumer fusion from NVlabs/Sana PR #503. Its kernels and third-party
-notices remain in their existing locations; they are not re-vendored here.
-The small `packing` import compatibility fallback is the sole change to that
-shared runtime in this proposal.
-
-`LICENSE` contains Apache License 2.0. This notice records attribution visible
-in the supplied source headers; no separate original `THIRD_PARTY_NOTICES.md`
-was present in the supplied snapshot. Model/adaptor weights are not included;
-their own upstream terms remain applicable.
+`LICENSE` contains Apache License 2.0 for the code. Base model and adapter weights
+are downloaded separately; their upstream model license is available from
+[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE) and
+[the official HyperFlow weights repository](https://huggingface.co/videorebirth/hyperflow/blob/main/LICENSE).

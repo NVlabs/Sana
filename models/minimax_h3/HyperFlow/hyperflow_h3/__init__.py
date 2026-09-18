@@ -1,12 +1,12 @@
 # Copyright 2026 The HyperFlow authors. Licensed under the Apache License, Version 2.0.
-"""HyperFlow: an 8-step LoRA for MiniMax-H3, on top of the official diffusers Modular Pipeline.
+"""HyperFlow: Video Rebirth's 8-step LoRA for MiniMax-H3, on top of the official diffusers Modular Pipeline.
 
 Three calls on top of the official loading recipe::
 
     blocks = hyperflow_blocks("fl2va")                       # official workflow, two blocks swapped
     pipe = blocks.init_pipeline("MiniMaxAI/MiniMax-H3", components_manager=manager)
     pipe.load_components(dtype=torch.bfloat16)
-    load_hyperflow_lora(pipe, "videorebirth/MiniMax-H3-HyperFlow")  # LoRA + two-time embedder + sigma grid
+    load_hyperflow_lora(pipe, "videorebirth/hyperflow")  # LoRA + two-time embedder + sigma grid
     if sol_attn_available():
         enable_sol_attention(pipe)                           # optional, NVIDIA Sol-Attn (SM80+)
 """

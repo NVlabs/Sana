@@ -1,0 +1,572 @@
+{
+    "id": "8b5c6d0a-573b-435d-954b-0a35d05c989b",
+    "revision": 0,
+    "last_node_id": 22,
+    "last_link_id": 37,
+    "nodes": [
+      {
+        "id": 2,
+        "type": "GemmaLoader",
+        "pos": [
+          468.1656799316406,
+          1070.545166015625
+        ],
+        "size": [
+          315,
+          106
+        ],
+        "flags": {},
+        "order": 0,
+        "mode": 0,
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "GEMMA",
+            "type": "GEMMA",
+            "slot_index": 0,
+            "links": [
+              10,
+              11
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "GemmaLoader",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          "Efficient-Large-Model/gemma-2-2b-it",
+          "cuda",
+          "BF16"
+        ]
+      },
+      {
+        "id": 8,
+        "type": "SanaResolutionSelect",
+        "pos": [
+          483.9179382324219,
+          873.2966918945312
+        ],
+        "size": [
+          315,
+          102
+        ],
+        "flags": {},
+        "order": 1,
+        "mode": 0,
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "width",
+            "type": "INT",
+            "slot_index": 0,
+            "links": [
+              7
+            ]
+          },
+          {
+            "name": "height",
+            "type": "INT",
+            "slot_index": 1,
+            "links": [
+              8
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "SanaResolutionSelect",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          "1024px",
+          "1.00"
+        ]
+      },
+      {
+        "id": 4,
+        "type": "EmptySanaLatentImage",
+        "pos": [
+          887.5203857421875,
+          755.1995239257812
+        ],
+        "size": [
+          315,
+          106
+        ],
+        "flags": {},
+        "order": 6,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "width",
+            "type": "INT",
+            "widget": {
+              "name": "width"
+            },
+            "link": 7
+          },
+          {
+            "name": "height",
+            "type": "INT",
+            "widget": {
+              "name": "height"
+            },
+            "link": 8
+          }
+        ],
+        "outputs": [
+          {
+            "name": "LATENT",
+            "type": "LATENT",
+            "slot_index": 0,
+            "links": [
+              33
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "EmptySanaLatentImage",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          512,
+          512,
+          1
+        ]
+      },
+      {
+        "id": 1,
+        "type": "VAEDecode",
+        "pos": [
+          1636.4532470703125,
+          606.2354736328125
+        ],
+        "size": [
+          200,
+          50
+        ],
+        "flags": {},
+        "order": 9,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "samples",
+            "type": "LATENT",
+            "link": 34
+          },
+          {
+            "name": "vae",
+            "type": "VAE",
+            "link": 2
+          }
+        ],
+        "outputs": [
+          {
+            "name": "IMAGE",
+            "type": "IMAGE",
+            "slot_index": 0,
+            "links": [
+              37
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "VAEDecode",
+          "cnr_id": "comfy-core",
+          "ver": "0.3.27"
+        },
+        "widgets_values": []
+      },
+      {
+        "id": 6,
+        "type": "GemmaTextEncode",
+        "pos": [
+          829.6780395507812,
+          1274.1309814453125
+        ],
+        "size": [
+          400,
+          200
+        ],
+        "flags": {},
+        "order": 4,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "GEMMA",
+            "type": "GEMMA",
+            "link": 10
+          }
+        ],
+        "outputs": [
+          {
+            "name": "CONDITIONING",
+            "type": "CONDITIONING",
+            "slot_index": 0,
+            "links": [
+              36
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "GemmaTextEncode",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          ""
+        ]
+      },
+      {
+        "id": 9,
+        "type": "SanaCheckpointLoader",
+        "pos": [
+          493.737548828125,
+          687.6068115234375
+        ],
+        "size": [
+          315,
+          130
+        ],
+        "flags": {},
+        "order": 2,
+        "mode": 0,
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "model",
+            "type": "MODEL",
+            "slot_index": 0,
+            "links": [
+              35
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "SanaCheckpointLoader",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          "Efficient-Large-Model/Sana_Sprint_1.6B_1024px",
+          "SanaSprint_1600M_P1_D20",
+          "FP32",
+          true
+        ]
+      },
+      {
+        "id": 20,
+        "type": "PreviewImage",
+        "pos": [
+          1660.9478759765625,
+          727.8193969726562
+        ],
+        "size": [
+          513.6846923828125,
+          598.8845825195312
+        ],
+        "flags": {},
+        "order": 10,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "images",
+            "type": "IMAGE",
+            "link": 37
+          }
+        ],
+        "outputs": [],
+        "properties": {
+          "Node name for S&R": "PreviewImage"
+        },
+        "widgets_values": []
+      },
+      {
+        "id": 10,
+        "type": "ExtraVAELoader",
+        "pos": [
+          1276.7528076171875,
+          1018.2510375976562
+        ],
+        "size": [
+          315,
+          106
+        ],
+        "flags": {},
+        "order": 3,
+        "mode": 0,
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "VAE",
+            "type": "VAE",
+            "slot_index": 0,
+            "links": [
+              2
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "ExtraVAELoader",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers",
+          "dcae-f32c32-sana-1.0-diffusers",
+          "FP32"
+        ]
+      },
+      {
+        "id": 17,
+        "type": "ScmModelSampling",
+        "pos": [
+          893.3164672851562,
+          610.3329467773438
+        ],
+        "size": [
+          270,
+          82
+        ],
+        "flags": {},
+        "order": 7,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "model",
+            "type": "MODEL",
+            "link": 35
+          }
+        ],
+        "outputs": [
+          {
+            "name": "MODEL",
+            "type": "MODEL",
+            "links": [
+              28
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "ScmModelSampling"
+        },
+        "widgets_values": [
+          4.5,
+          false
+        ]
+      },
+      {
+        "id": 7,
+        "type": "SanaTextEncode",
+        "pos": [
+          832.4186401367188,
+          1021.9381103515625
+        ],
+        "size": [
+          400,
+          200
+        ],
+        "flags": {},
+        "order": 5,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "GEMMA",
+            "type": "GEMMA",
+            "link": 11
+          }
+        ],
+        "outputs": [
+          {
+            "name": "CONDITIONING",
+            "type": "CONDITIONING",
+            "slot_index": 0,
+            "links": [
+              31
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "SanaTextEncode",
+          "cnr_id": "ComfyUI_ExtraModels",
+          "ver": "92f556ed4d3bec1a3f16117d2de10f195c36d68e"
+        },
+        "widgets_values": [
+          "a tiny astronaut hatching from an egg on the moon\""
+        ]
+      },
+      {
+        "id": 19,
+        "type": "KSampler",
+        "pos": [
+          1270.6649169921875,
+          595.4799194335938
+        ],
+        "size": [
+          315,
+          262
+        ],
+        "flags": {},
+        "order": 8,
+        "mode": 0,
+        "inputs": [
+          {
+            "name": "model",
+            "type": "MODEL",
+            "link": 28
+          },
+          {
+            "name": "positive",
+            "type": "CONDITIONING",
+            "link": 31
+          },
+          {
+            "name": "negative",
+            "type": "CONDITIONING",
+            "link": 36
+          },
+          {
+            "name": "latent_image",
+            "type": "LATENT",
+            "link": 33
+          }
+        ],
+        "outputs": [
+          {
+            "name": "LATENT",
+            "type": "LATENT",
+            "slot_index": 0,
+            "links": [
+              34
+            ]
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "KSampler"
+        },
+        "widgets_values": [
+          763443243300024,
+          "randomize",
+          2,
+          1,
+          "scm",
+          "sgm_uniform",
+          1
+        ]
+      }
+    ],
+    "links": [
+      [
+        2,
+        10,
+        0,
+        1,
+        1,
+        "VAE"
+      ],
+      [
+        7,
+        8,
+        0,
+        4,
+        0,
+        "INT"
+      ],
+      [
+        8,
+        8,
+        1,
+        4,
+        1,
+        "INT"
+      ],
+      [
+        10,
+        2,
+        0,
+        6,
+        0,
+        "GEMMA"
+      ],
+      [
+        11,
+        2,
+        0,
+        7,
+        0,
+        "GEMMA"
+      ],
+      [
+        28,
+        17,
+        0,
+        19,
+        0,
+        "MODEL"
+      ],
+      [
+        31,
+        7,
+        0,
+        19,
+        1,
+        "CONDITIONING"
+      ],
+      [
+        33,
+        4,
+        0,
+        19,
+        3,
+        "LATENT"
+      ],
+      [
+        34,
+        19,
+        0,
+        1,
+        0,
+        "LATENT"
+      ],
+      [
+        35,
+        9,
+        0,
+        17,
+        0,
+        "MODEL"
+      ],
+      [
+        36,
+        6,
+        0,
+        19,
+        2,
+        "CONDITIONING"
+      ],
+      [
+        37,
+        1,
+        0,
+        20,
+        0,
+        "IMAGE"
+      ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {
+      "ds": {
+        "scale": 0.7627768444385488,
+        "offset": [
+          -469.3002701216284,
+          -478.2539864725517
+        ]
+      },
+      "frontendVersion": "1.21.6"
+    },
+    "version": 0.4
+  }

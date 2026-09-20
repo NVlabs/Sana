@@ -1,0 +1,108 @@
+task: v2v
+data:
+  data_dir:
+    example_data: data/sana_streaming_1k/data/example_data
+  type: SanaV2VPairDataset
+  image_size: 720
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_720_MS_DIV32
+  transform: default_train_video
+  load_text_feat: false
+  load_vae_feat: false
+  num_frames: 81
+  sort_dataset: false
+  shuffle_dataset: false
+  resample_fps: false
+model:
+  model: SanaMSVideoV2V_2000M_P1_D20
+  image_size: 720
+  mixed_precision: bf16
+  fp32_attention: true
+  load_from: hf://Efficient-Large-Model/SANA-Streaming_bidirectional/dit/sana_bidirectional_short.pth
+  resume_from: null
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_720_MS_DIV32
+  multi_scale: true
+  attn_type: V2VBiGDNAttention
+  additional_inchannels: 128
+  softmax_ratio: 0.25
+  softmax_attn_type: V2VGatedSoftmaxAttention
+  linear_head_dim: 112
+  ffn_type: GLUMBConvTemp
+  t_kernel_size: 3
+  mlp_acts: [silu, silu, null]
+  mlp_ratio: 3.0
+  use_pe: true
+  pos_embed_type: wan_rope
+  qk_norm: true
+  cross_norm: true
+  class_dropout_prob: 0.1
+vae:
+  vae_type: LTX2VAE_diffusers
+  vae_pretrained: Lightricks/LTX-2
+  weight_dtype: bfloat16
+  vae_latent_dim: 128
+  vae_downsample_rate: 32
+  vae_stride: [8, 32, 32]
+  if_cache: false
+  cache_dir: null
+text_encoder:
+  text_encoder_name: gemma-2-2b-it
+  caption_channels: 2304
+  y_norm: true
+  y_norm_scale_factor: 0.01
+  model_max_length: 300
+  chi_prompt:
+    - 'Given a user prompt, generate an "Enhanced prompt" that provides detailed visual descriptions suitable for image generation. Evaluate the level of detail in the user prompt:'
+    - '- If the prompt is simple, focus on adding specifics about colors, shapes, sizes, textures, and spatial relationships to create vivid and concrete scenes.'
+    - '- If the prompt is already detailed, refine and enhance the existing details slightly without overcomplicating.'
+    - 'Please generate only the enhanced description for the prompt below and avoid including any additional commentary or evaluations:'
+    - 'User Prompt: '
+scheduler:
+  train_sampling_steps: 1000
+  predict_flow_v: true
+  noise_schedule: linear_flow
+  pred_sigma: false
+  learn_sigma: true
+  flow_shift: 3.0
+  inference_flow_shift: 8.0
+  weighting_scheme: logit_normal
+  logit_mean: 0.0
+  logit_std: 1.0
+  vis_sampler: flow_dpm-solver
+train:
+  use_fsdp: true
+  num_workers: 8
+  seed: 1
+  train_batch_size: 1
+  train_batch_size_image: 1
+  num_epochs: 10
+  gradient_accumulation_steps: 1
+  grad_checkpointing: true
+  gradient_clip: 0.1
+  optimizer:
+    type: AdamW
+    lr: 5.0e-5
+    betas: [0.9, 0.999]
+    eps: 1.0e-10
+    weight_decay: 0.0
+  auto_lr: null
+  lr_schedule: constant
+  lr_schedule_args:
+    num_warmup_steps: 500
+  log_interval: 5
+  save_model_epochs: 5
+  save_model_steps: 500
+  visualize: false
+  deterministic_validation: false
+  online_metric: false
+  work_dir: output/sana_streaming_bidirectional_2b_720p
+  ema_update: false
+  timestep_weight: false
+  ltx_image_condition_prob: 0.0
+  same_timestep_prob: 1.0
+  joint_training_interval: 0
+work_dir: output/sana_streaming_bidirectional_2b_720p
+debug: false
+caching: false
+tracker_project_name: sana-streaming
+name: sana_streaming_bidirectional_2b_720p
+loss_report_name: loss

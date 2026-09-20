@@ -1,0 +1,87 @@
+trainer: wm_self_forcing
+work_dir: output/sana_wm_distill_self_forcing_t43
+# Warm up self-forcing at T43 before extending the same generator/critic to
+# T121. The generator comes from ODE distillation; both score models start
+# from the public bidirectional teacher.
+model_config: configs/sana_wm/sana_wm_streaming_1600m_720p.yaml
+model_path: output/sana_wm_distill_ode_t43/checkpoints/step_003000/model.pt
+fake_model_config: configs/sana_wm/sana_wm_1600m_720p.yaml
+fake_model_path: hf://Efficient-Large-Model/SANA-WM_bidirectional/dit/sana_wm_1600m_720p.safetensors
+real_model_config: configs/sana_wm/sana_wm_1600m_720p.yaml
+real_model_path: hf://Efficient-Large-Model/SANA-WM_bidirectional/dit/sana_wm_1600m_720p.safetensors
+data:
+  hf_dataset_repo: Efficient-Large-Model/SANA-WM-example-training-dataset
+  hf_dataset_revision: 4d965e94b9ea11b9c5ba085251ffa7a0345e006f
+  hf_dataset_local_dir: .
+  hf_dataset_allow_patterns: [data/**]
+  data_dir:
+    sekai_game: data/sekai_game_train_961frames_16fps_ovl640
+  external_caption_suffixes: [_LongSceneStaticCaption-Qwen3-VL-30B-A3B-Instruct]
+  caption_proportion:
+    sekai_game:
+      _LongSceneStaticCaption-Qwen3-VL-30B-A3B-Instruct: 100
+  data_repeat:
+    sekai_game: 16
+  external_data_filter:
+    sekai_game:
+      _vmafmotion: {min: 0.5, max: 50}
+      _unimatch: {min: 3.0, max: 80}
+      _dover: {min: 0.25, max: 1.0}
+      _vlm_entity_filter: {min: 0, max: 10}
+      _vlm_quality_filter: {min: 0.5, max: 1.5}
+  type: SanaWMZipLatentDataset
+  image_size: 720
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_720_MS_DIV32
+  transform: default_train_video
+  load_text_feat: false
+  load_vae_feat: true
+  vae_cache_dir: data/vae_cache/LTX2VAE_diffusers_704x1280/sekai_game_train_961frames_16fps_ovl640
+  num_frames: 961
+  sort_dataset: false
+  shuffle_dataset: false
+  return_chunk_plucker: true
+  vae_ratio: [8, 32]
+  cam_sample_strategy: last
+num_latent_frames: 43
+num_cached_blocks: -1
+sink_token: false
+denoising_step_list: [1000, 967, 908, 764, 0]
+generator_update_interval: 5
+timestep_shift: 10.0
+min_score_timestep: 20
+max_score_timestep: 980
+real_guidance_scale: 3.0
+negative_prompt: A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience.
+optimizer:
+  lr: 1.0e-5
+  betas: [0.0, 0.999]
+  weight_decay: 0.0
+critic_optimizer:
+  lr: 2.0e-6
+  betas: [0.0, 0.999]
+  weight_decay: 0.0
+train:
+  seed: 0
+  batch_size: 1
+  num_workers: 0
+  max_steps: 700
+  log_interval: 10
+  save_model_steps: 700
+  early_stop_hours: 0
+  gradient_accumulation_steps: 1
+  generator_gradient_clip: 10.0
+  critic_gradient_clip: 10.0
+  grad_checkpointing: true
+  use_fsdp: true
+  fsdp_version: 2
+  cp_size: 4
+  extra:
+    cp:
+      scan_backend: triton
+      triton_block_fusion: true
+      fsdp2:
+        reshard_after_forward: true
+        limit_all_gathers: false
+resume_from: null
+report_to: none
+tracker_project_name: sana-wm-distill

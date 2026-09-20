@@ -1,0 +1,1142 @@
+{
+  "last_node_id": 37,
+  "last_link_id": 48,
+  "nodes": [
+    {
+      "id": 5,
+      "type": "GemmaLoader",
+      "pos": [
+        283.376953125,
+        603.7484741210938
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "links": [
+            9,
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GemmaLoader"
+      },
+      "widgets_values": [
+        "Efficient-Large-Model/gemma-2-2b-it",
+        "cuda",
+        "BF16"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "SanaTextEncode",
+      "pos": [
+        670.9176635742188,
+        797.39501953125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaTextEncode"
+      },
+      "widgets_values": [
+        "\"\""
+      ]
+    },
+    {
+      "id": 4,
+      "type": "SanaResolutionSelect",
+      "pos": [
+        300.2852783203125,
+        392.79766845703125
+      ],
+      "size": [
+        315,
+        102
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [
+            8
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaResolutionSelect"
+      },
+      "widgets_values": [
+        "1024px",
+        "1.46"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "SanaTextEncode",
+      "pos": [
+        674.2115478515625,
+        504.2879638671875
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaTextEncode"
+      },
+      "widgets_values": [
+        "A cyberpunk cat with a neon sign that says 'Sana'."
+      ]
+    },
+    {
+      "id": 24,
+      "type": "PreviewImage",
+      "pos": [
+        1443.0323486328125,
+        352.056396484375
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 47
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 25,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        2825.935546875,
+        -102.76895904541016
+      ],
+      "size": [
+        767.7372436523438,
+        310
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 30
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "meta_batch",
+          "type": "VHS_BatchManager",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 8,
+        "loop_count": 0,
+        "filename_prefix": "CogVideoX_Fun",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "pingpong": false,
+        "save_output": true,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "CogVideoX_Fun_00005.mp4",
+            "subfolder": "",
+            "type": "output",
+            "format": "video/h264-mp4",
+            "frame_rate": 8
+          },
+          "muted": false
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "CogVideoTextEncode",
+      "pos": [
+        1713.936279296875,
+        174.2305450439453
+      ],
+      "size": [
+        471.90142822265625,
+        168.08047485351562
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "links": [
+            32
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            36
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CogVideoTextEncode"
+      },
+      "widgets_values": [
+        "fireworks display over night city. The video is of high quality, and the view is very clear. High quality, masterpiece, best quality, highres, ultra-detailed, fantastic.",
+        1,
+        false
+      ]
+    },
+    {
+      "id": 28,
+      "type": "CogVideoTextEncode",
+      "pos": [
+        1720.936279296875,
+        393.230712890625
+      ],
+      "size": [
+        463.01251220703125,
+        144
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "links": [
+            33
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CogVideoTextEncode"
+      },
+      "widgets_values": [
+        "The video is not of a high quality, it has a low resolution. Watermark present in each frame. Strange motion trajectory. ",
+        1,
+        true
+      ]
+    },
+    {
+      "id": 30,
+      "type": "CogVideoImageEncodeFunInP",
+      "pos": [
+        2088.93603515625,
+        595.230712890625
+      ],
+      "size": [
+        253.60000610351562,
+        146
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 37
+        },
+        {
+          "name": "start_image",
+          "type": "IMAGE",
+          "link": 38
+        },
+        {
+          "name": "end_image",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image_cond_latents",
+          "type": "LATENT",
+          "links": [
+            34
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CogVideoImageEncodeFunInP"
+      },
+      "widgets_values": [
+        49,
+        true,
+        0
+      ]
+    },
+    {
+      "id": 33,
+      "type": "CogVideoDecode",
+      "pos": [
+        2442.93603515625,
+        -105.76895904541016
+      ],
+      "size": [
+        315,
+        198
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 40
+        },
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 41
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            30
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CogVideoDecode"
+      },
+      "widgets_values": [
+        true,
+        240,
+        360,
+        0.2,
+        0.2,
+        true
+      ]
+    },
+    {
+      "id": 34,
+      "type": "DownloadAndLoadCogVideoModel",
+      "pos": [
+        1714.936279296875,
+        -138.76895141601562
+      ],
+      "size": [
+        362.1656799316406,
+        218
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "block_edit",
+          "type": "TRANSFORMERBLOCKS",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "lora",
+          "type": "COGLORA",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "compile_args",
+          "type": "COMPILEARGS",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "COGVIDEOMODEL",
+          "links": [
+            31
+          ]
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "links": [
+            37,
+            40
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DownloadAndLoadCogVideoModel"
+      },
+      "widgets_values": [
+        "alibaba-pai/CogVideoX-Fun-V1.1-5b-InP",
+        "bf16",
+        "disabled",
+        false,
+        "sdpa",
+        "main_device"
+      ]
+    },
+    {
+      "id": 31,
+      "type": "ImageResizeKJ",
+      "pos": [
+        1722.936279296875,
+        615.230712890625
+      ],
+      "size": [
+        315,
+        266
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 48
+        },
+        {
+          "name": "get_image_size",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "width_input",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "width_input"
+          },
+          "shape": 7
+        },
+        {
+          "name": "height_input",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "height_input"
+          },
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            38
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null,
+          "shape": 3
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageResizeKJ"
+      },
+      "widgets_values": [
+        720,
+        480,
+        "lanczos",
+        false,
+        2,
+        0,
+        0,
+        "disabled"
+      ]
+    },
+    {
+      "id": 29,
+      "type": "CLIPLoader",
+      "pos": [
+        1216.935791015625,
+        -8.769308090209961
+      ],
+      "size": [
+        451.30548095703125,
+        82
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            35
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "text_encoders/t5xxl_fp16.safetensors",
+        "sd3"
+      ]
+    },
+    {
+      "id": 26,
+      "type": "CogVideoSampler",
+      "pos": [
+        2423.935791015625,
+        152.23048400878906
+      ],
+      "size": [
+        330,
+        574
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "COGVIDEOMODEL",
+          "link": 31
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 32
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 33
+        },
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "image_cond_latents",
+          "type": "LATENT",
+          "link": 34,
+          "shape": 7
+        },
+        {
+          "name": "context_options",
+          "type": "COGCONTEXT",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "controlnet",
+          "type": "COGVIDECONTROLNET",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "tora_trajectory",
+          "type": "TORAFEATURES",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "fastercache",
+          "type": "FASTERCACHEARGS",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "links": [
+            41
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CogVideoSampler"
+      },
+      "widgets_values": [
+        49,
+        25,
+        6,
+        1123398248636718,
+        "randomize",
+        "CogVideoXDDIM",
+        1
+      ]
+    },
+    {
+      "id": 35,
+      "type": "SanaCheckpointLoader",
+      "pos": [
+        286.5307922363281,
+        235.45753479003906
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            43
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaCheckpointLoader"
+      },
+      "widgets_values": [
+        "Efficient-Large-Model/Sana_1600M_1024px_MultiLing",
+        "SanaMS_1600M_P1_D20"
+      ]
+    },
+    {
+      "id": 37,
+      "type": "ExtraVAELoader",
+      "pos": [
+        1070.8033447265625,
+        747.4982299804688
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            46
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ExtraVAELoader"
+      },
+      "widgets_values": [
+        "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers",
+        "dcae-f32c32-sana-1.1-diffusers",
+        "BF16"
+      ]
+    },
+    {
+      "id": 1,
+      "type": "KSampler",
+      "pos": [
+        1101.390625,
+        196.0309600830078
+      ],
+      "size": [
+        300,
+        480
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 43
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 2
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 3
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            5
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        869595936769725,
+        "randomize",
+        28,
+        5,
+        "euler",
+        "normal",
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "type": "EmptyDCAELatentImage",
+      "pos": [
+        723.0592041015625,
+        317.112548828125
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 7,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 8,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyDCAELatentImage"
+      },
+      "widgets_values": [
+        512,
+        512,
+        1
+      ]
+    },
+    {
+      "id": 2,
+      "type": "VAEDecode",
+      "pos": [
+        1452.4869384765625,
+        217.9922637939453
+      ],
+      "size": [
+        200,
+        50
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 5
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 46
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            47,
+            48
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      2,
+      7,
+      0,
+      1,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      3,
+      12,
+      0,
+      1,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      4,
+      6,
+      0,
+      1,
+      3,
+      "LATENT"
+    ],
+    [
+      5,
+      1,
+      0,
+      2,
+      0,
+      "LATENT"
+    ],
+    [
+      7,
+      4,
+      0,
+      6,
+      0,
+      "INT"
+    ],
+    [
+      8,
+      4,
+      1,
+      6,
+      1,
+      "INT"
+    ],
+    [
+      9,
+      5,
+      0,
+      7,
+      0,
+      "GEMMA"
+    ],
+    [
+      11,
+      5,
+      0,
+      12,
+      0,
+      "GEMMA"
+    ],
+    [
+      30,
+      33,
+      0,
+      25,
+      0,
+      "IMAGE"
+    ],
+    [
+      31,
+      34,
+      0,
+      26,
+      0,
+      "COGVIDEOMODEL"
+    ],
+    [
+      32,
+      27,
+      0,
+      26,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      33,
+      28,
+      0,
+      26,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      34,
+      30,
+      0,
+      26,
+      4,
+      "LATENT"
+    ],
+    [
+      35,
+      29,
+      0,
+      27,
+      0,
+      "CLIP"
+    ],
+    [
+      36,
+      27,
+      1,
+      28,
+      0,
+      "CLIP"
+    ],
+    [
+      37,
+      34,
+      1,
+      30,
+      0,
+      "VAE"
+    ],
+    [
+      38,
+      31,
+      0,
+      30,
+      1,
+      "IMAGE"
+    ],
+    [
+      40,
+      34,
+      1,
+      33,
+      0,
+      "VAE"
+    ],
+    [
+      41,
+      26,
+      0,
+      33,
+      1,
+      "LATENT"
+    ],
+    [
+      43,
+      35,
+      0,
+      1,
+      0,
+      "MODEL"
+    ],
+    [
+      46,
+      37,
+      0,
+      2,
+      1,
+      "VAE"
+    ],
+    [
+      47,
+      2,
+      0,
+      24,
+      0,
+      "IMAGE"
+    ],
+    [
+      48,
+      2,
+      0,
+      31,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.5644739300537776,
+      "offset": [
+        515.970442108866,
+        435.7565370847522
+      ]
+    },
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

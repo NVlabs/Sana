@@ -1,0 +1,86 @@
+sana_config: configs/sana_video_config/Sana_2000M_480px_adamW_fsdp_longsana.yaml
+sana_fake_config: configs/sana_video_config/Sana_2000M_480px_AdamW_fsdp.yaml
+sana_inference_config: configs/sana_video_config/Sana_2000M_480px_adamW_fsdp_longsana.yaml
+generator_ckpt: hf://Efficient-Large-Model/LongSANA_2B_480p_self_forcing/checkpoints/LongSANA_2B_480p_self_forcing.pt
+fake_ckpt: hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth
+real_ckpt: hf://Efficient-Large-Model/SANA-Video_2B_480p/checkpoints/SANA_Video_2B_480p.pth
+generator_fsdp_wrap_strategy: size
+real_score_fsdp_wrap_strategy: size
+fake_score_fsdp_wrap_strategy: size
+text_encoder_fsdp_wrap_strategy: size
+# Use SANA as real teacher
+real_name: SANA
+# Use SANA as fake and generator (in DMDSana internally)
+fake_name: SANA
+denoising_step_list:
+  - 1000
+  - 960
+  - 889
+  - 727
+  - 0
+warp_denoising_step: false # need to remove - 0 in denoising_step_list if warp_denoising_step is true
+ts_schedule: false
+num_train_timestep: 1000
+timestep_shift: 5.0
+guidance_scale: 3.0
+denoising_loss_type: flow
+mixed_precision: true
+seed: 0
+wandb_key: null
+wandb_entity: null
+wandb_project: self-forcing-sana
+sharding_strategy: full
+lr: 1.0e-05
+lr_critic: 2.0e-06
+beta1: 0.0
+beta2: 0.999
+beta1_critic: 0.0
+beta2_critic: 0.999
+data_path: data/longsana/vidprom_filtered_extended.txt
+batch_size: 1
+ema_weight: 0.99
+ema_start_step: 200
+total_batch_size: 64
+log_iters: 200
+motion_score: 10
+max_checkpoints: 300
+max_iters: 30000
+negative_prompt: "A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience."
+negative_prompt_real: 'A chaotic sequence with misshapen, deformed limbs in heavy motion blur, sudden disappearance, jump cuts, jerky movements, rapid shot changes, frames out of sync, inconsistent character shapes, temporal artifacts, jitter, and ghosting effects, creating a disorienting visual experience.'
+dfake_gen_update_ratio: 5
+image_or_video_shape:
+  - 1
+  - 261
+  - 16
+  - 60
+  - 104
+distribution_loss: dmd_sana
+trainer: longsana
+gradient_checkpointing: true
+load_raw_video: false
+model_kwargs:
+  timestep_shift: 7.0
+  local_attn_size: 21
+# Visualization
+vis_interval: 200
+train_vis_interval: 100
+train_vis_rank: 1
+vis_ema: false
+vis_video_lengths:
+  - 261
+val_batch_size: 1
+val_data_path: data/longsana/vidprom_filtered_extended.txt
+slice_last_frames: 21
+streaming_training: true
+streaming_chunk_size: 21
+streaming_max_length: 261 #141
+student_max_frame: 261 #141
+streaming_min_new_frame: 20
+train_first_chunk: true
+last_step_only: false
+# train_first_chunk: true
+min_num_training_frames: 21
+num_training_frames: 21
+num_frame_per_block: 10
+num_chunks_per_clip: 2
+update_kv_cache_by_end: false

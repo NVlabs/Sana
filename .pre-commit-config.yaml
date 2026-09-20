@@ -1,0 +1,66 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: (Common) Remove trailing whitespaces
+      - id: mixed-line-ending
+        name: (Common) Fix mixed line ending
+        args: [--fix=lf]
+      - id: end-of-file-fixer
+        name: (Common) Remove extra EOF newlines
+      - id: check-merge-conflict
+        name: (Common) Check for merge conflicts
+      - id: requirements-txt-fixer
+        name: (Common) Sort "requirements.txt"
+        # - id: debug-statements
+        #   name: (Python) Check for debugger imports
+      - id: check-json
+        name: (JSON) Check syntax
+      - id: check-yaml
+        name: (YAML) Check syntax
+        exclude: mkdocs.yml
+      - id: check-toml
+        name: (TOML) Check syntax
+  # - repo: https://github.com/shellcheck-py/shellcheck-py
+  #   rev: v0.10.0.1
+  #   hooks:
+  #     - id: shellcheck
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.20.0
+    hooks:
+      - id: yamlfmt
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 1.0.0
+    hooks:
+      - id: mdformat
+        name: (Markdown) Format docs with mdformat
+        additional_dependencies:
+          - mdformat-admon
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.21.2
+    hooks:
+      - id: pyupgrade
+        name: (Python) Update syntax for newer versions
+        args: [--py37-plus]
+  - repo: https://github.com/psf/black
+    rev: 25.12.0
+    hooks:
+      - id: black
+        name: (Python) Format code with black
+  - repo: https://github.com/pycqa/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        name: (Python) Sort imports with isort
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v21.1.7
+    hooks:
+      - id: clang-format
+        name: (C/C++/CUDA) Format code with clang-format
+        args: [-style=google, -i]
+        types_or: [c, c++, cuda]
+  - repo: https://github.com/pycqa/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake

@@ -1,0 +1,1881 @@
+<html lang="en">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>
+    <script type='text/javascript' src='https://s3.amazonaws.com/mturk-public/externalHIT_v1.js'></script>
+
+    <!-- BOOTSTRAP CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <!-- HITPUB CSS -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i" rel="stylesheet">
+    <style id="hitpub_css">
+        /***********************************************
+        MOSAIC BOOSTRAP OVERWRITES
+        ***********************************************/
+        #hitinfo .card {
+            border-radius: 0;
+        }
+        #hitinfo button.btn-link {
+            color: #fff;
+            text-decoration: none;
+        }
+
+
+        #hitinfo button.btn-link:hover {
+            text-decoration: none;
+        }
+        #hit ul.question-choice {
+            list-style-type: none;
+        }
+
+        /***********************************************
+        MOSAIC GENERAL STYLING
+        ***********************************************/
+        body {
+            font-family: "Open Sans", "Roboto", sans-serif;
+            line-height: 1.25;
+        }
+        textarea#feedback {
+            width: 100%
+        }
+        input#submitButton {
+            margin: auto;
+            display: block;
+            background-color: #2172a4;
+            color: #fff;
+            font-size: 1.125rem;
+            padding: .5rem 1rem;
+            cursor: pointer;
+            border-radius: 1rem;
+        }
+        input#submitButton:hover {
+            background-color: #06486F;
+        }
+
+        input[type="radio"] {
+            cursor: pointer;
+        }
+
+        div.goal-category {
+            border-bottom: solid 1px #ccc;
+            padding: 1rem 1rem;
+        }
+
+        li {
+            margin:0.6em;
+        }
+
+        table {
+            width: 80%;
+            margin: 5px;
+        }
+
+        tr {
+            border:1px solid #ccc;
+        }
+
+        th {
+            width:20%;
+            background-color:#fff;
+            font-weight:normal;
+            text-align: center;
+            padding:0.5em;
+        }
+
+
+        td {
+            padding-left:20px;
+            padding-right:10px;
+        }
+
+
+
+
+        /***********************************************
+        HIT CUSTOM GENERAL STYLING
+        ***********************************************/
+        div.card-header {
+            background-color: #06486F;
+        }
+        div.card-header h5 {
+            color: #fff !important;
+        }
+
+
+        .question-choice-container label.btn {
+            background-color: #eee;
+            border: #ccc 1px solid;
+            margin-left: 0 !important;
+            color: black;
+        }
+
+
+        .legend {
+            margin-top: .33rem;
+            font-weight: normal;
+            padding-left: 40px;
+        }
+        .legend .label{
+            font-style: italic;
+        }
+
+        .emphasize {
+            font-weight: bold;
+            color: black;
+            font-style: italic;
+        }
+
+        .btn-group-container {
+            align:left;
+            padding:0;
+        }
+
+        .example {
+            pointer-events:none;
+        }
+
+        .title {
+            font-style: italic;
+        }
+
+        .entity {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .use {
+            color: purple;
+            font-weight: bold;
+        }
+
+        .btn-group-xs > .btn, .btn-xs {
+            padding: .4rem .4rem;
+            font-size: .8rem;
+            line-height: 1.2;
+            border-radius: .2rem;
+        }
+
+        .card-body {
+            background-color:#fbfbfb;
+        }
+
+        .concept_a {
+            color: #0072B2;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .concept_b {
+            color: #D55E00;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .concept_c {
+            color: #aa00d5;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .concept_d {
+            color: #008d4b;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .sm-bold {
+            font-weight:bold;
+            font-style: italic;
+            font-size: 80%;
+        }
+
+        .form-check {
+            padding-left:0;
+            font-size:0.75rem;
+        }
+
+        .form-check-input {
+            margin-left:0;
+            position: relative;
+        }
+
+        /***********************************************
+        CUSTOM STYLING
+        ***********************************************/
+        div.row {
+            display: block;
+        }
+
+        img.subject {
+            width: 100%;
+            max-width: 512px;
+            object-fit: contain;
+        }
+
+        div.question-wrapper {
+            display: contents;
+        }
+
+        input[type=radio], input[type=checkbox]:not(#uw-related) {
+            /* display: none; */
+            opacity: 0;
+            width: 1px;
+        }
+
+        div.multi-column {
+            display: inline-grid;
+            grid: auto-flow / 1fr 1fr 1fr;
+            gap: 0.5rem 0.5rem;
+        }
+        div.multi-column label {
+            margin: 0;
+        }
+        div.multi-column.three-column {
+            grid: auto-flow / 1fr 1fr 1fr;
+        }
+
+        /* Image on side */
+        #task-container .question-header {
+            display: flex;
+            flex-direction: row;
+        }
+        #task-container .question-header > div:first-child {
+            flex: 3 0 384px;
+            min-width: 0;
+        }
+        #task-container .question-header > div:last-child {
+            flex: 2 1 512px;
+            min-width: 0;
+        }
+        #task-container .question-header > div:first-child > img {
+            position: sticky;
+            top: 40px;
+        }
+
+        /* Error messages */
+        #task-container div[data-question=objects]:has(textarea.object-list) #question-1-warning {
+            display: none;
+            color: #600;
+        }
+        #task-container div[data-question=objects]:has(textarea.object-list:invalid) #question-1-warning {
+            display: unset;
+        }
+        #task-container div.question-list div[data-question=objects]:has(textarea.object-list:invalid) ~ div.question-wrapper {
+            visibility: hidden;
+        }
+
+        #uw-message {
+            visibility: hidden;
+            color: #900;
+        }
+        #uw-message.show {
+            visibility: visible;
+        }
+        input#submitButton:disabled, input#submitButton:hover:disabled {
+            background-color: #456;
+            color: #ccc;
+            cursor: default;
+        }
+
+        /* Hide unneeded questions */
+        .question-wrapper[data-question=object-0-count] ~ .question-wrapper[data-question=object-0-followup],
+        .question-wrapper[data-question=object-1-count] ~ .question-wrapper[data-question=object-1-followup],
+        .question-wrapper[data-question=object-0]:has(.question-wrapper[data-question=object-0-count] label)
+            ~ .question-wrapper[data-question=object-1]:has(.question-wrapper[data-question=object-1-count] label)
+            ~ .question-wrapper[data-question=position] {
+            display: none;
+        }
+        .question-wrapper[data-question=object-0-count]:has(label.active) ~ .question-wrapper[data-question=object-0-followup],
+        .question-wrapper[data-question=object-1-count]:has(label.active) ~ .question-wrapper[data-question=object-1-followup],
+        .question-wrapper[data-question=object-0]:has(.question-wrapper[data-question=object-0-count] label.active)
+                ~ .question-wrapper[data-question=object-1]:has(.question-wrapper[data-question=object-1-count] label.active)
+                ~ .question-wrapper[data-question=position] {
+            display: contents;
+        }
+        .question-wrapper[data-question=object-1-count]:has(label.active[data-value=count-0]) ~ .question-wrapper[data-question=object-1-followup],
+        .question-wrapper[data-question=object-0-count]:has(label.active[data-value=count-0]) ~ .question-wrapper[data-question=object-0-followup],
+        .question-wrapper[data-question=object-0]:has(.question-wrapper[data-question=object-0-count] label.active[data-value=count-0])
+                ~ .question-wrapper[data-question=position],
+        .question-wrapper[data-question=object-1]:has(.question-wrapper[data-question=object-1-count] label.active[data-value=count-0])
+                ~ .question-wrapper[data-question=position] {
+            display: none !important;
+        }
+
+        /* Caption */
+        div.image-caption {
+            width: fit-content;
+            border: 3px solid #25b;
+            background-color: #25b2;
+            margin: 10px 25px;
+            padding: 5px 10px 5px 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+
+        /* Objects textbox */
+        textarea.object-list {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #fcfcfc;
+        }
+
+        /* Quality */
+        label[data-value="quality-4"]:not(:disabled):not(.disabled).active,
+        label[data-value="real-3"]:not(:disabled):not(.disabled).active,
+        button.bg-quality-4, button.bg-real-3 {
+            background-color: #060;
+        }
+        label[data-value="quality-3"]:not(:disabled):not(.disabled).active,
+        button.bg-quality-3 {
+            background-color: #780;
+        }
+        label[data-value="quality-2"]:not(:disabled):not(.disabled).active,
+        label[data-value="real-2"]:not(:disabled):not(.disabled).active,
+        button.bg-quality-2, button.bg-real-2 {
+            background-color: #960;
+        }
+        label[data-value="quality-1"]:not(:disabled):not(.disabled).active,
+        label[data-value="real-1"]:not(:disabled):not(.disabled).active,
+        button.bg-quality-1, button.bg-real-1 {
+            background-color: #900;
+        }
+
+        /* Count of objects */
+        label[data-value="count-0"]:not(:disabled):not(.disabled).active, button.bg-count-0 {
+            background-color: #545b62;
+        }
+        label[data-value="count-1"]:not(:disabled):not(.disabled).active,
+        label[data-value="count-2"]:not(:disabled):not(.disabled).active,
+        label[data-value="count-3"]:not(:disabled):not(.disabled).active,
+        label[data-value="count-4"]:not(:disabled):not(.disabled).active,
+        button.bg-count-few {
+            background-color: #339;
+        }
+        label[data-value="count-5"]:not(:disabled):not(.disabled).active, button.bg-count-many {
+            background-color: #936;
+        }
+
+        /* Color of objects */
+        label[data-value="color-red"]:not(:disabled):not(.disabled).active, button.bg-color-red {
+            background-color: #c00;
+        }
+        label[data-value="color-orange"]:not(:disabled):not(.disabled).active, button.bg-color-orange {
+            background-color: #c60;
+        }
+        label[data-value="color-yellow"]:not(:disabled):not(.disabled).active, button.bg-color-yellow {
+            background-color: #990;
+        }
+        label[data-value="color-green"]:not(:disabled):not(.disabled).active, button.bg-color-green {
+            background-color: #390;
+        }
+        label[data-value="color-blue"]:not(:disabled):not(.disabled).active, button.bg-color-blue {
+            background-color: #009;
+        }
+        label[data-value="color-purple"]:not(:disabled):not(.disabled).active, button.bg-color-purple {
+            background-color: #60c;
+        }
+        label[data-value="color-pink"]:not(:disabled):not(.disabled).active, button.bg-color-pink {
+            background-color: #c09;
+        }
+        label[data-value="color-brown"]:not(:disabled):not(.disabled).active, button.bg-color-brown {
+            background-color: #930;
+        }
+        label[data-value="color-black"]:not(:disabled):not(.disabled).active, button.bg-color-black {
+            background-color: #000;
+        }
+        label[data-value="color-white"]:not(:disabled):not(.disabled).active, button.bg-color-white {
+            background-color: #888;
+        }
+        label[data-value="color-gray"]:not(:disabled):not(.disabled).active, button.bg-color-gray {
+            background-color: #444;
+        }
+
+        label[data-value="position-left"]:not(:disabled):not(.disabled).active,
+        label[data-value="position-right"]:not(:disabled):not(.disabled).active,
+        label[data-value="position-above"]:not(:disabled):not(.disabled).active,
+        label[data-value="position-below"]:not(:disabled):not(.disabled).active,
+        button.bg-position-dir {
+            background-color: #339;
+        }
+        button.bg-position-none {
+            background-color: #545b62;
+        }
+    </style>
+
+    <!-- HIT START -->
+    <div id="hit" class="container">
+
+        <!-- ACCORDION START -->
+        <div class="col-12 accordion" id="hitinfo">
+
+            <!-- INSTRUCTIONS START -->
+            <div class="card">
+                <div class="card-header" id="instructionsHeading">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#instructions" aria-expanded="true" aria-controls="instructions">
+                            Instructions (click to expand/collapse)
+                        </button>
+                    </h5>
+                </div>
+                <div class="collapse show" id="instructions" aria-labelledby="instructionsHeading" data-parent="#hitinfo">
+                    <div class="card-body">
+                        <div class="card-content">
+                            <p>Thanks for participating in this HIT!</p>
+
+                            <p class="mb-2"><b>You will view an image, potentially generated by an AI image generator.</b></p>
+                            <br />
+                            <p class="mb-2"><b>Please answer all of the following questions to the best of your abilities. For each image you may be asked about:</b></p>
+                            <div class="legend" style="margin-left: 40px">
+                                <div class="row"><strong>List of objects</strong>: What objects are you able to discern in the image?</div>
+                                <div class="row"><strong>Number of objects</strong>: How many objects of a particular type are visible, either fully or partially?</div>
+                                <div class="row"><strong>Color of objects</strong>: What color(s) would you consider the object(s) to be?</div>
+                                <div class="row"><strong>Realism</strong>: How realistic or structurally correct are the objects?</div>
+                                <div class="row"><strong>Relative position</strong>: What is the relative position in the image of one object to another?</div>
+                                <div class="row"><strong>Caption fit</strong>: How well does the image correspond to a provided caption?</div>
+                            </div>
+                            <br />
+                            <p>A few notes:</p>
+                            <ul>
+                                <li>Take a look at the examples if any of the questions are unclear to you.</li>
+                                <li>Complete question 1 before moving on to other questions. If you are unable to recognize a particular object, guess what it is or use a brief description.</li>
+                                <li><b>Additional questions may appear based on your previous answers. Make sure to answer all questions shown.</b></li>
+                                <li>When asked about color, select at least one color that <em>best</em> matches the true color of the object(s).</li>
+                                <li>Do not consider color when deciding how realistic an object is; focus on the shape and form compared to real life.</li>
+                                <li>When asked about position, an object can be both above/below and to the left/right of another object.
+                                    Mark position from your perspective looking at the 2D image, <em>not</em> from the camera perspective.
+                                </li>
+                                <li>The image may be just a black square, in which case, you should say there are no objects.</li>
+                                <li><b>Please answer with care: Some HITs will be checked by hand, and work may be rejected if there are too many errors.</b></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- INSTRUCTIONS END -->
+            <!-- EXAMPLES START -->
+            <div class="card">
+                <div class="card-header" id="examplesHeading">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#examples" aria-expanded="true" aria-controls="examples">
+                            Examples (click to expand/collapse)
+                        </button>
+                    </h5>
+                </div>
+                <div class="collapse" id="examples" aria-labelledby="examplesHeading" data-parent="#hitinfo">
+                    <div class="card-body">
+                        <div class="card-content col-12">
+                            <!-- EXAMPLE MACRO START -->
+                            <!-- EXAMPLE 1 -->
+                            <div id="example-1" class="question">
+                                <div class="question-header question-choice-container pl-5 mb-2 pt-2 pb-2 border-bottom">
+                                    <div style="border: 5px solid #00aeef; padding: 10px 20px 10px 20px;"><b>Example #1:</b></div>
+                                    <br />
+                                    <div style="border: 0px solid #000; padding: 10px 20px 10px 20px;">
+                                        <img class="subject" src="https://huggingface.co/datasets/djghosh/aigen-images/resolve/main/images/sdv2/00257/samples/00000.png" />
+                                    </div>
+
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 1: Briefly list all the objects visible in the image,</strong>
+                                        separated by commas.
+                                        If there are no objects in the image, write "none".
+                                    </div>
+                                    <div class="row-12 pt-1 col-5">
+                                        <textarea class="object-list" name="ex1-objects" autocomplete="off" rows="3" cols="60" required>books, table</textarea>
+                                    </div>
+
+
+
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2a: How <em>many</em> <u>books</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex1-count-0" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex1-count-0" autocomplete="off" value="1" required />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex1-count-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex1-count-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex1-count-0" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex1-count-0" autocomplete="off" value="5" required checked />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-many"><strong>5</strong> or more</button> because there are clearly far more than 4 books in the image.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2b: What <em>color</em> of <u>books</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="red" checked />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="yellow" checked />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="green" checked />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="blue" checked />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="brown" />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="ex1-color-0" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-red"><strong>Red</strong></button>, <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-yellow"><strong>Yellow</strong></button>, <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-green"><strong>Green</strong></button>, and <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-blue"><strong>Blue</strong></button> because there are books of all these colors in the image.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2c: How <em>realistic</em> are the <u>books</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="ex1-real-0" autocomplete="off" value="3" required checked />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="ex1-real-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="ex1-real-0" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    Most of the books are well-drawn, with just the green book having a visual glitch, so I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-real-3"><strong>3</strong> Realistic or almost fully realistic</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3: How well does the image fit the caption below? (1&ndash;4)</strong>
+                                        &quot;Elements&quot; refer to individual objects or attributes specified by the text.
+                                        <br />
+                                        <div class="image-caption">a photo of four books</div>
+                                    </div>
+                                    The image:
+                                    <div class="row-12 pt-1 btn-group-container col-5 q1">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-4">
+                                                <input class="btm-info" type="radio" name="ex1-quality" autocomplete="off" value="4" required />
+                                                <strong>4</strong> Fully captures the meaning of the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-3">
+                                                <input class="btm-info" type="radio" name="ex1-quality" autocomplete="off" value="3" required />
+                                                <strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="quality-2">
+                                                <input class="btm-info" type="radio" name="ex1-quality" autocomplete="off" value="2" required checked />
+                                                <strong>2</strong> Misses <em>several or most</em> of the elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-1">
+                                                <input class="btm-info" type="radio" name="ex1-quality" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Is completely unrelated to the caption.
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-quality-2"><strong>2</strong> Misses <em>several or most</em> of the elements in the caption.</button> because there were clearly far more than 4 books in the image, as the caption specifies.
+
+                                </div>
+                            </div>
+
+                            <!-- EXAMPLE 2 -->
+                            <div id="example-2" class="question">
+                                <div class="question-header question-choice-container pl-5 mb-2 pt-2 pb-2 border-bottom">
+                                    <div style="border: 5px solid #00aeef; padding: 10px 20px 10px 20px;"><b>Example #2:</b></div>
+                                    <br />
+                                    <div style="border: 0px solid #000; padding: 10px 20px 10px 20px;">
+                                        <img class="subject" src="https://huggingface.co/datasets/djghosh/aigen-images/resolve/main/images/sdv2/00476/samples/00001.png" />
+                                    </div>
+
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 1: Briefly list all the objects visible in the image,</strong>
+                                        separated by commas.
+                                        If there are no objects in the image, write "none".
+                                    </div>
+                                    <div class="row-12 pt-1 col-5">
+                                        <textarea class="object-list" name="ex2-objects" autocomplete="off" rows="3" cols="60" required>sofa, coffee table, fur ball thing, something like a kite</textarea>
+                                    </div>
+
+
+
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2a: How <em>many</em> <u>couches</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex2-count-0" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex2-count-0" autocomplete="off" value="1" required checked />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex2-count-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex2-count-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex2-count-0" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex2-count-0" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    There is very clearly one couch in the image, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-few"><strong>1</strong> </button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2b: What <em>color</em> of <u>couches</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="red" />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="yellow" />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="green" checked />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="blue" />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="brown" />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="ex2-color-0" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    Since the couch is almost entirely green, with just one orange pillow, I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-green"><strong>Green</strong></button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2c: How <em>realistic</em> are the <u>couches</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="ex2-real-0" autocomplete="off" value="3" required checked />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="ex2-real-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="ex2-real-0" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    I do not notice anything unrealistic or incorrect about the shape or form of the couch, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-real-3"><strong>3</strong> Realistic or almost fully realistic</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3a: How <em>many</em> <u>umbrellas</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex2-count-1" autocomplete="off" value="0" required checked />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex2-count-1" autocomplete="off" value="1" required />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex2-count-1" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex2-count-1" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex2-count-1" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex2-count-1" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    While the orange object in the image could be an umbrella, I thought it was a kite, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-0"><strong>0</strong> None</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 4: How well does the image fit the caption below? (1&ndash;4)</strong>
+                                        &quot;Elements&quot; refer to individual objects or attributes specified by the text.
+                                        <br />
+                                        <div class="image-caption">a photo of a green couch and an orange umbrella</div>
+                                    </div>
+                                    The image:
+                                    <div class="row-12 pt-1 btn-group-container col-5 q1">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-4">
+                                                <input class="btm-info" type="radio" name="ex2-quality" autocomplete="off" value="4" required />
+                                                <strong>4</strong> Fully captures the meaning of the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="quality-3">
+                                                <input class="btm-info" type="radio" name="ex2-quality" autocomplete="off" value="3" required checked />
+                                                <strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-2">
+                                                <input class="btm-info" type="radio" name="ex2-quality" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Misses <em>several or most</em> of the elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-1">
+                                                <input class="btm-info" type="radio" name="ex2-quality" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Is completely unrelated to the caption.
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The image depicts a green couch and an orange object, as specified, but it is unclear whether the object is an umbrella, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-quality-3"><strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.</button>.
+
+                                </div>
+                            </div>
+
+                            <!-- EXAMPLE 3 -->
+                            <div id="example-3" class="question">
+                                <div class="question-header question-choice-container pl-5 mb-2 pt-2 pb-2 border-bottom">
+                                    <div style="border: 5px solid #00aeef; padding: 10px 20px 10px 20px;"><b>Example #3:</b></div>
+                                    <br />
+                                    <div style="border: 0px solid #000; padding: 10px 20px 10px 20px;">
+                                        <img class="subject" src="https://huggingface.co/datasets/djghosh/aigen-images/resolve/main/images/sdv2/00134/samples/00001.png" />
+                                    </div>
+
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 1: Briefly list all the objects visible in the image,</strong>
+                                        separated by commas.
+                                        If there are no objects in the image, write "none".
+                                    </div>
+                                    <div class="row-12 pt-1 col-5">
+                                        <textarea class="object-list" name="ex3-objects" autocomplete="off" rows="3" cols="60" required>weird scissor-like thing</textarea>
+                                    </div>
+
+
+
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2a: How <em>many</em> <u>scissors</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex3-count-0" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex3-count-0" autocomplete="off" value="1" required checked />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex3-count-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex3-count-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex3-count-0" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex3-count-0" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    I guessed that the object in the image is meant to be scissors, so I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-few"><strong>1</strong> </button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2b: What <em>color</em> of <u>scissors</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="red" />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="yellow" />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="green" />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="blue" />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="brown" />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="ex3-color-0" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The primary colors of the scissor handles are red and orange, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-red"><strong>Red</strong></button> and <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-orange"><strong>Orange</strong></button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2c: How <em>realistic</em> are the <u>scissors</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="ex3-real-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="ex3-real-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="ex3-real-0" autocomplete="off" value="1" required checked />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    While the blade is recognizable, the object does not at all resemble a real pair of scissors, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-real-1"><strong>1</strong> Completely unrealistic</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3a: How <em>many</em> <u>birds</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex3-count-1" autocomplete="off" value="0" required checked />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex3-count-1" autocomplete="off" value="1" required />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex3-count-1" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex3-count-1" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex3-count-1" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex3-count-1" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    There are clearly no birds in the image, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-0"><strong>0</strong> None</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 4: How well does the image fit the caption below? (1&ndash;4)</strong>
+                                        &quot;Elements&quot; refer to individual objects or attributes specified by the text.
+                                        <br />
+                                        <div class="image-caption">a photo of a scissors and a bird</div>
+                                    </div>
+                                    The image:
+                                    <div class="row-12 pt-1 btn-group-container col-5 q1">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-4">
+                                                <input class="btm-info" type="radio" name="ex3-quality" autocomplete="off" value="4" required />
+                                                <strong>4</strong> Fully captures the meaning of the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-3">
+                                                <input class="btm-info" type="radio" name="ex3-quality" autocomplete="off" value="3" required />
+                                                <strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="quality-2">
+                                                <input class="btm-info" type="radio" name="ex3-quality" autocomplete="off" value="2" required checked />
+                                                <strong>2</strong> Misses <em>several or most</em> of the elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-1">
+                                                <input class="btm-info" type="radio" name="ex3-quality" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Is completely unrelated to the caption.
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    It seems there was an attempt at drawing scissors, but it is unrealistic, and there is definitely no bird, so I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-quality-2"><strong>2</strong> Misses <em>several or most</em> of the elements in the caption.</button>.
+
+                                </div>
+                            </div>
+
+                            <!-- EXAMPLE 4 -->
+                            <div id="example-4" class="question">
+                                <div class="question-header question-choice-container pl-5 mb-2 pt-2 pb-2 border-bottom">
+                                    <div style="border: 5px solid #00aeef; padding: 10px 20px 10px 20px;"><b>Example #4:</b></div>
+                                    <br />
+                                    <div style="border: 0px solid #000; padding: 10px 20px 10px 20px;">
+                                        <img class="subject" src="https://huggingface.co/datasets/djghosh/aigen-images/resolve/main/images/sdv2/00360/samples/00000.png" />
+                                    </div>
+
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 1: Briefly list all the objects visible in the image,</strong>
+                                        separated by commas.
+                                        If there are no objects in the image, write "none".
+                                    </div>
+                                    <div class="row-12 pt-1 col-5">
+                                        <textarea class="object-list" name="ex4-objects" autocomplete="off" rows="3" cols="60" required>bird, deformed skateboard</textarea>
+                                    </div>
+
+
+
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2a: How <em>many</em> <u>skateboards</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex4-count-0" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex4-count-0" autocomplete="off" value="1" required checked />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex4-count-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex4-count-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex4-count-0" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex4-count-0" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    There is <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-few"><strong>1</strong> </button> skateboard in the image.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2b: What <em>color</em> of <u>skateboards</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="red" />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="yellow" />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="green" />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="blue" />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="brown" checked />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-0" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The skateboard is a tan color, which seemed closest to brown to me, so I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-brown"><strong>Brown</strong></button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2c: How <em>realistic</em> are the <u>skateboards</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q2b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="ex4-real-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="ex4-real-0" autocomplete="off" value="2" required checked />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="ex4-real-0" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The skateboard has the right shape and parts, but the wheels and axles are clearly wrong, so I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-real-2"><strong>2</strong> Obvious mistakes or deformations</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3a: How <em>many</em> <u>birds</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="ex4-count-1" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="ex4-count-1" autocomplete="off" value="1" required checked />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="ex4-count-1" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="ex4-count-1" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="ex4-count-1" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="ex4-count-1" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    There is <button type="button" class="btn btn-secondary btn-sm btm-info bg-count-few"><strong>1</strong> </button> bird in the image.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3b: What <em>color</em> of <u>birds</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="red" />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="yellow" />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="green" />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="blue" />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="brown" checked />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="ex4-color-1" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The bird is primarily <button type="button" class="btn btn-secondary btn-sm btm-info bg-color-brown"><strong>Brown</strong></button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3c: How <em>realistic</em> are the <u>birds</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="ex4-real-1" autocomplete="off" value="3" required checked />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="ex4-real-1" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="ex4-real-1" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The bird is mostly realistic, even though the eyes and beak look more metallic than real life, so I chose <button type="button" class="btn btn-secondary btn-sm btm-info bg-real-3"><strong>3</strong> Realistic or almost fully realistic</button>.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 4a: Is the <u>bird</u> to the left or right of the <u>skateboard</u>?</strong>
+                                        Provide your answer as a <em>viewer of the image</em>, not from the &quot;camera's perspective&quot;.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q4a">
+                                        <div class="btn-group btn-group-vertical multi-column three-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="position-left">
+                                                <input class="btm-info" type="radio" name="ex4-position-x" autocomplete="off" value="left" required />
+                                                <strong>To the left</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="position-right">
+                                                <input class="btm-info" type="radio" name="ex4-position-x" autocomplete="off" value="right" required />
+                                                <strong>To the right</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="position-neither_x">
+                                                <input class="btm-info" type="radio" name="ex4-position-x" autocomplete="off" value="neither_x" required checked />
+                                                <strong>Neither</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 4b: Is the <u>bird</u> above or below the <u>skateboard</u>?</strong>
+                                        Provide your answer as a <em>viewer of the image</em>, not from the &quot;camera's perspective&quot;.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q4b">
+                                        <div class="btn-group btn-group-vertical multi-column three-column" data-toggle="buttons">
+                                        <label class="btn btn-secondary btn-sm text-left active" data-value="position-above">
+                                            <input class="btm-info" type="radio" name="ex4-position-y" autocomplete="off" value="above" required checked />
+                                            <strong>Above</strong>
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="position-below">
+                                            <input class="btm-info" type="radio" name="ex4-position-y" autocomplete="off" value="below" required />
+                                            <strong>Below</strong>
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="position-neither_y">
+                                            <input class="btm-info" type="radio" name="ex4-position-y" autocomplete="off" value="neither_y" required />
+                                            <strong>Neither</strong>
+                                        </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    The bird is standing on roughly the middle of the skateboard, so it is <button type="button" class="btn btn-secondary btn-sm btm-info bg-position-none"><strong>Neither</strong></button> left nor right of the skateboard, but definitely <button type="button" class="btn btn-secondary btn-sm btm-info bg-position-dir"><strong>Above</strong></button> the skateboard.
+                                    <br /><br />
+
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 5: How well does the image fit the caption below? (1&ndash;4)</strong>
+                                        &quot;Elements&quot; refer to individual objects or attributes specified by the text.
+                                        <br />
+                                        <div class="image-caption">a photo of a bird below a skateboard</div>
+                                    </div>
+                                    The image:
+                                    <div class="row-12 pt-1 btn-group-container col-5 q1">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-4">
+                                                <input class="btm-info" type="radio" name="ex4-quality" autocomplete="off" value="4" required />
+                                                <strong>4</strong> Fully captures the meaning of the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left active" data-value="quality-3">
+                                                <input class="btm-info" type="radio" name="ex4-quality" autocomplete="off" value="3" required checked />
+                                                <strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-2">
+                                                <input class="btm-info" type="radio" name="ex4-quality" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Misses <em>several or most</em> of the elements in the caption.
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="quality-1">
+                                                <input class="btm-info" type="radio" name="ex4-quality" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Is completely unrelated to the caption.
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    There is a bird and a skateboard, but the bird is not below the skateboard as implied by the caption, so I marked <button type="button" class="btn btn-secondary btn-sm btm-info bg-quality-3"><strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.</button>.
+
+                                </div>
+                            </div>
+                            <!-- EXAMPLE MACRO END -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- EXAMPLES END -->
+        </div>
+        <!-- ACCORDION END -->
+
+        <!-- MTURK INPUT START -->
+        <div class="col-12 mt-3 mb-1 border-top">
+            <div style="border: 5px solid #00aeef; padding: 10px 20px 10px 20px; margin-top: 10px"><b>Annotation task</b></div>
+
+            <form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
+                <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
+                <input type='hidden' name='ee' id='ee'/>
+
+                <!-- TASK START -->
+                <div id="task-container" class="question">
+                    <div class="question-header question-choice-container mb-2 pt-2 pb-2 border-bottom">
+                        <!-- Image -->
+                        <div style="border: 0px solid #000; padding: 10px 20px 10px 20px;">
+                            <img class="subject" src="${image_url}" />
+                            <!-- <img class="subject" src="https://huggingface.co/datasets/djghosh/aigen-images/resolve/main/images/sdv2/00023/samples/00000.png" /> -->
+                        </div>
+
+                        <div class="question-list">
+                            <!-- List objects -->
+                            <div class="question-wrapper" data-question="objects">
+                                <div class="row row-12 pl-3 pt-2">
+                                    <strong>Question 1: Briefly list all the objects visible in the image,</strong>
+                                    separated by commas.
+                                    If there are no objects in the image, write "none".
+                                </div>
+                                <div class="row-12 pt-1 col-5">
+                                    <textarea class="object-list" name="task-objects" autocomplete="off" rows="3" cols="40" placeholder="object 1, object 2, etc." required></textarea>
+                                </div>
+                                <span id="question-1-warning"><br />Please complete question 1 before continuing.</span>
+                            </div>
+
+                            <!-- First object -->
+                            <div class="question-wrapper" data-question="object-0">
+                                <div class="question-wrapper" data-question="object-0-count">
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2a: How <em>many</em> <u>${object_0_name_plural}</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="task-count-0" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="task-count-0" autocomplete="off" value="1" required />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="task-count-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="task-count-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="task-count-0" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="task-count-0" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="question-wrapper" data-question="object-0-followup">
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2b: What <em>color</em> of <u>${object_0_name_plural}</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="red" />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="yellow" />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="green" />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="blue" />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="brown" />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="task-color-0" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 2c: How <em>realistic</em> are the <u>${object_0_name_plural}</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="task-real-0" autocomplete="off" value="3" required />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="task-real-0" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="task-real-0" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Second object -->
+                            <div class="question-wrapper" data-question="object-1">
+                                <div class="question-wrapper" data-question="object-1-count">
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3a: How <em>many</em> <u>${object_1_name_plural}</u> are in the image?</strong>
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3a">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-0">
+                                                <input class="btm-info" type="radio" name="task-count-1" autocomplete="off" value="0" required />
+                                                <strong>0</strong> None
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-1">
+                                                <input class="btm-info" type="radio" name="task-count-1" autocomplete="off" value="1" required />
+                                                <strong>1</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-2">
+                                                <input class="btm-info" type="radio" name="task-count-1" autocomplete="off" value="2" required />
+                                                <strong>2</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-3">
+                                                <input class="btm-info" type="radio" name="task-count-1" autocomplete="off" value="3" required />
+                                                <strong>3</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-4">
+                                                <input class="btm-info" type="radio" name="task-count-1" autocomplete="off" value="4" required />
+                                                <strong>4</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="count-5">
+                                                <input class="btm-info" type="radio" name="task-count-1" autocomplete="off" value="5" required />
+                                                <strong>5</strong> or more
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="question-wrapper" data-question="object-1-followup">
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3b: What <em>color</em> of <u>${object_1_name_plural}</u> are in the image?</strong>
+                                        Choose all that apply.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3b">
+                                        <div class="btn-group btn-group-vertical multi-column" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-red">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="red" />
+                                                <strong>Red</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-orange">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="orange" />
+                                                <strong>Orange</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-yellow">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="yellow" />
+                                                <strong>Yellow</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-green">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="green" />
+                                                <strong>Green</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-blue">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="blue" />
+                                                <strong>Blue</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-purple">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="purple" />
+                                                <strong>Purple</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-pink">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="pink" />
+                                                <strong>Pink</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-brown">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="brown" />
+                                                <strong>Brown</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-black">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="black" />
+                                                <strong>Black</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-white">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="white" />
+                                                <strong>White</strong>
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="color-gray">
+                                                <input class="btm-info" type="checkbox" name="task-color-1" autocomplete="off" value="gray" />
+                                                <strong>Gray</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    <div class="row row-12 pl-3 pt-2">
+                                        <strong>Question 3c: How <em>realistic</em> are the <u>${object_1_name_plural}</u> in the image? (1&ndash;3)</strong>
+                                        Ignore the color of the object, and focus on any visible defects in the shape or structure.
+                                    </div>
+                                    <div class="row-12 pt-1 btn-group-container col-5 q3b">
+                                        <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-3">
+                                                <input class="btm-info" type="radio" name="task-real-1" autocomplete="off" value="3" required />
+                                                <strong>3</strong> Realistic or almost fully realistic
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-2">
+                                                <input class="btm-info" type="radio" name="task-real-1" autocomplete="off" value="2" required />
+                                                <strong>2</strong> Obvious mistakes or deformations
+                                            </label>
+                                            <label class="btn btn-secondary btn-sm text-left" data-value="real-1">
+                                                <input class="btm-info" type="radio" name="task-real-1" autocomplete="off" value="1" required />
+                                                <strong>1</strong> Completely unrealistic
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Relative position -->
+                            <div class="question-wrapper" data-question="position">
+                                <br />
+                                <div class="row row-12 pl-3 pt-2">
+                                    <strong>Question 4a: Is the <u>${object_1_name}</u> to the left or right of the <u>${object_0_name}</u>?</strong>
+                                    Provide your answer as a <em>viewer of the image</em>, not from the &quot;camera's perspective&quot;.
+                                </div>
+                                <div class="row-12 pt-1 btn-group-container col-5 q4a">
+                                    <div class="btn-group btn-group-vertical multi-column three-column" data-toggle="buttons">
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="position-left">
+                                            <input class="btm-info" type="radio" name="task-position-x" autocomplete="off" value="left" required />
+                                            <strong>To the left</strong>
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="position-right">
+                                            <input class="btm-info" type="radio" name="task-position-x" autocomplete="off" value="right" required />
+                                            <strong>To the right</strong>
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="position-neither_x">
+                                            <input class="btm-info" type="radio" name="task-position-x" autocomplete="off" value="neither_x" required />
+                                            <strong>Neither</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <br />
+                                <div class="row row-12 pl-3 pt-2">
+                                    <strong>Question 4b: Is the <u>${object_1_name}</u> above or below the <u>${object_0_name}</u>?</strong>
+                                    Provide your answer as a <em>viewer of the image</em>, not from the &quot;camera's perspective&quot;.
+                                </div>
+                                <div class="row-12 pt-1 btn-group-container col-5 q4b">
+                                    <div class="btn-group btn-group-vertical multi-column three-column" data-toggle="buttons">
+                                    <label class="btn btn-secondary btn-sm text-left" data-value="position-above">
+                                        <input class="btm-info" type="radio" name="task-position-y" autocomplete="off" value="above" required />
+                                        <strong>Above</strong>
+                                    </label>
+                                    <label class="btn btn-secondary btn-sm text-left" data-value="position-below">
+                                        <input class="btm-info" type="radio" name="task-position-y" autocomplete="off" value="below" required />
+                                        <strong>Below</strong>
+                                    </label>
+                                    <label class="btn btn-secondary btn-sm text-left" data-value="position-neither_y">
+                                        <input class="btm-info" type="radio" name="task-position-y" autocomplete="off" value="neither_y" required />
+                                        <strong>Neither</strong>
+                                    </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Image faithfulness -->
+                            <div class="question-wrapper" data-question="quality">
+                                <br />
+                                <div class="row row-12 pl-3 pt-2">
+                                    <strong>Question 5: How well does the image fit the caption below? (1&ndash;4)</strong>
+                                    &quot;Elements&quot; refer to individual objects or attributes specified by the text.
+                                    <br />
+                                    <div class="image-caption">${caption}</div>
+                                </div>
+                                The image:
+                                <div class="row-12 pt-1 btn-group-container col-5 q1">
+                                    <div class="btn-group btn-group-vertical" data-toggle="buttons">
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="quality-4">
+                                            <input class="btm-info" type="radio" name="task-quality" autocomplete="off" value="4" required />
+                                            <strong>4</strong> Fully captures the meaning of the caption.
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="quality-3">
+                                            <input class="btm-info" type="radio" name="task-quality" autocomplete="off" value="3" required />
+                                            <strong>3</strong> Mostly captures the meaning, but <em>misses one</em> of<wbr /> many elements in the caption.
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="quality-2">
+                                            <input class="btm-info" type="radio" name="task-quality" autocomplete="off" value="2" required />
+                                            <strong>2</strong> Misses <em>several or most</em> of the elements in the caption.
+                                        </label>
+                                        <label class="btn btn-secondary btn-sm text-left" data-value="quality-1">
+                                            <input class="btm-info" type="radio" name="task-quality" autocomplete="off" value="1" required />
+                                            <strong>1</strong> Is completely unrelated to the caption.
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <script>
+                    // Remove irrelevant questions altogether
+                    var excludeQuestions = "${exclude}".split(",");
+                    for (let questionTag of excludeQuestions) {
+                        document.querySelectorAll("div.question-wrapper[data-question=" + questionTag + "]").forEach(element => {
+                            element.remove();
+                        })
+                    }
+                </script>
+                <!-- TASK END -->
+
+                <!-- OPTIONAL FEEDBACK -->
+                <div class="row mt-5">
+                    <div class="col-8 offset-2 col-lg-6 offset-lg-3">
+                        <p>(Optional) Please let us know if anything was unclear, if you experienced any issues, or if you have any other feedback for us.</p>
+                        <textarea id="feedback" name="feedback" rows=3></textarea>
+                        <br /><br />
+                        <label>
+                            <input id="uw-related" type="checkbox" name="uw" />
+                            Are you an employee of the UW, family member of a UW employee, or UW student involved in this particular research?
+                        </label>
+                        <span id="uw-message">You may not participate in the HIT if you are affiliated with UW or this research project.</span>
+                    </div>
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <div class="row mt-5">
+                    <div class="col-2 offset-5">
+                        <!-- <input id="submitButton" onclick="getnext()" type="submit" value="Submit"> -->
+                        <input id="submitButton" type="submit" value="Submit">
+                    </div>
+                </div>
+
+            </form>
+            <script>
+                // Override default submission
+                function cancelSubmit(event) {
+                    event.preventDefault();
+                    return false;
+                }
+                // Only for UW-related checkbox
+                function disableSubmit(event) {
+                    const form = document.querySelector("#mturk_form");
+                    const isChecked = event.target.checked;
+                    form.querySelector("#submitButton").toggleAttribute("disabled", isChecked);
+                    form.querySelector("#uw-message").classList.toggle("show", isChecked);
+                }
+                // Manual submission
+                function trySubmit(event) {
+                    const form = document.querySelector("#mturk_form");
+                    if (form.querySelector("#submitButton").hasAttribute("disabled")) {
+                        event.preventDefault();
+                        return false;
+                    }
+                    if (validateHIT()) {
+                        try {
+                            form.querySelector("#ee").setAttribute("value", TimeMe.getTimeOnCurrentPageInSeconds());
+                        } catch {}
+                        event.preventDefault();
+                        form.submit();
+                        return false;
+                    }
+                }
+                // Check if form is valid and submit
+                function validateHIT() {
+                    var hasObject0 = false, hasObject1 = false;
+                    const form = document.querySelector("#mturk_form");
+                    // Object list
+                    {
+                        let objects = form.querySelector("div.question-wrapper[data-question=objects] textarea");
+                        if (!objects.checkValidity()) return false;
+                    }
+                    // Object 0
+                    {
+                        let objectCount = form.querySelector("div.question-wrapper[data-question=object-0-count] input[type=radio]:checked");
+                        if (objectCount === null) return false;
+                        // Check followup if needed
+                        if (objectCount.value != "0") {
+                            hasObject0 = true;
+                            // Color
+                            let objectColor = form.querySelector("div.question-wrapper[data-question=object-0-followup] input[type=checkbox]:checked");
+                            if (objectColor === null) return false;
+                            // Realism
+                            let objectReal = form.querySelector("div.question-wrapper[data-question=object-0-followup] input[type=radio]:checked");
+                            if (objectReal === null) return false;
+                        }
+                    }
+                    // Object 1
+                    if (form.querySelector("div.question-wrapper[data-question=object-1-count]") !== null) {
+                        let objectCount = form.querySelector("div.question-wrapper[data-question=object-1-count] input[type=radio]:checked");
+                        if (objectCount === null) return false;
+                        // Check followup if needed
+                        if (objectCount.value != "0") {
+                            hasObject1 = true;
+                            // Color
+                            let objectColor = form.querySelector("div.question-wrapper[data-question=object-1-followup] input[type=checkbox]:checked");
+                            if (objectColor === null) return false;
+                            // Realism
+                            let objectReal = form.querySelector("div.question-wrapper[data-question=object-1-followup] input[type=radio]:checked");
+                            if (objectReal === null) return false;
+                        }
+                    }
+                    // Position
+                    if (hasObject0 && hasObject1) {
+                        let positionInputs = form.querySelector("div.question-wrapper[data-question=position] input[type=radio]");
+                        if (!Array.from(positionInputs).every(input => input.checkValidity())) return false;
+                    }
+                    // Fit
+                    {
+                        let captionFit = form.querySelector("div.question-wrapper[data-question=quality] input[type=radio]:checked");
+                        if (captionFit === null) return false;
+                    }
+                    return true;
+                }
+                document.querySelector("#mturk_form").addEventListener("submit", cancelSubmit);
+                document.querySelector("#mturk_form #submitButton").addEventListener("click", trySubmit);
+                document.querySelector("#mturk_form #uw-related").addEventListener("change", disableSubmit);
+            </script>
+            <script type="text/javascript">turkSetAssignmentID();</script>
+        </div>
+        <!-- MTURK INPUT END -->
+
+    </div>
+</html>
+<!-- HIT END -->
+
+<!-- BOOSTRAP JS -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+<!-- HITPUB JS -->
+<script id="hitpub_js">
+    // TimeMe.js
+    (function () { var e, t; e = this, t = function () { var r = { startStopTimes: {}, idleTimeoutMs: 3e4, currentIdleTimeMs: 0, checkStateRateMs: 250, active: !1, idle: !1, currentPageName: "default-page-name", timeElapsedCallbacks: [], userLeftCallbacks: [], userReturnCallbacks: [], trackTimeOnElement: function (e) { var t = document.getElementById(e); t && (t.addEventListener("mouseover", function () { r.startTimer(e) }), t.addEventListener("mousemove", function () { r.startTimer(e) }), t.addEventListener("mouseleave", function () { r.stopTimer(e) }), t.addEventListener("keypress", function () { r.startTimer(e) }), t.addEventListener("focus", function () { r.startTimer(e) })) }, getTimeOnElementInSeconds: function (e) { var t = r.getTimeOnPageInSeconds(e); return t || 0 }, startTimer: function (e, t) { if (e || (e = r.currentPageName), void 0 === r.startStopTimes[e]) r.startStopTimes[e] = []; else { var n = r.startStopTimes[e], i = n[n.length - 1]; if (void 0 !== i && void 0 === i.stopTime) return } r.startStopTimes[e].push({ startTime: t || new Date, stopTime: void 0 }), r.active = !0, r.idle = !1 }, stopAllTimers: function () { for (var e = Object.keys(r.startStopTimes), t = 0; t < e.length; t++)r.stopTimer(e[t]) }, stopTimer: function (e, t) { e || (e = r.currentPageName); var n = r.startStopTimes[e]; void 0 !== n && 0 !== n.length && (void 0 === n[n.length - 1].stopTime && (n[n.length - 1].stopTime = t || new Date), r.active = !1) }, getTimeOnCurrentPageInSeconds: function () { return r.getTimeOnPageInSeconds(r.currentPageName) }, getTimeOnPageInSeconds: function (e) { var t = r.getTimeOnPageInMilliseconds(e); return void 0 === t ? void 0 : t / 1e3 }, getTimeOnCurrentPageInMilliseconds: function () { return r.getTimeOnPageInMilliseconds(r.currentPageName) }, getTimeOnPageInMilliseconds: function (e) { var t = r.startStopTimes[e]; if (void 0 !== t) { for (var n = 0, i = 0; i < t.length; i++) { var s = t[i].startTime, o = t[i].stopTime; void 0 === o && (o = new Date), n += o - s } return Number(n) } }, getTimeOnAllPagesInSeconds: function () { for (var e = [], t = Object.keys(r.startStopTimes), n = 0; n < t.length; n++) { var i = t[n], s = r.getTimeOnPageInSeconds(i); e.push({ pageName: i, timeOnPage: s }) } return e }, setIdleDurationInSeconds: function (e) { var t = parseFloat(e); if (!1 !== isNaN(t)) throw { name: "InvalidDurationException", message: "An invalid duration time (" + e + ") was provided." }; return r.idleTimeoutMs = 1e3 * e, this }, setCurrentPageName: function (e) { return r.currentPageName = e, this }, resetRecordedPageTime: function (e) { delete r.startStopTimes[e] }, resetAllRecordedPageTimes: function () { for (var e = Object.keys(r.startStopTimes), t = 0; t < e.length; t++)r.resetRecordedPageTime(e[t]) }, resetIdleCountdown: function () { r.idle && r.triggerUserHasReturned(), r.idle = !1, r.currentIdleTimeMs = 0 }, callWhenUserLeaves: function (e, t) { this.userLeftCallbacks.push({ callback: e, numberOfTimesToInvoke: t }) }, callWhenUserReturns: function (e, t) { this.userReturnCallbacks.push({ callback: e, numberOfTimesToInvoke: t }) }, triggerUserHasReturned: function () { if (!r.active) for (var e = 0; e < this.userReturnCallbacks.length; e++) { var t = this.userReturnCallbacks[e], n = t.numberOfTimesToInvoke; (isNaN(n) || void 0 === n || 0 < n) && (t.numberOfTimesToInvoke -= 1, t.callback()) } r.startTimer() }, triggerUserHasLeftPage: function () { if (r.active) for (var e = 0; e < this.userLeftCallbacks.length; e++) { var t = this.userLeftCallbacks[e], n = t.numberOfTimesToInvoke; (isNaN(n) || void 0 === n || 0 < n) && (t.numberOfTimesToInvoke -= 1, t.callback()) } r.stopAllTimers() }, callAfterTimeElapsedInSeconds: function (e, t) { r.timeElapsedCallbacks.push({ timeInSeconds: e, callback: t, pending: !0 }) }, checkState: function () { for (var e = 0; e < r.timeElapsedCallbacks.length; e++)r.timeElapsedCallbacks[e].pending && r.getTimeOnCurrentPageInSeconds() > r.timeElapsedCallbacks[e].timeInSeconds && (r.timeElapsedCallbacks[e].callback(), r.timeElapsedCallbacks[e].pending = !1); !1 === r.idle && r.currentIdleTimeMs > r.idleTimeoutMs ? (r.idle = !0, r.triggerUserHasLeftPage()) : r.currentIdleTimeMs += r.checkStateRateMs }, visibilityChangeEventName: void 0, hiddenPropName: void 0, listenForVisibilityEvents: function () { void 0 !== document.hidden ? (r.hiddenPropName = "hidden", r.visibilityChangeEventName = "visibilitychange") : void 0 !== document.mozHidden ? (r.hiddenPropName = "mozHidden", r.visibilityChangeEventName = "mozvisibilitychange") : void 0 !== document.msHidden ? (r.hiddenPropName = "msHidden", r.visibilityChangeEventName = "msvisibilitychange") : void 0 !== document.webkitHidden && (r.hiddenPropName = "webkitHidden", r.visibilityChangeEventName = "webkitvisibilitychange"), document.addEventListener(r.visibilityChangeEventName, function () { document[r.hiddenPropName] ? r.triggerUserHasLeftPage() : r.triggerUserHasReturned() }, !1), window.addEventListener("blur", function () { r.triggerUserHasLeftPage() }), window.addEventListener("focus", function () { r.triggerUserHasReturned() }), document.addEventListener("mousemove", function () { r.resetIdleCountdown() }), document.addEventListener("keyup", function () { r.resetIdleCountdown() }), document.addEventListener("touchstart", function () { r.resetIdleCountdown() }), window.addEventListener("scroll", function () { r.resetIdleCountdown() }), setInterval(function () { r.checkState() }, r.checkStateRateMs) }, websocket: void 0, websocketHost: void 0, setUpWebsocket: function (e) { if (window.WebSocket && e) { var t = e.websocketHost; try { r.websocket = new WebSocket(t), window.onbeforeunload = function () { r.sendCurrentTime(e.appId) }, r.websocket.onopen = function () { r.sendInitWsRequest(e.appId) }, r.websocket.onerror = function (e) { console && console.log("Error occurred in websocket connection: " + e) }, r.websocket.onmessage = function (e) { console && console.log(e.data) } } catch (e) { console && console.error("Failed to connect to websocket host.  Error:" + e) } } return this }, websocketSend: function (e) { r.websocket.send(JSON.stringify(e)) }, sendCurrentTime: function (e) { var t = { type: "INSERT_TIME", appId: e, timeOnPageMs: r.getTimeOnCurrentPageInMilliseconds(), pageName: r.currentPageName }; r.websocketSend(t) }, sendInitWsRequest: function (e) { var t = { type: "INIT", appId: e }; r.websocketSend(t) }, initialize: function (e) { var t = r.idleTimeoutMs || 30, n = r.currentPageName || "default-page-name", i = void 0, s = void 0; e && (t = e.idleTimeoutInSeconds || t, n = e.currentPageName || n, i = e.websocketOptions, s = e.initialStartTime), r.setIdleDurationInSeconds(t).setCurrentPageName(n).setUpWebsocket(i).listenForVisibilityEvents(), r.startTimer(void 0, s) } }; return r }, "undefined" != typeof module && module.exports ? module.exports = t() : "function" == typeof define && define.amd ? define([], function () { return e.TimeMe = t() }) : e.TimeMe = t() }).call(this);
+
+    TimeMe.initialize({
+        currentPageName: "task",
+        idleTimeoutInSeconds: 30
+    });
+
+    $(document).ready(function() {
+        $('#submitButton').click(function () {
+            try {
+                $('input[name=ee]').attr('value', TimeMe.getTimeOnCurrentPageInSeconds());
+            } catch {
+            }
+            return true;
+        });
+    });
+
+</script>

@@ -1,0 +1,32 @@
+trainer: wm_ode
+work_dir: output/sana_wm_distill_ode_t43
+model_config: configs/sana_wm/sana_wm_chunk_causal_1600m_720p.yaml
+model_path: hf://Efficient-Large-Model/SANA-WM_chunk_causal/dit/sana_wm_chunk_causal_1600m_720p.safetensors
+# LMDB schema is documented by SanaWMOdeTrajectoryDataset. Replace this with
+# the local trajectory cache produced from the same five-step schedule.
+data_path: data/sana_wm_ode_t43
+max_samples: null
+num_latent_frames: 43
+denoising_step_list: [1000, 967, 908, 764, 0]
+optimizer:
+  lr: 2.0e-5
+  betas: [0.9, 0.999]
+  weight_decay: 0.01
+train:
+  seed: 42
+  batch_size: 1
+  num_workers: 0
+  # The self-forcing curriculum starts from the ODE step-3000 checkpoint.
+  max_steps: 3000
+  log_interval: 10
+  # A full FSDP2+optimizer checkpoint is large; save the final state by default.
+  save_model_steps: 3000
+  early_stop_hours: 0
+  gradient_accumulation_steps: 1
+  gradient_clip: 1.0
+  grad_checkpointing: true
+  use_fsdp: true
+  fsdp_version: 2
+resume_from: null
+report_to: none
+tracker_project_name: sana-wm-distill

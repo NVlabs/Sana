@@ -1,0 +1,508 @@
+{
+  "last_node_id": 38,
+  "last_link_id": 47,
+  "nodes": [
+    {
+      "id": 4,
+      "type": "VAEDecode",
+      "pos": [
+        776.332763671875,
+        105.08650970458984
+      ],
+      "size": [
+        200,
+        50
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 3
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 24
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "GemmaLoader",
+      "pos": [
+        -381.6518859863281,
+        512.5463256835938
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "links": [
+            39,
+            41
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GemmaLoader"
+      },
+      "widgets_values": [
+        "Efficient-Large-Model/gemma-2-2b-it",
+        "cuda",
+        "BF16"
+      ]
+    },
+    {
+      "id": 29,
+      "type": "ExtraVAELoader",
+      "pos": [
+        460.67730712890625,
+        695.5695190429688
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            24
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ExtraVAELoader"
+      },
+      "widgets_values": [
+        "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers",
+        "dcae-f32c32-sana-1.1-diffusers",
+        "BF16"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "KSampler",
+      "pos": [
+        429.7785339355469,
+        99.45759582519531
+      ],
+      "size": [
+        300,
+        480
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 33
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 42
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 47
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 46
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            3
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        1057228702589644,
+        "fixed",
+        28,
+        2,
+        "euler",
+        "normal",
+        1
+      ]
+    },
+    {
+      "id": 33,
+      "type": "EmptySanaLatentImage",
+      "pos": [
+        51.56604766845703,
+        198.95700073242188
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 28,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 29,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            46
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptySanaLatentImage"
+      },
+      "widgets_values": [
+        512,
+        512,
+        1
+      ]
+    },
+    {
+      "id": 13,
+      "type": "PreviewImage",
+      "pos": [
+        802.6994018554688,
+        217.20889282226562
+      ],
+      "size": [
+        605.93505859375,
+        665.570068359375
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 25,
+      "type": "SanaCheckpointLoader",
+      "pos": [
+        -356.08001708984375,
+        129.6079559326172
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            33
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaCheckpointLoader"
+      },
+      "widgets_values": [
+        "Efficient-Large-Model/Sana_1600M_2Kpx_BF16",
+        "SanaMS_1600M_P1_D20_2K",
+        "BF16"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "SanaResolutionSelect",
+      "pos": [
+        -364.7435607910156,
+        301.5954284667969
+      ],
+      "size": [
+        315,
+        102
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [
+            28
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [
+            29
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaResolutionSelect"
+      },
+      "widgets_values": [
+        "2K",
+        "1.00"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "SanaTextEncode",
+      "pos": [
+        -17.398910522460938,
+        463.93927001953125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "link": 39
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            42
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SanaTextEncode"
+      },
+      "widgets_values": [
+        "a dog and a cat"
+      ]
+    },
+    {
+      "id": 37,
+      "type": "GemmaTextEncode",
+      "pos": [
+        -20.1395263671875,
+        716.132080078125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GEMMA",
+          "type": "GEMMA",
+          "link": 41
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            47
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GemmaTextEncode"
+      },
+      "widgets_values": [
+        ""
+      ]
+    }
+  ],
+  "links": [
+    [
+      3,
+      10,
+      0,
+      4,
+      0,
+      "LATENT"
+    ],
+    [
+      11,
+      4,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      24,
+      29,
+      0,
+      4,
+      1,
+      "VAE"
+    ],
+    [
+      28,
+      6,
+      0,
+      33,
+      0,
+      "INT"
+    ],
+    [
+      29,
+      6,
+      1,
+      33,
+      1,
+      "INT"
+    ],
+    [
+      33,
+      25,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      39,
+      9,
+      0,
+      14,
+      0,
+      "GEMMA"
+    ],
+    [
+      41,
+      9,
+      0,
+      37,
+      0,
+      "GEMMA"
+    ],
+    [
+      42,
+      14,
+      0,
+      10,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      46,
+      33,
+      0,
+      10,
+      3,
+      "LATENT"
+    ],
+    [
+      47,
+      37,
+      0,
+      10,
+      2,
+      "CONDITIONING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9090909090909091,
+      "offset": [
+        623.7012344346042,
+        257.61183690683845
+      ]
+    }
+  },
+  "version": 0.4
+}

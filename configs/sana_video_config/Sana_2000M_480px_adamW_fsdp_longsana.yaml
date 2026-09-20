@@ -1,0 +1,149 @@
+task: t2v
+sampling_algo: longlive_flow_euler
+cfg_scale: 1.0
+data:
+  data_dir:
+    video_toy_data: data/video_toy_data
+  external_caption_suffixes: [_Qwen2.5-VL]
+  caption_proportion:
+    prompt: 5
+    _Qwen2_5-VL: 95
+  external_data_filter:
+    video_toy_data:
+      _unimatch: {min: 1.0, max: 30}
+  image_size: 480
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
+  motion_score_cal_type: average # average, max
+  motion_score_file_thres:
+    _unimatch: null
+  load_text_feat: false
+  load_vae_feat: false
+  transform: default_train_video
+  type: SanaZipDataset
+  num_frames: 40
+  sort_dataset: false
+  resample_fps: false
+  shuffle_dataset: false
+image_data:
+  data_dir:
+    - data/toy_data
+  image_size: 480
+  external_caption_suffixes: []
+  caption_selection_type: proportion
+  caption_proportion:
+    prompt: 1
+  clip_thr_temperature: 0.1
+  clip_thr: 25.0
+  del_img_clip_thr: 22.0
+  load_text_feat: false
+  load_vae_feat: false
+  transform: default_train
+  type: SanaWebDatasetMS
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
+  sort_dataset: false
+# model config
+model:
+  model: SanaMSVideo_2000M_P2_D20
+  image_size: 480
+  mixed_precision: bf16
+  fp32_attention: true
+  load_from: hf://Efficient-Large-Model/SANA-Video_2B_480p_LongLive/checkpoints/SANA_Video_2B_480p_LongLive.pth
+  aspect_ratio_type: ASPECT_RATIO_VIDEO_480_MS
+  multi_scale: true
+  attn_type: cachedcausal
+  linear_head_dim: 112
+  ffn_type: CachedGLUMBConvTemp
+  t_kernel_size: 3
+  mlp_acts:
+    - silu
+    - silu
+    -
+  mlp_ratio: 3
+  use_pe: true
+  pos_embed_type: casual_wan_rope
+  qk_norm: true
+  cross_norm: true
+  class_dropout_prob: 0.1
+# VAE setting
+vae:
+  vae_type: WanVAE
+  vae_pretrained: hf://Efficient-Large-Model/SANA-Video_2B_480p/vae/Wan2.1_VAE.pth
+  weight_dtype: float32
+  vae_latent_dim: 16
+  vae_downsample_rate: 8
+  vae_stride:
+    - 4
+    - 8
+    - 8
+  if_cache: false
+# text encoder
+text_encoder:
+  text_encoder_name: gemma-2-2b-it
+  y_norm: true
+  y_norm_scale_factor: 0.01
+  model_max_length: 300
+  # CHI
+  chi_prompt:
+    - 'Given a user prompt, generate an "Enhanced prompt" that provides detailed visual descriptions suitable for image generation. Evaluate the level of detail in the user prompt:'
+    - '- If the prompt is simple, focus on adding specifics about colors, shapes, sizes, textures, and spatial relationships to create vivid and concrete scenes.'
+    - '- If the prompt is already detailed, refine and enhance the existing details slightly without overcomplicating.'
+    - 'Here are examples of how to transform or refine prompts:'
+    - '- User Prompt: A cat sleeping -> Enhanced: A small, fluffy white cat curled up in a round shape, sleeping peacefully on a warm sunny windowsill, surrounded by pots of blooming red flowers.'
+    - '- User Prompt: A busy city street -> Enhanced: A bustling city street scene at dusk, featuring glowing street lamps, a diverse crowd of people in colorful clothing, and a double-decker bus passing by towering glass skyscrapers.'
+    - 'Please generate only the enhanced description for the prompt below and avoid including any additional commentary or evaluations:'
+    - 'User Prompt: '
+# Sana schedule Flow
+scheduler:
+  predict_flow_v: true
+  noise_schedule: linear_flow
+  pred_sigma: false
+  flow_shift: 3.0
+  inference_flow_shift: 7.0
+  # logit-normal timestep
+  weighting_scheme: logit_normal
+  logit_mean: 0.0
+  logit_std: 1.0
+  vis_sampler: longlive_flow_euler
+# training setting
+train:
+  use_fsdp: true
+  num_workers: 10
+  seed: 1
+  train_batch_size: 1
+  train_batch_size_image: 4
+  num_epochs: 10
+  gradient_accumulation_steps: 1
+  grad_checkpointing: true
+  gradient_clip: 0.1
+  optimizer:
+    betas:
+      - 0.9
+      - 0.999
+    eps: 1.0e-10
+    lr: 5.0e-5
+    type: AdamW
+    weight_decay: 0.0
+  lr_schedule: constant
+  lr_schedule_args:
+    num_warmup_steps: 500
+  local_save_vis: true # if save log image locally
+  visualize: true
+  deterministic_validation: false
+  eval_sampling_steps: 500
+  log_interval: 5
+  save_model_epochs: 5
+  save_model_steps: 500
+  work_dir: output/debug
+  online_metric: false
+  eval_metric_step: 2000
+  online_metric_dir: metric_helper
+  validation_prompts:
+    - the opening scene begins with a dynamic view of a bustling cityscape captured in vibrant detail. towering skyscrapers dominate the skyline, while the streets below are alive with motion. people from diverse cultures fill the sidewalks, engaging in daily activities, their vibrant attire adding splashes of color to the scene. vehicles, including cars and buses, weave through the busy roads in a synchronized rhythm. bright billboards in various languages flash advertisements, reflecting the multicultural essence of the city. thecamera smoothly pans upward from the busy streets to focus on a sleek, modern office building. its reflective glass facade shimmers in the sunlight, hinting at its importance as a central location in the story. the atmosphere is energetic and cosmopolitan, setting the stage for an international narrative.
+    - a dark fantasy scene unfolds, captured with a 1980's film grain aesthetic that imbues the frame with a nostalgic, cinematic quality. the shot focuses on a cloaked woman in flowing, pale robes, standing eerily motionless outside a towering, rustic library. the intricate, gothic architecture of the library is illuminated by dim, flickering lanterns, casting dancing shadows across its arched windows and weathered stone fa_ade. the woman's hood obscures her face, her identity hidden, while her presence radiates an aura of magic and mystery. her unnaturally still posture increases the tension, with a single, deliberate gesture - a silent beckoning towards the library - drawing all attention. the surrounding cityscape, cloaked in the inky tones of night, features cobblestone streets and shadowy, weathered buildings, creating a setting that feels both hauntingly lived-in and enchantingly otherworldly.
+    - a large, modern office building dominates the frame, standing tall against a clear blue sky. the str ucture is sleek, with an exterior made primarily of glass and steel that reflects the sunlight in sharp, clean lines. the surrounding area includes a few scattered trees and a wide, open plaza with smooth paving, creating a sense of tranquility and order. the setting is serene and calm, with no people visible, emphasizing the stillness of the moment. the atmosphere feels pristine and meticulously maintained, as the building towers above the peaceful setting.
+    - the image quality is sharp with high dynamic range, capturing the vastness and beauty of the Chilean Andes. a majestic condor soars through the skies, its wide wings cutting across the clear blue expanse. below, a small pudmoves quietly through the thick foliage of a nearby forest. the camera angle gradually rises, expanding the frame to reveal an advanced mining project nestled within the landscape. the mining site, with its technology and industrial activity, contrasts yet integrates with the natural beauty, symbolizing progress and sustainability.
+    - a soft-focus view captures a serene garden, filled with cherry blossom trees in bloom. at the center stands a beautiful japanese woman, portrayed in exquisite detail, wearing a traditional kimono with intricate floral patterns in soft pastel colors. her long, dark hair cascades elegantly down her back, enhancing her gentle, serene expression. pink petals drift down in a light breeze, adding to the garden's ethereal ambiance. sunlight filters through the leafy canopy, casting dappled shadows that dance around her, subtly highlighting her serene posture and the details of her kimono. the atmosphere is tranquil and picturesque, enveloped in a sense of timeless beauty.
+    - the angle is mid-range, focusing on the well-dressed asian male friend sitting comfortably in a modern and stylish cafe. the setting exudes warmth and elegance, with soft music playing in the background to create an inviting atmosphere. the man holds a small gift box in his hand, his face illuminated by a confident smile as he looks around, his expression full of anticipation. his attire, a blend of classic and contemporary style, complements the chic surroundings, enhancing his poised demeanor. the ambient lighting accentuates his features, making the scene lively and intimate.
+    - the setting is a training facility, brightly lit with mirrored walls and sprung wooden floors. the scene starts with the camera panning slowly over the room, capturing the boundless determination in action as a group of korean girls rigorously practice their moves. each one is focused, their expressions marked by the intensity of a long and arduous journey. they are seen rehearsing complex choreography, with synchronized steps and practiced precision. alongside the strenuous physical training, snippets of their vocal lessons are interwoven, illustrating the multifaceted preparation involved. the atmosphere is one of dedication and discipline, reflected in their commitment to rigorous exercise and strict dietary habits. these scenes provide a glimpse into the grueling yet passionate pursuit of their dreams.
+    - astronaut is riding a horse on the moon, wearing a space suit and helmet. the horse is galloping across the lunar surface, leaving behind a trail of moon dust. in the background, earth is visible in the black sky, a beautiful blue and green marble. the astronaut is holding a flag with a logo on it, waving it proudly as they ride. the scene is surreal and whimsical, capturing the imagination of space exploration and adventure.
+  joint_training_interval: 10

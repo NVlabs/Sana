@@ -1,0 +1,55 @@
+name: Auto Lint (triggered by "auto lint" label)
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - closed
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+# run only one unit test for a branch / tag.
+concurrency:
+  group: ci-lint-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint-by-label:
+    if: contains(github.event.pull_request.labels.*.name, 'lint wanted')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Test pre-commit hooks
+        continue-on-error: true
+        uses: pre-commit/action@v3.0.0 # sync with https://github.com/Efficient-Large-Model/VILA-Internal/blob/main/.github/workflows/pre-commit.yaml
+        with:
+          extra_args: --all-files
+      - name: Check if there are any changes
+        id: verify_diff
+        run: |
+          git diff --quiet . || echo "changed=true" >> $GITHUB_OUTPUT
+      - name: Commit files
+        if: steps.verify_diff.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "[CI-Lint] Fix code style issues with pre-commit ${{ github.sha }}" -a
+          git push
+      - name: Remove label(s) after lint
+        if: always()
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: lint wanted

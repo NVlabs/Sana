@@ -1,0 +1,57 @@
+name: Deploy Documentation
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+  workflow_dispatch: # Allow manual trigger
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install mkdocs-material mkdocstrings[python] pymdown-extensions
+      - name: Build documentation
+        run: |
+          mkdocs build
+      - name: Deploy to GitHub Pages (docs/ subdirectory)
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/video/Sana-video')
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Save the built site
+          mv site /tmp/site
+
+          # Switch to page branch (where GitHub Pages is configured)
+          git fetch origin page:page
+          git checkout page
+
+          # Remove old docs/ and copy new content
+          rm -rf docs/
+          mkdir -p docs/
+          cp -r /tmp/site/* docs/
+
+          # Commit and push
+          git add docs/
+          git commit -m "Deploy documentation to /docs/" || echo "No changes to commit"
+          git push origin page

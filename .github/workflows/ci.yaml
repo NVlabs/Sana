@@ -1,0 +1,459 @@
+name: ci
+on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run tests-bash'
+        required: false
+        type: boolean
+        default: false
+      test_target:
+        description: 'Test job to run (requires run_tests)'
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - test-inference
+          - test-training-vae
+          - test-training-fsdp
+          - test-training-video
+          - test-training-sana-wm-stage1
+          - test-training-sana-wm-distill
+          - test-training-longsana
+          - test-training-sol-rl
+  pull_request_target:
+    types: [labeled, unlabeled, opened, synchronize, reopened]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  push:
+    branches: [main, feat/Sana-public, feat/Sana-public-for-NVLab]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+# if: ${{ github.repository == 'Efficient-Large-Model/Sana' }}
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.10.10
+      - name: Test pre-commit hooks
+        uses: pre-commit/action@v3.0.1
+  test-inference:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-inference')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.10.10
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run inference tests
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-inference bash tests/bash/inference/test_inference.sh
+  test-training-vae:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-vae')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.10.10
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run online VAE training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-online-vae bash tests/bash/training/test_training_vae.sh
+  test-training-fsdp:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-fsdp')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.10.10
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run FSDP training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-fsdp bash tests/bash/training/test_training_fsdp.sh
+  test-training-video:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-video')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.10.10
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run video training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
+  test-training-sana-wm-stage1:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-stage1')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run SANA-WM stage-1 training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-sana-wm-stage1 bash tests/bash/training/test_training_sana_wm_stage1.sh
+  test-training-sana-wm-distill:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-distill')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run SANA-WM distillation training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-sana-wm-distill bash tests/bash/training/test_training_sana_wm_distill.sh
+  test-training-longsana:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-longsana')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run longsana training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-longsana bash tests/bash/training/test_training_longsana.sh
+  test-training-sol-rl:
+    needs: pre-commit
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
+       (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sol-rl')) ||
+      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on:
+      - self-hosted
+      - sana-runner
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Clean Python caches
+        run: |
+          echo "Removing stale Python byte code files..."
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -type f -name "*.pyc" -delete
+      - name: Set up the environment
+        env:
+          SANA_SLURM_ACCOUNT: ${{ secrets.SANA_SLURM_ACCOUNT }}
+          SANA_SLURM_PARTITION: ${{ secrets.SANA_SLURM_PARTITION }}
+          SKIP_ENV_SETUP: true
+        run: |
+          bash environment_setup.sh
+      - name: Update 'sana-run' command in the Runner's default env
+        env:
+          CONDA_SH_PATH: ${{ secrets.CONDA_SH_PATH }}
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+        run: |
+          echo "--- Updating 'sana-run' command on the CI runner ---"
+          source "$CONDA_SH_PATH"
+          conda activate "$CONDA_ENV_NAME"
+          pip install -e .
+          echo "$CONDA_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "--- 'sana-run' command updated. ---"
+      - name: Run Sol-RL training test
+        env:
+          CONDA_ENV_NAME: ${{ secrets.CONDA_ENV_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sana-run --pty -m ci -J test-training-sol-rl bash tests/bash/training/test_training_sol_rl.sh
+  remove-label:
+    needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video, test-training-sana-wm-stage1, test-training-sana-wm-distill, test-training-longsana, test-training-sol-rl]
+    if: always() && github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Remove label after tests complete
+        uses: actions/github-script@v6
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'run-tests'
+              });
+              console.log('Successfully removed run-tests label');
+            } catch (error) {
+              console.log('Failed to remove label (may already be removed):', error.message);
+            }
+
+# tests-python:
+#     needs: pre-commit
+#     runs-on: self-hosted
+#     steps:
+#         - name: Check out Git repository
+#           uses: actions/checkout@v4
+#         - name: Set up Python
+#           uses: actions/setup-python@v5
+#           with:
+#               python-version: 3.10.10
+#         - name: Set up the environment
+#           run: |
+#               ./environment_setup.sh
+#         - name: Run tests with Slurm
+#           run: |
+#               sana-run --pty -m ci -J tests-python pytest tests/python

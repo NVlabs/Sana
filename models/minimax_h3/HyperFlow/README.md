@@ -4,7 +4,8 @@ Eight-step MiniMax-H3 video and audio generation using
 [Video Rebirth's HyperFlow 1.0](https://github.com/Video-Rebirth/hyperflow) and the
 existing [Sol-H3 runtime](../Sol-H3/). This integration targets the resident
 **8 x NVIDIA B200** configuration and provides T2V, first-frame I2V, and
-image-reference Ref2VA at 1344 x 768 and 24 FPS.
+image-reference Ref2VA at 1344 x 768 and 24 FPS. T2V and single-image Ref2VA
+have also been benchmarked on **8 x NVIDIA B300**, as reported below.
 
 HyperFlow's two-time conditioning and checkpoint schedule are preserved. T2V
 and I2V share the upstream `transformer`; Ref2VA keeps its distinct
@@ -30,9 +31,41 @@ or claimed as validated by this runner. The unmodified `hyperflow_h3/` source
 retains the upstream workflow building blocks. Multiple image references are
 accepted by the interface; the recorded GPU smoke checks used one reference.
 
+## Performance
+
+Sol-Engine achieves **2.86–4.15x speedup** over the original HyperFlow runtime
+in the following **8 x NVIDIA B300 SXM6 AC** measurements. Both configurations
+use the same base model and HyperFlow 1.0 adapter, **eight denoising steps**,
+BF16 DiT linears, and **unmerged LoRA**. Sol-Engine enables fused LoRA kernels
+and the full optimization stack; MXFP8 and reference KV caching are disabled.
+
+| Task | Video preset | Original HyperFlow (s) | Sol-Engine (s) | Speedup |
+|---|---:|---:|---:|---:|
+| T2V | 5 s | 10.834 | **3.571** | **3.03x** |
+| T2V | 10 s | 22.702 | **7.685** | **2.95x** |
+| T2V | 15 s | 37.974 | **13.273** | **2.86x** |
+| Ref2VA (one image) | 5 s | 15.649 | **3.773** | **4.15x** |
+| Ref2VA (one image) | 10 s | 28.810 | **7.608** | **3.79x** |
+| Ref2VA (one image) | 15 s | 44.790 | **12.578** | **3.56x** |
+
+Measured on 2026-09-19 at **1344 x 768, 24 FPS**, with synchronized audio,
+seed 42, and 124 / 243 / 362 output frames. Each entry is the median of
+**five timed calls after two warmups**, with models resident on the same host.
+Time includes conditioning, denoising, video/audio VAE decoding, and completion
+synchronization across all GPUs. It excludes model loading, initialization,
+warmup, prompt rewriting, RGB8 conversion, MP4 encoding, and file writes.
+
+The baseline uses the original HyperFlow Python runtime with dense SDPA and
+native PEFT LoRA branches. The speedups include approximate SOL/BSA attention,
+compressed communication, and reference-image resizing; see
+[numerical behavior](#optimizations-and-numerical-behavior).
+These measurements cover one prompt per task and one seed. The
+[benchmark record](VALIDATION.md#b300-performance-benchmark--2026-09-19)
+documents the tested commit, configuration, and timing samples.
+
 ## Setup
 
-Use Linux, Python 3.12, a working CUDA 13 toolchain/driver, and eight B200 GPUs
+Use Linux, Python 3.12, a working CUDA 13 toolchain/driver, and eight B200 or B300 GPUs
 connected by NVLink/NVSwitch. Run from this directory in a checkout of Sana's
 `sol-engine` branch, with the sibling `Sol-H3/` directory present. The package
 base commit and source hashes are in [PROVENANCE.json](PROVENANCE.json).
@@ -121,8 +154,8 @@ duration, prompt, and references before the reported request.
 The printed `generation_seconds` includes conditioning, denoising, video/audio
 VAE decoding, and completion synchronization. It excludes checkpoint loading,
 the optional warmup request, and MP4 encoding. Without warmup, compilation can
-be included in the reported time. See [VALIDATION.md](VALIDATION.md) before
-interpreting historical checks as a performance or quality benchmark.
+be included in the reported time. See [Performance](#performance) for warmed
+B300 latencies and [VALIDATION.md](VALIDATION.md) for their methodology.
 
 ## Resident Python interface
 

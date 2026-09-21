@@ -61,6 +61,52 @@ This establishes checkpoint equivalence for the historical checks below;
 it is not a new GPU benchmark. The README uses the official download repository,
 an immutable revision, and the public checksum.
 
+## B300 performance benchmark — 2026-09-19
+
+The [README performance table](README.md#performance) compares the packaged
+Sol-Engine runtime from [PR #507](https://github.com/NVlabs/Sana/pull/507), commit
+`d0e6fe4745f06ee5761116ebf2c0fc22ec4b031e`, with the original HyperFlow Python
+runtime distributed through Drive. The two configurations ran on the same
+eight-GPU NVIDIA B300 SXM6 AC host. The base revision is
+`MiniMaxAI/MiniMax-H3@83db0c0efe6ef9824e0e194be110346c0a9542ed`; the official
+HyperFlow adapter was verified against its published SHA256. Its tensor payload
+matches the earlier Drive adapter, as documented above.
+
+Both configurations use resident models, BF16 DiT linears, unmerged LoRA, eight
+steps, 1344 x 768 output, 24 FPS, and synchronized audio. T2V and single-image
+Ref2VA each cover the 5/10/15-second presets. Every case has two warmups followed
+by five measured calls; the table reports medians. The
+[machine-readable record](validation/b300-performance.json) preserves all
+60 measured latencies, their ranges, and configuration details.
+
+Timing starts at the pipeline call and ends after CUDA completion on all ranks,
+including conditioning, denoising, and video/audio VAE decoding. Both return
+tensor outputs. Loading, initialization, warmup, prompt rewriting, RGB8/PIL
+conversion, MP4 encoding, file saving, and noise-fixture I/O are excluded.
+
+The original runtime uses dense SDPA, native PEFT branches, its original rank-0
+conditioning broadcast, and 2048-short-edge reference preprocessing. Its rank-0
+conditioner remains resident for the comparison. The Sol-Engine configuration
+uses fused LoRA consumers, paired AdaLN tables, conditioner pruning, SOL/BSA,
+compressed Ulysses transport, parallel VAE paths, and its default reference
+sizing. MXFP8 and reference KV caching are disabled. The original runtime's
+duration limit is extended only to accept the existing 362-frame preset.
+
+The actual first DiT inputs verified identical target video/audio noise on all
+ranks for all six pairs, preserving the original random draw order. Each
+configuration retains its own reference preprocessing. All 84 calls, including
+warmups, used eight steps and unmerged LoRA. All 42 Sol-Engine calls matched the
+expected fusion counters: 2400 split-linear calls and 400 each for QKV packing,
+attention output, SwiGLU, and FFN output. T2V used 336 sparse/64 dense attention
+calls; Ref2VA used 400 sparse calls per rank.
+
+This benchmark uses one prompt per task, one seed, and one reference image.
+Its speedups include the approximate paths described in the README; it does
+not establish output equivalence or a broad perceptual-quality result. I2V,
+multiple references, and reference audio/video were not benchmarked here.
+The measurements were already complete; adding this record did not rerun GPU
+experiments.
+
 ## Historical B200 checks — 2026-09-16
 
 [historical-b200.json](validation/historical-b200.json) is a reduced record of

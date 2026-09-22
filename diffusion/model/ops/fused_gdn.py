@@ -22,6 +22,11 @@ import triton.language as tl
 # =====================================================================
 
 
+# Triton on ROCm accepts only "ieee" / "bf16x3" / "bf16x6" for tl.dot(input_precision=...);
+# "tf32" is CUDA-only, so every TF32 request resolves through this constant.
+TF32_INPUT_PRECISION = tl.constexpr("tf32" if torch.version.cuda is not None else "ieee")
+
+
 def _get_kernel_config() -> dict:
     """Return optimal kernel parameters for the current GPU.
 
@@ -177,7 +182,7 @@ def _fused_gdn_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     # ---- program → (batch, head) ----
     pid = tl.program_id(0)
@@ -312,7 +317,7 @@ def _fused_gdn_kernel(
                 K_rot_dc = K_rot.to(dot_dtype)
                 V_pred = tl.dot(K_rot_dc, state_prev.to(dot_dtype), out_dtype=tl.float32, input_precision=dot_ip)
                 dv = (V_raw - V_pred) * bt[:, None]
-                state_curr += tl.dot(tl.trans(K_rot), dv, out_dtype=tl.float32, input_precision="tf32")
+                state_curr += tl.dot(tl.trans(K_rot), dv, out_dtype=tl.float32, input_precision=TF32_INPUT_PRECISION)
 
                 z_hat = tl.sum(K * state_z_prev[None, :], axis=1)
                 dz = (1.0 - z_hat) * bt
@@ -1126,11 +1131,11 @@ def _fused_gdn_bwd_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     # Gradient matmuls: always use bf16 TC + TF32 input precision (matching PyTorch backward)
     grad_dtype = tl.bfloat16
-    grad_ip: tl.constexpr = "tf32"
+    grad_ip: tl.constexpr = TF32_INPUT_PRECISION
 
     # ---- Gradient state accumulators (reverse time) ----
     dstate = tl.zeros([BLOCK_D, BLOCK_D], dtype=tl.float32)

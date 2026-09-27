@@ -11,6 +11,7 @@ import torch
 from diffusers.utils import export_to_video, load_video
 
 from sol_refiner_h3 import SoLRefinerH3Pipeline
+from sol_refiner_h3.attention import LocalNattenProcessor
 
 
 def parse_args():
@@ -32,6 +33,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.width <= 0 or args.height <= 0 or args.width % 2 or args.height % 2:
+        raise SystemExit("MP4 output width and height must be positive even numbers")
     if args.output.exists():
         raise SystemExit("Output already exists; choose a new path")
     if not args.input.is_file():
@@ -45,6 +48,15 @@ def main():
         fps = float(fps)
     frames = load_video(str(args.input))
     pipe = SoLRefinerH3Pipeline.from_pretrained(args.model, torch_dtype=torch.bfloat16)
+    pipe.diffusion_decoder.set_attn_processor(LocalNattenProcessor())
+    pipe.diffusion_decoder.enable_tiling(
+        tile_sample_min_height=768,
+        tile_sample_min_width=768,
+        tile_sample_min_num_frames=128,
+        tile_sample_stride_height=512,
+        tile_sample_stride_width=512,
+        tile_sample_stride_num_frames=80,
+    )
     pipe.enable_model_cpu_offload()
     result = pipe(
         frames,
@@ -56,7 +68,7 @@ def main():
         decoder_generator=torch.Generator("cuda").manual_seed(args.decoder_seed),
     ).frames[0]
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    export_to_video(result, str(args.output), fps=fps)
+    export_to_video(result, str(args.output), fps=fps, macro_block_size=1)
 
 
 if __name__ == "__main__":

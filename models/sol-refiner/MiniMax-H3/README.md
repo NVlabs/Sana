@@ -7,8 +7,8 @@ Refine an H3-generated video with **one denoising step** using Diffusers LTX-2.5
 ## Status
 
 This is an initial integration for review. The single-step denoising path has
-been tested on H100. Complete model packaging, public downloads and full video
-I/O validation remain in progress.
+been tested on H100. A complete local model package has been loaded and used
+for MP4-to-MP4 inference. The public model repository is not yet selected.
 
 ## Implementation
 
@@ -38,8 +38,11 @@ pip install -r requirements.txt
 ```
 
 The Diffusers revision is pinned because LTX-2.5 diffusion-decoder APIs are newer
-than the APIs in some installed Diffusers releases. Decoder backend dependencies
-must match the selected PyTorch/CUDA installation.
+than the APIs in some installed Diffusers releases. The CLI uses the installed NATTEN backend for decoding. Install a matching wheel
+from [the official NATTEN wheel index](https://whl.natten.org/). The tested runtime
+is Python 3.12, PyTorch 2.9.1+cu126 and NATTEN 0.21.5 (torch290cu126).
+Decoder tiling uses 768-pixel spatial tiles with a 512-pixel stride to limit
+GPU memory; tile boundaries may differ from an untiled decode.
 
 ## Pretrained model format
 
@@ -106,8 +109,8 @@ python -m unittest discover -s tests -v
 ```
 
 See [VALIDATION.md](VALIDATION.md) for the measured checkpoint and backend checks,
-including the single-step contract and the H100 denoising test. Full pixel-output
-integration remains a separate release gate.
+including the single-step contract, component reload test and H100 video checks.
+Numerical similarity measurements describe these samples, not a general quality guarantee.
 
 ## Maintainer packaging
 

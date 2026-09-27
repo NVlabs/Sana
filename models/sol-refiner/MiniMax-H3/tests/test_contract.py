@@ -4,12 +4,13 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 import unittest
+import tempfile
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 from diffusers import FlowMatchEulerDiscreteScheduler
-from sol_refiner_h3 import DEFAULT_SIGMA, SoLRefinerH3Pipeline, output_geometry
+from sol_refiner_h3 import DEFAULT_SIGMA, LTX2Encoder, ModelMixin, SoLRefinerH3Pipeline, output_geometry
 
 
 class ConstantVelocity(torch.nn.Module):
@@ -49,6 +50,26 @@ class ContractTests(unittest.TestCase):
             ),
         )
         return pipe, model
+
+    def test_encoder_serialization_without_conv_decoder(self):
+        encoder = LTX2Encoder.from_config({
+            "block_out_channels": (8, 8, 8, 8),
+            "decoder_block_out_channels": (8, 8, 8),
+            "layers_per_block": (1, 1, 1, 1, 1),
+            "decoder_layers_per_block": (1, 1, 1, 1),
+            "latent_channels": 4,
+        })
+        self.assertIsInstance(encoder, ModelMixin)
+        self.assertIsNone(encoder.decoder)
+        with tempfile.TemporaryDirectory() as directory:
+            encoder.save_pretrained(directory)
+            restored = LTX2Encoder.from_pretrained(directory)
+        self.assertIsNone(restored.decoder)
+        self.assertEqual(set(encoder.state_dict()), set(restored.state_dict()))
+        for key, value in encoder.state_dict().items():
+            torch.testing.assert_close(restored.state_dict()[key], value)
+        with self.assertRaises(RuntimeError):
+            restored.decode(torch.zeros(1))
 
     def test_h3_geometry(self):
         self.assertEqual(output_geometry(1920, 1080, 124), (1920, 1088, 121))

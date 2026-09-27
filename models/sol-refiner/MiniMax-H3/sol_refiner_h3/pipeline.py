@@ -201,6 +201,7 @@ class SoLRefinerH3Pipeline(DiffusionPipeline):
         sigma: float = DEFAULT_SIGMA,
         generator: torch.Generator | None = None,
         decoder_generator: torch.Generator | None = None,
+        noise: torch.Tensor | None = None,
         prompt_embeds: torch.Tensor | None = None,
         prompt_attention_mask: torch.Tensor | None = None,
         output_type: str = "np",
@@ -236,9 +237,14 @@ class SoLRefinerH3Pipeline(DiffusionPipeline):
             self.vae.latents_std,
             self.vae.config.scaling_factor,
         ).to(device=device, dtype=self.transformer.dtype)
-        noise = randn_tensor(
-            latents.shape, generator=generator, device=device, dtype=latents.dtype
-        )
+        if noise is None:
+            noise = randn_tensor(
+                latents.shape, generator=generator, device=device, dtype=latents.dtype
+            )
+        elif noise.shape != latents.shape:
+            raise ValueError("Provided noise must match the conditioning latent shape")
+        else:
+            noise = noise.to(device=device, dtype=latents.dtype)
         noisy = ((1 - sigma) * latents.float() + sigma * noise.float()).to(
             latents.dtype
         )

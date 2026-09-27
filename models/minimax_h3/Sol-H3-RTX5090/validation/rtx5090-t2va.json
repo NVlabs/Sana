@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "run_date": "2026-09-23",
+  "task": "t2va",
+  "offload_mode": "cpu",
+  "sample": {
+    "case_source": "examples/prompts.jsonl",
+    "case_id": "mountain-lake",
+    "formal_seed": 42,
+    "warmup_seed": 999,
+    "formal_request_count": 1
+  },
+  "timing": {
+    "boundary": "same-host monotonic request entry to completed muxed MP4",
+    "request_start_monotonic_ns": 5241702063269395,
+    "final_mp4_complete_monotonic_ns": 5241741860020563,
+    "e2e_s": 39.796751168,
+    "stage1_s": 11.224092651,
+    "stage2_s": 12.000252239,
+    "startup_and_warmup_s": 375.143728772,
+    "qwen_encoding_only_s": 0.517563102,
+    "included": [
+      "temporary Qwen load, encoding and closure",
+      "CPU/GPU transfers",
+      "serial H3 and LTX stages",
+      "latent file transfer",
+      "final MP4 encoding and muxing"
+    ],
+    "excluded": [
+      "video-model initialization and full-chain warmup",
+      "HTTP transport and external service queue"
+    ],
+    "phase_sum_used": false,
+    "qwen_encoding_note": "Encoding-only component time excludes worker loading and closure; both remain inside e2e_s."
+  },
+  "hardware": {
+    "platform": "Linux x86_64",
+    "selected_gpu": "NVIDIA GeForce RTX 5090",
+    "compute_capability": "12.0",
+    "visible_gpu_count": 1,
+    "reported_memory_mib": 32607,
+    "driver": "580.173.02",
+    "host_ram_gib": 188,
+    "host_ram_note": "Observed workstation capacity, not a tested minimum."
+  },
+  "environment": {
+    "scope": "Observed reused environments; not a fresh-install lockfile.",
+    "stage1_and_qwen": {
+      "python": "3.12",
+      "packages": {
+        "torch": "2.12.0+cu130",
+        "triton": "3.7.0",
+        "torchvision": "0.27.0+cu130",
+        "torchaudio": "2.11.0+cu130",
+        "nvidia-cudnn-frontend": "1.27.0",
+        "fastvideo-kernel": "0.3.5",
+        "nvidia-cutlass-dsl": "4.6.0",
+        "quack-kernels": "0.6.3",
+        "apache-tvm-ffi": "0.1.11",
+        "comfy-kitchen": "0.2.26",
+        "comfy-aimdo": "0.4.11",
+        "remote-pdb": "2.1.0",
+        "ftfy": "6.3.1",
+        "omegaconf": "2.3.1",
+        "av": "18.1.0",
+        "imageio-ffmpeg": "0.6.0"
+      }
+    },
+    "stage2": {
+      "python": "3.13",
+      "packages": {
+        "torch": "2.13.0+cu132",
+        "triton": "3.7.1"
+      }
+    }
+  },
+  "memory": {
+    "scope": "Whole run, including startup and warmup",
+    "sampling_interval_s": 2,
+    "selected_gpu_sampled_max_mib": 21583,
+    "unexposed_second_gpu_sampled_max_mib": 0,
+    "note": "Device-wide samples every two seconds can miss instantaneous peaks."
+  },
+  "stage1": {
+    "status": "PASS",
+    "request_transformer_forwards": 4,
+    "request_attention_calls": 202,
+    "request_wall_s": 11.224092651,
+    "request_counts": {
+      "block_mask_calls": 200,
+      "compression_branch_calls": 200,
+      "cudnn_bsa_calls": 200,
+      "dense_text_calls": 2,
+      "triton_sparse_kernel_calls": 0,
+      "vsa_forward_calls": 200,
+      "warmup_reference_calls": 0
+    },
+    "video_vae_materializations": 0,
+    "warmup_selected_bsa_validation": {
+      "atol": 0.03,
+      "max_abs": 2.0,
+      "max_relative_l2": 6.378843681886792e-05,
+      "passed_calls": 200,
+      "reference": "saved unchanged original Triton; identical Q/K/V/counts/block_sizes and selected set; BSA active index prefix reversed",
+      "rtol": 0.03,
+      "scope": "first 200 actual model selected-attention calls, first full warmup only",
+      "status": "PASS",
+      "tolerance_source": "NVIDIA cudnn-frontend v1.28.0 test_BSA_attention_forward.py:50"
+    },
+    "offload": {
+      "active_blocks": 0,
+      "block_loads": 600,
+      "blocks": 50,
+      "fp8_buffer_count": 300,
+      "max_active_blocks": 1,
+      "mode": "cpu",
+      "parameters_and_buffers": true,
+      "block_loads_scope": "Cumulative construction, warmup and formal request; not a per-request count."
+    }
+  },
+  "stage2": {
+    "status": "PASS",
+    "completed_updates": 3,
+    "attention": {
+      "architecture": "sm120-triton",
+      "backend": "sol",
+      "selected_backend": "triton",
+      "compile_boundary": "eager_inner_sol_callable",
+      "cross_attention": "dense",
+      "dense_calls": 3,
+      "dense_calls_source": "inferred_from_layer1_entry_after_dense_layer0",
+      "sol_calls": 141,
+      "kernel": {
+        "dense_guard_calls": 0,
+        "dispatch_calls": 0,
+        "hunyuan_calls": 0,
+        "kernel_calls": 141
+      }
+    }
+  },
+  "output": {
+    "status": "PASS",
+    "sha256": "c6644e0f374f0be932061f641be97ebbdc046d0b34ba9f99dc621c71ddc244de",
+    "bytes": 2711675,
+    "video": {
+      "codec": "h264",
+      "width": 1344,
+      "height": 768,
+      "decoded_frames": 121,
+      "fps": 24
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate": 32000,
+      "channels": 2,
+      "decoded_samples_per_channel": 161792,
+      "rms": 0.0058222147773690424
+    },
+    "scope": "full media decoding and structural validation; not perceptual baseline parity"
+  },
+  "provenance": {
+    "tested_source_base_commit": "8e0db4fa562d727ea28b8d63015c196db7d97cae",
+    "runtime_hash_path_base": "models/minimax_h3/Sol-H3-Spark",
+    "runtime_sha256": {
+      "infer.py": "40426492b4ef12a5454973f6f244699df8cb654021fd712f491a505657c10dea",
+      "runtime/__init__.py": "2fdf068276a12a17c39459676261974b9dd47f047be27412b64485c1c866bb2d",
+      "runtime/cache_builder.py": "b99b4e7e869e6223002e29a5ffae26962e5dd071af7657bf5f2a8c3a74085d7d",
+      "runtime/cache_ops/__init__.py": "775bc25aa08c617cf23cc3bf5e44e75fe8676c40bedc5607fb74b671c5c2c2c5",
+      "runtime/cache_ops/int8_header.py": "f252805af03d04a23afdf33fb70d0f9017634706e49e7bff9146629cd4726922",
+      "runtime/cache_ops/int8_policy.py": "9469e1ecd805b0e13ee1bcb3897bfde14585bd2fe11f4c86a16fefc959b1a43a",
+      "runtime/config.py": "4bc897552f4308f4e0d45db7494b19cc1323e9202a96d87b316a037e0a8cb1ea",
+      "runtime/latent_transfer.py": "09588af507fdb23ff5e7ffdff73d1e8097cfb32b9c15b3e9fc8c79133751e783",
+      "runtime/offload.py": "e14d3505b6be538d5326c7aa57cd836086b08bf658ff7818a5c0dfb12d27a470",
+      "runtime/pipeline.py": "76065ba2843f76a452bc5a7eeaf6aba076b526dee67622ee54cf81c147b83083",
+      "runtime/prompt_cache.py": "5877134f6a3c95b50dbca376cccf7879481e8196620a255d4ce7ae950f18ae99",
+      "runtime/qwen.py": "ac814d71de8a8dbac32bbe06ab7d8376976d2fd8384c1a1a6ac38b4dd3136b7d",
+      "runtime/qwen_ops/__init__.py": "393ff69411e0b56df6f0f4703a0eb93497a1134e6d10c4393d922b588f0981aa",
+      "runtime/qwen_ops/conditioner.py": "e2323d53033694cb98c0bc4e2e7f4445c86093db08f5d63859a91d7270bbd2c9",
+      "runtime/qwen_ops/direct_io.py": "d14d862b5b1aaa3b2e6a2baac88e0d73254e3f9801524ce4df8bdc2092921f83",
+      "runtime/qwen_ops/media.py": "ad920c45a40175638c640d4edd5a4d70abb5573cdbdabc6946e0954c05b7e8ce",
+      "runtime/stage1.py": "8332627f2bda5a6af0ca0599968ac07b9737a3dfa513cd499b8995d2d8bd9545",
+      "runtime/stage1_ops/__init__.py": "1fbfd2be26b558b5acc5eb4c520779ea2bb780fcb6bc96020ad066ebbe6f09c5",
+      "runtime/stage1_ops/capture.py": "13e1f43b957d825eb5310dca312ac65023da14a3f1b3abe04ea544b3d3ff8193",
+      "runtime/stage1_ops/fused.py": "d219b84b6d0fbf0d9ca54180e15246c6b14460e5ed5c14c2662457f74b00e592",
+      "runtime/stage1_ops/lookup.py": "ef63c996de89846dcc0c62e18855aa31dcafc23bd681af78d836d0a0ba5f7e81",
+      "runtime/stage1_ops/native.py": "1bd751745168b03d74e2d5e567c7766546578d05d01c9fcf3e1666b477821c17",
+      "runtime/stage1_ops/regional.py": "5afeaf635089e5126780e4f88187dddee26fec4e73b5ed399fa0d8316a1b282f",
+      "runtime/stage1_ops/sol.py": "aae93ef8cfb84f3731db3dc3253e4f83157a25a9e61ed02db1891fbd3cc9955a",
+      "runtime/stage1_ops/tasks.py": "33af958488afc24d8add688413cd5bf79383e40bc1cbb878ca0dc751c82cff89",
+      "runtime/stage1_ops/vsa.py": "be2ad8972c2a1b7ae16c0d877882b923d8c2b0e711d7dc3741116ca6aefc885c",
+      "runtime/stage2.py": "f1de1fa99f0d2baace714a8629dd69934ec051de4df309f199e6868528022d14",
+      "runtime/stage2_ops/__init__.py": "8eb40fbb9fc4632dbba00bac95b571fc1f110c4bb0cc8cfe9268958eef7455c1",
+      "runtime/stage2_ops/conv_direct_nhwc.py": "752c88748c9fda9646ce7b23822a8667e99927c867b2471d7ac5247980d7b8eb",
+      "runtime/stage2_ops/h3_ltx_adapter/__init__.py": "c200de6b2632edb6f5f87908af707d4599411ae8c51ca2440d46c9dce167ee19",
+      "runtime/stage2_ops/h3_ltx_adapter/adapter.py": "a0b6c08ca3ddc5ba79c6348a78f09c49fa07a9b556ae18677347275f65ab0a5f",
+      "runtime/stage2_ops/h3_ltx_adapter/constants.py": "fc58ee14f66d845213029e154c47633003f4eafc6a6408d9638acecb069f680a",
+      "runtime/stage2_ops/h3_ltx_adapter/geometry.py": "6ed4ff18ed60faa4038c7e31d436640f33854471ab0362436ac64cf68f65f419",
+      "runtime/stage2_ops/h3_ltx_adapter/model.py": "f7a894a571197af2057de604916daadba3fe4b488474b5865cf1a4745a4c48ba",
+      "runtime/stage2_ops/h3_upscale.py": "c6560308bd26fed4fe0241e927a130b7b845f3792e9c02414acc9f93caeb025c",
+      "runtime/stage2_ops/models.py": "29c1795ac40c88f19b8d974f84e16cd17990c68c88722edcb1c1565251841b4b",
+      "runtime/stage2_ops/single_gpu_all2all.py": "431d541043eac50b3a3861d156d22cd106c2fd3dea90efbbe6ebdc6afd03719f",
+      "runtime/stage2_ops/writer_chunking.py": "19edfb2bbd62beee4635d7900097930c13e599a4abeceb7454d408b4614dd9f3",
+      "runtime/worker.py": "ee7c47087c60b30be6c06dc253467abeecff261b164d0b8fe482b929f8bcd019"
+    },
+    "manifest_sha256": {
+      "configs/default.json": "aed253f467b70ff532f82ff88984944d0480682f4d885d3f6a04d2e3e415f511",
+      "configs/dependencies.json": "8d5826bb0c8c17f971587fed256000d1658303f5352dda3f577567f83b42ea78",
+      "configs/checkpoints.json": "c01c8a1e2c24dd33cc276ad21056a53246cf6dfa236e1d26a7540e0f5b7a20b8"
+    },
+    "raw_receipt_sha256": {
+      "e2e-v4/results.json": "f29d4ae26b2dd373bc50253477788968ae62c75eee02746482bd5cb4d0be47f4",
+      "e2e-v4/verification-summary.json": "48dc4b999dc11353769b706707c3c354436c2f64c593d81274e5a0db8c1589ba",
+      "e2e-v4/mountain-lake/stage1/manifest.json": "f7e3801ec6de823bc24d7896e63a3f010842f1ce5622382cb3cf1a2b1b2b7f40",
+      "e2e-v4/warmup/stage1/manifest.json": "32e87307b68db093320f1b5f6d356e09a00d288c10dcfbcf68fd2dad4b9b19ca",
+      "e2e-v4/mountain-lake/stage2/stage2_result.json": "40cc4578d9c5ae45b61fc38ce87449feb617ea9c48f817f00c07621def7e8060",
+      "e2e-v4/mountain-lake/stage2/media-verification.json": "071763d41af725ca4a4f46e20f2fd2f6c0a23ed43f5a05111ac3497749be24bd"
+    },
+    "note": "Selected fields extracted from retained run receipts; private deployment paths, raw logs, weights and generated media are omitted."
+  },
+  "limits": [
+    "One formal request after one full warmup; no multi-run latency distribution.",
+    "FL2VA and Ref2VA have not been GPU-validated on this CPU-offload profile.",
+    "No perceptual parity to Spark or cross-device speedup claim.",
+    "Fresh-environment installation and service cold start were not benchmarked."
+  ],
+  "packaging": {
+    "package_path": "models/minimax_h3/Sol-H3-RTX5090",
+    "derived_from_package": "models/minimax_h3/Sol-H3-Spark",
+    "source_snapshot_commit": "3090097be9f08a4e25328f6740a9a961203fb277",
+    "byte_identical_runtime_files": 36,
+    "runtime_file_count": 39,
+    "changed_runtime_files": {
+      "infer.py": {
+        "change": "CLI defaults to CPU offload, only accepts cpu, and names RTX 5090 in help.",
+        "sha256": "1a20056548fd50fc7a6e508deda0d2a887b7d8670d80720d94ecdce45507ed54"
+      },
+      "runtime/pipeline.py": {
+        "change": "Python API defaults to CPU offload; module docstring names RTX 5090.",
+        "sha256": "95ac808d2de99ef0c70f1d3865bcba5426202f73f972b1ce06193dc7921e642d"
+      },
+      "runtime/config.py": {
+        "change": "Frozen recipe hash updated for profile name and Qwen placement metadata only.",
+        "sha256": "e6a22b976a549715bad7c6cb92d58128fcc2bdf71a0297e2343f5cd04403f129"
+      }
+    },
+    "recipe_metadata_changes": {
+      "name": "Sol-H3 RTX5090",
+      "stage1.qwen": "NVFP4_AWQ_per_request"
+    },
+    "packaged_manifest_sha256": {
+      "configs/default.json": "697097f281b42443b3388620cfca9266cd68eba09589d784687ff2e84bda0e83",
+      "configs/dependencies.json": "ff27df663d3da8c0f69604d9ac64fc0dc30134ef8a06932dac2ca390536244b3",
+      "configs/checkpoints.json": "c01c8a1e2c24dd33cc276ad21056a53246cf6dfa236e1d26a7540e0f5b7a20b8"
+    },
+    "inference_operations_and_numerical_settings_unchanged": true,
+    "checkpoint_and_source_pins_unchanged": true,
+    "new_gpu_benchmark": false,
+    "note": "Historical timing and provenance.runtime_sha256 describe the measured source package. Relocation and the listed packaging changes are checked separately; no new GPU run is claimed."
+  }
+}

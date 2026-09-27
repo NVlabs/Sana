@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refine an existing H3 video using a merged Diffusers model directory."""
+"""Refine an existing H3 video in one step using Diffusers LTX-2.5."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         required=True,
-        help="Merged pipeline directory or published model repository",
+        help="SoL-Refiner model directory or published model repository",
     )
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--prompt", required=True)

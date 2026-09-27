@@ -39,11 +39,7 @@ def output_geometry(width: int, height: int, frames: int) -> tuple[int, int, int
 
 
 class SoLRefinerH3Pipeline(DiffusionPipeline):
-    """Refine H3 video with a pretrained, offline-merged transformer.
-
-    The model directory contains ordinary Diffusers components. The runtime has
-    no adapter path or LoRA merge operation. Audio generation is disabled.
-    """
+    """Refine H3 video in one denoising step using Diffusers LTX-2.5 components."""
 
     model_cpu_offload_seq = "text_encoder->connectors->vae->latent_upsampler->transformer->diffusion_decoder"
     _optional_components = ["text_encoder", "tokenizer", "connectors"]
@@ -133,9 +129,16 @@ class SoLRefinerH3Pipeline(DiffusionPipeline):
         x = noisy_latents.to(device=device, dtype=dtype)
         batch, channels, frames, height, width = x.shape
         packed = LTX2ConditionPipeline._pack_latents(x, 1, 1)
-        self.scheduler.set_timesteps(sigmas=[sigma], device=device)
-        if len(self.scheduler.timesteps) != 1 or not torch.isclose(
-            self.scheduler.sigmas[0], torch.tensor(sigma, device=device), atol=1e-6
+        self.scheduler.set_timesteps(
+            num_inference_steps=1, sigmas=[sigma], device=device
+        )
+        if (
+            len(self.scheduler.timesteps) != 1
+            or len(self.scheduler.sigmas) != 2
+            or self.scheduler.sigmas[-1].item() != 0
+            or not torch.isclose(
+                self.scheduler.sigmas[0], torch.tensor(sigma, device=device), atol=1e-6
+            )
         ):
             raise ValueError("Scheduler altered the checkpoint's one-step sigma")
         timestep = self.scheduler.timesteps[0].expand(batch)

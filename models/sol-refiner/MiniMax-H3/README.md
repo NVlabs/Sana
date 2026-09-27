@@ -1,19 +1,14 @@
 # SoL-Refiner for MiniMax-H3
 
-Refine an H3-generated video with a single conditional denoising step. The
-inference runtime loads an **offline-merged model**: it does not load an adapter,
-inject LoRA layers or merge weights during inference.
+Refine an H3-generated video with **one denoising step** using Diffusers LTX-2.5.
 
 [Project page](https://nvlabs.github.io/Sana/Sol-Refiner/) · [All variants](../)
 
 ## Status
 
-This is an initial integration for review. The merged transformer has been
-produced and checked against the original implementation on H100. The standalone
-Diffusers transformer conversion and forward path have been exercised. A complete
-Diffusers model package, public download location, and end-to-end encoder/decoder
-video validation are not yet provided. Do not treat the transformer-only export
-as a complete pipeline directory.
+This is an initial integration for review. The single-step denoising path has
+been tested on H100. Complete model packaging, public downloads and full video
+I/O validation remain in progress.
 
 ## Implementation
 
@@ -53,7 +48,7 @@ ID. A complete model package must contain:
 
 ```text
 model_index.json
-transformer/         # premerged H3 weights, config and safetensors shards
+transformer/         # H3 weights, config and safetensors shards
 vae/                 # compatible LTX video encoder and latent statistics
 latent_upsampler/
 diffusion_decoder/
@@ -63,17 +58,13 @@ tokenizer/
 connectors/
 ```
 
-The release is one merged model, possibly stored in standard safetensors shards.
-The end user does not need the training adapter or a merge command. No placeholder
-Hub ID is presented as an available download.
-
 ## Refine an H3 video
 
 Once the complete model package is available:
 
 ```bash
 python infer.py \
-  --model /path/to/merged-sol-refiner-h3 \
+  --model /path/to/sol-refiner-h3 \
   --input /path/to/h3-video.mp4 \
   --prompt 'A snow leopard walks along a snowy mountain ridge.' \
   --output outputs/refined.mp4 \
@@ -81,7 +72,8 @@ python infer.py \
   --seed 303000 --decoder-seed 303000
 ```
 
-The default denoising sigma is `0.9093750119`, followed by zero. CFG is disabled.
+**The Refiner always performs one Transformer forward and one Euler update:**
+`0.9093750119 → 0`. There is no multi-step denoising loop. CFG is disabled.
 Diffusers prompt AdaLN uses the **scaled timestep** (`sigma * 1000`), while the
 Euler scheduler uses the corresponding unscaled sigma interval.
 
@@ -114,22 +106,21 @@ python -m unittest discover -s tests -v
 ```
 
 See [VALIDATION.md](VALIDATION.md) for the measured checkpoint and backend checks,
-including the distinction between low-precision numerical differences and exact
-weight equivalence. Full pixel-output integration remains a separate release gate.
+including the single-step contract and the H100 denoising test. Full pixel-output
+integration remains a separate release gate.
 
 ## Maintainer packaging
 
 `tools/package_model.py` assembles a compatible Diffusers base package and the
-already-fused transformer into the single directory expected by `infer.py`:
+H3 transformer into the directory expected by `infer.py`:
 
 ```bash
 python tools/package_model.py \
   --base /path/to/ltx25-diffusers-components \
-  --transformer /path/to/premerged-transformer \
-  --output /path/to/merged-sol-refiner-h3
+  --transformer /path/to/h3-transformer \
+  --output /path/to/sol-refiner-h3
 ```
 
-This is a maintainer-side packaging step, not a user-side LoRA merge. It requires
-an existing compatible Diffusers base package, including the LTX-2.5 diffusion
-decoder. It does not convert a raw upstream monolithic checkpoint or upload files.
+This packaging utility requires a compatible Diffusers base package, including
+the LTX-2.5 diffusion decoder.
 Run large model packaging on a compute host with enough memory.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $# -ne 4 ]]; then
-  echo "Usage: $0 MERGED_MODEL_DIR H3_VIDEO PROMPT OUTPUT_MP4" >&2
+  echo "Usage: $0 MODEL_DIR H3_VIDEO PROMPT OUTPUT_MP4" >&2
   exit 2
 fi
 example_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

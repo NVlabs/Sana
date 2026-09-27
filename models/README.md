@@ -16,7 +16,7 @@ reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 
 [SoL-Refiner](sol-refiner/) provides a unified entry for the SANA/Wan and
 MiniMax-H3 variants. The H3 integration uses Diffusers LTX-2.5 components
-and offline-merged weights; its release-validation status is recorded there.
+for single-step refinement; its release-validation status is recorded there.
 
 ## A model profile contains
 

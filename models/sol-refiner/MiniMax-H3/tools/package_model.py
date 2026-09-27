@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maintainer utility: package existing Diffusers components with fused weights."""
+"""Package Diffusers LTX-2.5 components for the H3 refiner."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument(
         "--transformer",
         required=True,
-        help="Already-fused Diffusers transformer directory",
+        help="H3 Diffusers transformer directory",
     )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

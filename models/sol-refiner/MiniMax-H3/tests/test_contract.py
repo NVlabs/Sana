@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
@@ -60,7 +61,9 @@ class ContractTests(unittest.TestCase):
     def test_exact_one_step_and_scaled_prompt_timestep(self):
         pipe, model = self.pipeline()
         x = torch.linspace(-1, 1, 120).reshape(1, 4, 2, 3, 5)
-        pred = pipe.denoise_latents(x, torch.zeros(1, 2, 8), sigma=DEFAULT_SIGMA)
+        with patch.object(pipe.scheduler, "step", wraps=pipe.scheduler.step) as step:
+            pred = pipe.denoise_latents(x, torch.zeros(1, 2, 8), sigma=DEFAULT_SIGMA)
+        self.assertEqual(step.call_count, 1)
         torch.testing.assert_close(pred, x - DEFAULT_SIGMA * 0.25)
         self.assertEqual(len(model.calls), 1)
         call = model.calls[0]
@@ -75,6 +78,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(float(pipe.scheduler.sigmas[-1]), 0.0)
         pred2 = pipe.denoise_latents(x, torch.zeros(1, 2, 8), sigma=DEFAULT_SIGMA)
         torch.testing.assert_close(pred2, pred)
+        self.assertEqual(len(model.calls), 2)
 
     def test_invalid_schedule_rejected(self):
         pipe, _ = self.pipeline(shift=2)

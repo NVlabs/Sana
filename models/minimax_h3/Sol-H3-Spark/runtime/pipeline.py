@@ -35,8 +35,6 @@ def worker_environment(name, paths):
     for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"):
         env.pop(key, None)
     roots = [str(PACKAGE)]
-    if paths.get(name + "_dependencies"):
-        roots.append(paths[name + "_dependencies"])
     if name == "stage1":
         if paths.get("fa4_dependencies"):
             roots.extend([paths["fa4_dependencies"],
@@ -122,17 +120,11 @@ class Pipeline:
     """
 
     def __init__(self, paths, output_root, *, task="t2va", ref_image_match=None,
-                 ref_stage1_attn=None, offload_mode="none", worker_factory=Worker):
+                 ref_stage1_attn=None, worker_factory=Worker):
         self.paths = paths
         self.task = task
         self.config = load_recipe(task, ref_image_match=ref_image_match,
                                   ref_stage1_attn=ref_stage1_attn)
-        if offload_mode not in ("none", "cpu"):
-            raise ValueError("offload_mode must be none or cpu")
-        self.cpu_offload = offload_mode == "cpu"
-        if self.cpu_offload:
-            self.config["execution"] = {"offload": "cpu", "gpu_count": 1,
-                                        "qwen_lifetime": "one_request", "overlap_stages": False}
         self.root = Path(output_root).resolve()
         self.root.mkdir(parents=True, exist_ok=False)
         self.worker_factory = worker_factory
@@ -165,14 +157,13 @@ class Pipeline:
         self.stage2.call("prepare", request_id="warmup", output_root=str(request / "stage2"))
         s2 = self.stage2.call(capture_dir=s1["capture_dir"], output_root=str(request / "stage2"), request_id="warmup")
         self.stage2.call("release_idle_cache")
-        if not self.cpu_offload:
-            self.qwen = self.worker_factory("qwen", self.root / "qwen-worker", self.paths, self.config)
+        self.qwen = self.worker_factory("qwen", self.root / "qwen-worker", self.paths, self.config)
         self.report.update(status="READY", startup_and_warmup_s=(time.monotonic_ns() - started) / 1e9,
                            warmup={"case_id": case["case_id"], "seed": 999, "output": s2["output"]})
         self.save()
 
     def generate(self, case):
-        if self.stage1 is None or self.stage2 is None or (not self.cpu_offload and self.qwen is None):
+        if self.qwen is None:
             raise RuntimeError("Call start() before generate()")
         if case.get("task", "t2va") != self.task:
             raise ValueError("Use a separate pipeline for a different task")
@@ -185,25 +176,13 @@ class Pipeline:
         row["request_start_monotonic_ns"] = started
         try:
             self.stage2.call("release_idle_cache", qwen_resident=True)
-            if self.cpu_offload:
-                self.qwen = self.worker_factory("qwen", request / "qwen-worker", self.paths, self.config)
-                try:
-                    conditioning = self.qwen.call(case=case, output_root=str(request / "qwen"))
-                finally:
-                    self.qwen.close()
-                    self.qwen = None
-                preparation = None
-            else:
-                conditioning = self.qwen.call(case=case, output_root=str(request / "qwen"))
-                preparation = self.stage2.submit("prepare", request_id=case["case_id"],
-                                                 output_root=str(request / "stage2"))
+            conditioning = self.qwen.call(case=case, output_root=str(request / "qwen"))
+            preparation = self.stage2.submit("prepare", request_id=case["case_id"],
+                                             output_root=str(request / "stage2"))
             s1 = self.stage1.call(case=case, conditioning_path=conditioning["conditioning_path"],
                                   outputdir=str(request / "stage1"))
-            if self.cpu_offload:
-                self.stage2.call("prepare", request_id=case["case_id"], output_root=str(request / "stage2"))
-            else:
-                self.qwen.call("release_idle_cache")
-                self.stage2.wait(preparation)
+            self.qwen.call("release_idle_cache")
+            self.stage2.wait(preparation)
             s2 = self.stage2.call(capture_dir=s1["capture_dir"], output_root=str(request / "stage2"),
                                   request_id=case["case_id"])
             ended = s2["final_mp4_complete_monotonic_ns"]
@@ -216,8 +195,7 @@ class Pipeline:
                        qwen_s=conditioning["request_wall_s"], stage1_s=s1["request_wall_s"],
                        stage2_s=s2["stage2_request_s"],
                        stage2_phases_s=s2.get("result", {}).get("phases_s", {}))
-            if self.qwen is not None:
-                self.qwen.call("release_idle_cache")
+            self.qwen.call("release_idle_cache")
         except BaseException as error:
             row.update(status="FAIL", error=f"{type(error).__name__}: {error}")
             self.report["status"] = "FAIL"

@@ -49,9 +49,8 @@ def install(model, state, compile_kwargs=None):
             or audit.get("active_compression_gates") != 50
             or audit.get("vsa_forward_calls") != 0 or "vsa_regional_compile" in state):
         raise RuntimeError("install once after the original fresh VSA backend audit, before any forward")
-    expected_arch = (12, 0) if state.get("cpu_offload") else (12, 1)
-    if torch.cuda.get_device_capability() != expected_arch:
-        raise RuntimeError(f"regional VSA profile requires {expected_arch}")
+    if torch.cuda.get_device_capability() != (12, 1):
+        raise RuntimeError("this explicit regional adaptation requires SM121")
     if _attention_compile_explicitly_disabled():
         raise RuntimeError("explicit attention compiler-disable cannot enter fullgraph regions")
     bodies, texts = [], []

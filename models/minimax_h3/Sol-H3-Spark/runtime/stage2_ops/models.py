@@ -22,20 +22,6 @@ TILES = {"frames": {"tile_size": 128, "overlap": 24},
          "width": {"tile_size": 768, "overlap": 64}}
 
 
-def offload_placement(name, module):
-    """Describe bindings honestly: streaming body weights start as meta views."""
-    tensors = [*module.named_parameters(), *module.named_buffers()]
-    if not tensors:
-        raise RuntimeError(f"offloaded module {name!r} exposes no tensors")
-    for tensor_name, tensor in tensors:
-        if tensor.is_meta and (name != "transformer" or ".transformer_blocks." not in tensor_name):
-            raise RuntimeError(f"unexpected unmaterialized tensor: {name}.{tensor_name}")
-    return {"offload": "cpu", "tensor_count": len(tensors),
-            "tensor_bindings_by_device": dict(Counter(str(t.device) for _, t in tensors)),
-            "dtypes": sorted({str(t.dtype) for _, t in tensors}),
-            "binding_scope": "module views; streaming CPU backing and GPU pools are managed by LTX"}
-
-
 def public_refiner_modules(ltx_root):
     ltx_root = Path(ltx_root).resolve(strict=True)
     for package in ("ltx-core", "ltx-pipelines", "ltx-kernels"):
@@ -58,7 +44,7 @@ def public_refiner_modules(ltx_root):
     return base, compat
 
 
-def construct(models, paths, *, torch, dist, compile_enabled, base, compat, cpu_offload=False):
+def construct(models, paths, *, torch, dist, compile_enabled, base, compat):
     from .h3_ltx_adapter import H3ToLTXAdapter
     from ltx_core.model.transformer.model import LTXModelType
 
@@ -79,9 +65,6 @@ def construct(models, paths, *, torch, dist, compile_enabled, base, compat, cpu_
         device=models.device, torch_module=torch)
     models.h3_ltx_adapter = H3ToLTXAdapter.from_pretrained(
         paths["adapter_dir"], device=models.device, dtype=models.dtype)
-    if cpu_offload:
-        models.h3_upscaler.cpu()
-        models.h3_ltx_adapter.model.cpu()
 
     pixel_shape = base.VideoPixelShape(batch=1, frames=121, height=768, width=1344, fps=24)
     latent_shape = base.VideoLatentShape.from_pixel_shape(pixel_shape, scale_factors=base.VIDEO_SCALE_FACTORS)
@@ -94,7 +77,7 @@ def construct(models, paths, *, torch, dist, compile_enabled, base, compat, cpu_
     stage = base.DiffusionStage.from_checkpoint(str(paths["transformer"]), models.dtype,
         models.device, loras=(lora,), quantization=None, registry=registry,
         compilation_config=compilation, alloc_trim_strategy=base.AllocatorTrimStrategy.DEFER,
-        offload_mode=base.OffloadMode.CPU if cpu_offload else base.OffloadMode.NONE)
+        offload_mode=base.OffloadMode.NONE)
     model_config = stage._transformer_builder.model_config()["transformer"]
     heads, head_dim = int(model_config["num_attention_heads"]), int(model_config["attention_head_dim"])
     if (int(model_config["num_layers"]), heads, head_dim) != (48, 32, 128):
@@ -109,31 +92,10 @@ def construct(models, paths, *, torch, dist, compile_enabled, base, compat, cpu_
     models.steady_all2all_timeout_s = manager.all2all_timeout_seconds
     if compile_enabled:
         manager.all2all_timeout_seconds = base.COMPILE_WARMUP_ALL2ALL_TIMEOUT_S
-    models.streaming_transformer = None
-    if cpu_offload:
-        from ltx_core.multigpu.transformer.sequence_parallel import (
-            SequenceParallelModelWrapper, create_video_self_attention_module_ops)
-        from ltx_core.model.transformer.model import X0Model
-        # SequenceParallelBuilder requires its fully resident builder. Apply
-        # the same attention module op to the native streaming builder instead.
-        builder = stage._transformer_builder
-        stage._transformer_builder = builder.with_module_ops(
-            (*builder.module_ops, create_video_self_attention_module_ops(manager)))
-        models.streaming_transformer = stage._prepared_builder().build(
-            device=models.device, dtype=models.dtype)
-        models.transformer = X0Model(SequenceParallelModelWrapper(
-            models.streaming_transformer, manager)).eval().requires_grad_(False)
-        # Retain the released Triton Sol implementation on SM120. The generic
-        # library otherwise automatically selects a different CuTe kernel.
-        from techniques.sparse_backends.sol_attn_backend import _load_sol_attn
-        _load_sol_attn()
-        from sol_attn import interface as sol_interface
-        sol_interface._CUTE_BACKENDS.pop((12, 0), None)
-    else:
-        stage._transformer_builder = base.SequenceParallelBuilder(inner=stage._transformer_builder,
-            attn_mgr=manager, registry=registry,
-            tracker=base.TransformerWeightTracker(group=dist.group.WORLD, no_lora_swap=True))
-        models.transformer = stage._build_transformer(video_tools=models.video_tools).requires_grad_(False)
+    stage._transformer_builder = base.SequenceParallelBuilder(inner=stage._transformer_builder,
+        attn_mgr=manager, registry=registry,
+        tracker=base.TransformerWeightTracker(group=dist.group.WORLD, no_lora_swap=True))
+    models.transformer = stage._build_transformer(video_tools=models.video_tools).requires_grad_(False)
     models.sol_attention = base.Stage2SolAttention(models.transformer,
         isolate_sol_from_compile=compile_enabled)
     models.sol_backend = base._actual_sol_backend()
@@ -148,7 +110,7 @@ def construct(models, paths, *, torch, dist, compile_enabled, base, compat, cpu_
     audio_block = compat.AudioConditioner(str(paths["audio_vae"]), models.dtype, models.device,
         registry=registry, alloc_trim_strategy=base.AllocatorTrimStrategy.DEFER)
     models.audio_encoder = audio_block._encoder_builder.build(
-        device=torch.device("cpu") if cpu_offload else models.device, dtype=models.dtype).eval().requires_grad_(False)
+        device=models.device, dtype=models.dtype).eval().requires_grad_(False)
     models.audio_tools = compat.AudioLatentTools(compat.AudioPatchifier(patch_size=1),
         compat.AudioLatentShape.from_video_pixel_shape(pixel_shape))
     decoder_block = compat.VideoDecoder(str(paths["output_video_vae"]), models.dtype,
@@ -162,15 +124,14 @@ def construct(models, paths, *, torch, dist, compile_enabled, base, compat, cpu_
     gc.collect()
     torch.cuda.empty_cache()
     models.video_decoder = decoder_block._decoder_builder.build(
-        device=torch.device("cpu") if cpu_offload else models.device, dtype=models.dtype).eval().requires_grad_(False)
+        device=models.device, dtype=models.dtype).eval().requires_grad_(False)
     if type(models.video_decoder).__name__ != "ConvVideoDecoder":
         raise RuntimeError("the output checkpoint must build the original ConvVideoDecoder")
     models.parameter_dtypes = dict(Counter(str(p.dtype) for p in models.transformer.parameters()))
     if (not models.parameter_dtypes.get("torch.bfloat16")
             or not set(models.parameter_dtypes) <= {"torch.bfloat16", "torch.float32"}):
         raise RuntimeError("refiner parameters must retain BF16 and original FP32 parameters")
-    placement = offload_placement if cpu_offload else base._module_residency
-    models.residency = {name: placement(name, module) for name, module in (
+    models.residency = {name: base._module_residency(name, module) for name, module in (
         ("transformer", models.transformer), ("audio_encoder", models.audio_encoder),
         ("video_decoder", models.video_decoder), ("h3_upscaler", models.h3_upscaler),
         ("h3_ltx_adapter", models.h3_ltx_adapter.model))}

@@ -9,7 +9,6 @@ from pathlib import Path
 import time
 
 from .qwen_ops.media import input_spec, prepare_inputs, reference_target_area
-from .offload import validate_device
 
 
 def atomic_json(path, value):
@@ -159,7 +158,8 @@ class Session:
         from .qwen_ops.conditioner import (
             MiniMaxNVFP4Conditioner, normalize_and_validate_conditioning, _import_comfy_sd,
         )
-        validate_device(torch, config)
+        if torch.cuda.device_count() != 1 or tuple(torch.cuda.get_device_capability()) != (12, 1):
+            raise RuntimeError('Qwen resident runtime requires the single Spark SM121')
         self.torch = torch
         self.normalize = normalize_and_validate_conditioning
         self.before_load = resource_snapshot(torch)

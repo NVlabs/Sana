@@ -39,35 +39,6 @@ request produced a final video with audio. Validation confirms:
   the original tiles, 16 direct-NHWC operations and 121 output frames.
 - Gemma and the connector are absent from online inference.
 
-## Single-RTX-5090 T2VA integration
-
-The CPU-offload profile completed one full warmup and one formal request on
-September 23, 2026 using `infer.py --offload cpu`, the `mountain-lake` example
-and formal seed 42. Continuous request-to-completed-MP4 time was **39.80 s**,
-including temporary Qwen loading/closure, transfers and muxing. Startup and
-full warmup took 375.14 s and are reported separately. Two-second device-memory
-samples reached 21,583 MiB on the selected GPU; the second GPU remained unused.
-
-The H3 request completed four transformer forwards, 200 cuDNN BSA calls and
-two text-attention calls. Warmup compared all 200 selected BSA outputs against
-the original Triton backend. LTX completed three updates and 141 Triton Sol
-kernel calls. Full media decoding verified 1344 × 768, 121-frame H.264 at
-24 FPS and stereo 32 kHz AAC from the original H3 audio.
-
-A separate small GPU check verified exact eager and compiled offload parity
-against matching resident execution, FP8 buffer transfer, construction-time
-mutation and exception cleanup. H3 retained at most one active body block.
-The CPU suite covers serial stage scheduling, temporary Qwen lifetime and
-preservation of the frozen recipe alongside the existing Spark contracts.
-
-See [setup and timing boundaries](rtx5090.md) and the
-[sanitized measurement receipt](../validation/rtx5090-t2va.json).
-This is one measured request, not a multi-run statistic or a cross-device
-speedup. Clean-environment installation, FL2VA/Ref2VA on CPU offload and
-perceptual parity to Spark remain unvalidated. The resident Spark integration
-results above predate this offload addition; its default path has CPU regression
-coverage here, without a new Spark GPU run.
-
 ## Image/reference extensions
 
 CPU checks cover task/input selection, ordered references, native

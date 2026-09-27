@@ -3,10 +3,6 @@
 Use Linux aarch64 on a single DGX Spark (GB10/SM121). Run the commands below
 from `models/minimax_h3/Sol-H3-Spark`, on the GPU host or in a compute allocation.
 
-For Linux x86_64 and one RTX 5090, use the [5090 setup](rtx5090.md).
-It shares these source/checkpoint manifests and cache format, with native
-x86_64 interpreters and `--offload cpu`.
-
 The validated runtime uses separate Qwen, Stage1 and Stage2 environments.
 Reuse them where available: the `requirements/*-observed.txt` files are version
 inventories, not installable lockfiles. A clean installation has not yet been

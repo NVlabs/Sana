@@ -222,7 +222,40 @@
     "One formal request after one full warmup; no multi-run latency distribution.",
     "FL2VA and Ref2VA have not been GPU-validated on this CPU-offload profile.",
     "No perceptual parity to Spark or cross-device speedup claim.",
-    "Existing resident Spark GPU results predate this offload addition; no new Spark GPU run.",
     "Fresh-environment installation and service cold start were not benchmarked."
-  ]
+  ],
+  "packaging": {
+    "package_path": "models/minimax_h3/Sol-H3-RTX5090",
+    "derived_from_package": "models/minimax_h3/Sol-H3-Spark",
+    "source_snapshot_commit": "3090097be9f08a4e25328f6740a9a961203fb277",
+    "byte_identical_runtime_files": 36,
+    "runtime_file_count": 39,
+    "changed_runtime_files": {
+      "infer.py": {
+        "change": "CLI defaults to CPU offload, only accepts cpu, and names RTX 5090 in help.",
+        "sha256": "1a20056548fd50fc7a6e508deda0d2a887b7d8670d80720d94ecdce45507ed54"
+      },
+      "runtime/pipeline.py": {
+        "change": "Python API defaults to CPU offload; module docstring names RTX 5090.",
+        "sha256": "95ac808d2de99ef0c70f1d3865bcba5426202f73f972b1ce06193dc7921e642d"
+      },
+      "runtime/config.py": {
+        "change": "Frozen recipe hash updated for profile name and Qwen placement metadata only.",
+        "sha256": "e6a22b976a549715bad7c6cb92d58128fcc2bdf71a0297e2343f5cd04403f129"
+      }
+    },
+    "recipe_metadata_changes": {
+      "name": "Sol-H3 RTX5090",
+      "stage1.qwen": "NVFP4_AWQ_per_request"
+    },
+    "packaged_manifest_sha256": {
+      "configs/default.json": "697097f281b42443b3388620cfca9266cd68eba09589d784687ff2e84bda0e83",
+      "configs/dependencies.json": "ff27df663d3da8c0f69604d9ac64fc0dc30134ef8a06932dac2ca390536244b3",
+      "configs/checkpoints.json": "c01c8a1e2c24dd33cc276ad21056a53246cf6dfa236e1d26a7540e0f5b7a20b8"
+    },
+    "inference_operations_and_numerical_settings_unchanged": true,
+    "checkpoint_and_source_pins_unchanged": true,
+    "new_gpu_benchmark": false,
+    "note": "Historical timing and provenance.runtime_sha256 describe the measured source package. Relocation and the listed packaging changes are checked separately; no new GPU run is claimed."
+  }
 }

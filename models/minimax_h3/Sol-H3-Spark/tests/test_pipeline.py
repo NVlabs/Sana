@@ -60,32 +60,6 @@ class FakeWorker:
 
 
 class PipelineTests(unittest.TestCase):
-    def test_cpu_offload_serializes_gpu_work_and_preserves_math_recipe(self):
-        FakeWorker.events = []
-        case = {"case_id": "offload", "prompt": "A bird glides over a mountain lake.", "seed": 42}
-        with tempfile.TemporaryDirectory() as directory:
-            pipeline = Pipeline({}, Path(directory) / "run", offload_mode="cpu", worker_factory=FakeWorker)
-            try:
-                recipe = dict(pipeline.config)
-                recipe.pop("execution")
-                self.assertEqual(recipe, load_recipe())
-                pipeline.start(case)
-                self.assertIsNone(pipeline.qwen)
-                FakeWorker.events.clear()
-                pipeline.generate(case)
-                pipeline.generate(dict(case, case_id="second"))
-                pipeline.finish()
-                events = FakeWorker.events
-                self.assertEqual(events.count(("start", "qwen")), 2)
-                self.assertEqual(events.count(("close", "qwen")), 2)
-                self.assertNotIn(("submit", "stage2", "prepare"), events)
-                self.assertLess(events.index(("close", "qwen")), events.index(("call", "stage1", "run")))
-                self.assertLess(events.index(("call", "stage1", "run")), events.index(("call", "stage2", "prepare")))
-                self.assertIsNone(pipeline.qwen)
-                self.assertEqual(pipeline.report["status"], "PASS")
-            finally:
-                pipeline.close()
-
     def test_residency_order_and_real_endpoint(self):
         FakeWorker.events = []
         case = {"case_id": "example", "prompt": "A bird glides over a mountain lake.", "seed": 42}
@@ -251,8 +225,7 @@ class PipelineTests(unittest.TestCase):
                     infer.main(["--paths", "unused.json", "--output-dir", str(root / "run"), *source,
                                 "--ref-image-match", "stage2", "--ref-stage1-attn", "sol"])
                     factory.assert_called_once_with({}, root / "run", task="ref2va",
-                                                    ref_image_match="stage2", ref_stage1_attn="sol",
-                                                    offload_mode="none")
+                                                    ref_image_match="stage2", ref_stage1_attn="sol")
             for flag, value in (("--ref-image-match", "stage1"), ("--ref-stage1-attn", "dense")):
                 with mock.patch.object(infer, "load_paths") as paths, \
                      mock.patch.object(infer, "Pipeline") as factory, contextlib.redirect_stderr(io.StringIO()):

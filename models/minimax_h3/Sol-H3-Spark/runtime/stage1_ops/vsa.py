@@ -212,8 +212,9 @@ def install_model(model, state, backend="cudnn_bsa"):
         "formal_layout_copy_policy": "no BSHD-to-BHSD reference copies",
         "routing_or_compression_math_changed": False}
     if backend == "cudnn_bsa":
-        if torch.cuda.get_device_capability() != (12, 1):
-            raise RuntimeError("this BSA integration gate is specifically for actual SM121")
+        expected_arch = (12, 0) if state.get("cpu_offload") else (12, 1)
+        if torch.cuda.get_device_capability() != expected_arch:
+            raise RuntimeError(f"BSA profile requires {expected_arch}")
         from cudnn import BSA
         bsa_forward = BSA.block_sparse_attention_forward
         bsa_sources = {}

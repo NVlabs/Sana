@@ -22,6 +22,7 @@ from .stage2_ops.h3_upscale import (ADAPTER_OUTPUT, H3_INPUT, H3_UPSCALED,
 from .stage2_ops.models import SIGMAS, TILES, construct, public_refiner_modules
 from .stage2_ops.conv_direct_nhwc import installed_direct_upsample_nhwc
 from .stage2_ops.writer_chunking import tracked_writer_chunks
+from .offload import enabled as offload_enabled, validate_device
 
 REQUIRED_PATHS = ("transformer", "refiner_lora", "output_video_vae", "audio_vae",
                   "adapter_dir", "h3_upscaler_source", "h3_upscaler_checkpoint", "prompt_cache")
@@ -33,7 +34,8 @@ def _refiner_class(base, compat, session):
     class SparkRefiner(compat.OfficialCompatRefiner):
         def __init__(self):
             construct(self, session.paths, torch=torch, dist=session.dist,
-                      compile_enabled=session.compile_enabled, base=base, compat=compat)
+                      compile_enabled=session.compile_enabled, base=base, compat=compat,
+                      cpu_offload=session.cpu_offload)
 
         def first_frame_path(self, record):
             return None
@@ -64,14 +66,21 @@ def _refiner_class(base, compat, session):
                 return value
 
             checked(normalized, H3_INPUT)
+            if session.cpu_offload:
+                self.h3_upscaler.to(self.device)
             self.h3_upscaler_calls += 1
             highres, self._h3_upscale_s = base._timed_cuda(
                 lambda: upscale_comfy_normalized_h3(self.h3_upscaler, normalized))
+            if session.cpu_offload:
+                self.h3_upscaler.cpu()
+                self.h3_ltx_adapter.model.to(self.device)
             checked(highres, H3_UPSCALED)
             self.adapter_convert_calls += 1
             latent, self._h3_adapter_s = base._timed_cuda(lambda: self.h3_ltx_adapter.convert(
                 highres, pixel_frames=124, pixel_height=768, pixel_width=1344,
                 input_normalization="normalized"))
+            if session.cpu_offload:
+                self.h3_ltx_adapter.model.cpu()
             checked(latent, ADAPTER_OUTPUT)
             return checked(latent[:, :, :16].contiguous(), REFINER_INPUT)
 
@@ -80,7 +89,13 @@ def _refiner_class(base, compat, session):
             from ltx_core.types import Audio
 
             audio = Audio(waveform=session.payload["audio"].to(self.device), sampling_rate=32000)
-            latent = encode_audio(audio, self.audio_encoder, None).to(device=self.device, dtype=self.dtype)
+            if session.cpu_offload:
+                self.audio_encoder.to(self.device)
+            try:
+                latent = encode_audio(audio, self.audio_encoder, None).to(device=self.device, dtype=self.dtype)
+            finally:
+                if session.cpu_offload:
+                    self.audio_encoder.cpu()
             expected = tuple(int(value) for value in self.audio_tools.target_shape)
             if (latent.ndim != len(expected) or any(int(actual) != wanted
                     for dim, (actual, wanted) in enumerate(zip(latent.shape, expected)) if dim != 2)):
@@ -92,7 +107,8 @@ def _refiner_class(base, compat, session):
 
         def _checked_attention_stats(self):
             stats = self.sol_attention.stats()
-            stats.update(selected_backend=self.sol_backend, architecture="sm121-triton")
+            stats.update(selected_backend=self.sol_backend,
+                         architecture="sm120-triton" if session.cpu_offload else "sm121-triton")
             expected = {"completed_steps": 3, "dense_calls": 3, "sol_calls": 141}
             kernel = stats.get("kernel", {})
             if (any(stats.get(key) != value for key, value in expected.items())
@@ -100,6 +116,15 @@ def _refiner_class(base, compat, session):
                     or kernel.get("hunyuan_calls") != 0 or self.sol_backend != "triton"):
                 raise RuntimeError(f"three-update Triton Sol contract failed: {stats}")
             return stats
+
+        def stream_full_vae(self, latent, generator, phases):
+            if session.cpu_offload:
+                self.video_decoder.to(self.device)
+            try:
+                yield from super().stream_full_vae(latent, generator, phases)
+            finally:
+                if session.cpu_offload:
+                    self.video_decoder.cpu()
 
         def write_full_vae_video(self, chunks, chunk_count, source_path, output_path):
             from ltx_core.types import Audio
@@ -146,6 +171,8 @@ class Session:
         self.final_mp4_complete_monotonic_ns = None
         self.writer_chunk_receipt = None
         self.timings = {}
+        self.runtime_config = config
+        self.cpu_offload = offload_enabled(config)
         config = config.get("stage2", config)
         self.compile_enabled = config.get("compile", True)
         self.fixed_prompt = config.get("fixed_prompt", FIXED_PROMPT)
@@ -178,8 +205,7 @@ class Session:
         if int(os.environ.get("LOCAL_RANK", "-1")) != 0 or torch.cuda.device_count() != 1:
             raise RuntimeError("launch Stage2 with torchrun --nproc-per-node=1 and one visible GPU")
         torch.cuda.set_device(0)
-        if tuple(torch.cuda.get_device_capability(0)) != (12, 1):
-            raise RuntimeError("this release profile requires Spark SM121")
+        validate_device(torch, self.runtime_config)
         if not dist.is_initialized():
             dist.init_process_group("nccl")
             self._owns_dist = True
@@ -201,6 +227,7 @@ class Session:
             "stage2_gemma_loaded": False, "stage2_connector_loaded": False,
             "fixed_prompt_cache": self.prompt_cache.receipt(), "residency": self.models.residency,
             "all2all_copy_elision": self.models.all2all_receipt,
+            "offload": "cpu" if self.cpu_offload else "none",
             "denoiser_dummy_warmup": False, "latent_only_transfer": True}
         self.timings["startup_s"] = self.session_receipt["session_initialization_s"]
 
@@ -290,6 +317,8 @@ class Session:
         if self.closed:
             return
         self.closed = True
+        if self.models is not None and getattr(self.models, "streaming_transformer", None) is not None:
+            self.models.streaming_transformer.teardown()
         self.models = None
         self.stack.close()
         gc.collect()

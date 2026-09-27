@@ -131,7 +131,7 @@ class Stage2ContractTests(unittest.TestCase):
             return Tensor(stage2.ADAPTER_OUTPUT)
         base = SimpleNamespace(_timed_cuda=lambda fn: (fn(), 0.1))
         compat = SimpleNamespace(OfficialCompatRefiner=object)
-        session = SimpleNamespace(torch=TORCH)
+        session = SimpleNamespace(torch=TORCH, cpu_offload=False)
         cls = stage2._refiner_class(base, compat, session)
         model = object.__new__(cls)
         model.dtype, model.device = "bf16", "cuda:0"

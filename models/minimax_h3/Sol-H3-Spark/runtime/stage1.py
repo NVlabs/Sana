@@ -11,6 +11,7 @@ import time
 
 from .stage1_ops.lookup import install_exact_t2va_lookup, quantized_linear_name
 from .stage1_ops import native, vsa, sol
+from . import offload
 from .stage1_ops.tasks import input_spec, native_inputs, ref_lora_alpha, task_of, validate_prepared_media
 from .qwen_ops.media import reference_target_area, resolve_reference_image_size
 
@@ -38,7 +39,7 @@ def validate_native_attention(before, after, *, require_calls=True):
 
 
 def install_worker(worker, task="t2va", attention=None, reference_area=None,
-                   reference_budget_source=None):
+                   reference_budget_source=None, cpu_offload=False):
     import torch
     from fastvideo.pipelines.lazy_module import is_lazy_module
     from fastvideo.layers.lora.linear import BaseLayerWithLoRA
@@ -52,6 +53,9 @@ def install_worker(worker, task="t2va", attention=None, reference_area=None,
              "fp8_route": "native_FastVideo_tensorwise_W8A8_after_original_BF16_LoRA_merge",
              "qwen_builtin_materializations": 0, "case": None}
     worker._sol_h3_stage1 = state
+    state["cpu_offload"] = cpu_offload
+    if cpu_offload:
+        offload.install_stage1_loader()
     if task == "ref2va" and reference_area is not None:
         from fastvideo.pipelines.basic.minimax_h3 import reference
         install_reference_image_size(reference, reference_area)
@@ -129,7 +133,13 @@ def install_worker(worker, task="t2va", attention=None, reference_area=None,
                 tagged.append(name)
         if not tagged or merged == 0:
             raise RuntimeError("missing real LoRA merge or native FP8 targets")
-        convert_model_to_fp8(model)
+        if cpu_offload:
+            # Keep the original GPU quantization operations and BF16 rounding,
+            # while moving at most one body block onto the device at a time.
+            for block in model.transformer_blocks:
+                with offload.mutation_scope(block):
+                    convert_model_to_fp8(block)
+        convert_model_to_fp8(model)  # Remaining small shared/text projections.
         state.update(merged_lora_layers=merged, fp8_linears=len(tagged), fp8_linear_names=tagged,
                      fp8_weight_bytes=sum(m._fp8_weight.numel() for m in model.modules() if hasattr(m, "_fp8_weight")))
         original_model_forward = model.forward
@@ -145,6 +155,7 @@ def install_worker(worker, task="t2va", attention=None, reference_area=None,
         model.forward = observed_model_forward
         if len(tagged) != 312:
             raise RuntimeError(f"expected 312 native W8A8 linears, got {len(tagged)}")
+        manager = offload.prepare_stage1_compile(model) if cpu_offload else None
         if task == "ref2va":
             if sol_route is None:
                 regional.install_dense(model, state)
@@ -153,6 +164,9 @@ def install_worker(worker, task="t2va", attention=None, reference_area=None,
         else:
             vsa.install_model(model, state)
             regional.install(model, state)
+        if manager is not None:
+            manager.install_inference_hooks()
+            state["offload"] = manager.stats
         return model
     pipe.modules["transformer"].set_materialize_transform(quantize_after_merge)
     control.install_fa4_audit(worker)  # Native FA4 handles the two text-refiner blocks.
@@ -266,6 +280,7 @@ class Session:
     def __init__(self, paths: dict, work_dir: str, config: dict):
         self.closed = False
         self.failed = False
+        self.cpu_offload = offload.enabled(config)
         self.root = Path(work_dir).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.task = task_of(config.get("stage1", config))
@@ -306,6 +321,10 @@ class Session:
         environment = self.basic.configure_environment(profile)
         self.basic.validate_profile_dependencies(profile)
         generator_config = self.basic.build_generator_config(profile)
+        if self.cpu_offload:
+            engine = generator_config.engine
+            generator_config = dataclasses.replace(generator_config, engine=dataclasses.replace(
+                engine, offload=dataclasses.replace(engine.offload, dit=True, dit_layerwise=True)))
         if self.task != "t2va":
             components = generator_config.pipeline.components
             if self.task == "ref2va":
@@ -325,7 +344,8 @@ class Session:
         try:
             self.rpc(functools.partial(install_worker, task=self.task, attention=self.attention,
                                       reference_area=self.reference_area,
-                                      reference_budget_source=self.reference_budget_source))
+                                      reference_budget_source=self.reference_budget_source,
+                                      cpu_offload=self.cpu_offload))
         except BaseException:
             self.generator.shutdown()
             self.closed = True

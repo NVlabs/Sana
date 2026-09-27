@@ -28,6 +28,8 @@ def main(argv=None):
     parser.add_argument("--ref-stage1-attn", choices=REF_STAGE1_ATTN_CHOICES,
                         help="Ref2VA only: dense FA4 (default) or dense-first Sol-Attn; Stage2 is unchanged")
     parser.add_argument("--output-dir", type=Path, required=True, help="New directory; existing runs are never overwritten")
+    parser.add_argument("--offload", choices=("none", "cpu"), default="none",
+                        help="Use cpu for one RTX 5090; none preserves the resident Spark profile")
     args = parser.parse_args(argv)
     try:
         if args.prompt is not None:
@@ -62,7 +64,8 @@ def main(argv=None):
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
     pipeline = Pipeline(paths, args.output_dir, task=cases[0]["task"],
-                        ref_image_match=args.ref_image_match, ref_stage1_attn=args.ref_stage1_attn)
+                        ref_image_match=args.ref_image_match, ref_stage1_attn=args.ref_stage1_attn,
+                        offload_mode=args.offload)
     try:
         print("Loading models and running one full warmup (reported separately).", flush=True)
         pipeline.start(cases[0])

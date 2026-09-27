@@ -62,6 +62,20 @@ not another row in the same-profile speedup table above. No matched end-to-end
 baseline or perceptual quality gate exists, so no speedup or quality-pass claim
 is made.
 
+## Sol-H3 Spark and RTX 5090
+
+The [Sol-H3 Spark entry](Sol-H3-Spark/) combines a four-update W8A8 H3 draft
+at 384p, learned latent upscaling and a three-update BF16 LTX refiner to emit
+1344 × 768 video with original H3 audio. Its default runs on one DGX Spark;
+the [RTX 5090 profile](Sol-H3-Spark/docs/rtx5090.md) uses `--offload cpu` to
+stream video-model weights and load Qwen for each request on a single card.
+
+One measured 5090 T2VA request completed in **39.80 s**, including Qwen loading,
+transfers and the final MP4. Model initialization and full warmup are excluded.
+The output has 121 frames at 24 FPS with stereo AAC. This is a separate
+composite pipeline and timing boundary from the baseline comparisons above;
+no cross-profile speedup is claimed. See the profile's validation notes.
+
 ## Usage
 
 Run the launcher from the repository root and select the full-opt config for your GPU from the

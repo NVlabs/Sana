@@ -4,6 +4,13 @@ A two-stage video-and-audio pipeline for one NVIDIA DGX Spark.
 Generate a 384p draft, upscale and transfer its latent representation, then
 refine and decode a **1344 × 768, 121-frame video at 24 FPS** with original H3 audio.
 
+The same entry supports an opt-in CPU-offload profile on one RTX 5090.
+
+| Hardware | Selection | Model placement | Guide |
+| --- | --- | --- | --- |
+| DGX Spark (SM121) | `--offload none` (default) | Resident model sessions | [Spark setup](docs/setup.md) |
+| RTX 5090 (SM120) | `--offload cpu` | Streamed video weights; Qwen loaded per request | [5090 setup and validation](docs/rtx5090.md) |
+
 [Project page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/) ·
 [Environment and weights](docs/setup.md) · [Component terms](THIRD_PARTY_NOTICES.md)
 
@@ -24,7 +31,7 @@ see [validation](docs/validation.md).
 
 | Component | Fixed configuration |
 | --- | --- |
-| Prompt encoding | Resident NVFP4 AWQ Qwen; fresh user-prompt features per request |
+| Prompt encoding | NVFP4 AWQ Qwen; fresh user-prompt features per request; resident in the default Spark profile |
 | Draft generation | MiniMax-H3, FastH3 VSA DataFree LoRA, W8A8 FP8 DiT; 4 updates at 672 × 384 × 124 |
 | Draft attention | VSA, 90% video sparsity, 64-token blocks; optimized cuDNN BSA backend |
 | Latent transfer | Learned H3 ×2 upscaler, then H3-to-LTX VAE latent adapter |
@@ -220,12 +227,19 @@ zero-copy. Both stages and file transfer are included in request latency.
 ## Timing
 
 One full-chain warmup uses the first case's input shape; it does not prewarm
-every later reference layout. Stage2's initial loading peak is completed
-before permanent Qwen residency. Work performed during this startup sequence
-is reported separately from formal requests. The permanent Qwen worker is
+every later reference layout. In the default Spark profile, Stage2's initial
+loading peak is completed before permanent Qwen residency. Work performed
+during this startup sequence is reported separately from formal requests. The
+permanent Qwen worker is
 then loaded, but its **first encoding is part of the first formal request**;
 that request is not claimed to be fully warm. Later shapes may also incur
 first-use work inside their measured requests.
+
+With `--offload cpu`, each formal request starts a temporary Qwen worker and
+closes it before H3 runs. Qwen loading and closure, CPU/GPU transfers and both
+serial video stages are inside the request clock. Video-model initialization
+and the full-chain warmup remain separate. The [5090 measurement](docs/rtx5090.md#validation)
+is one formal T2VA request after warmup.
 
 For every formal request, E2E is the continuous same-host monotonic interval
 from request entry, **before fresh Qwen encoding**, to the completed, muxed
@@ -245,13 +259,15 @@ prepare.py                   Resolve source, checkpoint and environment paths
 configs/                    One recipe; source/checkpoint manifests
 runtime/
   pipeline.py, worker.py     Persistent local sessions and request timing
-  qwen.py, stage1.py         Resident quantized prompt and draft generation
+  qwen.py, stage1.py         Quantized prompt encoding and draft generation
+  offload.py                Single-5090 placement, including H3 FP8 buffers
   latent_transfer.py        Same-request H3 latent/PCM contract
   stage2.py                 Upscale, adapter, three-step refiner and Conv decode
   prompt_cache.py            Online feature-only cache loader
   cache_builder.py           Offline INT8 context generation
   *_ops/                    Required inference operators and model adapters
 tests/                      CPU contracts; no model downloads
+validation/                 Compact measured hardware validation summaries
 ```
 
 Sampling and attention reuse the existing Sana `super_acceleration` and

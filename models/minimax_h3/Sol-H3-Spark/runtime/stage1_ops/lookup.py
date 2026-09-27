@@ -1,5 +1,6 @@
 """Exact merged BF16 AdaLN projections for the native four-update schedule."""
 import struct
+from ..offload import mutation_scope
 
 
 def conditioning_lookup_plan(video_timesteps, audio_timesteps, *, video_condition=False, audio_condition=False):
@@ -107,27 +108,28 @@ def install_exact_t2va_lookup(model, pipe, task="t2va"):
     with torch.inference_mode():
         embeddings = [model.time_embedder(model.time_proj(torch.tensor(row, device=device, dtype=torch.float32)))
                       for rows in plans for row in rows]
-        targets = [(f"transformer_blocks.{index}.adaln_proj", block.adaln_proj)
-                   for index, block in enumerate(model.transformer_blocks)] + [("norm_out", model.norm_out)]
+        targets = [(f"transformer_blocks.{index}.adaln_proj", block.adaln_proj, block)
+                   for index, block in enumerate(model.transformer_blocks)] + [("norm_out", model.norm_out, model.norm_out)]
         removed_bytes = sum(p.numel() * p.element_size() for p in model.time_embedder.parameters())
         table_bytes = 0
-        for name, target in targets:
-            linear = target.linear
-            if not target.apply_silu or linear.weight.dtype != torch.bfloat16 or linear.bias.dtype != torch.bfloat16:
-                raise RuntimeError(f"unexpected full BF16 native projection: {name}")
-            reference = [linear(F.silu(temb).to(torch.bfloat16))[0] for temb in embeddings]
-            replacement = FixedProjection(torch.cat(reference, dim=0))
-            passed = all(torch.equal(replacement(getattr(lookup, f"indices_{index // 4}_{index % 4}"))[0], output)
-                         and bool(torch.isfinite(output).all()) for index, output in enumerate(reference))
-            if not passed:
-                raise RuntimeError(f"exact merged BF16 lookup replay failed: {name}")
-            removed_bytes += sum(p.numel() * p.element_size() for p in linear.parameters())
-            table_bytes += replacement.outputs.numel() * replacement.outputs.element_size()
-            record["verification"].append({"name": name, "step_rows": [len(row) for row in plan],
-                                           "all_mode_step_rows": [[len(row) for row in rows] for rows in plans],
-                                           "all_four_steps_bitwise_equal": True, "max_abs": 0.0})
-            target.linear = replacement
-            target.apply_silu = False  # SiLU is already included in the exact reference above.
+        for name, target, block in targets:
+            with mutation_scope(block):
+                linear = target.linear
+                if not target.apply_silu or linear.weight.dtype != torch.bfloat16 or linear.bias.dtype != torch.bfloat16:
+                    raise RuntimeError(f"unexpected full BF16 native projection: {name}")
+                reference = [linear(F.silu(temb).to(torch.bfloat16))[0] for temb in embeddings]
+                replacement = FixedProjection(torch.cat(reference, dim=0))
+                passed = all(torch.equal(replacement(getattr(lookup, f"indices_{index // 4}_{index % 4}"))[0], output)
+                             and bool(torch.isfinite(output).all()) for index, output in enumerate(reference))
+                if not passed:
+                    raise RuntimeError(f"exact merged BF16 lookup replay failed: {name}")
+                removed_bytes += sum(p.numel() * p.element_size() for p in linear.parameters())
+                table_bytes += replacement.outputs.numel() * replacement.outputs.element_size()
+                record["verification"].append({"name": name, "step_rows": [len(row) for row in plan],
+                                               "all_mode_step_rows": [[len(row) for row in rows] for rows in plans],
+                                               "all_four_steps_bitwise_equal": True, "max_abs": 0.0})
+                target.linear = replacement
+                target.apply_silu = False  # SiLU is already included in the exact reference above.
     model.time_proj = lookup
     model.time_embedder = identity
     record.update(removed_parameter_bytes=removed_bytes, lookup_table_bytes=table_bytes,

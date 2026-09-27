@@ -87,11 +87,8 @@ those tasks are not established by the T2VA result.
 
 ## Timing
 
-E2E uses one same-host monotonic clock from request entry, before Qwen loading,
-to the completed muxed MP4. It includes Qwen load/encoding/closure, transfers,
-H3 generation, upscaling, refinement, decoding and muxing. It is not a sum of
-component timers. Video-model initialization and full-chain warmup are separate.
-HTTP transport, an external service queue and service cold start were not measured.
+After warmup, E2E latency is measured from request entry (before Qwen encoder
+loading) until the final MP4 file is fully written.
 
 | Method | E2E latency |
 | --- | --- |

@@ -93,14 +93,14 @@ H3 generation, upscaling, refinement, decoding and muxing. It is not a sum of
 component timers. Video-model initialization and full-chain warmup are separate.
 HTTP transport, an external service queue and service cold start were not measured.
 
-| Measurement | Result |
+| Method | E2E latency |
 | --- | --- |
-| One formal T2VA request to completed MP4 | 39.80 s |
-| Video-model initialization plus full warmup | 375.14 s |
-| Whole-run device memory, sampled every 2 s | Maximum 21,583 MiB (21.08 GiB) |
+| 4-step LoRA | 97 s |
+| 4-step LoRA + quant | 51 s |
+| Sol-H3 | 39.8 s |
 
 See [validation](docs/validation.md) for exact timings, source provenance and
-measurement limits. The sampled maximum may miss instantaneous peaks.
+measurement limits.
 
 ## Code layout
 

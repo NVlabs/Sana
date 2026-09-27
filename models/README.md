@@ -12,6 +12,12 @@ The actual runtime adapter code lives under `models/<model_uid>/baseline/` and
 `techniques/`. (Both moved in the 2026-07-17 `efficiency/` -> `techniques/`
 reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 
+## SoL-Refiner
+
+[SoL-Refiner](sol-refiner/) provides a unified entry for the SANA/Wan and
+MiniMax-H3 variants. The H3 integration uses Diffusers LTX-2.5 components
+and offline-merged weights; its release-validation status is recorded there.
+
 ## A model profile contains
 
 - official config and runtime env

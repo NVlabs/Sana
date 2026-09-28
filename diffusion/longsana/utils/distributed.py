@@ -15,6 +15,41 @@ from torch.distributed.fsdp.wrap import (
 )
 
 
+def get_device_type() -> str:
+    """Device type of the active accelerator ('cpu' when there is none)."""
+    for name in ("cuda", "npu", "xpu", "mps"):
+        backend = getattr(torch, name, None)
+        if backend is not None and backend.is_available():
+            return name
+    return "cpu"
+
+
+def get_current_device():
+    """Current device of the active accelerator as a `torch.device` ('cpu' when there is none)."""
+    device_type = get_device_type()
+    if device_type == "cpu":
+        return torch.device("cpu")
+    return torch.device(device_type, getattr(torch, device_type).current_device())
+
+
+def get_default_dtype():
+    """dtype used on the active accelerator (float32 on CPU)."""
+    return torch.bfloat16 if get_device_type() != "cpu" else torch.float32
+
+
+def set_device(index: int) -> None:
+    """Bind the calling process to `index` on the active accelerator."""
+    device_type = get_device_type()
+    if device_type == "cpu":
+        return
+    getattr(torch, device_type).set_device(index)
+
+
+def get_distributed_backend() -> str:
+    """Collective communication backend matching the active accelerator."""
+    return {"cuda": "nccl", "npu": "hccl", "xpu": "xccl"}.get(get_device_type(), "gloo")
+
+
 def fsdp_state_dict(model):
     fsdp_fullstate_save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
     with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, fsdp_fullstate_save_policy):
@@ -66,7 +101,7 @@ def fsdp_wrap(
         auto_wrap_policy=auto_wrap_policy,
         sharding_strategy=sharding_strategy,
         mixed_precision=mixed_precision_policy,
-        device_id=torch.cuda.current_device(),
+        device_id=get_current_device(),
         limit_all_gathers=True,
         use_orig_params=True,
         cpu_offload=CPUOffload(offload_params=cpu_offload),
@@ -80,7 +115,7 @@ def barrier():
         dist.barrier()
 
 
-def launch_distributed_job(backend: str = "nccl"):
+def launch_distributed_job(backend: str = None):
     rank = int(os.environ["RANK"])
     local_rank = int(os.environ["LOCAL_RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
@@ -92,9 +127,10 @@ def launch_distributed_job(backend: str = "nccl"):
     else:  # IPv4
         init_method = f"tcp://{host}:{port}"
     dist.init_process_group(
-        rank=rank, world_size=world_size, backend=backend, init_method=init_method, timeout=timedelta(minutes=30)
+        rank=rank, world_size=world_size, backend=backend or get_distributed_backend(), init_method=init_method,
+        timeout=timedelta(minutes=30)
     )
-    torch.cuda.set_device(local_rank)
+    set_device(local_rank)
 
 
 class EMA_FSDP:

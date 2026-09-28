@@ -23,7 +23,7 @@ from diffusion.longsana.utils.dataset import (
     cycle,
 )
 from diffusion.longsana.utils.debug_option import DEBUG
-from diffusion.longsana.utils.distributed import EMA_FSDP, fsdp_state_dict, fsdp_wrap, launch_distributed_job
+from diffusion.longsana.utils.distributed import EMA_FSDP, fsdp_state_dict, fsdp_wrap, get_current_device, launch_distributed_job
 from diffusion.longsana.utils.misc import merge_dict_list, set_seed
 from tools.download import find_model
 
@@ -44,7 +44,7 @@ class Trainer:
         self.world_size = dist.get_world_size()
 
         self.dtype = torch.bfloat16 if config.mixed_precision else torch.float32
-        self.device = torch.cuda.current_device()
+        self.device = get_current_device()
         self.is_main_process = global_rank == 0
         self.causal = config.causal
         self.disable_wandb = config.disable_wandb

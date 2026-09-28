@@ -8,6 +8,7 @@ from termcolor import colored
 
 from diffusion.model.nets.basic_modules import CachedGLUMBConvTemp
 from diffusion.model.nets.sana_blocks import CachedCausalAttention
+from diffusion.longsana.utils.distributed import get_current_device, get_default_dtype
 from diffusion.scheduler.sana_streaming_cache import (
     accumulate_fixed_rope_kv_cache,
     promote_fixed_rope_full_history_cache,
@@ -77,8 +78,8 @@ class SanaTrainingPipeline:
             self.device = p.device
             self.dtype = p.dtype
         except Exception:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            self.dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+            self.device = get_current_device()
+            self.dtype = get_default_dtype()
 
         self.same_step_across_blocks = same_step_across_blocks
         print(f"[SanaTrainingPipeline] same_step_across_blocks={self.same_step_across_blocks}")

@@ -16,7 +16,9 @@ from sol_refiner.sampling import DEFAULT_NEGATIVE_PROMPT
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--model", required=True, help="One-step or multi-step Diffusers model package"
+        "--model",
+        default="Efficient-Large-Model/SoL-Refiner-LTX-2.3-One-Step",
+        help="Hugging Face repo ID for the one-step or multi-step model",
     )
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--prompt", required=True)

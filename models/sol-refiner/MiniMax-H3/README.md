@@ -21,12 +21,12 @@ version. Tested on H100 80GB with Python 3.12, PyTorch 2.9.1+cu126 and NATTEN
 ## Run
 
 Use the [pretrained LTX-2.5 refiner](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.5-for-MiniMax-H3)
-for MiniMax-H3, or a complete local Diffusers model package:
+for MiniMax-H3:
 
 ```bash
 python infer.py \
   --model Efficient-Large-Model/SoL-Refiner-LTX-2.5-for-MiniMax-H3 \
-  --input /path/to/h3-video.mp4 \
+  --input input.mp4 \
   --prompt 'A snow leopard walks along a snowy mountain ridge.' \
   --output outputs/refined.mp4 \
   --seed 303000 --decoder-seed 20260826

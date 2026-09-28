@@ -14,9 +14,9 @@ reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 
 ## SoL-Refiner
 
-[SoL-Refiner](sol-refiner/) provides a unified entry for the SANA/Wan and
-MiniMax-H3 variants. The H3 integration uses Diffusers LTX-2.5 components
-for single-step refinement; its release-validation status is recorded there.
+[SoL-Refiner](sol-refiner/) provides the original LTX-2.3 one-step and multi-step
+refiners and the LTX-2.5 extension for MiniMax-H3. Each entry includes inference
+commands using the published Hugging Face models.
 
 ## A model profile contains
 

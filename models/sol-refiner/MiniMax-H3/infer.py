@@ -18,8 +18,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--model",
-        required=True,
-        help="SoL-Refiner model directory or published model repository",
+        default="Efficient-Large-Model/SoL-Refiner-LTX-2.5-for-MiniMax-H3",
+        help="Hugging Face model repo ID",
     )
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--prompt", required=True)

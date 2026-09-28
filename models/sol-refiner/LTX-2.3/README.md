@@ -55,7 +55,7 @@ is available. Baseline inference does not require the optional CuTe dependencies
 
 Pretrained weights: [One-step](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.3-One-Step) ·
 [Multi-step](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.3-Multi-Step). The same weights support baseline
-and SoL-Engine execution. A local Diffusers package also works.
+and SoL-Engine execution. The CLI defaults to the one-step Hugging Face model.
 
 ```bash
 # One-step, baseline

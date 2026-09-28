@@ -70,7 +70,7 @@ The refiner backbone and the base video generator are separate choices. SANA-Vid
 
 **To run the original paper version**, follow [LTX-2.3 installation and inference](LTX-2.3/) for one-step and multi-step models, each with baseline and SoL-Engine execution.
 
-**To run the H3 extension**, follow [MiniMax-H3 installation and inference](MiniMax-H3/). It accepts an existing H3 video and a prompt. The release entry loads the pretrained model from Hugging Face or a complete local model package.
+**To run the H3 extension**, follow [MiniMax-H3 installation and inference](MiniMax-H3/). It accepts an existing H3 video and a prompt. The release entry loads the pretrained model from Hugging Face.
 
 The project-page figures summarize the research and demonstrations. They are separate from benchmarks of this particular Diffusers implementation.
 

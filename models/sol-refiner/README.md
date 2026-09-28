@@ -65,8 +65,10 @@ The refiner backbone and the base video generator are separate choices. SANA-Vid
 
 | Version | Refiner backbone | Code entry | Availability |
 | --- | --- | --- | --- |
-| Original paper version | LTX-2.3 | [SANA / WAN entry](wan/) | Implementation and model release pending |
+| Original paper version | LTX-2.3 | [One-step & multi-step](LTX-2.3/) | Baseline and SoL-Engine inference; public checkpoints pending |
 | MiniMax-H3 extension | LTX-2.5 | [MiniMax-H3](MiniMax-H3/) | One-step Diffusers inference available; public checkpoint pending |
+
+**To run the original paper version**, follow [LTX-2.3 installation and inference](LTX-2.3/) for one-step and multi-step models, each with baseline and SoL-Engine execution.
 
 **To run the H3 extension**, follow [MiniMax-H3 installation and inference](MiniMax-H3/). It accepts an existing H3 video and a prompt. The current release entry uses a complete local model package; we will add the official download location when the weights are published.
 

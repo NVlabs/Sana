@@ -2,6 +2,10 @@
 
 Refine an H3 video with **one denoising step**, using Diffusers LTX-2.5 components.
 
+This is the subsequent MiniMax-H3 extension of [SoL-Refiner](../). The original
+paper uses LTX-2.3; this version adapts LTX-2.5 Refiner for H3 enhancement and
+acceleration. See the [project overview and method](../) for the research context.
+
 [Project page](https://nvlabs.github.io/Sana/Sol-Refiner/) · [All variants](../)
 
 ## Install

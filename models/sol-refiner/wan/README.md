@@ -1,7 +1,11 @@
-# SoL-Refiner for SANA / Wan
+# SoL-Refiner for SANA / WAN
 
-This is the reserved entry for the SANA / Wan variant. Its implementation,
-checkpoint and validation will be contributed separately.
+This directory reserves the SANA / WAN release entry for the original
+[SoL-Refiner paper](../), which builds on **LTX-2.3 Refiner**. Implementation
+and pretrained weights will follow in a separate contribution.
 
-The [MiniMax-H3](../MiniMax-H3/) directory contains the H3-specific variant.
-Its checkpoint is not advertised as the SANA / Wan release.
+For the subsequent **LTX-2.5 extension for MiniMax-H3**, see
+[MiniMax-H3](../MiniMax-H3/).
+
+Explore the [method and project overview](../) or the
+[interactive video comparisons](https://nvlabs.github.io/Sana/Sol-Refiner/#generator-samples).

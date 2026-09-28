@@ -15,9 +15,9 @@ Jincheng Yu, Duomin Wang, Ruihua Zhang, Lei Zhu, Song Han, Enze Xie
 
 </div>
 
-[![SoL-Refiner video showcase](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Refiner/posters/hero-grid.jpg)](https://nvlabs.github.io/Sana/Sol-Refiner/#generator-samples)
+[![SoL-Refiner training and one-step inference](assets/method.svg)](#method)
 
-<p align="center"><em>Explore synchronized before-and-after video comparisons on the <a href="https://nvlabs.github.io/Sana/Sol-Refiner/#generator-samples">project page</a>.</em></p>
+<p align="center"><em>SoL-Refiner: three-stage training and one-step high-resolution refinement.<br>Original paper framework based on LTX-2.3 Refiner.</em></p>
 
 ## Overview
 
@@ -26,8 +26,6 @@ Jincheng Yu, Duomin Wang, Ruihua Zhang, Lei Zhu, Song Han, Enze Xie
 The project combines high-resolution continual training, reinforcement learning (RL) post-training and one-step distillation. The paper studies refinement up to **4K**, with bidirectional and streaming inference. The [project gallery](https://nvlabs.github.io/Sana/Sol-Refiner/#generator-samples) shows refinement across **SANA-Video, WAN, Cosmos-Nano and MiniMax H3**.
 
 ## Method
-
-[![SoL-Refiner training and inference pipeline](assets/method.svg)](assets/method.svg)
 
 **The paper's training and inference pipeline.** Paired low- and high-quality videos train the refiner; reward feedback improves visual quality; distillation compresses the teacher into a one-step student. At inference, latent upsampling and noise initialize the refiner, while a tiny autoencoder and SoL-Engine reduce execution cost.
 

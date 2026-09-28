@@ -53,27 +53,28 @@ is available. Baseline inference does not require the optional CuTe dependencies
 
 ## Refine a video
 
-Public model downloads are pending. Supply the corresponding complete local
-Diffusers package in each command.
+Pretrained weights: [One-step](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.3-One-Step) ·
+[Multi-step](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.3-Multi-Step). The same weights support baseline
+and SoL-Engine execution. A local Diffusers package also works.
 
 ```bash
 # One-step, baseline
-python infer.py --model /path/to/one-step \
+python infer.py --model Efficient-Large-Model/SoL-Refiner-LTX-2.3-One-Step \
   --input input.mp4 --prompt 'A cinematic scene.' --seed 1234 \
   --engine baseline --output one-step-baseline.mp4
 
 # One-step, SoL-Engine
-python infer.py --model /path/to/one-step \
+python infer.py --model Efficient-Large-Model/SoL-Refiner-LTX-2.3-One-Step \
   --input input.mp4 --prompt 'A cinematic scene.' --seed 1234 \
   --engine sol --output one-step-sol.mp4
 
 # Multi-step, baseline
-python infer.py --model /path/to/multi-step \
+python infer.py --model Efficient-Large-Model/SoL-Refiner-LTX-2.3-Multi-Step \
   --input input.mp4 --prompt 'A cinematic scene.' --seed 1234 \
   --engine baseline --output multi-step-baseline.mp4
 
 # Multi-step, SoL-Engine with TeaCache
-python infer.py --model /path/to/multi-step \
+python infer.py --model Efficient-Large-Model/SoL-Refiner-LTX-2.3-Multi-Step \
   --input input.mp4 --prompt 'A cinematic scene.' --seed 1234 \
   --engine sol --teacache --output multi-step-sol.mp4
 ```

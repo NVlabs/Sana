@@ -5,7 +5,7 @@
 
 **Generate a draft. Refine once. Deliver high-resolution video.**
 
-[**Project Page**](https://nvlabs.github.io/Sana/Sol-Refiner/) · [**Video Comparisons**](https://nvlabs.github.io/Sana/Sol-Refiner/#generator-samples) · [**Method**](#method) · [**Code & Models**](#code--models) · [**Citation**](#citation)
+[**Project Page**](https://nvlabs.github.io/Sana/Sol-Refiner/) · [**Video Comparisons**](https://nvlabs.github.io/Sana/Sol-Refiner/#generator-samples) · [**Method**](#method) · [**Code & Models**](#code--models) · [**Hugging Face**](https://huggingface.co/collections/Efficient-Large-Model/sol-refiner-6aba664fa5a41296a351abad) · [**Citation**](#citation)
 
 Haozhe Liu\*, Tian Ye\*, Shuchen Xue\*, Yitong Li, Junsong Chen, Haopeng Li,<br>
 Jincheng Yu, Duomin Wang, Ruihua Zhang, Lei Zhu, Song Han, Enze Xie
@@ -65,12 +65,12 @@ The refiner backbone and the base video generator are separate choices. SANA-Vid
 
 | Version | Refiner backbone | Code entry | Availability |
 | --- | --- | --- | --- |
-| Original paper version | LTX-2.3 | [One-step & multi-step](LTX-2.3/) | Baseline and SoL-Engine inference; public checkpoints pending |
-| MiniMax-H3 extension | LTX-2.5 | [MiniMax-H3](MiniMax-H3/) | One-step Diffusers inference available; public checkpoint pending |
+| Original paper version | LTX-2.3 | [One-step & multi-step](LTX-2.3/) | [One-step weights](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.3-One-Step) · [Multi-step weights](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.3-Multi-Step) |
+| MiniMax-H3 extension | LTX-2.5 | [MiniMax-H3](MiniMax-H3/) | [One-step weights](https://huggingface.co/Efficient-Large-Model/SoL-Refiner-LTX-2.5-for-MiniMax-H3) |
 
 **To run the original paper version**, follow [LTX-2.3 installation and inference](LTX-2.3/) for one-step and multi-step models, each with baseline and SoL-Engine execution.
 
-**To run the H3 extension**, follow [MiniMax-H3 installation and inference](MiniMax-H3/). It accepts an existing H3 video and a prompt. The current release entry uses a complete local model package; we will add the official download location when the weights are published.
+**To run the H3 extension**, follow [MiniMax-H3 installation and inference](MiniMax-H3/). It accepts an existing H3 video and a prompt. The release entry loads the pretrained model from Hugging Face or a complete local model package.
 
 The project-page figures summarize the research and demonstrations. They are separate from benchmarks of this particular Diffusers implementation.
 

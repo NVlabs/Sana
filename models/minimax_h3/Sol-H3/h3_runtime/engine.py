@@ -203,12 +203,13 @@ class MiniMaxH3Inference:
             self.pipe = ModularPipeline.from_pretrained(
                 model_path, components_manager=manager
             )
-        load_kwargs = {"dtype": torch.bfloat16}
-        if task == "ref2va":
-            # Resolve every Ref2VA component below the selected model root. This
-            # also avoids stale absolute paths in locally converted indexes.
-            load_kwargs["pretrained_model_name_or_path"] = model_path
-        self.pipe.load_components(**load_kwargs)
+        # Resolve every component below the selected model root. The published
+        # index names the Hub repo for each component, so loading a local copy
+        # through it still needs Hub access; locally converted indexes may also
+        # contain stale absolute paths.
+        self.pipe.load_components(
+            dtype=torch.bfloat16, pretrained_model_name_or_path=str(model_path)
+        )
         self.transformer = (
             self.pipe.transformer_ref if task == "ref2va" else self.pipe.transformer
         )

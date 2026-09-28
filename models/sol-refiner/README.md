@@ -8,7 +8,7 @@ shared code entry for its generator-specific variants.
 | Variant | Entry | Status |
 | --- | --- | --- |
 | SANA / Wan | [wan](wan/) | Separate implementation and model release pending |
-| MiniMax-H3 | [MiniMax-H3](MiniMax-H3/) | Diffusers LTX-2.5 one-step inference implementation; model packaging and full video validation in progress |
+| MiniMax-H3 | [MiniMax-H3](MiniMax-H3/) | Diffusers LTX-2.5 one-step inference; three full video tests completed; public weights pending |
 
 Each variant documents its own pretrained model and input contract. The H3
 variant is a dedicated refiner, not a substitute checkpoint for the SANA / Wan

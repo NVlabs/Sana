@@ -163,8 +163,12 @@ if _HAS_TRITON:
         b = tl.load(X + xb + R, mask=m, other=0.0).to(tl.float32)
         c = tl.load(C + cb, mask=m, other=0.0).to(tl.float32)
         s = tl.load(S + cb, mask=m, other=0.0).to(tl.float32)
-        tl.store(O + xb, a * c - b * s, mask=m)
-        tl.store(O + xb + R, b * c + a * s, mask=m)
+        # Match ``x * cos`` followed by in-place BF16 ``addcmul_``: the
+        # first product is rounded to the output dtype before the FMA.
+        ac = (a * c).to(tl.bfloat16).to(tl.float32)
+        bc = (b * c).to(tl.bfloat16).to(tl.float32)
+        tl.store(O + xb, ac - b * s, mask=m)
+        tl.store(O + xb + R, bc + a * s, mask=m)
 
     @triton.jit
     def _rope_split_kernel(X, C, S, O, Tt, H, R, BLOCK: tl.constexpr):
@@ -179,8 +183,10 @@ if _HAS_TRITON:
         b = tl.load(X + xb + R + j, mask=m, other=0.0).to(tl.float32)
         c = tl.load(C + cb + j, mask=m, other=0.0).to(tl.float32)
         s = tl.load(S + cb + j, mask=m, other=0.0).to(tl.float32)
-        tl.store(O + xb + j, a * c - b * s, mask=m)
-        tl.store(O + xb + R + j, b * c + a * s, mask=m)
+        ac = (a * c).to(tl.bfloat16).to(tl.float32)
+        bc = (b * c).to(tl.bfloat16).to(tl.float32)
+        tl.store(O + xb + j, ac - b * s, mask=m)
+        tl.store(O + xb + R + j, bc + a * s, mask=m)
 
 
 def rope_split(x, cos, sin):
@@ -189,7 +195,7 @@ def rope_split(x, cos, sin):
     eager path = rearrange + mul + 2x addcmul_ + rearrange + swapaxes().reshape()
                  (the final reshape after swapaxes forces a full copy)
     fused      = 1 read + 1 write, output already in (1,T,H*2R) layout.
-    Exact same math:  out[:R] = a*cos - b*sin ;  out[R:] = b*cos + a*sin
+    Preserves the reference BF16 rounding between the multiply and addcmul.
     """
     if not (_HAS_TRITON and x.is_cuda):
         return None

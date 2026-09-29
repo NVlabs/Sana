@@ -9,7 +9,7 @@ from diffusers.models.transformers.transformer_ltx2 import (
 )
 
 from . import fusion
-from .sol_attention import _morton3d_perm, solattn_sm90_attention
+from .sol_attention import _morton3d_perm, solattn_attention, solattn_backend
 
 
 def reference_rotary(x, frequencies):
@@ -79,7 +79,7 @@ class RefinerAttention(LTX2AudioVideoAttnProcessor):
             and self.engine.sparse_shape
         )
         if sparse and attention_mask is None:
-            out = solattn_sm90_attention(
+            out = solattn_attention(
                 q,
                 k,
                 v,
@@ -152,8 +152,12 @@ class SolEngine:
         if density is not None and not 0 < density <= 1:
             raise ValueError("Density must be in (0, 1]")
         self.tau = 1.5 if tau is None and density is None else tau
-        if not torch.cuda.is_available() or torch.cuda.get_device_capability()[0] != 9:
-            raise ValueError("This SOL-Attn backend requires an SM90 GPU (H100/H200)")
+        if not torch.cuda.is_available():
+            raise ValueError("SoL-Engine requires a CUDA GPU")
+
+        # Resolve against the pipeline's actual execution device in ``begin``;
+        # this also handles callers that place the pipeline on a non-default GPU.
+        self.backend = None
 
         self.layers = len(transformer.transformer_blocks)
         self.tau_cache = {}
@@ -171,6 +175,10 @@ class SolEngine:
         transformer.transformer_blocks[-1].register_forward_hook(self._restore)
 
     def begin(self, grid, device):
+        # Keep architecture policy in the shared backend: SM90 selects the H100/H200
+        # CuTe kernel, SM100 selects the B200/GB200 kernel, and other supported
+        # architectures use their specialized kernel or the Triton fallback.
+        self.backend = solattn_backend(device)
         self.perm, self.inverse = _morton3d_perm(grid, device)
         self.sparse_shape = True
         self.step = self.sparse_calls = 0

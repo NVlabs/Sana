@@ -27,8 +27,11 @@ schedule truncates the original 32-step LTX schedule to the interval shown above
 | `--engine sol` | SOL-Attn + fused operations | SOL-Attn + fused operations |
 | `--engine sol --teacache` | Unsupported | Also reuses eligible denoised predictions |
 
-SoL-Engine reuses Sana's integrated SM90 SOL-Attn backend. Tokens follow Morton
-ordering across the block stack; the first and last layers retain dense attention.
+SoL-Engine reuses Sana's integrated architecture dispatcher: H100/H200 select the
+CuTe SM90 kernel, B200/GB200 select CuTe SM100, and other supported NVIDIA GPUs
+use their specialized kernel or the Triton fallback. The selected backend is
+reported as `attention_backend` in the run summary. Tokens follow Morton ordering
+across the block stack; the first and last layers retain dense attention.
 The default routing threshold is `tau=1.5`, matching the reference video-demo
 configuration. Use `--sol-tau` to adjust it, or `--sol-density 0.15` to select the
 reference long-sequence benchmark policy. Low target densities can be too
@@ -44,7 +47,7 @@ Use a Linux CUDA environment with Python 3.12 and PyTorch 2.9.1+cu126:
 
 ```bash
 pip install -r requirements.txt
-# Optional, for the H100/H200 SoL-Engine backend:
+# Optional, for the architecture-specialized CuTe SoL-Engine backends:
 pip install -r requirements-sol.txt
 ```
 

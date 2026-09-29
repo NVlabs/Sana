@@ -3,12 +3,15 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 from diffusers.models.transformers.transformer_ltx2 import LTX2VideoTransformerBlock
+from sol_refiner import fusion
 from sol_refiner.optimization import FusedVideoBlock, RefinerAttention, reference_rotary
-from sol_refiner.sol_attention import _morton3d_perm
+from sol_refiner import sol_attention
+from sol_refiner.sol_attention import _morton3d_perm, _prep_small, solattn_attention
 
 
 class OptimizationTests(unittest.TestCase):
@@ -65,11 +68,60 @@ class OptimizationTests(unittest.TestCase):
             reference_rotary(x, (cos, sin)), expected, rtol=0, atol=0
         )
 
+    @unittest.skipUnless(torch.cuda.is_available(), "requires CUDA")
+    def test_fused_rotary_preserves_bf16_rounding(self):
+        x = torch.tensor(
+            [[[1.234375, 0.3984375]]], device="cuda", dtype=torch.bfloat16
+        )
+        cos = torch.tensor(
+            [[[[0.95703125]]]], device="cuda", dtype=torch.bfloat16
+        )
+        sin = torch.tensor(
+            [[[[0.287109375]]]], device="cuda", dtype=torch.bfloat16
+        )
+        torch.testing.assert_close(
+            fusion.rope_split(x, cos, sin),
+            reference_rotary(x, (cos, sin)),
+            rtol=0,
+            atol=0,
+        )
+
     def test_morton_roundtrip(self):
         perm, inv = _morton3d_perm((3, 8, 8), "cpu")
         x = torch.arange(192)
         torch.testing.assert_close(x[perm][inv], x)
         self.assertEqual(perm.unique().numel(), 192)
+
+    def test_sol_attention_does_not_expose_padded_tokens_to_kernel(self):
+        seen = {}
+
+        def fake_kernel(q, k, v, **kwargs):
+            seen["shape"] = q.shape
+            return q
+
+        q = torch.randn(1, 2, 65, 128, dtype=torch.bfloat16)
+        with patch.object(sol_attention, "_kernel", return_value=fake_kernel):
+            out = solattn_attention(q, q, q)
+        self.assertEqual(seen["shape"], (1, 65, 2, 128))
+        torch.testing.assert_close(out, q)
+
+    def test_density_calibration_supports_partial_tail_block(self):
+        seen = {}
+
+        def fake_kernel(q, k, v, **kwargs):
+            seen["shape"] = q.shape
+            return q
+
+        q = torch.randn(1, 1, 65, 128, dtype=torch.bfloat16)
+        with patch.object(sol_attention, "_kernel", return_value=fake_kernel):
+            out = solattn_attention(q, q, q, target_density=0.5)
+        self.assertEqual(seen["shape"], (1, 65, 1, 128))
+        torch.testing.assert_close(out, q)
+
+        qc, kc, *_ = _prep_small(q, q, 128**-0.5)
+        torch.testing.assert_close(qc[:, :, 0], q[:, :, :64].float().mean(dim=2))
+        torch.testing.assert_close(qc[:, :, 1], q[:, :, 64:].float().mean(dim=2))
+        torch.testing.assert_close(kc, qc.to(kc.dtype))
 
 
 if __name__ == "__main__":

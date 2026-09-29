@@ -224,6 +224,12 @@ class SoLRefinerPipeline(DiffusionPipeline):
             "transformer_calls": calls,
             "cached_steps": cache.skipped if cache else 0,
             "engine": "sol" if self.acceleration else "baseline",
+            "attention_backend": (
+                self.acceleration.backend if self.acceleration else "torch-sdpa"
+            ),
+            "sparse_calls": (
+                self.acceleration.sparse_calls if self.acceleration else 0
+            ),
         }
         return x.reshape(batch, *grid, channels).permute(0, 4, 1, 2, 3).contiguous()
 

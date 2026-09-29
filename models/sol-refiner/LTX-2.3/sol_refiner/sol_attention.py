@@ -15,11 +15,18 @@ _MORTON: dict = {}
 def _prep_small(q, k, scale):
     """centroids + threshold mean/var only - never materialises route_means."""
     b, h, t, d = q.shape
-    n = t // BLOCK_SIZE
+    n = (t + BLOCK_SIZE - 1) // BLOCK_SIZE
+    padding = n * BLOCK_SIZE - t
+    if padding:
+        q = F.pad(q, (0, 0, 0, padding))
+        k = F.pad(k, (0, 0, 0, padding))
     q_blocks = q.reshape(b, h, n, BLOCK_SIZE, d).float()
     k_blocks = k.reshape(b, h, n, BLOCK_SIZE, d).float()
-    kc = k_blocks.mean(dim=3)
-    qc = q_blocks.mean(dim=3)
+    counts = torch.full((n,), BLOCK_SIZE, device=q.device, dtype=torch.float32)
+    counts[-1] = t - (n - 1) * BLOCK_SIZE
+    denominator = counts.view(1, 1, n, 1)
+    kc = k_blocks.sum(dim=3) / denominator
+    qc = q_blocks.sum(dim=3) / denominator
     del q_blocks, k_blocks
     log2_scale = float(scale) * LOG2E
     kc_mean = kc.mean(dim=2)
@@ -111,23 +118,27 @@ def _kernel():
     return _load_sol_attn()
 
 
-@torch.no_grad()
-def solattn_sm90_attention(q, k, v, *, tau=1.5, target_density=None, cache=None):
-    """Use Sana's integrated kernel with the reference density calibration."""
-    kernel = _kernel()
+def solattn_backend(device=None):
+    """Return the backend selected by Sana's shared architecture dispatcher."""
+    _kernel()  # Loads the in-tree ``sol_attn`` package before importing its API.
     from sol_attn import get_sol_attn_backend
 
-    if get_sol_attn_backend(q.device) != "cute_sm90":
-        raise RuntimeError("The refiner's SOL profile requires the CuTe SM90 backend")
+    return get_sol_attn_backend(device)
+
+
+@torch.no_grad()
+def solattn_attention(q, k, v, *, tau=1.5, target_density=None, cache=None):
+    """Use Sana's architecture-dispatched kernel and density calibration."""
+    kernel = _kernel()
     if q.shape[-1] != HEAD_DIM:
         raise ValueError("SOL profile requires head_dim=128")
-    tokens = q.shape[2]
-    padding = -tokens % BLOCK_SIZE
-    if padding:
-        q, k, v = (F.pad(x, (0, 0, 0, padding)) for x in (q, k, v))
     if target_density is not None:
         tau = calibrate_tau(
-            q, k, HEAD_DIM**-0.5, target_density, {} if cache is None else cache
+            q,
+            k,
+            HEAD_DIM**-0.5,
+            target_density,
+            {} if cache is None else cache,
         )
     out = kernel(
         *(x.transpose(1, 2).contiguous() for x in (q, k, v)),
@@ -135,4 +146,4 @@ def solattn_sm90_attention(q, k, v, *, tau=1.5, target_density=None, cache=None)
         thresh_type="diag",
         kv_splits=1,
     )
-    return out[:, :tokens].transpose(1, 2).contiguous()
+    return out.transpose(1, 2).contiguous()

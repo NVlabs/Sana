@@ -40,6 +40,7 @@ support a wider range of models.
 
 ## 📰 News
 
+- **[2026/09/28]** 🔥 **SoL-Refiner** \[[Code](models/sol-refiner/) | [Weights](https://huggingface.co/collections/Efficient-Large-Model/sol-refiner-6aba664fa5a41296a351abad) | [Project Page](https://nvlabs.github.io/Sana/Sol-Refiner/)\] — code and pretrained weights for one-step high-resolution video refinement across base generators, including a dedicated refiner for MiniMax-H3.
 - **[2026/09/27]** 🔥 **Sol-H3 on NVIDIA GeForce RTX 5090** \[[Code](models/minimax_h3/Sol-H3-RTX5090/)\] — single-GPU CPU offload for the two-stage pipeline, generating 1344×768 video with original H3 audio. One 5-second T2VA request completed in **39.80 s** end-to-end.
 - **[2026/09/11]** 🔥 **Sol-H3 on NVIDIA DGX Spark** \[[Code](models/minimax_h3/Sol-H3-Spark/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/)\] — production two-stage MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On a single NVIDIA DGX Spark at 1344×768, T2V end-to-end latency is **56 s** for a 5-second output.
 - **[2026/09/08]** 🔥 **Sol-H3** \[[Code](models/minimax_h3/Sol-H3/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/)\] — production MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On 8× NVIDIA B300 at 1344×768, warm BF16-compute T2V latency is **1.653 / 3.732 / 6.612 s** for 5 / 10 / 15-second outputs; optional fused MXFP8 compute reaches **1.472 s** for the 5-second case.

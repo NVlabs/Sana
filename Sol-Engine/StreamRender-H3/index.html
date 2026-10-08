@@ -52,16 +52,34 @@ h1{margin:22px 0 0;font-weight:inherit}
 .hero-resource:is(:hover,:focus-visible)::after{transform:scaleX(1)}
 
 .hero-visual{margin:0;min-width:0}
-.hv-grid{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);align-items:center;gap:10px}
+.hv-grid{display:grid;grid-template-columns:minmax(0,1.35fr) 26px minmax(0,1fr);align-items:stretch;gap:10px}
 .hv-col{display:grid;gap:10px;min-width:0}
+.hv-col:first-child{display:flex}
+.hv-col:first-child .hv-tile{flex:1;aspect-ratio:auto}
+.hv-arrow{align-self:center}
 .hv-tile{position:relative;margin:0;overflow:hidden;background:var(--soft);aspect-ratio:16/9}
 .hv-tile img{display:block;width:100%;height:100%;object-fit:cover}
 .hv-tile span{position:absolute;left:8px;bottom:7px;padding:3px 7px;background:rgba(16,17,20,.72);color:#fff;font-family:var(--mono);font-size:.6rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.hv-atlas{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.hv-tile canvas{display:block;width:100%;height:100%;object-fit:cover;background:#0d120d url(assets/hero-atlas-poster.webp) no-repeat;background-size:300% 200%}
+.hv-tile canvas[data-cell="0"]{background-position:0 0}
+.hv-tile canvas[data-slot="0"]{background-position:50% 0}
+.hv-tile canvas[data-slot="1"]{background-position:100% 0}
+.hv-tile span b{font-weight:600;color:#c9f27a}
+.hv-swap{position:absolute;top:8px;right:8px;padding:3px 7px;background:var(--nv-green);color:#0b1200;font-family:var(--mono);font-size:.58rem;font-style:normal;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:0;transform:translateY(-4px);transition:opacity .25s ease,transform .25s ease;pointer-events:none}
+.hv-swap.on{opacity:1;transform:none}
+.hv-source::after{content:"Unchanged";position:absolute;top:8px;right:8px;padding:3px 7px;border:1px solid rgba(255,255,255,.7);color:#fff;background:rgba(16,17,20,.55);font-family:var(--mono);font-size:.58rem;font-weight:650;letter-spacing:.1em;text-transform:uppercase;opacity:0;transition:opacity .25s ease}
+.hv-source.hold::after{opacity:1}
 .hv-source{outline:1px solid var(--line)}
 .hv-arrow{display:grid;justify-items:center;gap:8px;color:var(--nv-green-dark);font-family:var(--mono);font-size:.56rem;font-weight:650;letter-spacing:.1em;text-transform:uppercase;writing-mode:vertical-rl}
 .hv-arrow::after{content:"";width:2px;height:56px;background:linear-gradient(var(--nv-green),var(--nv-green)) center/2px 100% no-repeat}
 .hv-label{display:flex;justify-content:space-between;gap:16px;margin-top:12px;color:var(--quiet);font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase}
 
+.demo{width:min(1100px,100% - 48px);margin:0 auto clamp(56px,7vw,88px)}
+.demo-media{margin:0}
+.demo-media video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#050705}
+.demo-media figcaption{margin:13px 0 0;color:var(--quiet);font-size:.8rem;line-height:1.55}
+.demo-media figcaption strong{margin-right:10px;color:var(--nv-green-dark);font-family:var(--mono);font-size:.72rem;font-weight:680;letter-spacing:.12em;text-transform:uppercase}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:min(1000px,100% - 48px);margin:0 auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .stat{padding:26px 22px 24px;border-left:1px solid var(--line)}
 .stat:first-child{border-left:0;padding-left:0}
@@ -106,7 +124,7 @@ footer a:hover{color:var(--nv-green-dark)}
   .article-prose h2[data-section-index]::after{left:22px;width:18px}
 }
 @media (max-width:900px){
-  .hero-stage{grid-template-columns:1fr;padding-left:0}
+  .hero-stage{grid-template-columns:minmax(0,1fr);padding-left:0}
   .hero-visual{margin-top:8px}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stat:nth-child(3){border-left:0;padding-left:0}
@@ -114,7 +132,7 @@ footer a:hover{color:var(--nv-green-dark)}
 }
 @media (max-width:720px){
   html{scroll-padding-top:76px}
-  .header-inner,.hero,.article-shell,.stats,footer{width:min(100% - 32px,1180px)}
+  .header-inner,.hero,.article-shell,.stats,.demo,footer{width:min(100% - 32px,1180px)}
   .header-inner{min-height:62px}
   nav{gap:15px;overflow-x:auto}
   nav a{font-size:.63rem;letter-spacing:.055em}
@@ -125,7 +143,9 @@ footer a:hover{color:var(--nv-green-dark)}
   .article-prose h2{margin-top:68px}
   .article-prose h3{margin-top:48px}
   .article-figure.wide{width:calc(100vw - 32px)}
-  .hv-grid{grid-template-columns:1fr;gap:12px}
+  .hv-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+  .hv-col:first-child .hv-tile{aspect-ratio:16/9}
+  .hv-label{flex-direction:column;gap:4px}
   .hv-arrow{writing-mode:horizontal-tb;grid-auto-flow:column;align-items:center;justify-content:center}
   .hv-arrow::after{width:40px;height:2px;background-size:100% 2px}
   .stat{padding:20px 14px 18px}
@@ -143,17 +163,22 @@ footer a:hover{color:var(--nv-green-dark)}
 <div class="hero-copy"><p class="eyebrow">Sol-Engine · Research blog</p><h1 id="project-title"><span class="hero-project-name">StreamRender-H3</span><span class="hero-title-rest">Code Drives the World, Video Models Generate the Visuals</span></h1>
 <p class="lede">A code game engine keeps the world state. A two-step streaming video model renders it as the player drives.</p>
 <div class="hero-resources" role="group" aria-label="Project resources"><a class="hero-resource" href="../"><span class="hero-resource-primary">Sol-Engine</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a><a class="hero-resource" href="../Sol-H3/"><span class="hero-resource-primary">Sol-H3</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a></div></div>
-<figure class="hero-visual" aria-label="One semantic stream from the engine rendered with two reference images">
+<figure class="hero-visual" aria-label="One semantic stream from the engine rendered live in several looks">
+<video class="hv-atlas" src="assets/hero-atlas.mp4" poster="assets/hero-atlas-poster.webp" muted loop playsinline autoplay preload="auto" aria-hidden="true"></video>
 <div class="hv-grid">
-<div class="hv-col"><div class="hv-tile hv-source"><img src="assets/hero-semantic.webp" alt="Semantic map drawn by the racing engine" width="760" height="423" fetchpriority="high"><span>Engine · semantic map</span></div></div>
+<div class="hv-col"><div class="hv-tile hv-source"><canvas data-cell="0" width="640" height="366" role="img" aria-label="Semantic map drawn by the racing engine"></canvas><span>Engine · semantic map</span></div></div>
 <div class="hv-arrow" aria-hidden="true">Render</div>
 <div class="hv-col">
-<div class="hv-tile"><img src="assets/hero-lookA.webp" alt="The same frame rendered with reference image A" width="760" height="420"><span>Look A</span></div>
-<div class="hv-tile"><img src="assets/hero-lookB.webp" alt="The same frame rendered with reference image B" width="760" height="420"><span>Look B</span></div>
+<div class="hv-tile"><canvas data-slot="0" width="640" height="366" role="img" aria-label="The same stream rendered with one reference image"></canvas><span>Reference · <b data-name="0">Dusk</b></span><i class="hv-swap" data-swap="0">New reference image</i></div>
+<div class="hv-tile"><canvas data-slot="1" width="640" height="366" role="img" aria-label="The same stream rendered with another reference image"></canvas><span>Reference · <b data-name="1">Snow</b></span><i class="hv-swap" data-swap="1">New reference image</i></div>
 </div></div>
-<figcaption class="hv-label"><span>Racing demo · t = 18 s</span><span>Same semantic stream · two reference images</span></figcaption>
+<figcaption class="hv-label"><span>Racing demo · one drive</span><span>Same semantic stream · only the reference image changes</span></figcaption>
 </figure>
 </div></section>
+<section class="demo" aria-labelledby="demo-title">
+<figure class="demo-media"><video controls playsinline preload="metadata" poster="assets/demo-poster.webp" width="1920" height="1080" aria-describedby="demo-caption"><source src="assets/streamrender-h3-demo.mp4" type="video/mp4"></video>
+<figcaption id="demo-caption"><strong id="demo-title">Demo</strong> StreamRender-H3 in the racing demo · 1080p, 62 s, with sound</figcaption></figure>
+</section>
 <section class="stats" aria-label="Key numbers">
 <div class="stat"><span class="stat-value">2<small>steps</small></span><span class="stat-label">Denoising steps per chunk in the distilled student</span></div>
 <div class="stat"><span class="stat-value">217.96<small>ms</small></span><span class="stat-label">Diffusion render per streaming step on 8 GB200 GPUs, down from 799.66 ms</span></div>
@@ -216,7 +241,7 @@ footer a:hover{color:var(--nv-green-dark)}
 <p><strong>Pruning to 24 layers.</strong> We removed layers greedily without retraining, each time dropping the layer whose removal lowered reconstruction PSNR the least, and timed the decoder at each depth. Under a budget of 50 ms per two latent frames at 720p and 540p, 24 layers fit. We keep layers 0–17, 19–21, 31, 32, and 35 with their original weights, which brings the decoder to 1.62B parameters.</p>
 <p><strong>Chunk-causal attention in time.</strong> The DiT emits two or three latent frames per round, so the decoder works on chunks of two latent frames. Each chunk attends to its own two latent frames and to the cached keys and values of the previous four in every layer, about 0.7 s of video, and never to a later latent frame. Every call returns eight video frames. When a chunk contains the first latent frame of a native five-latent-frame block, that latent frame yields one video frame, exactly as in the released VAE, so the stream still produces 17 video frames per five latent frames. This replaces temporal chunking with overlap: the context comes from cached past latent frames instead of recomputed future ones, so each latent frame is computed once.</p>
 <p><strong>Windowed attention instead of spatial tiling.</strong> We remove spatial tiling. Attention runs within non-overlapping windows of 16×16 tokens, which cover the same 256 pixels as a tile, and every other layer shifts the windows by half a window so that neighboring windows exchange information inside the network. Every pixel is computed once and no seam blending is needed. Spatial positions are encoded relative to the window, as in the released tile decode.</p>
-<p><strong>Relative time for the register tokens.</strong> The decoder carries four register tokens and one class token that attend to the whole frame. We rebuild them for every chunk and never cache them, so they cannot carry information backward from a later chunk. Our first version left these tokens without a time position, while frame tokens used the absolute latent-frame index. Their attention then depended on absolute time, and because training clips held ten latents, the first video frame of every five-latent-frame block turned about 20 gray levels darker from the eleventh latent frame on. Giving the register tokens the time position of their chunk makes every attention score depend only on time differences. The same latent frames now decode identically whether the stream clock starts at 0, 100, or 1000.</p>
+<p><strong>Relative time for the register tokens.</strong> The decoder carries four register tokens and one class token that attend to the whole frame. We rebuild them for every chunk and never cache them, so they cannot carry information backward from a later chunk. In the released decoder these tokens have no time position, and that is harmless there: each temporal chunk is decoded on its own with its frames numbered from 0, so attention between frame tokens and register tokens only ever sees the same few time positions. The causal decoder cannot renumber its frames, because cached keys must keep the positions they were computed with, so frame tokens take the absolute latent-frame index of the stream. Our first version kept the register tokens without a time position, and the attention between them and the frame tokens then depended on absolute time. Training clips held ten latent frames, so from the eleventh latent frame on the decoder ran at positions it had never seen, and the first video frame of every five-latent-frame block turned about 20 gray levels darker. Giving the register tokens the time position of their chunk makes every attention score depend only on time differences. The same latent frames now decode identically whether the stream clock starts at 0, 100, or 1000.</p>
 <figure class="article-figure wide"><a class="figure-open" href="assets/fast_causal_h3_vae_overlap.webp" target="_blank" rel="noreferrer" aria-label="Open full-size figure"><img src="assets/fast_causal_h3_vae_overlap.webp" alt="Released H3 VAE vs. Fast Causal H3 VAE: spatial tiling and temporal chunking with overlap vs. non-overlapping shifted windows and a causal K/V cache" loading="lazy" decoding="async"/></a><figcaption>Top: the released decoder splits a 720p frame into 28 overlapping 256-pixel tiles and decodes overlapping regions more than once; Fast Causal H3 VAE uses non-overlapping windows that shift every other layer. Bottom: the released decoder decodes each five-latent-frame chunk together with the next two latent frames; Fast Causal H3 VAE decodes two latent frames per call and reads the cached keys and values of the previous four. Third row: in each layer, an attention window is the same 256-pixel region in the six latent frames plus five global tokens; its queries come from the two current latent frames, so every window is one short attention sequence.</figcaption></figure>
 <p><strong>Distillation.</strong> The teacher is the full H3 VAE decode of the same latents. The student decodes chunk by chunk with the same code used in deployment, on clips of three five-latent-frame blocks (51 video frames, 384×384 crops), so it sees block starts both with an empty cache and with a full one. The loss combines L1, LPIPS (weight 1.0), a frame-difference term (weight 1.0, tripled across latent boundaries), and an edge term (weight 0.1). We trained for 6,000 steps on eight GPUs with AdamW at a learning rate of 2×10⁻⁵, decaying it on a cosine schedule to 10⁻⁶ over the last 3,500 steps. In the last 500 steps PSNR on the evaluation cases rose by only 0.06 dB. As a check on causality, changing any future latent frame leaves every earlier output frame bit-for-bit unchanged.</p>
 <figure class="article-figure wide"><a class="figure-open" href="assets/fast_causal_h3_vae.webp" target="_blank" rel="noreferrer" aria-label="Open full-size figure"><img src="assets/fast_causal_h3_vae.webp" alt="Fast Causal H3 VAE: step-by-step decode latency (left) and latency and quality against the released decoders (right)" loading="lazy" decoding="async"/></a><figcaption>Left: decode time after each change. Right: the three decoders compared. PSNR and LPIPS are measured against the H3 VAE decode of the same DiT latents; high-frequency detail is the high-frequency image energy relative to that decode.</figcaption></figure>
@@ -240,6 +265,30 @@ footer a:hover{color:var(--nv-green-dark)}
 <footer><span>StreamRender-H3 · NVIDIA Research</span><a href="../">← Sol-Engine</a></footer>
 <script>
 (()=>{const links=[...document.querySelectorAll('nav a')];const targets=links.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);if(!('IntersectionObserver' in window))return;const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.toggleAttribute('aria-current',a.getAttribute('href')==='#'+e.target.id));}})},{rootMargin:'-20% 0px -70% 0px'});targets.forEach(t=>io.observe(t));})();
+</script>
+<script>
+(()=>{const v=document.querySelector('.hv-atlas');if(!v)return;
+const W=640,H=366,cells={sem:[0,0],dusk:[1,0],snow:[2,0],autumn:[1,1],rain:[2,1]};
+const pairs=[['dusk','snow'],['autumn','rain']],names={dusk:'Dusk',snow:'Snow',autumn:'Autumn',rain:'Rain at night'};
+const PERIOD=7,WIPE=1.1,STAGGER=.25,LEAD=WIPE+STAGGER+.35;
+const sem=document.querySelector('canvas[data-cell="0"]').getContext('2d'),semTile=document.querySelector('.hv-source');
+const slots=[...document.querySelectorAll('canvas[data-slot]')].map(c=>c.getContext('2d'));
+const labels=[...document.querySelectorAll('b[data-name]')],badges=[...document.querySelectorAll('.hv-swap')];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)');
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+function blit(ctx,key,x0,x1){const [cx,cy]=cells[key];if(x1<=x0)return;ctx.drawImage(v,cx*W+x0,cy*H,x1-x0,H,x0,0,x1-x0,H)}
+function edge(ctx,x){const g=ctx.createLinearGradient(x-26,0,x+2,0);g.addColorStop(0,'rgba(118,185,0,0)');g.addColorStop(1,'rgba(118,185,0,.45)');ctx.fillStyle=g;ctx.fillRect(x-26,0,28,H);ctx.fillStyle='#a7ff2e';ctx.fillRect(x-1.5,0,3,H)}
+let raf=0;function draw(){if(v.readyState>=2){const t=v.currentTime,k=Math.floor(t/PERIOD),ph=t-k*PERIOD,start=PERIOD-LEAD;
+const cur=pairs[k%2],nxt=pairs[(k+1)%2];blit(sem,'sem',0,W);let any=false;
+slots.forEach((ctx,i)=>{const p=Math.max(0,Math.min(1,(ph-start-i*STAGGER)/WIPE)),x=Math.round(ease(p)*W);
+blit(ctx,nxt[i],0,x);blit(ctx,cur[i],x,W);if(p>0&&p<1)edge(ctx,x);
+const active=ph>=start+i*STAGGER-.15&&p<1;badges[i].classList.toggle('on',active);any=any||active;
+labels[i].textContent=names[p>=.5?nxt[i]:cur[i]]});semTile.classList.toggle('hold',any);
+const d=v.duration||14,FD=.3,dim=t<FD?1-t/FD:t>d-FD?1-(d-t)/FD:0;if(dim>0)[sem,...slots].forEach(ctx=>{ctx.fillStyle=`rgba(5,7,5,${dim})`;ctx.fillRect(0,0,W,H)})}
+raf=v.paused?0:requestAnimationFrame(draw)}
+v.addEventListener('play',()=>{if(!raf)raf=requestAnimationFrame(draw)});v.addEventListener('seeked',draw);v.addEventListener('loadeddata',draw);
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!reduce.matches)v.play().catch(()=>{});else v.pause()}),{threshold:.15});
+io.observe(document.querySelector('.hero-visual'));if(reduce.matches)v.pause();})();
 </script>
 </body>
 </html>

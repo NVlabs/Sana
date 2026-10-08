@@ -62,6 +62,11 @@ h1{margin:22px 0 0;font-weight:inherit}
 .hv-arrow::after{content:"";width:2px;height:56px;background:linear-gradient(var(--nv-green),var(--nv-green)) center/2px 100% no-repeat}
 .hv-label{display:flex;justify-content:space-between;gap:16px;margin-top:12px;color:var(--quiet);font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase}
 
+.demo{width:min(1100px,100% - 48px);margin:0 auto clamp(56px,7vw,88px)}
+.demo-media{margin:0}
+.demo-media video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#050705}
+.demo-media figcaption{margin:13px 0 0;color:var(--quiet);font-size:.8rem;line-height:1.55}
+.demo-media figcaption strong{margin-right:10px;color:var(--nv-green-dark);font-family:var(--mono);font-size:.72rem;font-weight:680;letter-spacing:.12em;text-transform:uppercase}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:min(1000px,100% - 48px);margin:0 auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .stat{padding:26px 22px 24px;border-left:1px solid var(--line)}
 .stat:first-child{border-left:0;padding-left:0}
@@ -114,7 +119,7 @@ footer a:hover{color:var(--nv-green-dark)}
 }
 @media (max-width:720px){
   html{scroll-padding-top:76px}
-  .header-inner,.hero,.article-shell,.stats,footer{width:min(100% - 32px,1180px)}
+  .header-inner,.hero,.article-shell,.stats,.demo,footer{width:min(100% - 32px,1180px)}
   .header-inner{min-height:62px}
   nav{gap:15px;overflow-x:auto}
   nav a{font-size:.63rem;letter-spacing:.055em}
@@ -154,6 +159,10 @@ footer a:hover{color:var(--nv-green-dark)}
 <figcaption class="hv-label"><span>Racing demo · t = 18 s</span><span>Same semantic stream · two reference images</span></figcaption>
 </figure>
 </div></section>
+<section class="demo" aria-labelledby="demo-title">
+<figure class="demo-media"><video controls playsinline preload="metadata" poster="assets/demo-poster.webp" width="1920" height="1080" aria-describedby="demo-caption"><source src="assets/streamrender-h3-demo.mp4" type="video/mp4"></video>
+<figcaption id="demo-caption"><strong id="demo-title">Demo</strong> StreamRender-H3 in the racing demo · 1080p, 60 s, with sound</figcaption></figure>
+</section>
 <section class="stats" aria-label="Key numbers">
 <div class="stat"><span class="stat-value">2<small>steps</small></span><span class="stat-label">Denoising steps per chunk in the distilled student</span></div>
 <div class="stat"><span class="stat-value">217.96<small>ms</small></span><span class="stat-label">Diffusion render per streaming step on 8 GB200 GPUs, down from 799.66 ms</span></div>

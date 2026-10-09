@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 760" width="1600" height="760" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ag" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#4e8a00"/></marker>
+    <marker id="gr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9aa1af"/></marker>
+  </defs>
+  <rect width="1600" height="760" fill="#ffffff"/>
+
+  <!-- Column titles -->
+  <text x="40" y="52" font-size="14" font-weight="700" fill="#4e8a00" letter-spacing="2">HUMAN · ONCE</text>
+  <text x="485" y="52" font-size="14" font-weight="700" fill="#4e8a00" letter-spacing="2">AGENT LOOP · EVERY ITERATION</text>
+  <text x="1030" y="52" font-size="14" font-weight="700" fill="#4e8a00" letter-spacing="2">WHAT EACH MEASUREMENT DECIDED</text>
+
+  <!-- Human goal card -->
+  <rect x="40" y="76" width="320" height="300" rx="14" fill="#f4f5f2" stroke="#dedfdc"/>
+  <text x="64" y="116" font-size="22" font-weight="700" fill="#1d2330">Goal and constraints</text>
+  <g font-size="16" fill="#1d2330">
+    <text x="64" y="166">• Strictly causal decoding</text>
+    <text x="64" y="206">• 2 latent frames per call</text>
+    <text x="64" y="246">• ≤ 50 ms per call at 720p</text>
+    <text x="64" y="286">• Start from the released</text>
+    <text x="80" y="310">H3 VAE weights</text>
+  </g>
+  <text x="64" y="356" font-size="13.5" fill="#8a92a3">Set at the start; not revised by the loop.</text>
+  <line x1="360" y1="226" x2="392" y2="300" stroke="#9aa1af" stroke-width="2" marker-end="url(#gr)"/>
+
+  <!-- Loop: four nodes around a ring -->
+  <circle cx="700" cy="340" r="215" fill="none" stroke="#e6efd8" stroke-width="22"/>
+  <path d="M 770 131 A 215 215 0 0 1 909 270" fill="none" stroke="#76b900" stroke-width="3" marker-end="url(#ag)"/>
+  <path d="M 909 410 A 215 215 0 0 1 770 549" fill="none" stroke="#76b900" stroke-width="3" marker-end="url(#ag)"/>
+  <path d="M 630 549 A 215 215 0 0 1 491 410" fill="none" stroke="#76b900" stroke-width="3" marker-end="url(#ag)"/>
+  <path d="M 491 270 A 215 215 0 0 1 630 131" fill="none" stroke="#76b900" stroke-width="3" marker-end="url(#ag)"/>
+
+  <g text-anchor="middle">
+    <rect x="615" y="94" width="170" height="62" rx="31" fill="#ffffff" stroke="#76b900" stroke-width="2"/>
+    <text x="700" y="123" font-size="19" font-weight="700" fill="#1d2330">Propose</text>
+    <text x="700" y="144" font-size="13" fill="#8a92a3">a change</text>
+
+    <rect x="830" y="309" width="170" height="62" rx="31" fill="#ffffff" stroke="#76b900" stroke-width="2"/>
+    <text x="915" y="338" font-size="19" font-weight="700" fill="#1d2330">Implement</text>
+    <text x="915" y="359" font-size="13" fill="#8a92a3">code, train, profile</text>
+
+    <rect x="615" y="524" width="170" height="62" rx="31" fill="#76b900"/>
+    <text x="700" y="553" font-size="19" font-weight="700" fill="#ffffff">Measure</text>
+    <text x="700" y="574" font-size="13" fill="#eef7dc">run the fixed checks</text>
+
+    <rect x="400" y="309" width="170" height="62" rx="31" fill="#ffffff" stroke="#76b900" stroke-width="2"/>
+    <text x="485" y="338" font-size="19" font-weight="700" fill="#1d2330">Decide</text>
+    <text x="485" y="359" font-size="13" fill="#8a92a3">keep, revert, or stop</text>
+  </g>
+
+  <!-- Fixed checks in the middle -->
+  <text x="700" y="258" font-size="13" font-weight="700" fill="#4e8a00" text-anchor="middle" letter-spacing="1.6">FIXED CHECKS</text>
+  <g font-size="15" fill="#1d2330" text-anchor="middle">
+    <text x="700" y="290">Bit match to reference</text>
+    <text x="700" y="318">Causality</text>
+    <text x="700" y="346">Latency per call</text>
+    <text x="700" y="374">PSNR · LPIPS · detail</text>
+    <text x="700" y="402">Block-start brightness</text>
+  </g>
+
+  <!-- Iterations column -->
+  <g font-size="15">
+    <g transform="translate(1030,80)">
+      <rect width="530" height="74" rx="10" fill="#f4f5f2"/>
+      <text x="18" y="30" font-size="13" font-weight="700" fill="#4e8a00">01 · PRUNE</text>
+      <text x="18" y="56" fill="#1d2330">Drop the cheapest layer by PSNR; <tspan font-weight="700">24 of 36</tspan> layers fit 50 ms</text>
+    </g>
+    <g transform="translate(1030,166)">
+      <rect width="530" height="74" rx="10" fill="#f4f5f2"/>
+      <text x="18" y="30" font-size="13" font-weight="700" fill="#4e8a00">02 · MAKE CAUSAL</text>
+      <text x="18" y="56" fill="#1d2330">Matches the released decoder to <tspan font-weight="700">2×10⁻⁵</tspan> → start distillation</text>
+    </g>
+    <g transform="translate(1030,252)">
+      <rect width="530" height="74" rx="10" fill="#f4f5f2"/>
+      <text x="18" y="30" font-size="13" font-weight="700" fill="#4e8a00">03 · ATTENTION BACKEND</text>
+      <text x="18" y="56" fill="#1d2330">FlexAttention <tspan font-weight="700">6 ms/layer</tspan> → FA4 varlen + graph: <tspan font-weight="700">146 → 32 ms</tspan></text>
+    </g>
+    <g transform="translate(1030,338)">
+      <rect width="530" height="74" rx="10" fill="#f4f5f2"/>
+      <text x="18" y="30" font-size="13" font-weight="700" fill="#4e8a00">04 · REGISTER TIME</text>
+      <text x="18" y="56" fill="#1d2330">Block starts <tspan font-weight="700">~20 levels</tspan> darker → relative time: <tspan font-weight="700">&lt; 2 levels</tspan></text>
+    </g>
+    <g transform="translate(1030,424)">
+      <rect width="530" height="74" rx="10" fill="#f4f5f2"/>
+      <text x="18" y="30" font-size="13" font-weight="700" fill="#4e8a00">05 · DISTILL TO CONVERGENCE</text>
+      <text x="18" y="56" fill="#1d2330">Last 500 steps add only <tspan font-weight="700">+0.06 dB</tspan> → stop at step 6,000</text>
+    </g>
+    <g transform="translate(1030,510)">
+      <rect width="530" height="74" rx="10" fill="#f4f5f2"/>
+      <text x="18" y="30" font-size="13" font-weight="700" fill="#4e8a00">06 · KERNEL AGENT (KDA)</text>
+      <text x="18" y="56" fill="#1d2330">Correctness gate + latency benchmark: <tspan font-weight="700">32 → 24 ms</tspan></text>
+    </g>
+  </g>
+  <line x1="1002" y1="340" x2="1022" y2="340" stroke="#9aa1af" stroke-width="2" marker-end="url(#gr)"/>
+
+  <!-- Result strip -->
+  <rect x="40" y="636" width="1520" height="92" rx="14" fill="#ffffff" stroke="#76b900" stroke-width="2"/>
+  <text x="70" y="672" font-size="13" font-weight="700" fill="#4e8a00" letter-spacing="2">RESULT · FAST CAUSAL H3 VAE</text>
+  <g font-size="18" fill="#1d2330">
+    <text x="70" y="706"><tspan font-weight="700">24 ms</tspan> per 2 latent frames at 720p <tspan fill="#8a92a3">(H3 VAE 324 ms)</tspan></text>
+    <text x="640" y="706"><tspan font-weight="700">33.0 dB</tspan> PSNR to H3 VAE <tspan fill="#8a92a3">(TAE 27.1 dB)</tspan></text>
+    <text x="1120" y="706">Bit-exact causal streaming</text>
+  </g>
+</svg>

@@ -1,0 +1,606 @@
+{
+  "schema": 1,
+  "backend": "h3",
+  "host": "127.0.0.1",
+  "port": 8765,
+  "max_pending_frames": 48,
+  "max_body_bytes": 12582912,
+  "output_queue_chunks": 2,
+  "session_idle_seconds": 120,
+  "output": {
+    "fps": 24,
+    "height": 768,
+    "width": 1344
+  },
+  "reference": {
+    "height": 480,
+    "width": 832
+  },
+  "warmup_rounds": 6,
+  "inference": {
+    "seed": 20260830,
+    "diffusion": {
+      "sampling_timesteps": {
+        "module": "dev.yanzuolu.common.diffusion.timestep.sampling.trailing",
+        "class_name": "TrailingSamplingTimesteps",
+        "args": {
+          "T": 1,
+          "num_sampling_steps": 2,
+          "shift": 6
+        }
+      },
+      "audio_sampling_timesteps": {
+        "module": "dev.yanzuolu.common.diffusion.timestep.sampling.trailing",
+        "class_name": "TrailingSamplingTimesteps",
+        "args": {
+          "T": 1,
+          "num_sampling_steps": 2,
+          "shift": 1.5
+        }
+      },
+      "schedule": {
+        "module": "dev.yanzuolu.common.diffusion.schedule.lerp",
+        "class_name": "LinearInterpolationSchedule",
+        "args": {
+          "T": 1,
+          "pred_type": "x_0"
+        }
+      },
+      "sampler": {
+        "module": "dev.yanzuolu.common.diffusion.sampler.ddim",
+        "class_name": "DDIMSampler",
+        "args": {}
+      },
+      "fake_schedule": {
+        "module": "dev.yanzuolu.common.diffusion.schedule.lerp",
+        "class_name": "LinearInterpolationSchedule",
+        "args": {
+          "T": 1,
+          "pred_type": "x_0"
+        }
+      },
+      "fake_training_timesteps": {
+        "module": "dev.yanzuolu.common.diffusion.timestep.training.uniform",
+        "class_name": "UniformTrainingTimesteps",
+        "args": {
+          "T": 1,
+          "shift": 6
+        }
+      },
+      "audio_fake_training_timesteps": {
+        "module": "dev.yanzuolu.common.diffusion.timestep.training.uniform",
+        "class_name": "UniformTrainingTimesteps",
+        "args": {
+          "T": 1,
+          "shift": 1.5
+        }
+      },
+      "score_timesteps": {
+        "module": "dev.yanzuolu.common.diffusion.timestep.training.uniform",
+        "class_name": "UniformTrainingTimesteps",
+        "args": {
+          "T": 1,
+          "shift": 6
+        }
+      },
+      "audio_score_timesteps": {
+        "module": "dev.yanzuolu.common.diffusion.timestep.training.uniform",
+        "class_name": "UniformTrainingTimesteps",
+        "args": {
+          "T": 1,
+          "shift": 1.5
+        }
+      }
+    },
+    "distributed": {
+      "up_size": [
+        1,
+        8
+      ]
+    },
+    "data": {
+      "args": {
+        "tokenizer_path": "asset://tokenizer",
+        "num_frames": 107,
+        "chunk_size": 2,
+        "fps": 24,
+        "height": 768,
+        "width": 1344,
+        "reference_height": 480,
+        "reference_width": 832,
+        "video_latent_channels": 24,
+        "audio_latent_channels": 32,
+        "spatial_vae_stride": 16,
+        "sink_size": 2,
+        "window_size": 2,
+        "bootstrap_size": 7,
+        "merge_single_frame_units": true,
+        "audio_lookahead_latents": 29,
+        "audio_right_lookahead_latents": 0,
+        "max_seqlen": 40960,
+        "max_seqlen_per_sample": 40960,
+        "max_retries": 5,
+        "sync_group_size": 1,
+        "text_dropout": 0
+      }
+    },
+    "meta_model": {
+      "teacher_streaming": {
+        "sink_size": 4,
+        "window_size": 5
+      },
+      "student_cfg_fitting": false,
+      "fake_cfg_fitting": true,
+      "teacher_cfg_fitting": false,
+      "cfg_fitting_guidance": {
+        "anchors": "guided",
+        "branches": [
+          {
+            "name": "null",
+            "drop": [
+              "text",
+              "reference"
+            ]
+          },
+          {
+            "name": "text_only",
+            "drop": [
+              "reference"
+            ]
+          }
+        ],
+        "stages": [
+          {
+            "branch": "null",
+            "scale": 1.5
+          },
+          {
+            "branch": "text_only",
+            "scale": 3
+          }
+        ]
+      },
+      "teacher_guidance_scale": [
+        1,
+        1
+      ],
+      "fake_loss_type": "x_0",
+      "fake_grad_enabled": false,
+      "real_grad_enabled": false,
+      "fake_use_trajectory": true,
+      "dmd_loss": {
+        "type": "dmd",
+        "norm_clip_min": 0.00001,
+        "phuber_c": 0.001,
+        "alpha": 1
+      },
+      "qwen_visual_context": true,
+      "qwen_reference_video": false,
+      "selective_video_encoding": false,
+      "qwen_processor_path": "asset://qwen_processor",
+      "audio_loss_weight": 1,
+      "bootstrap_loss_weight": 1,
+      "first_frame_loss_weight": 1,
+      "continuation_loss_weight": 1,
+      "separate_reference_rope": true,
+      "fixed_window_rope": true,
+      "keep_sink_reference": true,
+      "keep_negative_reference": true,
+      "loss_weighting": "uniform"
+    },
+    "models": {
+      "backbone": {
+        "module": "dev.yanzuolu.projects.minimax_h3.modeling.build",
+        "class_name": "MiniMaxH3CausalX0DiTSP",
+        "meta_init": true,
+        "args": {
+          "hidden_size": 5376,
+          "num_layers": 50,
+          "token_refiner_num_layers": 2,
+          "num_attention_heads": 56,
+          "attention_head_dim": 128,
+          "ffn_hidden_size": 14336,
+          "latents_dim": 24,
+          "audio_latents_dim": 32,
+          "patch_size": [
+            1,
+            2,
+            2
+          ],
+          "text_dim": 5120,
+          "timestep_input_dim": 256,
+          "time_embed_hidden_size": 5376,
+          "time_embed_dim": 2688,
+          "adaln_out_features": 96768,
+          "final_adaln_out_features": 10752,
+          "rope_inv_freq_len": 16,
+          "norm_eps": 0.00001,
+          "qk_norm_eps": 0.00001,
+          "final_norm_eps": 0.00001
+        },
+        "runtime": {
+          "training": false,
+          "requires_grad": false,
+          "param_dtype": "bfloat16"
+        },
+        "placement": {
+          "device": "cuda"
+        },
+        "weight": {
+          "path": "asset://backbone",
+          "strict": true,
+          "assign": true
+        }
+      },
+      "text_encoder": {
+        "module": "dev.yanzuolu.projects.minimax_h3_videoref.modeling.ref2va_encoder",
+        "class_name": "build_ref2va_encoder",
+        "meta_init": true,
+        "args": {
+          "pretrained_model_name_or_path": "asset://qwen_model"
+        },
+        "runtime": {
+          "training": false,
+          "requires_grad": false,
+          "param_dtype": "bfloat16"
+        },
+        "placement": {
+          "weight_dtype": "bfloat16",
+          "fsdp": {
+            "wrap_modules": [
+              "Qwen3VLTextDecoderLayer",
+              "Qwen3VLVisionBlock"
+            ],
+            "param_dtype": "bfloat16",
+            "reduce_dtype": "float32",
+            "shard_size": 4,
+            "cpu_offload": true
+          },
+          "plugins": [
+            {
+              "module": "dev.yanzuolu.common.plugin.dcp_weights",
+              "class_name": "ShardedDCPWeights",
+              "path": "asset://qwen_dcp"
+            }
+          ]
+        }
+      },
+      "video_vae": {
+        "module": "dev.yanzuolu.projects.minimax_h3.modeling.taeh3_native_streaming",
+        "class_name": "MiniMaxH3NativeStreamingTAE",
+        "meta_init": false,
+        "args": {
+          "parallel_encode": false,
+          "parallel_decode": false
+        },
+        "weight": {
+          "path": "asset://tae",
+          "strict": true,
+          "assign": false
+        },
+        "runtime": {
+          "training": false,
+          "requires_grad": false,
+          "param_dtype": "float16",
+          "plugins": [
+            {
+              "module": "dev.yanzuolu.common.plugin.autocast",
+              "class_name": "AutocastNoGradWrapper",
+              "functions": [
+                "encode_videos",
+                "encode_images",
+                "decode_base"
+              ],
+              "grad_enabled": false,
+              "autocast": {
+                "enabled": true,
+                "dtype": "float16"
+              }
+            }
+          ]
+        },
+        "placement": {
+          "weight_dtype": "float32"
+        }
+      },
+      "video_decoder": {
+        "module": "causal_vit_codec",
+        "class_name": "CausalViTVideoDecoder",
+        "meta_init": false,
+        "args": {
+          "vae_config": {
+            "models": {
+              "video_vae": {
+                "module": "dev.yanzuolu.projects.minimax_h3.modeling.build",
+                "class_name": "MiniMaxH3VideoVAE",
+                "meta_init": false,
+                "args": {
+                  "causal_decoder": false,
+                  "causal_encoder": true,
+                  "ch": 128,
+                  "ch_mult": [
+                    1,
+                    2,
+                    2,
+                    4,
+                    4,
+                    8
+                  ],
+                  "embed_dim": 24,
+                  "in_channels": 3,
+                  "num_res_blocks": 2,
+                  "num_res_blocks_decoder": null,
+                  "out_ch": 3,
+                  "padding_mode": "reflect",
+                  "padding_mode_t": null,
+                  "pixel_norm_type": "imagenet",
+                  "scaling_factor": 1,
+                  "shift_factor": 0,
+                  "space_down": [
+                    2,
+                    2,
+                    2,
+                    2,
+                    1,
+                    1
+                  ],
+                  "space_up": [
+                    1,
+                    2,
+                    2,
+                    2,
+                    2,
+                    1
+                  ],
+                  "time_down": [
+                    1,
+                    2,
+                    2,
+                    1,
+                    1,
+                    1
+                  ],
+                  "time_up": null,
+                  "use_3d_conv": true,
+                  "use_t_isolated_gn": true,
+                  "use_vit_decoder": true,
+                  "vit_decoder_kwargs": {
+                    "dim_head": 64,
+                    "ffn_activation_fn": "silu",
+                    "ffn_use_gated": true,
+                    "heads": 32,
+                    "norm_affine": true,
+                    "norm_type": "rms_norm",
+                    "num_layers": 36,
+                    "qk_norm_affine": false,
+                    "qk_norm_type": "rms_norm",
+                    "rope_dim_ratio": 0.75,
+                    "rope_theta": 100
+                  },
+                  "z_channels": 24,
+                  "zq_ch_decoder": null,
+                  "zq_ch_encoder": null,
+                  "forward_kwargs": {
+                    "clip_length": 17,
+                    "token_drop": 3,
+                    "encoder_tiling": true,
+                    "decoder_tiling": true,
+                    "parallel_tiling": false,
+                    "tile_size": 256,
+                    "tile_overlap_min": 64,
+                    "encoder_parallel": false,
+                    "decoder_parallel": false
+                  },
+                  "latents_mean": [
+                    0.858090341091156,
+                    -0.9606591463088989,
+                    1.0661640167236328,
+                    -0.5090325474739075,
+                    -0.2727581858634949,
+                    -1.3675414323806763,
+                    -0.2553254961967468,
+                    -0.26907554268836975,
+                    -0.5376840829849243,
+                    -0.0464097298681736,
+                    0.6657370328903198,
+                    0.19690127670764923,
+                    -0.5460608005523682,
+                    -0.4035342037677765,
+                    -0.23683024942874908,
+                    0.25928452610969543,
+                    -0.30133944749832153,
+                    0.211341992020607,
+                    -1.1206848621368408,
+                    0.3581933379173279,
+                    -0.04225143790245056,
+                    0.2604829967021942,
+                    0.22864092886447906,
+                    0.7056031823158264
+                  ],
+                  "latents_std": [
+                    1.2223774194717407,
+                    1.2767263650894165,
+                    1.6831774711608887,
+                    1.7549455165863037,
+                    1.5636216402053833,
+                    2.194143533706665,
+                    0.9653137922286987,
+                    1.0569885969161987,
+                    0.841948926448822,
+                    0.7729952931404114,
+                    1.8955937623977661,
+                    0.946841835975647,
+                    0.7996809482574463,
+                    0.44988900423049927,
+                    0.7197399735450745,
+                    0.6936293244361877,
+                    2.961095094680786,
+                    2.7694199085235596,
+                    3.0496184825897217,
+                    2.1088054180145264,
+                    3.276226282119751,
+                    3.1627357006073,
+                    2.2816812992095947,
+                    2.6127843856811523
+                  ]
+                },
+                "weight": {
+                  "path": "asset://native_vae",
+                  "strict": true
+                },
+                "runtime": {
+                  "training": false,
+                  "requires_grad": false,
+                  "param_dtype": "float32",
+                  "plugins": [
+                    {
+                      "module": "dev.yanzuolu.common.plugin.autocast",
+                      "class_name": "AutocastNoGradWrapper",
+                      "functions": [
+                        "decode_base"
+                      ],
+                      "grad_enabled": false,
+                      "autocast": {
+                        "enabled": true,
+                        "dtype": "float16"
+                      }
+                    }
+                  ]
+                },
+                "placement": {
+                  "weight_dtype": "float32"
+                }
+              }
+            }
+          },
+          "student_weights": "asset://causal_decoder"
+        },
+        "runtime": {
+          "training": false,
+          "requires_grad": false,
+          "param_dtype": "float32"
+        },
+        "placement": {
+          "weight_dtype": "float32"
+        }
+      },
+      "audio_vae": {
+        "module": "dev.yanzuolu.projects.minimax_h3.modeling.build",
+        "class_name": "MiniMaxH3AudioVAE",
+        "meta_init": false,
+        "args": {
+          "attn_proj": true,
+          "decoder_dim": 1024,
+          "decoder_rates": [
+            5,
+            5,
+            2,
+            2,
+            2,
+            2,
+            2
+          ],
+          "decoder_type": "bigvgan",
+          "encoder_dim": 64,
+          "encoder_rates": [
+            2,
+            4,
+            4,
+            5,
+            5
+          ],
+          "latent_dim": 2048,
+          "sample_rate": 32000,
+          "vae_latent_channels": 32,
+          "latents_mean": [
+            -0.020211687488382354,
+            0.3876466479950502,
+            -0.04398279799186767,
+            -0.28591514936373,
+            0.08179686214561671,
+            -0.35782641352446604,
+            0.040623809960919084,
+            -0.01552534501956604,
+            -0.223362481667332,
+            0.1821006842509091,
+            0.2941778783780663,
+            -0.07901167601970885,
+            -0.056815072777201,
+            -0.3699028221860095,
+            -0.31616315591624855,
+            0.5905951377425391,
+            -0.052139568068853864,
+            0.013673160263486295,
+            -0.03691647864630577,
+            0.09732660653298163,
+            -0.3394662328788498,
+            -0.30685677538541667,
+            -0.24504598907458763,
+            -0.034698524462007344,
+            0.02868032184767538,
+            -0.21217779266454084,
+            -0.1678263169941987,
+            0.3221287889040614,
+            -0.1223055851554907,
+            0.4356604928128464,
+            -0.0502599202236253,
+            0.3979258376211797
+          ],
+          "latents_std": [
+            1.6895524230479284,
+            2.76263727217653,
+            1.7945344281264435,
+            1.6801681847309828,
+            1.6390226546605453,
+            2.7788298348882177,
+            1.7659090095747236,
+            1.6199757612137327,
+            2.6336525640336896,
+            1.8539356672817833,
+            2.5056497896915633,
+            1.811019237886178,
+            1.9579657790720237,
+            1.6685498243529284,
+            1.4922469314453364,
+            3.298670198067373,
+            1.9491804496832168,
+            1.8720003270431442,
+            1.8334080103291832,
+            1.6488070416529093,
+            1.6176957696319716,
+            1.9131449234774398,
+            1.5695245398428617,
+            1.6943659940415912,
+            1.8318420762504692,
+            1.5540637421583379,
+            1.9344930328968526,
+            1.599198216109855,
+            1.718045989838149,
+            1.6307219190837705,
+            1.8661226051202384,
+            1.5613768203168363
+          ]
+        },
+        "weight": {
+          "module": "dev.yanzuolu.projects.minimax_h3.modeling.weights",
+          "class_name": "MiniMaxH3AudioVAEWeightLoader",
+          "path": "asset://audio_vae"
+        },
+        "runtime": {
+          "training": false,
+          "requires_grad": false,
+          "param_dtype": "float32"
+        },
+        "placement": {
+          "weight_dtype": "float32"
+        }
+      }
+    },
+    "engine": {
+      "up_size": {
+        "train": 1,
+        "validation": 8
+      }
+    }
+  }
+}

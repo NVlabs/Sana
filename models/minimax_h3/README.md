@@ -19,6 +19,14 @@ Speedups are measured against the matching baseline runtime on the same hardware
 uses its validated release workload, so the table compares relative acceleration rather than
 absolute latency across GPUs.
 
+## StreamRender-H3
+
+The standalone [StreamRender-H3](../streamrender_h3/) module connects a
+controllable Three.js game engine, semantic reference frames, streaming TAE
+encoding, a two-evaluation H3 streaming renderer, and causal RGB decoding
+to browser video feedback. It includes the resident worker, session bridge,
+deployment configuration and actual browser-loop validation.
+
 ## SOL-H3
 
 The standalone [`Sol-H3`](Sol-H3/) runtime covers distilled

@@ -22,8 +22,16 @@ on:
           - test-training-sana-wm-distill
           - test-training-longsana
           - test-training-sol-rl
+  # Every PR: pre-commit runs unprivileged (read-only token, no secrets), so fork code is safe here.
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  # Adding the `run-tests` label (write/triage access only) approves ONE test run of the PR head at
+  # labeling time. Later pushes never run with secrets; re-review and re-label to test new commits.
   pull_request_target:
-    types: [labeled, unlabeled, opened, synchronize, reopened]
+    types: [labeled]
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -33,11 +41,14 @@ on:
       - '**.md'
       - 'docs/**'
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+permissions:
+  contents: read
 # if: ${{ github.repository == 'Efficient-Large-Model/Sana' }}
 jobs:
   pre-commit:
+    if: github.event_name != 'pull_request_target' || github.event.label.name == 'run-tests'
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
@@ -45,6 +56,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -56,7 +69,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-inference')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -66,6 +79,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -104,7 +119,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-vae')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -114,6 +129,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -152,7 +169,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-fsdp')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -162,6 +179,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -200,7 +219,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-video')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -210,6 +229,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       # - name: Set up Python
       #   uses: actions/setup-python@v5
       #   with:
@@ -248,7 +269,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-stage1')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -258,6 +279,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       - name: Clean Python caches
         run: |
           echo "Removing stale Python byte code files..."
@@ -292,7 +315,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-distill')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -302,6 +325,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       - name: Clean Python caches
         run: |
           echo "Removing stale Python byte code files..."
@@ -336,7 +361,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-longsana')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -346,6 +371,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       - name: Clean Python caches
         run: |
           echo "Removing stale Python byte code files..."
@@ -380,7 +407,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sol-rl')) ||
-      github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'run-tests')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests')
     runs-on:
       - self-hosted
       - sana-runner
@@ -390,6 +417,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          # Only reached under pull_request_target after a maintainer added `run-tests`.
+          allow-unsafe-pr-checkout: true
       - name: Clean Python caches
         run: |
           echo "Removing stale Python byte code files..."
@@ -421,12 +450,14 @@ jobs:
           sana-run --pty -m ci -J test-training-sol-rl bash tests/bash/training/test_training_sol_rl.sh
   remove-label:
     needs: [test-inference, test-training-vae, test-training-fsdp, test-training-video, test-training-sana-wm-stage1, test-training-sana-wm-distill, test-training-longsana, test-training-sol-rl]
-    if: always() && github.event_name == 'pull_request_target'
+    if: always() && github.event_name == 'pull_request_target' && github.event.label.name == 'run-tests'
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      pull-requests: write
     steps:
       - name: Remove label after tests complete
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             try {

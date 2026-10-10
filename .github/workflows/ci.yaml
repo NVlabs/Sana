@@ -51,6 +51,19 @@ jobs:
     if: github.event_name != 'pull_request_target' || github.event.label.name == 'run-tests'
     runs-on: ubuntu-latest
     steps:
+      # GPU tests may only be started by admin/maintain/write users; triage can add labels too.
+      - name: Check who added run-tests
+        if: github.event_name == 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          role=$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${SENDER}/permission" --jq .role_name)
+          echo "${SENDER} has role: ${role}"
+          case "$role" in
+            admin|maintain|write) ;;
+            *) echo "::error::Only admin/maintain/write users can start GPU tests."; exit 1 ;;
+          esac
       - name: Check out Git repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -66,8 +79,6 @@ jobs:
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test-inference:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-inference')) ||
@@ -118,8 +129,6 @@ jobs:
           sana-run --pty -m ci -J test-inference bash tests/bash/inference/test_inference.sh
   test-training-vae:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-vae')) ||
@@ -170,8 +179,6 @@ jobs:
           sana-run --pty -m ci -J test-training-online-vae bash tests/bash/training/test_training_vae.sh
   test-training-fsdp:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-fsdp')) ||
@@ -222,8 +229,6 @@ jobs:
           sana-run --pty -m ci -J test-training-fsdp bash tests/bash/training/test_training_fsdp.sh
   test-training-video:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-video')) ||
@@ -274,8 +279,6 @@ jobs:
           sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
   test-training-sana-wm-stage1:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-stage1')) ||
@@ -322,8 +325,6 @@ jobs:
           sana-run --pty -m ci -J test-training-sana-wm-stage1 bash tests/bash/training/test_training_sana_wm_stage1.sh
   test-training-sana-wm-distill:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-distill')) ||
@@ -370,8 +371,6 @@ jobs:
           sana-run --pty -m ci -J test-training-sana-wm-distill bash tests/bash/training/test_training_sana_wm_distill.sh
   test-training-longsana:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-longsana')) ||
@@ -418,8 +417,6 @@ jobs:
           sana-run --pty -m ci -J test-training-longsana bash tests/bash/training/test_training_longsana.sh
   test-training-sol-rl:
     needs: pre-commit
-    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
-    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sol-rl')) ||

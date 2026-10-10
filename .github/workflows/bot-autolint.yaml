@@ -19,21 +19,22 @@ concurrency:
   cancel-in-progress: true
 jobs:
   lint-by-label:
-    if: contains(github.event.pull_request.labels.*.name, 'lint wanted')
+    # Same-repo PRs only: this job pushes commits with a write token.
+    if: contains(github.event.pull_request.labels.*.name, 'lint wanted') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.10'
       - name: Test pre-commit hooks
         continue-on-error: true
-        uses: pre-commit/action@v3.0.0 # sync with https://github.com/Efficient-Large-Model/VILA-Internal/blob/main/.github/workflows/pre-commit.yaml
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         with:
           extra_args: --all-files
       - name: Check if there are any changes
@@ -50,6 +51,16 @@ jobs:
           git push
       - name: Remove label(s) after lint
         if: always()
-        uses: actions-ecosystem/action-remove-labels@v1
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
-          labels: lint wanted
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'lint wanted'
+              });
+            } catch (error) {
+              console.log('Failed to remove label (may already be removed):', error.message);
+            }

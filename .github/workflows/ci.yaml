@@ -52,20 +52,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           # Only reached under pull_request_target after a maintainer added `run-tests`.
           allow-unsafe-pr-checkout: true
       # - name: Set up Python
-      #   uses: actions/setup-python@v5
+      #   uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       #   with:
       #     python-version: 3.10.10
       - name: Test pre-commit hooks
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test-inference:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-inference')) ||
@@ -75,14 +77,14 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           # Only reached under pull_request_target after a maintainer added `run-tests`.
           allow-unsafe-pr-checkout: true
       # - name: Set up Python
-      #   uses: actions/setup-python@v5
+      #   uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       #   with:
       #     python-version: 3.10.10
       - name: Clean Python caches
@@ -116,6 +118,8 @@ jobs:
           sana-run --pty -m ci -J test-inference bash tests/bash/inference/test_inference.sh
   test-training-vae:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-vae')) ||
@@ -125,14 +129,14 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           # Only reached under pull_request_target after a maintainer added `run-tests`.
           allow-unsafe-pr-checkout: true
       # - name: Set up Python
-      #   uses: actions/setup-python@v5
+      #   uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       #   with:
       #     python-version: 3.10.10
       - name: Clean Python caches
@@ -166,6 +170,8 @@ jobs:
           sana-run --pty -m ci -J test-training-online-vae bash tests/bash/training/test_training_vae.sh
   test-training-fsdp:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-fsdp')) ||
@@ -175,14 +181,14 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           # Only reached under pull_request_target after a maintainer added `run-tests`.
           allow-unsafe-pr-checkout: true
       # - name: Set up Python
-      #   uses: actions/setup-python@v5
+      #   uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       #   with:
       #     python-version: 3.10.10
       - name: Clean Python caches
@@ -216,6 +222,8 @@ jobs:
           sana-run --pty -m ci -J test-training-fsdp bash tests/bash/training/test_training_fsdp.sh
   test-training-video:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-video')) ||
@@ -225,14 +233,14 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           # Only reached under pull_request_target after a maintainer added `run-tests`.
           allow-unsafe-pr-checkout: true
       # - name: Set up Python
-      #   uses: actions/setup-python@v5
+      #   uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       #   with:
       #     python-version: 3.10.10
       - name: Clean Python caches
@@ -266,6 +274,8 @@ jobs:
           sana-run --pty -m ci -J test-training-video bash tests/bash/training/test_training_video.sh
   test-training-sana-wm-stage1:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-stage1')) ||
@@ -275,7 +285,7 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -312,6 +322,8 @@ jobs:
           sana-run --pty -m ci -J test-training-sana-wm-stage1 bash tests/bash/training/test_training_sana_wm_stage1.sh
   test-training-sana-wm-distill:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sana-wm-distill')) ||
@@ -321,7 +333,7 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -358,6 +370,8 @@ jobs:
           sana-run --pty -m ci -J test-training-sana-wm-distill bash tests/bash/training/test_training_sana_wm_distill.sh
   test-training-longsana:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-longsana')) ||
@@ -367,7 +381,7 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -404,6 +418,8 @@ jobs:
           sana-run --pty -m ci -J test-training-longsana bash tests/bash/training/test_training_longsana.sh
   test-training-sol-rl:
     needs: pre-commit
+    # Secrets live in the `gpu-ci` environment, which only the main branch can deploy to.
+    environment: gpu-ci
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true' &&
        (github.event.inputs.test_target == '' || github.event.inputs.test_target == 'all' || github.event.inputs.test_target == 'test-training-sol-rl')) ||
@@ -413,7 +429,7 @@ jobs:
       - sana-runner
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -457,7 +473,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Remove label after tests complete
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             try {
@@ -477,9 +493,9 @@ jobs:
 #     runs-on: self-hosted
 #     steps:
 #         - name: Check out Git repository
-#           uses: actions/checkout@v4
+#           uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 #         - name: Set up Python
-#           uses: actions/setup-python@v5
+#           uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
 #           with:
 #               python-version: 3.10.10
 #         - name: Set up the environment

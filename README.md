@@ -177,6 +177,13 @@ draw on TeaCache, EasyCache, SVDQuant/Nunchaku, FlashAttention,
 [TransformerEngine](https://github.com/NVIDIA/TransformerEngine), and the sparse-attention
 / token-reduction literature surveyed in the [docs](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
 
+For StreamRender-H3, we thank the [MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)
+team for the base video model and codecs, the
+[Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) team for the text and visual
+conditioning model, and [TAE / TAeHV](https://github.com/madebyollin/taehv)
+by Ollin Boer Bohan for the lightweight video autoencoder used for reference
+encoding. Their respective upstream licenses and attribution notices apply.
+
 ## 📌 Citation
 
 ```bibtex

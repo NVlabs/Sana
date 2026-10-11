@@ -191,3 +191,18 @@ workspace; original file-level notices are retained.
 
 Deployment glue follows the repository's Apache-2.0 license. Model weights
 retain their upstream permissions and licenses and are not redistributed here.
+
+## Acknowledgements
+
+We thank the following projects and their authors:
+
+1. [MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) for the base video
+   generation model and native video/audio codecs. Our streaming renderer and
+   distilled causal decoder build on these components.
+2. [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) for the text and visual
+   conditioning model used to encode the prompt and initial reference image.
+3. [TAE / TAeHV](https://github.com/madebyollin/taehv), by Ollin Boer Bohan,
+   for the lightweight video autoencoder used by the reference-video encoder.
+
+These acknowledgements do not replace the upstream licenses and attribution
+notices, which remain applicable to the corresponding components.

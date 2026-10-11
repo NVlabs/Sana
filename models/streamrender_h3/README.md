@@ -17,7 +17,6 @@ player controls -> game engine -> semantic RGB frames
 - The package-local H3 imports pass in the production Python environment.
 - The actual same-rack 8-GB200 browser/H3 loop passed in job **7848438**.
   Final clean-exit verification **7848537** completed successfully (exit 0).
-  Results and timing boundaries are recorded in `VALIDATION.md`.
 - This runtime has its own entry point; it is not a SGLang `scripts/run.py`
   model adapter. It can be launched independently from this model folder.
 

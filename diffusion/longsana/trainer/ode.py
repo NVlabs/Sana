@@ -19,7 +19,7 @@ from torchvision.io import write_video
 from diffusion.longsana.model import ODERegressionSana
 from diffusion.longsana.pipeline.sana_inference_pipeline import SanaInferencePipeline
 from diffusion.longsana.utils.dataset import ODERegressionLMDBDataset, TextDataset, cycle
-from diffusion.longsana.utils.distributed import barrier, fsdp_wrap, launch_distributed_job
+from diffusion.longsana.utils.distributed import barrier, fsdp_wrap, get_current_device, launch_distributed_job
 from diffusion.longsana.utils.misc import set_seed
 from tools.download import find_model
 
@@ -38,7 +38,7 @@ class ODESANATrainer:
         self.world_size = dist.get_world_size()
 
         self.dtype = torch.bfloat16 if config.mixed_precision else torch.float32
-        self.device = torch.cuda.current_device()
+        self.device = get_current_device()
         self.is_main_process = global_rank == 0
         self.global_rank = global_rank
         self.disable_wandb = config.disable_wandb

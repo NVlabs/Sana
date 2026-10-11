@@ -68,6 +68,36 @@ bounded; the browser retries the same frame on backpressure.
 
 ## Assets and initialization
 
+The public checkpoint bundle is
+[yitongl/StreamRender-H3](https://huggingface.co/yitongl/StreamRender-H3).
+Download it with the Hugging Face client in the configured Python environment:
+
+```bash
+hf download yitongl/StreamRender-H3 --local-dir /your/code/models/StreamRender-H3
+python /your/code/models/StreamRender-H3/download_assets.py
+```
+
+The bundle is approximately 217 GB. The second command reconstructs the exact
+merged backbone from its shards and verifies its SHA-256; it needs another
+66.28 GB of disk space. Other weights need no conversion. The resulting
+`assets.json` is the runtime weight manifest.
+
+**60 curated examples** are included in [`examples/`](examples/README.md).
+The default startup prompt is **B10_e-track-3_bluehour**. Semantic videos
+and reference pictures are downloaded from the linked GitHub Release;
+weights are downloaded from Hugging Face. To prepare the default example:
+
+```bash
+python scripts/prepare_example.py \
+  --assets /your/code/models/StreamRender-H3/assets.json
+GPUS=8 PYTHON_BIN=python bash scripts/launch_local.sh \
+  --assets configs/example.local.json
+```
+
+See the example README for media download, alternative prompts and prerecorded
+semantic-video playback. Existing local manifests retain their own prompts;
+use the selection script to opt into the new default.
+
 Weights are external assets, not Git contents. Copy
 `configs/assets.example.json` to a local manifest and fill its paths. The
 role of each path is specified in `asset_roles`. The required assets include:

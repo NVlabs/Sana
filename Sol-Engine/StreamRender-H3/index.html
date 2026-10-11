@@ -10,6 +10,8 @@
 <meta property="og:description" content="A code game engine keeps the world state; a two-step streaming video model renders it in real time.">
 <meta property="og:url" content="https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/">
 <meta property="og:image" content="https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/assets/og.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="900">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/">
 <link rel="icon" href="../Sol-H3/assets/favicon.svg" type="image/svg+xml">
@@ -34,6 +36,28 @@ nav{display:flex;align-items:center;gap:clamp(16px,3vw,32px)}
 nav a{padding:10px 0;color:var(--muted);font-size:.72rem;font-weight:620;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
 nav a:hover,nav a[aria-current="true"]{color:var(--ink)}
 
+.intro{position:relative;padding:clamp(20px,3vw,40px) 0 0}
+.intro-stick{display:flex;flex-direction:column;align-items:center;gap:18px}
+.teaser-card{width:min(1240px,calc(100vw - 96px),calc((100svh - 72px - 96px) * 1.7768));margin:0;overflow:hidden;border-radius:18px;background:#05070a;box-shadow:0 30px 80px -30px rgba(10,20,10,.45),0 2px 0 rgba(0,0,0,.04);transform-origin:50% 0;will-change:transform,opacity}
+.teaser-card img{display:block;width:100%;height:auto}
+.intro-cue{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--quiet);font-family:var(--mono);font-size:.62rem;font-weight:650;letter-spacing:.18em;text-decoration:none;text-transform:uppercase;will-change:opacity}
+.intro-cue i{width:1px;height:28px;background:linear-gradient(var(--nv-green),transparent);animation:cue 1.8s ease-in-out infinite}
+@keyframes cue{0%{transform:scaleY(.3);transform-origin:top;opacity:.3}50%{transform:scaleY(1);opacity:1}100%{transform:scaleY(.3);transform-origin:bottom;opacity:.3}}
+.hero.hero-split{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);grid-template-areas:"head head" "copy demo";align-items:center;gap:clamp(18px,2.4vw,30px) clamp(28px,4vw,56px);width:min(1240px,calc(100vw - 96px),calc((100svh - 72px - 96px) * 1.7768));margin:0 auto;padding:clamp(36px,4.5vw,56px) 0 clamp(40px,5vw,64px)}
+.hero-head{grid-area:head;min-width:0}
+.hero-split .hero-copy{grid-area:copy;min-width:0;will-change:opacity}
+.hero-demo{grid-area:demo;width:auto;margin:0;min-width:0}
+.hero-heading{margin:14px 0 0;color:var(--ink);font-size:clamp(1.3rem,2.85vw,2.75rem);font-weight:680;letter-spacing:-.035em;line-height:1.12;white-space:nowrap}
+.hero-split .lede{max-width:44ch;margin:0;font-size:clamp(1.02rem,1.35vw,1.2rem);line-height:1.6}
+.hero-split .hero-resources{margin-top:20px}
+.hero-demo .demo-media video{border-radius:12px}
+.section-visual{margin:2.4rem 0 2.8rem}
+.section-visual .hv-label{margin-top:12px}
+@media (max-width:720px){
+  .intro{padding-top:16px}
+  .teaser-card{width:calc(100vw - 32px);border-radius:12px}
+  .intro-cue{display:none}
+}
 .hero{width:min(1320px,100% - 48px);margin:0 auto;padding:clamp(46px,6vw,82px) 0 clamp(56px,7vw,92px)}
 .hero-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(28px,4vw,64px);padding-left:clamp(0px,3.4vw,52px)}
 .eyebrow{display:flex;align-items:center;gap:12px;margin:0;color:var(--nv-green-dark);font-family:var(--mono);font-size:.72rem;font-weight:680;letter-spacing:.13em;text-transform:uppercase}
@@ -75,7 +99,7 @@ h1{margin:22px 0 0;font-weight:inherit}
 .hv-arrow::after{content:"";width:2px;height:56px;background:linear-gradient(var(--nv-green),var(--nv-green)) center/2px 100% no-repeat}
 .hv-label{display:flex;justify-content:space-between;gap:16px;margin-top:12px;color:var(--quiet);font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase}
 
-.demo{width:min(1100px,100% - 48px);margin:0 auto clamp(56px,7vw,88px)}
+.demo:not(.hero-demo){width:min(1100px,100% - 48px);margin:0 auto clamp(56px,7vw,88px)}
 .demo-media{margin:0}
 .demo-media video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#050705}
 .demo-media figcaption{margin:13px 0 0;color:var(--quiet);font-size:.8rem;line-height:1.55}
@@ -136,6 +160,7 @@ h1{margin:22px 0 0;font-weight:inherit}
 .ack-list a{color:var(--ink);font-weight:650;text-decoration:underline;text-decoration-color:var(--nv-green);text-decoration-thickness:2px;text-underline-offset:4px}
 .ack-list a:hover{color:var(--nv-green-dark)}
 .ack-role{color:var(--muted);font-size:.98rem;line-height:1.55}
+.article-figure.showcase video{display:block;width:100%;height:auto;aspect-ratio:1920/888;background:#050705}
 footer{display:flex;align-items:center;justify-content:space-between;gap:24px;width:min(1180px,100% - 48px);min-height:92px;margin:0 auto;border-top:1px solid var(--line);color:var(--quiet);font-family:var(--mono);font-size:.67rem;letter-spacing:.08em;text-transform:uppercase}
 footer a{text-decoration:none}
 footer a:hover{color:var(--nv-green-dark)}
@@ -146,6 +171,9 @@ footer a:hover{color:var(--nv-green-dark)}
   .article-prose h2[data-section-index]::after{left:22px;width:18px}
 }
 @media (max-width:900px){
+  .hero-split{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "demo" "copy"}
+  .hero-heading{white-space:normal}
+  .hero-split .lede{max-width:none}
   .hero-stage{grid-template-columns:minmax(0,1fr);padding-left:0}
   .hero-visual{margin-top:8px}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -155,6 +183,8 @@ footer a:hover{color:var(--nv-green-dark)}
 @media (max-width:720px){
   html{scroll-padding-top:76px}
   .header-inner,.hero,.article-shell,.stats,.demo,.credits,footer{width:min(100% - 32px,1180px)}
+  .hero-split{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "demo" "copy";gap:20px;padding-top:28px}
+  .hero-heading{white-space:normal;font-size:1.55rem}
   .credits-row{grid-template-columns:minmax(0,1fr);gap:10px}
   .credits-name:not(:last-child)::after{margin:0 9px}
   .credits{padding:28px 22px}
@@ -185,27 +215,21 @@ footer a:hover{color:var(--nv-green-dark)}
 </head>
 <body>
 <a class="skip-link" href="#content">Skip to content</a>
-<header class="site-header"><div class="header-inner"><a class="brand" href="./" aria-label="StreamRender-H3 home"><span class="brand-parent">Sol-Engine</span><span class="brand-sep">/</span><span>StreamRender-H3</span></a><nav aria-label="Article navigation"><a href="#why-separate-world-logic-from-visual-generation">Motivation</a><a href="#overall-architecture-code-game-engine-streaming-diffusion-render">Architecture</a><a href="#3-1-streaming-diffusion-render">Renderer</a><a href="#3-2-fast-causal-h3-vae-self-improving-the-streaming-decoder-with-agent-loops">VAE</a><a href="#3-3-inference-acceleration-and-end-to-end-deployment">Inference</a></nav></div></header>
+<header class="site-header"><div class="header-inner"><a class="brand" href="./" aria-label="StreamRender-H3 home"><span class="brand-parent">Sol-Engine</span><span class="brand-sep">/</span><span>StreamRender-H3</span></a><nav aria-label="Article navigation"><a href="#why-separate-world-logic-from-visual-generation">Motivation</a><a href="#overall-architecture-code-game-engine-streaming-diffusion-render">Architecture</a><a href="#3-1-streaming-diffusion-render">Renderer</a><a href="#3-2-fast-causal-h3-vae-self-improving-the-streaming-decoder-with-agent-loops">VAE</a><a href="#3-3-inference-acceleration-and-end-to-end-deployment">Inference</a><a href="#current-limitations-and-future-directions">Limitations</a></nav></div></header>
 <main id="content"><article>
-<section class="hero" aria-labelledby="project-title"><div class="hero-stage">
-<div class="hero-copy"><p class="eyebrow">Sol-Engine · Research blog</p><h1 id="project-title"><span class="hero-project-name">StreamRender-H3</span><span class="hero-title-rest">Interactive Coding Worlds with Real-time Streaming Diffusion Render</span></h1>
+<section class="intro" aria-label="StreamRender-H3 teaser">
+<div class="intro-stick"><figure class="teaser-card"><img src="assets/teaser.webp" alt="StreamRender-H3: one race car shown half as the coded world (semantic map, wireframe and code) and half as the rendered frame. World = Code + Diffusion Render." width="1672" height="941" fetchpriority="high"></figure>
+<a class="intro-cue" href="#overview" aria-label="Scroll to the article"><span>Scroll</span><i aria-hidden="true"></i></a></div>
+</section>
+<section class="hero hero-split" id="overview" aria-labelledby="project-title">
+<div class="hero-head"><p class="eyebrow">Sol-Engine · Research blog</p>
+<h1 id="project-title" class="hero-heading">Interactive Coding Worlds with Real-time Streaming Diffusion Render</h1></div>
+<div class="hero-copy">
 <p class="lede">Code drives the world, video models generate the visuals. A code game engine keeps the world state, and a two-step streaming video model renders it as the player drives.</p>
-<div class="hero-resources" role="group" aria-label="Project resources"><a class="hero-resource" href="../"><span class="hero-resource-primary">Sol-Engine</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a><a class="hero-resource" href="../Sol-H3/"><span class="hero-resource-primary">Sol-H3</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a></div></div>
-<figure class="hero-visual" aria-label="One semantic stream from the engine rendered live in several looks">
-<video class="hv-atlas" src="assets/hero-atlas.mp4" poster="assets/hero-atlas-poster.webp" muted loop playsinline autoplay preload="auto" aria-hidden="true"></video>
-<div class="hv-grid">
-<div class="hv-col"><div class="hv-tile hv-source"><canvas data-cell="0" width="640" height="366" role="img" aria-label="Semantic map drawn by the racing engine"></canvas><span>Engine · semantic map</span></div></div>
-<div class="hv-arrow" aria-hidden="true">Render</div>
-<div class="hv-col">
-<div class="hv-tile"><canvas data-slot="0" width="640" height="366" role="img" aria-label="The same stream rendered with one reference image"></canvas><span>Reference · <b data-name="0">Dusk</b></span><i class="hv-swap" data-swap="0">New reference image</i></div>
-<div class="hv-tile"><canvas data-slot="1" width="640" height="366" role="img" aria-label="The same stream rendered with another reference image"></canvas><span>Reference · <b data-name="1">Snow</b></span><i class="hv-swap" data-swap="1">New reference image</i></div>
-</div></div>
-<figcaption class="hv-label"><span>Racing demo · one drive</span><span>Same semantic stream · only the reference image changes</span></figcaption>
-</figure>
-</div></section>
-<section class="demo" aria-labelledby="demo-title">
-<figure class="demo-media"><video controls playsinline preload="metadata" poster="assets/demo-poster.webp" width="1920" height="1080" aria-describedby="demo-caption"><source src="assets/streamrender-h3-demo.mp4" type="video/mp4"></video>
-<figcaption id="demo-caption"><strong id="demo-title">Demo</strong> StreamRender-H3 in the racing demo · 1080p, 62 s, with sound</figcaption></figure>
+<div class="hero-resources" role="group" aria-label="Project resources"><a class="hero-resource" href="#demo-title"><span class="hero-resource-primary">Watch the demo</span><span class="hero-resource-arrow" aria-hidden="true">→</span></a><a class="hero-resource" href="../"><span class="hero-resource-primary">Sol-Engine</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a><a class="hero-resource" href="../Sol-H3/"><span class="hero-resource-primary">Sol-H3</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a></div>
+</div>
+<div class="hero-demo demo" id="demo"><figure class="demo-media"><video controls playsinline preload="metadata" poster="assets/demo-poster.webp" width="1920" height="1080" aria-describedby="demo-caption"><source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/StreamRender-H3/blog-assets/streamrender-h3-demo-71s.mp4" type="video/mp4"></video>
+<figcaption id="demo-caption"><strong id="demo-title">Demo</strong> StreamRender-H3 in the racing demo · 1080p, 71 s, with sound</figcaption></figure></div>
 </section>
 <section class="stats" aria-label="Key numbers">
 <div class="stat"><span class="stat-value">2<small>steps</small></span><span class="stat-label">Denoising steps per chunk in the deployed generator</span></div>
@@ -218,6 +242,17 @@ footer a:hover{color:var(--nv-green-dark)}
 <p>An interactive world must determine how player actions change its state and how those changes appear on screen. World logic governs maps, physics, rules, and object states. Visual generation determines appearance, materials, lighting, and style. Game engines already separate these responsibilities, and video models offer a new way to produce the visuals.</p>
 <p>World logic requires explicit, controllable state. Road positions should be queryable, collisions should follow executable rules, and revisiting a location should return the same map. Code directly represents and maintains this information, allowing developers to modify rules, debug behavior, and reproduce interactions. Video models can use reference conditions to give the same scene structure and motion different appearances.</p>
 <p>StreamRender-H3 separates these responsibilities between a <strong>Code Game Engine</strong> and a <strong>Streaming Diffusion Render</strong>. The engine maintains world state and responds to player input, while the video model continuously generates the visuals. An intermediate state representation connects the two. This preserves control over the world while enabling flexible, high-fidelity visuals without relying on a traditional 3D pipeline for final rendering.</p>
+<div class="section-visual"><figure class="hero-visual" aria-label="One semantic stream from the engine rendered live in several looks">
+<video class="hv-atlas" src="assets/hero-atlas.mp4" poster="assets/hero-atlas-poster.webp" muted loop playsinline autoplay preload="auto" aria-hidden="true"></video>
+<div class="hv-grid">
+<div class="hv-col"><div class="hv-tile hv-source"><canvas data-cell="0" width="640" height="366" role="img" aria-label="Intermediate state representation emitted by the code game engine"></canvas><span>State representation · from code</span></div></div>
+<div class="hv-arrow" aria-hidden="true">Render</div>
+<div class="hv-col">
+<div class="hv-tile"><canvas data-slot="0" width="640" height="366" role="img" aria-label="The same stream rendered with one reference image"></canvas><span>Diffusion render · <b data-name="0">Dusk</b></span><i class="hv-swap" data-swap="0">New reference image</i></div>
+<div class="hv-tile"><canvas data-slot="1" width="640" height="366" role="img" aria-label="The same stream rendered with another reference image"></canvas><span>Diffusion render · <b data-name="1">Snow</b></span><i class="hv-swap" data-swap="1">New reference image</i></div>
+</div></div>
+<figcaption class="hv-label"><span>Real output · one drive</span><span>Same state stream · only the reference image changes</span></figcaption>
+</figure></div>
 <h2 id="overall-architecture-code-game-engine-streaming-diffusion-render" data-section-index="02">Overall Architecture: Code Game Engine × Streaming Diffusion Render</h2>
 <h3 id="2-1-code-game-engine-maps-physics-and-interaction-feedback"><span class="h-num">2.1</span>Code Game Engine: Maps, Physics, and Interaction Feedback</h3>
 <p>The Code Game Engine maintains every part of the world that code can state exactly. Throughout this post we use a racing game as the running demo. It serves only as an example, and nothing in the design is specific to racing. In the racing demo, the engine is a browser game written in three.js. In general, the engine keeps three kinds of information.</p>
@@ -292,6 +327,10 @@ footer a:hover{color:var(--nv-green-dark)}
 <p>Together, these optimizations deliver real-time rendering across multiple GPUs, making interactive, real-time streaming video possible for users.</p>
 <figure class="article-figure wide"><a class="figure-open" href="assets/cumulative_dit_ablation.svg" target="_blank" rel="noreferrer" aria-label="Open full-size figure"><img src="assets/cumulative_dit_ablation.svg" alt="Cumulative two-NFE DiT inference ablation on eight GB200 GPUs, with optimized streaming encoder and decoder fixed across all stages" loading="lazy" decoding="async"/></a><figcaption>Cumulative two-NFE DiT inference ablation on eight GB200 GPUs, with optimized streaming encoder and decoder fixed across all stages</figcaption></figure>
 <figure class="article-figure wide"><a class="figure-open" href="assets/streaming_render_latency_v6.svg" target="_blank" rel="noreferrer" aria-label="Open full-size figure"><img src="assets/streaming_render_latency_v6.svg" alt="Streaming render latency: reference encoding, two-step render and causal video decoding" loading="lazy" decoding="async"/></a><figcaption>Warm renderer stage timings: reference encoding and two-step render use the latest cumulative optimized run (P50), with internal GPU communication included; causal video decoding uses the latest 23.8 ms update. Stage medians are reported independently. <a href="assets/streaming_render_latency_v6.json">Measurement details</a>.</figcaption></figure>
+<figure class="article-figure wide showcase"><video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/StreamRender-H3/blog-assets/showcase-20-drives.mp4" poster="assets/showcase-poster.webp" muted loop playsinline autoplay preload="metadata" width="1920" height="888" aria-label="Twenty racing drives rendered at once by StreamRender-H3"></video><figcaption>Twenty drives rendered by StreamRender-H3 at once, each on its own track, look, and car livery. One minute, no sound.</figcaption></figure>
+<h2 id="current-limitations-and-future-directions" data-section-index="04">Current Limitations and Future Directions</h2>
+<p><strong>One scenario so far.</strong> Everything reported here comes from the racing demo. The renderer, the two-step student, and the critics are trained only on racing data, with a third-person camera behind the player&#x27;s car. The test drives come from the same game, so the models are fitted to this one scenario. The interface itself is not tied to racing, since any engine that can paint its scene with one flat color per class can drive the renderer. Covering more games and scenes, and measuring how much new data each one needs, is the next step.</p>
+<p><strong>A smaller, faster, sharper renderer.</strong> The streaming render still uses the full MiniMax-H3 DiT on eight GPUs. Reducing its parameter count, lowering the cost of each streaming step further, and improving the visual quality of the rendered video are the other directions we are pursuing.</p>
 </div></section>
 <section class="credits" id="credits" aria-labelledby="credits-title">
 <p class="credits-kicker">Credits</p>
@@ -361,6 +400,20 @@ io.observe(document.querySelector('.hero-visual'));if(reduce.matches)v.pause();}
 </script>
 <script>
 document.querySelectorAll('.cite-copy').forEach(b=>b.addEventListener('click',async()=>{const t=document.getElementById(b.dataset.copyTarget).textContent;try{await navigator.clipboard.writeText(t);b.textContent='Copied'}catch(e){const r=document.createRange();r.selectNodeContents(document.getElementById(b.dataset.copyTarget));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);b.textContent='Press ⌘C'}setTimeout(()=>b.textContent='Copy all BibTeX',1800)}));
+</script>
+<script>
+(()=>{const card=document.querySelector('.teaser-card'),cue=document.querySelector('.intro-cue'),copy=document.querySelector('.hero-split .hero-copy');
+if(!card)return;const mq=matchMedia('(max-width:720px),(prefers-reduced-motion:reduce)');let raf=0;
+function apply(){raf=0;
+ if(mq.matches){for(const el of [card,cue,copy]){if(el){el.style.transform=el.style.opacity=''}}return}
+ const h=card.offsetHeight||1,p=Math.min(1,Math.max(0,scrollY/(h*.8))),e=p*p*(3-2*p);
+ card.style.transform=`scale(${1-e*.08})`;card.style.opacity=String(1-e*.55);
+ if(cue)cue.style.opacity=String(Math.max(0,1-p*3));
+ if(copy)copy.style.opacity=String(.35+.65*Math.min(1,p*1.6))}
+const req=()=>{if(!raf)raf=requestAnimationFrame(apply)};addEventListener('scroll',req,{passive:true});addEventListener('resize',req);mq.addEventListener?.('change',req);apply();})();
+</script>
+<script>
+(()=>{const v=document.querySelector(".showcase video");if(!v)return;const r=matchMedia("(prefers-reduced-motion: reduce)");if(!("IntersectionObserver" in window))return;new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!r.matches)v.play().catch(()=>{});else v.pause()}),{threshold:.2}).observe(v);if(r.matches)v.pause()})();
 </script>
 </body>
 </html>

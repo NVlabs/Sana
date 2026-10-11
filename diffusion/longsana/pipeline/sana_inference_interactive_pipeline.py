@@ -3,6 +3,7 @@ from typing import List, Optional
 import torch
 from einops import rearrange
 
+from diffusion.longsana.utils.distributed import get_current_device, get_default_dtype
 from diffusion.model.nets.basic_modules import CachedGLUMBConvTemp
 from diffusion.model.nets.sana_blocks import CachedCausalAttention
 
@@ -30,8 +31,8 @@ class SanaInferenceInteractivePipeline:
             self.model_device = p.device
             self.model_dtype = p.dtype
         except Exception:
-            self.model_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            self.model_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+            self.model_device = get_current_device()
+            self.model_dtype = get_default_dtype()
 
         # cache helpers
         self.cached_modules = None

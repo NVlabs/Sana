@@ -40,6 +40,10 @@ import torch
 import triton
 import triton.language as tl
 
+# Triton on ROCm accepts only "ieee" / "bf16x3" / "bf16x6" for tl.dot(input_precision=...);
+# "tf32" is CUDA-only, so every TF32 request resolves through this constant.
+TF32_INPUT_PRECISION = tl.constexpr("tf32" if torch.version.cuda is not None else "ieee")
+
 _CAM_IDENTITY_CACHE: dict[
     tuple[str, int | None, int, int, int], tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 ] = {}
@@ -336,7 +340,7 @@ def _phase_a_kv_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     pid_b = pid // (H * F)
@@ -449,7 +453,7 @@ def _phase_a_z_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     pid_b = pid // (H * F)
@@ -666,7 +670,7 @@ def _phase_b_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     bh = pid
@@ -970,7 +974,7 @@ def _phase_b_dtile_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     pid_bh = tl.program_id(0)
     pid_d = tl.program_id(1)
@@ -1195,7 +1199,7 @@ def _phase_c_kernel(
         dot_dtype = tl.float32
     else:
         dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else "tf32"
+    dot_ip: tl.constexpr = "ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     pid_b = pid // (H * F)

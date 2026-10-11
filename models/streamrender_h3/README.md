@@ -3,22 +3,7 @@
 An end-to-end runtime connecting a controllable Three.js game engine to a
 resident, multi-GPU H3 streaming renderer and browser video feedback.
 
-```text
-player controls -> game engine -> semantic RGB frames
-    -> streaming TAE encoder -> two full H3 denoising evaluations
-    -> fast causal ViT24 decoder -> streaming RGB feedback in the browser
-```
-
-## Implementation and validation status
-
-- The engine, online worker, ordered frame protocol, bounded queues, session
-  reset, and browser feedback client are included here.
-- CPU protocol/configuration tests and the frontend production build pass.
-- The package-local H3 imports pass in the production Python environment.
-- The actual same-rack 8-GB200 browser/H3 loop passed in job **7848438**.
-  Final clean-exit verification **7848537** completed successfully (exit 0).
-- This runtime has its own entry point; it is not a SGLang `scripts/run.py`
-  model adapter. It can be launched independently from this model folder.
+[![Session setup and the interaction loop from player input to streaming video feedback](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/assets/interaction_loop.webp)](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/#2-3-a-real-time-interaction-loop-from-player-input-to-video-feedback)
 
 ## Runtime profile
 
@@ -120,15 +105,6 @@ creation/editing is a setup asset-production step: provide its finished image
 in the manifest, then the worker encodes it once at session start. An image
 generation API is not required during the interaction loop.
 
-The current step224 merged backbone has SHA256:
-
-```text
-56c3ee3270db40354ef70fcbea16248809914cfa8f51acb57dae7d30fa4bb597
-```
-
-The runtime accepts paths relative to the manifest's directory as well as
-absolute paths. `*.local.json`, weights, outputs and caches are Git-ignored.
-
 ## Environment
 
 Use Python 3.11 and a compatible CUDA PyTorch installation. The production
@@ -204,34 +180,6 @@ ssh -J hsg -L 5191:127.0.0.1:5191 GPU_NODE
 Then open `http://127.0.0.1:5191` locally. Another site can use its equivalent
 SSH tunnel or an authenticated reverse proxy. Both services default to
 loopback; do not expose this development endpoint publicly.
-
-## Validation and timing boundaries
-
-```bash
-PYTHONPATH="$PWD/models/streamrender_h3" python -m unittest discover \
-  -s models/streamrender_h3/tests -v
-```
-
-Set `VALIDATE_BROWSER=1` when submitting the Slurm launcher to run a headless
-browser producing real game-engine frames and consuming rendered feedback.
-Provide `NODE_BIN` and, when necessary, `CHROMIUM_BIN`.
-This validation run exits after completion. Normal workers stay resident.
-
-Per-session output is written under `outputs/SESSION_ID/`:
-
-- `controls.jsonl`: frame-indexed actions, simulation state and chunk pairing.
-- `timings.jsonl`: chunk encode/render/decode, GPU RGB readiness, wall time
-  and publication intervals.
-
-There are no stage-level forced synchronizations; readiness is synchronized
-once at the chunk boundary. GPU RGB-ready timing excludes input PNG transport,
-PNG decode, H2D/resize, JPEG encoding and browser/network display.
-Publication intervals include waiting and host-side work between chunks;
-they are a different metric. The browser loop includes those transport
-operations and must be evaluated separately.
-
-An RGB-ready speed quoted for an older checkpoint/runner is not a performance
-claim for this newly integrated worker.
 
 ## Provenance and licenses
 

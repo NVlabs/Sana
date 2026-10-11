@@ -169,6 +169,11 @@ nav::-webkit-scrollbar{display:none}
 .article-prose pre,.cite-window pre{max-width:100%}
 .cite-window{max-width:100%}
 .showcase-title{scroll-margin-top:96px}
+.hv-pip{position:absolute;right:10px;bottom:10px;z-index:2;width:30%;margin:0;border:2px solid #fff;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.35);background:#0d120d}
+.hv-pip canvas{display:block;width:100%;height:auto;aspect-ratio:640/366}
+.hv-pip{overflow:visible}
+.hv-pip canvas{border-radius:4px}
+.hv-pip figcaption{position:absolute;left:0;bottom:calc(100% + 4px);margin:0;padding:2px 6px;border-radius:3px;background:rgba(16,17,20,.78);color:#fff;font-family:var(--mono);font-size:.52rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 footer{display:flex;align-items:center;justify-content:space-between;gap:24px;width:min(1180px,100% - 48px);min-height:92px;margin:0 auto;border-top:1px solid var(--line);color:var(--quiet);font-family:var(--mono);font-size:.67rem;letter-spacing:.08em;text-transform:uppercase}
 footer a{text-decoration:none}
 footer a:hover{color:var(--nv-green-dark)}
@@ -250,10 +255,11 @@ footer a:hover{color:var(--nv-green-dark)}
 <p>An interactive world must determine how player actions change its state and how those changes appear on screen. World logic governs maps, physics, rules, and object states. Visual generation determines appearance, materials, lighting, and style. Game engines already separate these responsibilities, and video models offer a new way to produce the visuals.</p>
 <p>World logic requires explicit, controllable state. Road positions should be queryable, collisions should follow executable rules, and revisiting a location should return the same map. Code directly represents and maintains this information, allowing developers to modify rules, debug behavior, and reproduce interactions. Video models can use reference conditions to give the same scene structure and motion different appearances.</p>
 <p>StreamRender-H3 separates these responsibilities between a <strong>Code Game Engine</strong> and a <strong>Streaming Diffusion Render</strong>. The engine maintains world state and responds to player input, while the video model continuously generates the visuals. An intermediate state representation connects the two. This preserves control over the world while enabling flexible, high-fidelity visuals without relying on a traditional 3D pipeline for final rendering.</p>
+<p><a href="https://www.nvidia.com/en-us/geforce/news/dlss5-breakthrough-in-visual-fidelity-for-games/" target="_blank" rel="noreferrer">NVIDIA DLSS 5</a> pioneered this direction in games: a real-time neural rendering model that takes the color and motion vectors of each rendered frame and adds photoreal lighting and materials, anchored to the source 3D content and consistent from frame to frame. StreamRender-H3 follows the same idea of generative rendering on top of a game engine and pushes it one step further. The engine hands the video model only a semantic map, so the model generates the full appearance of every frame, and a reference image and a prompt can change that appearance completely.</p>
 <div class="section-visual"><figure class="hero-visual" aria-label="One semantic stream from the engine rendered live in several looks">
 <video class="hv-atlas" src="assets/hero-atlas.mp4" poster="assets/hero-atlas-poster.webp" muted loop playsinline autoplay preload="auto" aria-hidden="true"></video>
 <div class="hv-grid">
-<div class="hv-col"><div class="hv-tile hv-source"><canvas data-cell="0" width="640" height="366" role="img" aria-label="Intermediate state representation emitted by the code game engine"></canvas><span>State representation · from code</span></div></div>
+<div class="hv-col"><div class="hv-tile hv-source"><canvas data-cell="0" width="640" height="366" role="img" aria-label="Intermediate state representation emitted by the code game engine"></canvas><figure class="hv-pip"><canvas data-cell="torcs" width="640" height="366" role="img" aria-label="The same frame as drawn by the TORCS game engine"></canvas><figcaption>Original game</figcaption></figure><span>State representation · from code</span></div></div>
 <div class="hv-arrow" aria-hidden="true">Render</div>
 <div class="hv-col">
 <div class="hv-tile"><canvas data-slot="0" width="640" height="366" role="img" aria-label="The same stream rendered with one reference image"></canvas><span>Diffusion render · <b data-name="0">Dusk</b></span><i class="hv-swap" data-swap="0">New reference image</i></div>
@@ -350,6 +356,7 @@ footer a:hover{color:var(--nv-green-dark)}
 <ul class="ack-list">
 <li><a class="ack-entity" href="../" target="_blank" rel="noopener noreferrer">Sol-Engine</a><span class="ack-role">Inference stack for the streaming render and its acceleration.</span></li>
 <li><a class="ack-entity" href="https://github.com/NVlabs/SoL-Pi" target="_blank" rel="noopener noreferrer">SoL-Pi</a><span class="ack-role">Main coding agent used throughout the development of the streaming renderer.</span></li>
+<li><a class="ack-entity" href="https://www.nvidia.com/en-us/geforce/news/dlss5-breakthrough-in-visual-fidelity-for-games/" target="_blank" rel="noopener noreferrer">NVIDIA DLSS 5</a><span class="ack-role">Pioneering real-time generative rendering on top of game engines.</span></li>
 <li><a class="ack-entity" href="https://huggingface.co/MiniMaxAI/MiniMax-H3" target="_blank" rel="noopener noreferrer">MiniMax</a><span class="ack-role">MiniMax-H3 Ref2VA open weights and code, the base of the streaming renderer and the H3 VAE.</span></li>
 <li><a class="ack-entity" href="https://arxiv.org/abs/2609.15863" target="_blank" rel="noopener noreferrer">LynnReal-Omni</a><span class="ack-role">Streaming window with sink and recent history, and guidance fitting extended here to structure control.</span></li>
 <li><a class="ack-entity" href="https://arxiv.org/abs/2509.22622" target="_blank" rel="noopener noreferrer">LongLive</a><span class="ack-role">Frame sink and streaming long tuning that our streaming DMD distillation follows.</span></li>
@@ -388,10 +395,10 @@ footer a:hover{color:var(--nv-green-dark)}
 </script>
 <script>
 (()=>{const v=document.querySelector('.hv-atlas');if(!v)return;
-const W=640,H=366,cells={sem:[0,0],dusk:[1,0],snow:[2,0],autumn:[1,1],rain:[2,1]};
+const W=640,H=366,cells={sem:[0,0],torcs:[0,1],dusk:[1,0],snow:[2,0],autumn:[1,1],rain:[2,1]};
 const pairs=[['dusk','snow'],['autumn','rain']],names={dusk:'Dusk',snow:'Snow',autumn:'Autumn',rain:'Rain at night'};
 const PERIOD=7,WIPE=1.1,STAGGER=.25,LEAD=WIPE+STAGGER+.35;
-const sem=document.querySelector('canvas[data-cell="0"]').getContext('2d'),semTile=document.querySelector('.hv-source');
+const sem=document.querySelector('canvas[data-cell="0"]').getContext('2d'),pipc=document.querySelector('canvas[data-cell="torcs"]'),pip=pipc&&pipc.getContext('2d'),semTile=document.querySelector('.hv-source');
 const slots=[...document.querySelectorAll('canvas[data-slot]')].map(c=>c.getContext('2d'));
 const labels=[...document.querySelectorAll('b[data-name]')],badges=[...document.querySelectorAll('.hv-swap')];
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
@@ -399,12 +406,12 @@ const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
 function blit(ctx,key,x0,x1){const [cx,cy]=cells[key];if(x1<=x0)return;ctx.drawImage(v,cx*W+x0,cy*H,x1-x0,H,x0,0,x1-x0,H)}
 function edge(ctx,x){const g=ctx.createLinearGradient(x-26,0,x+2,0);g.addColorStop(0,'rgba(118,185,0,0)');g.addColorStop(1,'rgba(118,185,0,.45)');ctx.fillStyle=g;ctx.fillRect(x-26,0,28,H);ctx.fillStyle='#a7ff2e';ctx.fillRect(x-1.5,0,3,H)}
 let raf=0;function draw(){if(v.readyState>=2){const t=v.currentTime,k=Math.floor(t/PERIOD),ph=t-k*PERIOD,start=PERIOD-LEAD;
-const cur=pairs[k%2],nxt=pairs[(k+1)%2];blit(sem,'sem',0,W);let any=false;
+const cur=pairs[k%2],nxt=pairs[(k+1)%2];blit(sem,'sem',0,W);if(pip)blit(pip,'torcs',0,W);let any=false;
 slots.forEach((ctx,i)=>{const p=Math.max(0,Math.min(1,(ph-start-i*STAGGER)/WIPE)),x=Math.round(ease(p)*W);
 blit(ctx,nxt[i],0,x);blit(ctx,cur[i],x,W);if(p>0&&p<1)edge(ctx,x);
 const active=ph>=start+i*STAGGER-.15&&p<1;badges[i].classList.toggle('on',active);any=any||active;
 labels[i].textContent=names[p>=.5?nxt[i]:cur[i]]});semTile.classList.toggle('hold',any);
-const d=v.duration||14,FD=.3,dim=t<FD?1-t/FD:t>d-FD?1-(d-t)/FD:0;if(dim>0)[sem,...slots].forEach(ctx=>{ctx.fillStyle=`rgba(5,7,5,${dim})`;ctx.fillRect(0,0,W,H)})}
+const d=v.duration||14,FD=.3,dim=t<FD?1-t/FD:t>d-FD?1-(d-t)/FD:0;if(dim>0)[sem,...(pip?[pip]:[]),...slots].forEach(ctx=>{ctx.fillStyle=`rgba(5,7,5,${dim})`;ctx.fillRect(0,0,W,H)})}
 raf=v.paused?0:requestAnimationFrame(draw)}
 v.addEventListener('play',()=>{if(!raf)raf=requestAnimationFrame(draw)});v.addEventListener('seeked',draw);v.addEventListener('loadeddata',draw);
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!reduce.matches)v.play().catch(()=>{});else v.pause()}),{threshold:.15});

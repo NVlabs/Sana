@@ -105,6 +105,53 @@ creation/editing is a setup asset-production step: provide its finished image
 in the manifest, then the worker encodes it once at session start. An image
 generation API is not required during the interaction loop.
 
+## Upstream runtime dependencies
+
+The trained-weight release does not include unchanged upstream models.
+Download these components from their original sources:
+
+| Runtime asset | Original download source |
+| --- | --- |
+| Qwen3-VL conditioning weights/config (`qwen_model`) | [MiniMax-H3 / Ref2VA/text_encoder](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/text_encoder) — the H3-compatible conditioning checkpoint |
+| Tokenizer (`tokenizer`) | [MiniMax-H3 / Ref2VA/tokenizer](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/tokenizer) |
+| Image/text processor (`qwen_processor`) | [MiniMax-H3 / Ref2VA/processor](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/processor) |
+| Native H3 video VAE (`native_vae`) | [MiniMax-H3 / Ref2VA/video_vae/source](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/video_vae/source) — `model.safetensors`, used for decoder construction |
+| Native H3 audio VAE (`audio_vae`) | [MiniMax-H3 / Ref2VA/audio_vae](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/audio_vae) — `model.safetensors` |
+| Official H3 TAE (`tae`) | [TAeHV / taeh3.pth](https://github.com/madebyollin/taehv/blob/62f7591f59dfbb4c3c02b7a621d180a9eeaba26c/taeh3.pth) — official GitHub release; no official HF model repository was verified |
+
+The [Qwen3-VL upstream model](https://huggingface.co/Qwen/Qwen3-VL-32B-Instruct)
+is the upstream architecture. For this runtime, use the H3-distributed
+`Ref2VA/text_encoder` checkpoint above rather than assuming another Qwen
+checkpoint is interchangeable.
+
+`qwen_dcp` is a PyTorch distributed-checkpoint representation of those
+conditioning weights, not a separate model. The current runtime loader
+requires a compatible local DCP conversion; the public upstream HF download
+provides safetensors, not the local DCP directory. Do not point
+`qwen_dcp` at the safetensors directory.
+
+Download the H3 dependencies without its original transformer weights:
+
+```python
+from huggingface_hub import snapshot_download
+snapshot_download(
+    "MiniMaxAI/MiniMax-H3", local_dir="./MiniMax-H3",
+    allow_patterns=["Ref2VA/text_encoder/*", "Ref2VA/tokenizer/*",
+                    "Ref2VA/processor/*", "Ref2VA/video_vae/*",
+                    "Ref2VA/audio_vae/*"],
+)
+```
+
+Download the verified official TAE weights:
+
+```bash
+curl -fL -o taeh3_official.pth \
+  https://raw.githubusercontent.com/madebyollin/taehv/62f7591f59dfbb4c3c02b7a621d180a9eeaba26c/taeh3.pth
+```
+
+Fill the corresponding paths in the runtime asset manifest. These links
+identify external dependencies; they do not add their weights to this release.
+
 ## Environment
 
 Use Python 3.11 and a compatible CUDA PyTorch installation. The production

@@ -87,7 +87,10 @@ def main():
                     if errors:
                         raise errors[0]
                     response = requests.post(f'{server}/frame/{session}/{sent}', data=payload.getvalue(),
-                                             headers={'Content-Type': 'image/png'}, timeout=60)
+                                             headers={'Content-Type': 'image/png',
+                                                      'X-Controls': json.dumps({'frame': sent,
+                                                                               'source': 'prerecorded',
+                                                                               'example': row['name']})}, timeout=60)
                     if response.status_code != 429:
                         response.raise_for_status()
                         break

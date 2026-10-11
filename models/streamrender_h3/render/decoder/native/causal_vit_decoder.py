@@ -40,6 +40,49 @@ PATCH, PATCH_T, OUT_CH = 16, 4, 3
 
 
 class CausalViTDecoder(nn.Module):
+    @classmethod
+    def from_config(cls, config, *, window=16, chunk=2, cache_latents=4,
+                    shift=True, time_norm=7.0, frames_to_trim=3, block_latents=5):
+        """Construct only the student architecture, without a VAE or teacher weights.
+
+        Parameters start on meta and must be filled with a strict, assign=True
+        checkpoint load. Nonpersistent statistics and RoPE buffers are built
+        on CPU because they are not supplied by the student state dictionary.
+        """
+        from dev.yanzuolu.projects.minimax_h3.modeling.video_vae.vae_vit import ViT3DDecoder
+        from dev.yanzuolu.projects.minimax_h3.modeling.video_vae.base_module import RotaryEmbeddingND
+
+        kwargs = dict(config['decoder_kwargs'])
+        if kwargs.get('patch_size', PATCH) != PATCH or kwargs.get('patch_size_t', PATCH_T) != PATCH_T:
+            raise ValueError('Student checkpoint requires 16-pixel / 4-frame patches')
+        model = cls.__new__(cls)
+        nn.Module.__init__(model)
+        with torch.device('meta'):
+            dec = ViT3DDecoder(**kwargs)
+            model.post_quant_conv = nn.Conv3d(config['embed_dim'], kwargs['in_channels'], 1)
+        model.keep_layers = list(config.get('keep_layers', range(kwargs['num_layers'])))
+        if len(model.keep_layers) != kwargs['num_layers']:
+            raise ValueError('keep_layers must describe every student layer')
+        model.window, model.chunk, model.cache_latents, model.shift = window, chunk, cache_latents, shift
+        model.time_norm, model.frames_to_trim, model.block_latents = time_norm, frames_to_trim, block_latents
+        model.x_embedder = dec.x_embedder
+        model.register_tokens = dec.register_tokens
+        model.blocks = dec.transformer_blocks
+        model.norm_out, model.proj_out = dec.norm_out, dec.proj_out
+        model.pos_embed = RotaryEmbeddingND(
+            int(kwargs['dim_head'] * kwargs['rope_dim_ratio']), kwargs['rope_theta'],
+            n_dim=3, use_angle=True)
+        model.heads, model.dh = kwargs['heads'], kwargs['dim_head']
+        for name in ('latents_mean', 'latents_std'):
+            value = torch.tensor(config[name], dtype=torch.float32)
+            if value.numel() != config['embed_dim']:
+                raise ValueError(f'{name} does not match latent channels')
+            if name == 'latents_std' and not bool((value > 0).all()):
+                raise ValueError('latents_std must be positive')
+            model.register_buffer(name, value, persistent=False)
+        model.pos_embed.requires_grad_(False)
+        return model
+
     def __init__(self, vae, keep_layers, *, window: int = 16, chunk: int = 2, cache_latents: int = 4,
                  shift: bool = True, time_norm: float = 7.0, frames_to_trim: int = 3, block_latents: int = 5):
         super().__init__()

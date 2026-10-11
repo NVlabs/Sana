@@ -76,26 +76,29 @@ class _CausalViTStream:
 class CausalViTVideoDecoder(nn.Module):
     video_temporal_mapping = H3_VIDEO_TEMPORAL_MAPPING          # read on the class by the meta model
 
-    def __init__(self, vae_config: str, student_weights: str, keep_layers: list[int] | None = None,
+    def __init__(self, decoder_config: dict | str, student_weights: str,
                  chunk: int = 2, cache_latents: int = 4, cuda_graph: bool = True) -> None:
         super().__init__()
-        from dev.yanzuolu.common.config import CfgNode
-        from dev.yanzuolu.common.model import build_model
-        if isinstance(vae_config, dict):
-            cfg = vae_config
+        from dev.yanzuolu.projects.minimax_h3.modeling.video_vae.processor import VAEProcessor
+        if isinstance(decoder_config, dict):
+            cfg = decoder_config
         else:
-            with open(vae_config) as handle:
+            with open(decoder_config) as handle:
                 cfg = yaml.safe_load(handle)
-        vae = build_model("video_vae", CfgNode(cfg["models"]["video_vae"]))["model"].eval()
-        self.vit = CausalViTDecoder(vae, keep_layers or KEEP_24, chunk=chunk, cache_latents=cache_latents)
-        missing = self.vit.load_state_dict(load_file(student_weights, device="cpu"), strict=False)
-        assert not missing.missing_keys and not missing.unexpected_keys, missing
-        self.processor = vae.processor
-        self.vae_ratio, self.vae_ratio_t = vae.vae_ratio, vae.vae_ratio_t
-        assert vae.video_temporal_mapping == self.video_temporal_mapping
-        self.register_buffer("latents_mean", vae.latents_mean.detach().clone().float(), persistent=False)
-        self.register_buffer("latents_std", vae.latents_std.detach().clone().float(), persistent=False)
-        del vae
+        self.vit = CausalViTDecoder.from_config(cfg, chunk=chunk, cache_latents=cache_latents)
+        self.vit.load_state_dict(load_file(student_weights, device="cpu"), strict=True, assign=True)
+        if any(t.is_meta for t in list(self.vit.parameters()) + list(self.vit.buffers())):
+            raise RuntimeError('Student checkpoint left unmaterialized tensors')
+        self.vit.eval()
+        self.vae_ratio = cfg['decoder_kwargs']['patch_size']
+        self.vae_ratio_t = cfg['decoder_kwargs']['patch_size_t']
+        self.processor = VAEProcessor(
+            vae_ratio=self.vae_ratio, vae_ratio_t=self.vae_ratio_t,
+            clip_length=17, frame_overlap=5, token_overlap=2, tokens_chunk_size=5,
+            isolated_last_frame=False, latent_patch_size=1, crop_mode='top_left',
+            pixel_norm_type=cfg['pixel_norm_type'], use_3d_conv=True)
+        self.register_buffer("latents_mean", self.vit.latents_mean.detach().clone(), persistent=False)
+        self.register_buffer("latents_std", self.vit.latents_std.detach().clone(), persistent=False)
         self.chunk, self.block_latents, self.frames_to_trim = chunk, self.vit.block_latents, self.vit.frames_to_trim
         self.latent_chunk = chunk
         self.cuda_graph = cuda_graph

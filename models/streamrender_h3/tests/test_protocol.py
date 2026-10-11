@@ -1,4 +1,5 @@
 import queue
+import json
 import threading
 import unittest
 from runtime.server import Bridge, Session
@@ -41,7 +42,9 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(inference["models"]["backbone"]["args"]["num_layers"], 50)
         self.assertEqual(inference["diffusion"]["sampling_timesteps"]["args"]["num_sampling_steps"], 2)
         self.assertFalse(inference["meta_model"]["qwen_reference_video"])
-        self.assertIsInstance(inference["models"]["video_decoder"]["args"]["vae_config"], dict)
+        decoder = inference["models"]["video_decoder"]["args"]["decoder_config"]
+        self.assertEqual(decoder['decoder_kwargs']['num_layers'], 24)
+        self.assertNotIn('asset://native_vae', json.dumps(config))
 
 
 if __name__ == "__main__":

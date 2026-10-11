@@ -53,18 +53,19 @@ bounded; the browser retries the same frame on backpressure.
 ## Assets and initialization
 
 The public checkpoint bundle is
-[yitongl/StreamRender-H3](https://huggingface.co/yitongl/StreamRender-H3).
+[Efficient-Large-Model/StreamRender-H3](https://huggingface.co/Efficient-Large-Model/StreamRender-H3).
 Download it with the Hugging Face client in the configured Python environment:
 
 ```bash
-hf download yitongl/StreamRender-H3 --local-dir /your/code/models/StreamRender-H3
+hf download Efficient-Large-Model/StreamRender-H3 --local-dir /your/code/models/StreamRender-H3
 python /your/code/models/StreamRender-H3/download_assets.py
 ```
 
-The bundle is approximately 217 GB. The second command reconstructs the exact
+The bundle is approximately 206.87 GB. The second command reconstructs the exact
 merged backbone from its shards and verifies its SHA-256; it needs another
 66.28 GB of disk space. Other weights need no conversion. The resulting
-`assets.json` is the runtime weight manifest.
+`assets.json` is the runtime weight manifest. All five model components,
+including both Qwen storage formats, are supplied by this organization repository.
 
 **60 curated examples** are included in [`examples/`](examples/README.md).
 The default startup prompt is **B10_e-track-3_bluehour**. Semantic videos
@@ -90,12 +91,12 @@ role of each path is specified in `asset_roles`. The required assets include:
 2. Qwen model configuration, processor, tokenizer, and compatible DCP weights.
 3. Native TAE weights.
 4. Causal ViT24 decoder weights.
-5. Original H3 VAE weights used when constructing the decoder architecture.
-6. Audio VAE weights for the H3 model/codec contract.
-7. A photorealistic reference image aligned with the engine opening scene,
+5. Audio VAE weights for the H3 model/codec contract.
+6. A photorealistic reference image aligned with the engine opening scene,
    and its corresponding render prompt.
 
-The original H3 VAE is loaded for decoder construction; online reference
+The causal decoder is built directly from its configuration and trained
+weights. No original H3 video VAE checkpoint is loaded. Online reference
 encoding uses TAE and online video decoding uses the causal ViT24 implementation.
 Audio latents remain part of H3 inference, while this browser feedback path
 publishes RGB video only.
@@ -105,52 +106,6 @@ creation/editing is a setup asset-production step: provide its finished image
 in the manifest, then the worker encodes it once at session start. An image
 generation API is not required during the interaction loop.
 
-## Upstream runtime dependencies
-
-The trained-weight release does not include unchanged upstream models.
-Download these components from their original sources:
-
-| Runtime asset | Original download source |
-| --- | --- |
-| Qwen3-VL conditioning weights/config (`qwen_model`) | [MiniMax-H3 / Ref2VA/text_encoder](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/text_encoder) — the H3-compatible conditioning checkpoint |
-| Tokenizer (`tokenizer`) | [MiniMax-H3 / Ref2VA/tokenizer](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/tokenizer) |
-| Image/text processor (`qwen_processor`) | [MiniMax-H3 / Ref2VA/processor](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/processor) |
-| Native H3 video VAE (`native_vae`) | [MiniMax-H3 / Ref2VA/video_vae/source](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/video_vae/source) — `model.safetensors`, used for decoder construction |
-| Native H3 audio VAE (`audio_vae`) | [MiniMax-H3 / Ref2VA/audio_vae](https://huggingface.co/MiniMaxAI/MiniMax-H3/tree/main/Ref2VA/audio_vae) — `model.safetensors` |
-| Official H3 TAE (`tae`) | [TAeHV / taeh3.pth](https://github.com/madebyollin/taehv/blob/62f7591f59dfbb4c3c02b7a621d180a9eeaba26c/taeh3.pth) — official GitHub release; no official HF model repository was verified |
-
-The [Qwen3-VL upstream model](https://huggingface.co/Qwen/Qwen3-VL-32B-Instruct)
-is the upstream architecture. For this runtime, use the H3-distributed
-`Ref2VA/text_encoder` checkpoint above rather than assuming another Qwen
-checkpoint is interchangeable.
-
-`qwen_dcp` is a PyTorch distributed-checkpoint representation of those
-conditioning weights, not a separate model. The current runtime loader
-requires a compatible local DCP conversion; the public upstream HF download
-provides safetensors, not the local DCP directory. Do not point
-`qwen_dcp` at the safetensors directory.
-
-Download the H3 dependencies without its original transformer weights:
-
-```python
-from huggingface_hub import snapshot_download
-snapshot_download(
-    "MiniMaxAI/MiniMax-H3", local_dir="./MiniMax-H3",
-    allow_patterns=["Ref2VA/text_encoder/*", "Ref2VA/tokenizer/*",
-                    "Ref2VA/processor/*", "Ref2VA/video_vae/*",
-                    "Ref2VA/audio_vae/*"],
-)
-```
-
-Download the verified official TAE weights:
-
-```bash
-curl -fL -o taeh3_official.pth \
-  https://raw.githubusercontent.com/madebyollin/taehv/62f7591f59dfbb4c3c02b7a621d180a9eeaba26c/taeh3.pth
-```
-
-Fill the corresponding paths in the runtime asset manifest. These links
-identify external dependencies; they do not add their weights to this release.
 
 ## Environment
 

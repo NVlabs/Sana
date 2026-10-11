@@ -30,7 +30,7 @@ directory is Git-ignored. JSONL paths are relative to the model folder.
 
 ## Download weights and start a render
 
-The public checkpoint bundle is [yitongl/StreamRender-H3](https://huggingface.co/yitongl/StreamRender-H3).
+The public checkpoint bundle is [Efficient-Large-Model/StreamRender-H3](https://huggingface.co/Efficient-Large-Model/StreamRender-H3).
 Follow the environment and checkpoint-download instructions in the
 [runtime README](../README.md). After downloading the weights and running
 the bundle's `download_assets.py`, use the resulting `assets.json`:

@@ -135,7 +135,7 @@ class SanaWebDatasetMS(SanaWebDataset):
             if os.path.exists(caption_json_path):
                 try:
                     caption_json = lru_json_load(caption_json_path)
-                except:
+                except Exception:
                     caption_json = {}
                 if self.key in caption_json:
                     if self.default_prompt in caption_json[self.key]:

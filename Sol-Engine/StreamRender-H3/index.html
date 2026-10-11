@@ -226,7 +226,7 @@ footer a:hover{color:var(--nv-green-dark)}
 <h1 id="project-title" class="hero-heading">Interactive Coding Worlds with Real-time Streaming Diffusion Render</h1></div>
 <div class="hero-copy">
 <p class="lede">Code drives the world, video models generate the visuals. A code game engine keeps the world state, and a two-step streaming video model renders it as the player drives.</p>
-<div class="hero-resources" role="group" aria-label="Project resources"><a class="hero-resource" href="#demo-title"><span class="hero-resource-primary">Watch the demo</span><span class="hero-resource-arrow" aria-hidden="true">→</span></a><a class="hero-resource" href="../"><span class="hero-resource-primary">Sol-Engine</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a><a class="hero-resource" href="../Sol-H3/"><span class="hero-resource-primary">Sol-H3</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a></div>
+<div class="hero-resources" role="group" aria-label="Project resources"><a class="hero-resource" href="#demo" data-play-demo><span class="hero-resource-primary">Watch the demo</span><span class="hero-resource-arrow" aria-hidden="true">→</span></a><a class="hero-resource" href="../"><span class="hero-resource-primary">Sol-Engine</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a><a class="hero-resource" href="../Sol-H3/"><span class="hero-resource-primary">Sol-H3</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a><a class="hero-resource" href="https://github.com/NVlabs/Sana/tree/sol-engine/models/streamrender_h3" target="_blank" rel="noopener noreferrer"><span class="hero-resource-primary">Source Code</span><span class="hero-resource-arrow" aria-hidden="true">↗</span></a></div>
 </div>
 <div class="hero-demo demo" id="demo"><figure class="demo-media"><video controls playsinline preload="metadata" poster="assets/demo-poster.webp" width="1920" height="1080" aria-describedby="demo-caption"><source src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/StreamRender-H3/blog-assets/streamrender-h3-demo-71s.mp4" type="video/mp4"></video>
 <figcaption id="demo-caption"><strong id="demo-title">Demo</strong> StreamRender-H3 in the racing demo · 1080p, 71 s, with sound</figcaption></figure></div>
@@ -414,6 +414,9 @@ const req=()=>{if(!raf)raf=requestAnimationFrame(apply)};addEventListener('scrol
 </script>
 <script>
 (()=>{const v=document.querySelector(".showcase video");if(!v)return;const r=matchMedia("(prefers-reduced-motion: reduce)");if(!("IntersectionObserver" in window))return;new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!r.matches)v.play().catch(()=>{});else v.pause()}),{threshold:.2}).observe(v);if(r.matches)v.pause()})();
+</script>
+<script>
+(()=>{const a=document.querySelector("[data-play-demo]");const v=document.querySelector("#demo video");if(!a||!v)return;a.addEventListener("click",e=>{e.preventDefault();const r=v.getBoundingClientRect();const top=scrollY+r.top-Math.max(16,(innerHeight-r.height)/2);scrollTo({top,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});history.replaceState(null,"","#demo");const p=v.play();if(p&&p.catch)p.catch(()=>{v.muted=true;v.play().catch(()=>{})})})})();
 </script>
 </body>
 </html>

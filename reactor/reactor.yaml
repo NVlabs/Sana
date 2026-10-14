@@ -1,0 +1,40 @@
+$schema: reactor/v2
+
+model:
+  name: streamrender-h3
+  version: v0.2.0
+  description: Render recorded semantic videos with an aligned reference and prompt using StreamRender-H3.
+  resources:
+    gpu:
+      type: NVIDIA_B200
+      count: 4
+    cpu:
+      request: "16"
+      limit: "32"
+    memory:
+      request: 256Gi
+      limit: 768Gi
+
+runtime:
+  import: streamrender_h3:StreamRenderH3
+  weights_path: ~/.cache/reactor_registry/streamrender-h3
+
+build:
+  runtime_version: "3.8.1"
+  python_version: "3.12"
+  cuda_version: "12.8.1"
+  python_requirements: requirements.txt
+  system_packages: [git, build-essential, libgl1, libglib2.0-0]
+  run:
+    - git clone --branch sol-engine https://github.com/NVlabs/Sana.git /opt/streamrender-sana && git -C /opt/streamrender-sana checkout 62da34b14a53d7289e82fa56692f34e96e089bee
+    - pip install -r /opt/streamrender-sana/models/streamrender_h3/requirements.txt
+  runtime_env:
+    STREAMRENDER_SOURCE: /opt/streamrender-sana
+    STREAMRENDER_GPUS: "4"
+    TOKENIZERS_PARALLELISM: "false"
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    FLASH_ATTN_4_AVAILABLE: "1"
+    FLEX_FLASH_ATTN_AVAILABLE: "0"
+    H3_FA4_NUM_SPLITS: "1"
+    H3_CACHE_QUERY_CAPACITY: "12288"
+    OMP_NUM_THREADS: "8"

@@ -105,7 +105,7 @@ From weights to the Studio; [docs/install.md](docs/install.md) has every option.
    `scripts/hyperflow/e2e_comfy.py` times the same graph through ComfyUI's API.
 
 Frontend only: `python3 -m http.server` here and open `scripts/studio_preview.html` (stubbed
-backend, no GPU). The film is reproduced with [`scripts/promo/`](scripts/promo/).
+backend, no GPU).
 
 ## Layout
 
@@ -116,7 +116,7 @@ backend, no GPU). The film is reproduced with [`scripts/promo/`](scripts/promo/)
 | `sol_h3_engine/two_stage_worker.py` | Two stage: drives `Sol-H3-RTX5090` / `Sol-H3-Spark` |
 | `sol_h3_engine/runtimes/` | NVFP4 Qwen worker and the H3 four-step / 50-step baseline runtimes |
 | `web/` | Sol-H3 Studio |
-| `scripts/` | `configure.py`, checkpoint builders (`hyperflow/`), `fetch_assets.py`, gallery, film |
+| `scripts/` | `configure.py`, checkpoint builders (`hyperflow/`), `fetch_assets.py`, gallery, local runner |
 | `docs/`, `tests/` | Installation, validation, architecture, Studio design; CPU tests |
 
 ## Limitations

@@ -88,7 +88,6 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
    第一次请求会加载并编译模型，之后复用。`scripts/hyperflow/e2e_comfy.py` 可以通过 ComfyUI API 对同一张图测速。
 
 只看前端：在本目录运行 `python3 -m http.server`，打开 `scripts/studio_preview.html`（模拟后端，不需要 GPU）。
-宣传片的制作脚本在 [`scripts/promo/`](scripts/promo/)。
 
 ## 目录
 
@@ -99,7 +98,7 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
 | `sol_h3_engine/two_stage_worker.py` | 两阶段：调用 `Sol-H3-RTX5090` / `Sol-H3-Spark` |
 | `sol_h3_engine/runtimes/` | NVFP4 Qwen worker，以及 H3 4 步 / 50 步基线运行时 |
 | `web/` | Sol-H3 Studio |
-| `scripts/` | `configure.py`、权重构建（`hyperflow/`）、`fetch_assets.py`、作品墙、宣传片 |
+| `scripts/` | `configure.py`、权重构建（`hyperflow/`）、`fetch_assets.py`、作品墙、本地运行 |
 | `docs/`、`tests/` | 安装、测试记录、架构、Studio 设计；CPU 测试 |
 
 ## 限制

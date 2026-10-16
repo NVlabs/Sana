@@ -169,6 +169,29 @@ once (about 15 minutes) into `TORCHINDUCTOR_CACHE_DIR`.
 `python3 scripts/fetch_assets.py gallery` downloads the clips shown in the film into
 `assets/gallery/`; `scripts/build_gallery.py MANIFEST.json DIR` assembles a folder from your own.
 
+### All together
+
+The configuration the Studio was validated with: one stage (with reference images), two stage
+and the gallery. Leave out the options for parts you did not build.
+
+```bash
+python3 scripts/fetch_assets.py gallery
+python3 scripts/configure.py \
+  --reuse-paths /path/to/paths.json \
+  --dense-lora /path/to/dense-datafree/adapter_model.safetensors \
+  --hyperflow-weights /path/to/minimax_h3_hyperflow_8step_v1.0.safetensors \
+  --hyperflow-deps /path/to/hyperflow-overlay \
+  --hyperflow-fp8-dir /path/to/transformer_hf8 \
+  --hyperflow-adaln-table /path/to/transformer_hf8/adaln_table.pt \
+  --hyperflow-ref-fp8-dir /path/to/transformer_ref_hf8 \
+  --two-stage-package "$PWD/../Sol-H3-RTX5090" \
+  --two-stage-paths /path/to/paths-5090.json \
+  --gallery "$PWD/assets/gallery" \
+  --output-dir ~/sol-h3-settings --gpu 0
+```
+
+With the noncausal VAE, add `--hyperflow-fast-vae-weights` and `--fast-vae-code`.
+
 ## 3. Start ComfyUI
 
 ```bash

@@ -9,7 +9,7 @@ and a pipeline, click **Generate**, and watch the progress until the 5-second cl
 audio plays. Behind it, the Sol engine runs the model in its own process; the node graph is
 still there when you want it.
 
-[![Sol-H3 in ComfyUI — watch the film](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3-ComfyUI/film/sol-h3-in-comfyui-poster.jpg)](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3-ComfyUI/film/sol-h3-in-comfyui.mp4)
+https://github.com/user-attachments/assets/20de4fc3-d9c7-4c64-a84e-da870deedfe5
 
 | Studio | Gallery |
 |---|---|

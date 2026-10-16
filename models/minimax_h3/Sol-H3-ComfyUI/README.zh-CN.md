@@ -7,7 +7,7 @@
 ComfyUI 作为底座，**Sol-H3 Studio** 是盖在画布上的创作界面：写提示词、选模式和流程、点 **Generate**，
 看着进度走完，5 秒带原生音频的视频就会直接播放。后面是 Sol 引擎，在独立进程里运行模型；需要时随时切回节点图。
 
-[![Sol-H3 in ComfyUI 宣传片](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3-ComfyUI/film/sol-h3-in-comfyui-poster.jpg)](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3-ComfyUI/film/sol-h3-in-comfyui.mp4)
+https://github.com/user-attachments/assets/20de4fc3-d9c7-4c64-a84e-da870deedfe5
 
 | 创作界面 | 作品墙 |
 |---|---|

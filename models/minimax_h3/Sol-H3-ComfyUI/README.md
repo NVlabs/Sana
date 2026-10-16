@@ -9,7 +9,7 @@ and a pipeline, click **Generate**, and watch the progress until the 5-second cl
 audio plays. Behind it, the Sol engine runs the model in its own process; the node graph is
 still there when you want it.
 
-[![Sol-H3 in ComfyUI — watch the film](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3-ComfyUI/film/sol-h3-in-comfyui-poster.jpg)](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Sol-Engine/Sol-H3-ComfyUI/film/sol-h3-in-comfyui.mp4)
+https://github.com/user-attachments/assets/20de4fc3-d9c7-4c64-a84e-da870deedfe5
 
 | Studio | Gallery |
 |---|---|
@@ -40,7 +40,7 @@ the DGX Spark row is the released Sol-H3-Spark package (mean of three). Details 
 - **Two pipelines.** *One stage* runs MiniMax-H3 with the 8-step [HyperFlow](../HyperFlow/)
   LoRA and Sol-H3's acceleration: LoRA merged into an FP8 DiT, an exact AdaLN lookup table
   instead of 26 GB of projections, Sol-Attn sparse attention with SageAttention for dense steps,
-  per-block `torch.compile`, a distilled noncausal VAE. *Two stage* is the
+  per-block `torch.compile`, an optional distilled noncausal VAE. *Two stage* is the
   [`Sol-H3-RTX5090`](../Sol-H3-RTX5090/) H3 draft + LTX refine runtime, used unchanged
   ([`Sol-H3-Spark`](../Sol-H3-Spark/) on DGX Spark).
 - **Text, first frame and reference images** (up to four) on one stage.
@@ -52,9 +52,9 @@ the DGX Spark row is the released Sol-H3-Spark package (mean of three). Details 
 - **Process isolation.** Models run in a worker with its own Python environment, so ComfyUI's
   packages are never touched. Cancel stops the worker.
 
-## Reproduce it
+## Getting started
 
-The full path from weights to the Studio; [docs/install.md](docs/install.md) has every option.
+From weights to the Studio; [docs/install.md](docs/install.md) has every option.
 
 1. **Runtime environment.** Linux, one RTX 5090 (32 GB), ≥ 90 GB host RAM, CUDA 13 driver. One
    Python 3.12 environment with PyTorch 2.12.0+cu130 and Triton 3.7.0 runs Qwen and the H3 DiT;
@@ -62,26 +62,38 @@ The full path from weights to the Studio; [docs/install.md](docs/install.md) has
    engine also needs a small overlay with Diffusers 0.40, PEFT and [`hyperflow_h3`](../HyperFlow/hyperflow_h3/).
 2. **Weights.** [MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3), the
    [NVFP4 Qwen encoder](https://huggingface.co/Comfy-Org/MiniMax-H3) (`text_encoders/`),
-   the [HyperFlow 8-step LoRA](https://huggingface.co/videorebirth/hyperflow), the
-   [noncausal VAE](https://huggingface.co/hp-l33/h3-fast-vae-noncausal) and the
+   the [HyperFlow 8-step LoRA](https://huggingface.co/videorebirth/hyperflow) and the
    [FastH3 dense-datafree adapter](https://huggingface.co/FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA)
-   (four-step and baseline profiles).
-3. **One-stage checkpoints** (once, on the GPU host; see [install](docs/install.md#one-stage)):
+   (four-step and baseline profiles). The distilled noncausal VAE is optional and not yet public;
+   without it one stage decodes with the original H3 VAE (about 10 s more per clip).
+3. **A first configuration** (HyperFlow BF16, enough to encode prompts). From this directory:
    ```bash
-   LORA=minimax_h3_hyperflow_8step_v1.0.safetensors
-   python scripts/hyperflow/convert_fp8.py MiniMax-H3/transformer $LORA transformer_hf8
-   python scripts/hyperflow/build_adaln_table.py OPTIONS.json t2va.pt T2VA_PAYLOAD.pt
-   python scripts/hyperflow/build_adaln_table.py OPTIONS.json fl2va.pt FL2VA_PAYLOAD.pt
+   ln -s "$PWD" /path/to/ComfyUI/custom_nodes/Sol-H3-ComfyUI
+   python3 scripts/configure.py \
+     --reuse-paths /path/to/h3-runtime/paths.json \
+     --dense-lora /path/to/dense-datafree/adapter_model.safetensors \
+     --hyperflow-weights /path/to/minimax_h3_hyperflow_8step_v1.0.safetensors \
+     --hyperflow-deps /path/to/hyperflow-overlay \
+     --output-dir ~/sol-h3-base --gpu 0
+   export SOL_ENGINE_CONFIG=~/sol-h3-base/config.json
+   ```
+4. **One-stage checkpoints**, once, with the runtime Python (see [install](docs/install.md#one-stage)):
+   ```bash
+   P='Sol-H3 HyperFlow · 8 steps — RTX 5090'; LORA=/path/to/minimax_h3_hyperflow_8step_v1.0.safetensors
+   python scripts/hyperflow/convert_fp8.py /path/to/MiniMax-H3/transformer $LORA transformer_hf8
+   python scripts/hyperflow/save_payload.py "$P" t2va.payload.pt "A bird glides over a lake."
+   python scripts/hyperflow/save_payload.py "$P" fl2va.payload.pt "The scene comes alive." frame.png
+   python scripts/hyperflow/build_adaln_table.py "$P" transformer_hf8 t2va.pt t2va.payload.pt
+   python scripts/hyperflow/build_adaln_table.py "$P" transformer_hf8 fl2va.pt fl2va.payload.pt
    python scripts/hyperflow/merge_adaln_tables.py transformer_hf8/adaln_table.pt t2va.pt fl2va.pt
    python scripts/hyperflow/convert_ref.py \
      https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/main/transformer_ref \
      $LORA transformer_hf8/adaln_table.pt transformer_ref_hf8    # reference images
    ```
-4. **Two stage** (optional): prepare [`../Sol-H3-RTX5090`](../Sol-H3-RTX5090/docs/setup.md); its
+   Two stage (optional): prepare [`../Sol-H3-RTX5090`](../Sol-H3-RTX5090/docs/setup.md); its
    `prepare.py` writes `paths-5090.json`.
-5. **Install into ComfyUI** (0.30 or newer) and write the host configuration:
+5. **The full configuration**, then start ComfyUI (0.30 or newer):
    ```bash
-   ln -s "$PWD" /path/to/ComfyUI/custom_nodes/Sol-H3-ComfyUI    # from this directory
    python3 scripts/fetch_assets.py gallery                          # optional showcase wall
    python3 scripts/configure.py \
      --reuse-paths /path/to/h3-runtime/paths.json \
@@ -90,13 +102,12 @@ The full path from weights to the Studio; [docs/install.md](docs/install.md) has
      --hyperflow-deps /path/to/hyperflow-overlay \
      --hyperflow-fp8-dir /path/to/transformer_hf8 \
      --hyperflow-adaln-table /path/to/transformer_hf8/adaln_table.pt \
-     --hyperflow-fast-vae-weights /path/to/fast_h3_vae_noncausal_24l.safetensors \
-     --fast-vae-code /path/to/fast-vae-code \
      --hyperflow-ref-fp8-dir /path/to/transformer_ref_hf8 \
      --two-stage-package "$PWD/../Sol-H3-RTX5090" \
      --two-stage-paths /path/to/paths-5090.json \
      --gallery "$PWD/assets/gallery" \
      --output-dir ~/sol-h3-settings --gpu 0
+   # with the noncausal VAE: --hyperflow-fast-vae-weights .../fast_h3_vae_noncausal_24l.safetensors --fast-vae-code ...
    export SOL_ENGINE_CONFIG=~/sol-h3-settings/config.json
    cd /path/to/ComfyUI && python main.py
    ```
@@ -105,7 +116,7 @@ The full path from weights to the Studio; [docs/install.md](docs/install.md) has
    `scripts/hyperflow/e2e_comfy.py` times the same graph through ComfyUI's API.
 
 Frontend only: `python3 -m http.server` here and open `scripts/studio_preview.html` (stubbed
-backend, no GPU). The film is reproduced with [`scripts/promo/`](scripts/promo/).
+backend, no GPU).
 
 ## Layout
 
@@ -116,7 +127,7 @@ backend, no GPU). The film is reproduced with [`scripts/promo/`](scripts/promo/)
 | `sol_h3_engine/two_stage_worker.py` | Two stage: drives `Sol-H3-RTX5090` / `Sol-H3-Spark` |
 | `sol_h3_engine/runtimes/` | NVFP4 Qwen worker and the H3 four-step / 50-step baseline runtimes |
 | `web/` | Sol-H3 Studio |
-| `scripts/` | `configure.py`, checkpoint builders (`hyperflow/`), `fetch_assets.py`, gallery, film |
+| `scripts/` | `configure.py`, checkpoint builders (`hyperflow/`), `fetch_assets.py`, gallery, local runner |
 | `docs/`, `tests/` | Installation, validation, architecture, Studio design; CPU tests |
 
 ## Limitations

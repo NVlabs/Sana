@@ -36,7 +36,8 @@ def main():
     parser.add_argument("--hyperflow-adaln-table", type=Path,
                         help="exact AdaLN table from scripts/hyperflow/build_adaln_table.py")
     parser.add_argument("--hyperflow-fast-vae-weights", type=Path,
-                        help="fast_h3_vae_noncausal_24l.safetensors for the fast HyperFlow profile's video decode")
+                        help="fast_h3_vae_noncausal_24l.safetensors for one stage's video decode (optional; "
+                             "without it the original H3 VAE decodes)")
     parser.add_argument("--hyperflow-ref-fp8-dir", type=Path,
                         help="transformer_ref (reference images) FP8 checkpoint + adaln_table.pt from scripts/hyperflow/convert_ref.py")
     parser.add_argument("--one-stage-resolutions", default="768p,480p",
@@ -92,20 +93,23 @@ def main():
             "hyperflow": {"weights": str(args.hyperflow_weights.resolve(strict=True)),
                           "deps": str(args.hyperflow_deps.resolve(strict=True)), "workflows": ["t2va"]}},
             **profiles}
-    fast = (args.hyperflow_fp8_dir, args.hyperflow_adaln_table, args.hyperflow_fast_vae_weights, args.fast_vae_code)
-    if any(fast[:3]):
-        if not all(fast) or not (args.hyperflow_weights and args.hyperflow_deps):
-            raise ValueError("The fast HyperFlow profile needs --hyperflow-weights/--hyperflow-deps, "
-                             "--hyperflow-fp8-dir, --hyperflow-adaln-table, --hyperflow-fast-vae-weights and --fast-vae-code")
+    if args.hyperflow_fp8_dir or args.hyperflow_adaln_table:
+        if not (args.hyperflow_fp8_dir and args.hyperflow_adaln_table and args.hyperflow_weights and args.hyperflow_deps):
+            raise ValueError("The one-stage profile needs --hyperflow-weights, --hyperflow-deps, "
+                             "--hyperflow-fp8-dir and --hyperflow-adaln-table")
+        if bool(args.hyperflow_fast_vae_weights) != bool(args.fast_vae_code):
+            raise ValueError("Give --hyperflow-fast-vae-weights and --fast-vae-code together, or neither")
         base = profiles["Sol-H3 HyperFlow · 8 steps — RTX 5090"]
         hf = dict(base["hyperflow"])
         hf.update(
             fp8_dir=str(args.hyperflow_fp8_dir.resolve(strict=True)),
             adaln_table=str(args.hyperflow_adaln_table.resolve(strict=True)),
-            sol_attn=True, dense_attn="sage2pp", compile=True, pin_unmatched_group=True, qwen_resident=True,
-            fast_vae={"code": str(args.fast_vae_code.resolve(strict=True)),
-                      "vae_config": str(Path(paths["h3_model"]) / "vae/config.json"),
-                      "weights": str(args.hyperflow_fast_vae_weights.resolve(strict=True))})
+            sol_attn=True, dense_attn="sage2pp", compile=True, pin_unmatched_group=True, qwen_resident=True)
+        # Without the distilled noncausal decoder, one stage decodes with the original H3 VAE.
+        if args.hyperflow_fast_vae_weights:
+            hf["fast_vae"] = {"code": str(args.fast_vae_code.resolve(strict=True)),
+                              "vae_config": str(Path(paths["h3_model"]) / "vae/config.json"),
+                              "weights": str(args.hyperflow_fast_vae_weights.resolve(strict=True))}
         hf["workflows"] = ["t2va", "fl2va"]
         modes = ["text", "first_frame"]
         if args.hyperflow_ref_fp8_dir:
@@ -135,7 +139,7 @@ def main():
                           "two_stage": {"package": str(package), "offload": "none" if args.device == "spark" else "cpu",
                                         "resident_qwen": args.device != "spark"}}
     optional = (args.fast_vae_code, args.fast_vae_weights, args.fast_vae_diffusers_source)
-    # --fast-vae-code alone serves the fast HyperFlow profile; the FastH3 noncausal profile needs all three.
+    # --fast-vae-code with --hyperflow-fast-vae-weights serves one stage; the FastH3 noncausal profile needs all three.
     if args.fast_vae_weights or args.fast_vae_diffusers_source:
         if not all(optional):
             raise ValueError("Provide all three --fast-vae-* paths together")

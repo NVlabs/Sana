@@ -3,9 +3,8 @@
   assets/film/      the "Sol-H3 in ComfyUI" film and poster
   assets/demo/      earlier demo clips used by scripts/studio_preview.html
   assets/gallery/   Studio gallery clips (pass to configure.py --gallery)
-  assets/promo/     sources to re-render the film (scripts/promo/)
 
-Usage: python3 scripts/fetch_assets.py [film demo gallery promo]   (default: all)
+Usage: python3 scripts/fetch_assets.py [film demo gallery]   (default: all)
 Uses only the standard library; no token is needed (public dataset).
 """
 import json
@@ -40,8 +39,8 @@ def listing(folder):
 
 
 def main():
-    parts = sys.argv[1:] or ["film", "demo", "gallery", "promo"]
-    if set(parts) - {"film", "demo", "gallery", "promo"}:
+    parts = sys.argv[1:] or ["film", "demo", "gallery"]
+    if set(parts) - {"film", "demo", "gallery"}:
         sys.exit(__doc__)
     for part in parts:
         for row in listing(part):

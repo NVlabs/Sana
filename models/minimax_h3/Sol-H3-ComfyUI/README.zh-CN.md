@@ -32,7 +32,7 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
 - **Sol-H3 Studio**：覆盖在 ComfyUI 上的全屏工作台，中英文可切换（右上角）：提示词与示例、模式、流程、分辨率、
   seed、实时进度（编码 → 第 k/8 步 → 解码）、成片播放与下载、最近作品和作品库。随时切到 **Nodes**，Studio 编辑的是同一张节点图。
 - **两种流程**：*单阶段* 用 [HyperFlow](../HyperFlow/) 8 步 LoRA 加 Sol-H3 加速——LoRA 合并进 FP8 DiT、用精确查表
-  替换 26 GB 的 AdaLN 投影、Sol-Attn 稀疏注意力（dense 步用 SageAttention）、逐块 `torch.compile`、蒸馏的非因果 VAE；
+  替换 26 GB 的 AdaLN 投影、Sol-Attn 稀疏注意力（dense 步用 SageAttention）、逐块 `torch.compile`、可选的蒸馏非因果 VAE；
   *两阶段* 原样调用 [`Sol-H3-RTX5090`](../Sol-H3-RTX5090/) 的 H3 草稿 + LTX 精修（DGX Spark 上用 [`Sol-H3-Spark`](../Sol-H3-Spark/)）。
 - **文生视频、首帧、参考图**（最多 4 张），在单阶段上运行。
 - **768p 或 480p**，16:9，5 秒。
@@ -49,23 +49,35 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
    编译的 SageAttention 2.2。单阶段还需要一个包含 Diffusers 0.40、PEFT 和 [`hyperflow_h3`](../HyperFlow/hyperflow_h3/) 的小依赖层。
 2. **权重**：[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)、[NVFP4 Qwen 编码器](https://huggingface.co/Comfy-Org/MiniMax-H3)
    （`text_encoders/`）、[HyperFlow 8 步 LoRA](https://huggingface.co/videorebirth/hyperflow)、
-   [非因果 VAE](https://huggingface.co/hp-l33/h3-fast-vae-noncausal)、
    [FastH3 dense-datafree adapter](https://huggingface.co/FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA)（4 步与基线配置用）。
-3. **单阶段权重**（在 GPU 主机上做一次，见 [安装说明](docs/install.md#one-stage)）：
+   蒸馏的非因果 VAE 为可选、尚未公开；不提供时单阶段用原版 H3 VAE 解码（每条约慢 10 秒）。
+3. **先写一份基础配置**（HyperFlow BF16，用于编码提示词）。在本目录执行：
    ```bash
-   LORA=minimax_h3_hyperflow_8step_v1.0.safetensors
-   python scripts/hyperflow/convert_fp8.py MiniMax-H3/transformer $LORA transformer_hf8
-   python scripts/hyperflow/build_adaln_table.py OPTIONS.json t2va.pt T2VA_PAYLOAD.pt
-   python scripts/hyperflow/build_adaln_table.py OPTIONS.json fl2va.pt FL2VA_PAYLOAD.pt
+   ln -s "$PWD" /path/to/ComfyUI/custom_nodes/Sol-H3-ComfyUI
+   python3 scripts/configure.py \
+     --reuse-paths /path/to/h3-runtime/paths.json \
+     --dense-lora /path/to/dense-datafree/adapter_model.safetensors \
+     --hyperflow-weights /path/to/minimax_h3_hyperflow_8step_v1.0.safetensors \
+     --hyperflow-deps /path/to/hyperflow-overlay \
+     --output-dir ~/sol-h3-base --gpu 0
+   export SOL_ENGINE_CONFIG=~/sol-h3-base/config.json
+   ```
+4. **单阶段权重**，用运行环境的 Python 做一次（见 [安装说明](docs/install.md#one-stage)）：
+   ```bash
+   P='Sol-H3 HyperFlow · 8 steps — RTX 5090'; LORA=/path/to/minimax_h3_hyperflow_8step_v1.0.safetensors
+   python scripts/hyperflow/convert_fp8.py /path/to/MiniMax-H3/transformer $LORA transformer_hf8
+   python scripts/hyperflow/save_payload.py "$P" t2va.payload.pt "A bird glides over a lake."
+   python scripts/hyperflow/save_payload.py "$P" fl2va.payload.pt "The scene comes alive." frame.png
+   python scripts/hyperflow/build_adaln_table.py "$P" transformer_hf8 t2va.pt t2va.payload.pt
+   python scripts/hyperflow/build_adaln_table.py "$P" transformer_hf8 fl2va.pt fl2va.payload.pt
    python scripts/hyperflow/merge_adaln_tables.py transformer_hf8/adaln_table.pt t2va.pt fl2va.pt
    python scripts/hyperflow/convert_ref.py \
      https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/main/transformer_ref \
      $LORA transformer_hf8/adaln_table.pt transformer_ref_hf8    # 参考图
    ```
-4. **两阶段**（可选）：按 [`../Sol-H3-RTX5090`](../Sol-H3-RTX5090/docs/setup.md) 准备，它的 `prepare.py` 会写出 `paths-5090.json`。
-5. **装进 ComfyUI**（0.30 或更新）并写主机配置：
+   两阶段（可选）：按 [`../Sol-H3-RTX5090`](../Sol-H3-RTX5090/docs/setup.md) 准备，它的 `prepare.py` 会写出 `paths-5090.json`。
+5. **写完整配置**并启动 ComfyUI（0.30 或更新）：
    ```bash
-   ln -s "$PWD" /path/to/ComfyUI/custom_nodes/Sol-H3-ComfyUI    # 在本目录执行
    python3 scripts/fetch_assets.py gallery                          # 可选：作品墙示例
    python3 scripts/configure.py \
      --reuse-paths /path/to/h3-runtime/paths.json \
@@ -74,13 +86,12 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
      --hyperflow-deps /path/to/hyperflow-overlay \
      --hyperflow-fp8-dir /path/to/transformer_hf8 \
      --hyperflow-adaln-table /path/to/transformer_hf8/adaln_table.pt \
-     --hyperflow-fast-vae-weights /path/to/fast_h3_vae_noncausal_24l.safetensors \
-     --fast-vae-code /path/to/fast-vae-code \
      --hyperflow-ref-fp8-dir /path/to/transformer_ref_hf8 \
      --two-stage-package "$PWD/../Sol-H3-RTX5090" \
      --two-stage-paths /path/to/paths-5090.json \
      --gallery "$PWD/assets/gallery" \
      --output-dir ~/sol-h3-settings --gpu 0
+   # 有非因果 VAE 时再加：--hyperflow-fast-vae-weights .../fast_h3_vae_noncausal_24l.safetensors --fast-vae-code ...
    export SOL_ENGINE_CONFIG=~/sol-h3-settings/config.json
    cd /path/to/ComfyUI && python main.py
    ```

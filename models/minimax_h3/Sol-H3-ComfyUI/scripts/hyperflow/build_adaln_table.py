@@ -6,24 +6,31 @@
    checkpoint weights with ONE linear call of exactly that batch (Sol-H3 install_exact_t2va_lookup rule: cuBLAS picks
    a different kernel per M, so a single big batch differs by 1 BF16 ulp), and save {keys, tables}.
 3. Self-check: block 0's official MiniMaxH3AdaLayerNormModulation on every set equals the table bit for bit.
-ref2va (transformer_ref) needs its own table: pass ref2va payloads only.
-Usage: build_adaln_table.py OPTIONS.json OUT.pt PAYLOAD.pt [PAYLOAD.pt ...]
+Run it with the runtime Python. PROFILE is a HyperFlow profile from SOL_ENGINE_CONFIG (the BF16 one configure.py
+writes from --hyperflow-weights/--hyperflow-deps); FP8_DIR is convert_fp8.py's output *with* adaln_proj (the default).
+One task per run (host RAM), then merge_adaln_tables.py. Payloads come from save_payload.py.
+Usage: SOL_ENGINE_CONFIG=config.json build_adaln_table.py PROFILE FP8_DIR OUT.pt PAYLOAD.pt [PAYLOAD.pt ...]
 """
 import json
 import sys
 from pathlib import Path
 
-ENGINE = Path(__file__).resolve().parents[2] / "sol_h3_engine"
-sys.path.insert(0, str(ENGINE))
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "sol_h3_engine"))
+sys.path.insert(0, str(ROOT))
 
 
 def main():
-    options_path, out, payloads = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3:]
+    profile, fp8_dir, out, payloads = sys.argv[1], Path(sys.argv[2]), Path(sys.argv[3]), sys.argv[4:]
+    from sol_h3_engine.config import load_profile
+    options = load_profile(profile)
+    if options.get("precision") != "hyperflow":
+        raise ValueError("%s is not a HyperFlow profile" % profile)
+    options["hyperflow"]["fp8_dir"] = str(fp8_dir.resolve(strict=True))
     import torch
     from torch import nn
     from safetensors import safe_open
     from hyperflow_worker import HyperFlow
-    options = json.loads(options_path.read_text())
     import torch as _t
     tasks = sorted({_t.load(p, map_location="cpu", weights_only=False).get("task", "t2va") for p in payloads})
     # t2va and fl2va must be separate pipelines here: a shared fl2va pipe cannot run t2va (keyframes=[] → torch.cat).

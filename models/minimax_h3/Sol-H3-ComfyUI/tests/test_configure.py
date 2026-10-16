@@ -109,3 +109,36 @@ class TwoStageProfileTest(unittest.TestCase):
             two = config["profiles"]["Sol-H3 two stage — DGX Spark"]
             self.assertEqual((two["precision"], two["two_stage"]["offload"], two["resolutions"]), ("two_stage", "none", ["768p"]))
             self.assertEqual(config["gallery"], str((root / "gallery").resolve()))
+
+
+class OneStageWithoutFastVaeTest(unittest.TestCase):
+    def test_one_stage_uses_original_vae_when_fast_vae_is_not_given(self):
+        import sys
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            model = root / "MiniMax-H3"
+            for component in ("transformer", "vae", "audio_vae"):
+                (model / component).mkdir(parents=True)
+                (model / component / "diffusion_pytorch_model.safetensors").write_bytes(b"x")
+            python = root / "python"
+            python.write_text("#!/bin/sh\n")
+            python.chmod(0o755)
+            manifest = {key: str(root / key) for key in module.REQUIRED}
+            manifest.update(stage1_python=str(python), qwen_python=str(python), h3_model=str(model))
+            for key, value in manifest.items():
+                if key not in ("stage1_python", "qwen_python", "h3_model"):
+                    Path(value).mkdir(exist_ok=True)
+            (root / "paths.json").write_text(json.dumps(manifest))
+            for name in ("lora.safetensors", "hf.safetensors", "table.pt"):
+                (root / name).write_bytes(b"x")
+            for name in ("deps", "fp8"):
+                (root / name).mkdir()
+            argv = ["configure.py", "--reuse-paths", str(root / "paths.json"), "--dense-lora", str(root / "lora.safetensors"),
+                    "--output-dir", str(root / "out"), "--hyperflow-weights", str(root / "hf.safetensors"),
+                    "--hyperflow-deps", str(root / "deps"), "--hyperflow-fp8-dir", str(root / "fp8"),
+                    "--hyperflow-adaln-table", str(root / "table.pt")]
+            with mock.patch.object(sys, "argv", argv):
+                module.main()
+            profiles = json.loads((root / "out" / "config.json").read_text())["profiles"]
+            self.assertNotIn("fast_vae", profiles["Sol-H3 one stage — RTX 5090"]["hyperflow"])

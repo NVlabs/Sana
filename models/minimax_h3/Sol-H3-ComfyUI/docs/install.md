@@ -82,8 +82,8 @@ upload, decode, RGB conversion and offload all count toward the reported time.
 
 ### One stage
 
-`Sol-H3 one stage — RTX 5090` is listed first (the Studio default) when
-these four options are given together with `--hyperflow-weights` and `--hyperflow-deps`:
+`Sol-H3 one stage — RTX 5090` is listed first (the Studio default) when these options are
+given together with `--hyperflow-weights` and `--hyperflow-deps`; the last two are optional:
 
 ```bash
   --hyperflow-fp8-dir /path/to/transformer_hf8 \
@@ -96,31 +96,36 @@ It runs the HyperFlow DiT with the LoRA merged into per-tensor FP8 weights, an e
 AdaLN lookup table instead of the 26 GB `adaln_proj` weights, Sol-Attn sparse attention
 (the `sol_attn` package in the HyperFlow overlay) with SageAttention 2.2 for the dense
 steps, regional `torch.compile` of each block, a resident Qwen worker parked in host
-RAM between requests, and the distilled noncausal VAE
-([hp-l33/h3-fast-vae-noncausal](https://huggingface.co/hp-l33/h3-fast-vae-noncausal)).
+RAM between requests, and — when given — the distilled noncausal VAE
+(`hp-l33/h3-fast-vae-noncausal`, not yet public). Without it the original H3 VAE decodes,
+about 10 s more per 768p clip.
 SageAttention must be built for SM120 in the runtime environment, and FlashAttention 4
 must be importable by the worker (for example `PYTHONPATH=/path/to/fa4-runtime`).
 Set `TORCHINDUCTOR_CACHE_DIR` to a persistent directory so later sessions reuse the
 compiled blocks.
 
 Build the FP8 checkpoint and the AdaLN table once, inside the runtime environment
-on the GPU host:
+on the GPU host, with `SOL_ENGINE_CONFIG` pointing at a configuration that has the BF16
+`Sol-H3 HyperFlow · 8 steps — RTX 5090` profile (`configure.py` with `--hyperflow-weights`
+and `--hyperflow-deps` only):
 
 ```bash
+P='Sol-H3 HyperFlow · 8 steps — RTX 5090'
 # 1. Merge the HyperFlow LoRA and quantise the 300 block linears to FP8 (shard by shard).
 python scripts/hyperflow/convert_fp8.py /path/to/MiniMax-H3/transformer \
   /path/to/minimax_h3_hyperflow_8step_v1.0.safetensors /path/to/transformer_hf8
-# 2. One conditioning payload per task (any prompt: the table depends only on the schedule),
-#    from a profile that already has --hyperflow-fp8-dir but no table yet.
-python3 scripts/hyperflow/save_payload.py 'Sol-H3 HyperFlow · 8 steps — RTX 5090' T2VA_PAYLOAD.pt "A bird over a lake."
-python3 scripts/hyperflow/save_payload.py 'Sol-H3 HyperFlow · 8 steps — RTX 5090' FL2VA_PAYLOAD.pt "The scene comes alive." frame.png
+# 2. One conditioning payload per task (any prompt: the table depends only on the schedule).
+python scripts/hyperflow/save_payload.py "$P" t2va.payload.pt "A bird over a lake."
+python scripts/hyperflow/save_payload.py "$P" fl2va.payload.pt "The scene comes alive." frame.png
 # 3. Record every forward's (timestep, endpoint) set and compute the table at the live batch
-#    size, one task per run (host RAM), then merge. OPTIONS.json is that profile's options
-#    (the worker's options.json) with hyperflow.fp8_dir set.
-python scripts/hyperflow/build_adaln_table.py OPTIONS.json t2va.pt T2VA_PAYLOAD.pt
-python scripts/hyperflow/build_adaln_table.py OPTIONS.json fl2va.pt FL2VA_PAYLOAD.pt
+#    size, one task per run (host RAM), then merge.
+python scripts/hyperflow/build_adaln_table.py "$P" /path/to/transformer_hf8 t2va.pt t2va.payload.pt
+python scripts/hyperflow/build_adaln_table.py "$P" /path/to/transformer_hf8 fl2va.pt fl2va.payload.pt
 python scripts/hyperflow/merge_adaln_tables.py /path/to/transformer_hf8/adaln_table.pt t2va.pt fl2va.pt
 ```
+
+Optionally rerun step 1 into the same directory with `--drop-adaln`: it rewrites the shards
+without the 26 GB of `adaln_proj` weights the table replaces (the table file is kept).
 
 `build_adaln_table.py` checks the table against the official AdaLN module bit for bit.
 A request whose schedule is not in the table fails instead of running with wrong values.

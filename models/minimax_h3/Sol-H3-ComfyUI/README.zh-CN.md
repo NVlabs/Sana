@@ -100,26 +100,6 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
 
 只看前端：在本目录运行 `python3 -m http.server`，打开 `scripts/studio_preview.html`（模拟后端，不需要 GPU）。
 
-## 目录
-
-| 路径 | 内容 |
-|---|---|
-| `__init__.py`、`sol_h3_engine/comfy_*.py`、`bridge.py`、`config.py` | ComfyUI 节点和 `/solh3/*` 接口（仅标准库）、worker 桥接、配置 |
-| `sol_h3_engine/hyperflow_*.py` | 单阶段：FP8 线性层、AdaLN 查表、分块编译、引擎 |
-| `sol_h3_engine/two_stage_worker.py` | 两阶段：调用 `Sol-H3-RTX5090` / `Sol-H3-Spark` |
-| `sol_h3_engine/runtimes/` | NVFP4 Qwen worker，以及 H3 4 步 / 50 步基线运行时 |
-| `web/` | Sol-H3 Studio |
-| `scripts/` | `configure.py`、权重构建（`hyperflow/`）、`fetch_assets.py`、作品墙、本地运行 |
-| `docs/`、`tests/` | 安装、测试记录、架构、Studio 设计；CPU 测试 |
-
-## 限制
-
-- 仅 16:9、5 秒（121 帧、24 fps）；单阶段支持 768p 或 480p，两阶段为 768p。
-- 两阶段仅支持文生视频；首帧和参考图在单阶段上运行。
-- 参考图请求需要在主机内存里切换 DiT（模式切换时 46–72 秒）。
-- 每张 GPU 一次处理一个请求；尚未提供从零安装器。
-- 单阶段（FP8、编译、蒸馏 VAE）与 BF16 不是逐位一致，只做了目视检查。
-
 ## 致谢
 
 Studio 参考了 [FreeVideo](https://github.com/FlashML-org/FreeVideo) 的模式。HyperFlow 来自

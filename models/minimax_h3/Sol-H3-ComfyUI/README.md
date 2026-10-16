@@ -118,26 +118,6 @@ From weights to the Studio; [docs/install.md](docs/install.md) has every option.
 Frontend only: `python3 -m http.server` here and open `scripts/studio_preview.html` (stubbed
 backend, no GPU).
 
-## Layout
-
-| Path | Contents |
-|---|---|
-| `__init__.py`, `sol_h3_engine/comfy_*.py`, `bridge.py`, `config.py` | ComfyUI nodes and `/solh3/*` routes (standard library only), worker bridge, profiles |
-| `sol_h3_engine/hyperflow_*.py` | One stage: FP8 linears, AdaLN table, regional compile, the engine |
-| `sol_h3_engine/two_stage_worker.py` | Two stage: drives `Sol-H3-RTX5090` / `Sol-H3-Spark` |
-| `sol_h3_engine/runtimes/` | NVFP4 Qwen worker and the H3 four-step / 50-step baseline runtimes |
-| `web/` | Sol-H3 Studio |
-| `scripts/` | `configure.py`, checkpoint builders (`hyperflow/`), `fetch_assets.py`, gallery, local runner |
-| `docs/`, `tests/` | Installation, validation, architecture, Studio design; CPU tests |
-
-## Limitations
-
-- 16:9 only, 5 s (121 frames, 24 fps); 768p or 480p on one stage, 768p on two stage.
-- Two stage runs text to video; first frame and reference images run on one stage.
-- Reference requests swap the DiT checkpoint in host RAM (46–72 s when switching modes).
-- One request at a time per GPU; there is no clean-environment installer.
-- One stage (FP8, compiled, distilled VAE) is not bit-identical to BF16; it was checked visually.
-
 ## Acknowledgements
 
 The Studio follows the pattern of [FreeVideo](https://github.com/FlashML-org/FreeVideo).

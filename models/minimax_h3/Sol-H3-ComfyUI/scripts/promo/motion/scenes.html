@@ -1,0 +1,194 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Motion-graphics overlays for the Sol-H3 in ComfyUI promo. Rendered frame by frame
+   (transparent background) and composited over generated footage with ffmpeg.
+   Every scene is a pure function of time t (seconds) so renders are deterministic. */
+:root{
+  --ink:#ffffff; --soft:rgba(255,255,255,.72); --faint:rgba(255,255,255,.38);
+  --sol:#9be22d; --sol-deep:#76b900; --base:#ff6b5e; --track:rgba(255,255,255,.12);
+  --display:"Geist","Helvetica Neue",Arial,sans-serif; --mono:"Geist Mono",ui-monospace,Menlo,monospace;
+}
+html,body{margin:0;width:1920px;height:1080px;background:transparent;overflow:hidden}
+body{font-family:var(--display);color:var(--ink);-webkit-font-smoothing:antialiased}
+.scene{position:absolute;inset:0;display:none}
+.scene.on{display:block}
+.shadow{text-shadow:0 2px 30px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35)}
+/* Title */
+#title .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,8,10,0) 30%,rgba(6,8,10,.3) 55%,rgba(6,8,10,.8) 100%)}
+#title .wrap{position:absolute;left:0;right:0;bottom:96px;display:grid;justify-items:center;text-align:center}
+#title .lock{display:flex;align-items:center;height:132px}
+#title .lock img{width:132px;height:132px;border-radius:30px;box-shadow:0 18px 50px rgba(0,0,0,.5);flex:none}
+#title .lock .w{display:inline-block;overflow:hidden;white-space:nowrap;font-size:104px;font-weight:800;letter-spacing:-.045em;line-height:1.1}
+#title .lock .w span{display:inline-block;padding:0 34px}
+#title .lock .x{display:inline-block;font-size:72px;font-weight:300;color:rgba(255,255,255,.75);padding:0 6px;flex:none}
+#title .lock .c{color:var(--sol)}
+#title h1{margin:34px 0 0;font-size:148px;line-height:.95;font-weight:800;letter-spacing:-.05em;white-space:nowrap}
+#title .line{margin-top:22px;display:flex;align-items:center;gap:22px;font-size:38px;font-weight:600;color:rgba(255,255,255,.86);letter-spacing:-.015em}
+#title .line i{width:8px;height:8px;border-radius:50%;background:var(--sol)}
+/* Question */
+#question h1{position:absolute;inset:0;margin:0;display:grid;place-items:center;text-align:center;font-size:118px;font-weight:800;letter-spacing:-.045em;line-height:1.02}
+/* Latency: one clip, request to MP4, per pipeline and device. */
+#lat .head{position:absolute;left:150px;top:78px}
+#lat .head h1{margin:0;font-size:72px;font-weight:800;letter-spacing:-.04em;line-height:1.02}
+#lat .head p{margin:18px 0 0;font-family:var(--mono);font-size:24px;color:var(--soft);letter-spacing:.01em}
+#lat .rows{position:absolute;left:150px;right:150px;top:262px;display:grid;gap:14px}
+#lat .row{display:grid;grid-template-columns:168px 430px 1fr;align-items:center;gap:34px;height:100px}
+#lat .dev{display:grid;place-items:center;height:100px}
+#lat .dev img{display:block;width:168px;filter:drop-shadow(0 2px 12px rgba(0,0,0,.45))}
+#lat .dev img.spark{width:150px}
+#lat .who{line-height:1}
+#lat .who b{display:block;font-size:40px;font-weight:750;letter-spacing:-.03em}
+#lat .who small{display:block;margin-top:9px;font-family:var(--mono);font-size:21px;color:var(--soft)}
+#lat .track{position:relative;height:30px}
+#lat .bar{position:absolute;left:0;top:0;bottom:0;border-radius:8px;transform-origin:left;width:0}
+#lat .base .bar{background:linear-gradient(90deg,#ff8a7f,#d9483d)}
+#lat .lora .bar{background:linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,.32))}
+#lat .sol .bar{background:linear-gradient(90deg,#a6e33a,var(--sol-deep));box-shadow:0 0 30px rgba(155,226,45,.25)}
+#lat .sol .who b{color:var(--sol)}
+#lat .base .who b{color:#fff}
+#lat .val{position:absolute;top:50%;translate:16px -50%;font-family:var(--mono);font-size:30px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+#lat .base .val{color:var(--base)}
+#lat .sol .val{color:var(--sol)}
+#lat .cut{position:absolute;top:-8px;bottom:-8px;width:22px;background:linear-gradient(105deg,transparent 40%,rgba(10,12,14,.95) 41% 59%,transparent 60%);opacity:0}
+#lat .x{position:absolute;left:0;right:0;bottom:44px;text-align:center;font-size:40px;font-weight:650;letter-spacing:-.02em;color:var(--soft)}
+#lat .x b{display:block;color:var(--sol);font-weight:800;font-size:132px;line-height:.9;letter-spacing:-.06em;margin-bottom:8px;text-shadow:0 0 60px rgba(155,226,45,.35)}
+/* Modes */
+#modes .head{position:absolute;left:0;right:0;top:96px;text-align:center}
+#modes .head h1{margin:0;font-size:84px;font-weight:800;letter-spacing:-.04em}
+#modes .cards{position:absolute;left:200px;right:200px;top:290px;display:grid;grid-template-columns:repeat(2,1fr);gap:64px}
+#modes .card{border-radius:26px;overflow:hidden;background:rgba(10,12,14,.55);border:1px solid rgba(255,255,255,.16)}
+#modes .slot{height:432px;background:transparent}
+#modes .cap{padding:28px 32px 34px}
+#modes .cap b{display:block;font-size:44px;font-weight:700;letter-spacing:-.03em}
+#modes .cap span{display:block;margin-top:10px;font-size:28px;color:var(--soft);line-height:1.35}
+/* Studio */
+#studio .tag{position:absolute;left:0;right:0;top:52px;text-align:center;font-size:64px;font-weight:800;letter-spacing:-.04em}
+#studio .tag span{display:block;margin-top:12px;font-size:30px;font-weight:600;color:var(--soft);letter-spacing:0}
+#studio .tag b{color:var(--ink)}
+/* Caption */
+#caption .c{position:absolute;left:96px;bottom:92px;font-size:54px;font-weight:700;letter-spacing:-.03em}
+#caption .c small{display:block;margin-top:8px;font-size:28px;font-weight:600;color:var(--sol);letter-spacing:-.01em}
+/* End */
+#end .wrap{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center}
+#end .logo{font-size:150px;font-weight:800;letter-spacing:-.05em;line-height:1}
+#end .logo span{color:var(--sol)}
+#end h2{margin:26px 0 0;font-size:62px;font-weight:700;letter-spacing:-.035em}
+#end .badge{margin-top:38px;display:inline-flex;align-items:center;gap:16px;padding:14px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.26);background:rgba(10,12,14,.45);font-size:32px;font-weight:600}
+#end .url{margin-top:34px;font-family:var(--mono);font-size:40px;color:var(--sol)}
+</style></head>
+<body>
+<section class="scene" id="title"><div class="scrim"></div><div class="wrap shadow">
+  <div class="lock"><img src="brand/solh3.svg" alt=""><span class="w"><span>Sol-H3</span></span><span class="x">×</span><span class="w"><span class="c">ComfyUI</span></span><img src="brand/comfyui.svg" alt=""></div>
+  <h1>MiniMax H3</h1>
+  <div class="line">Video with sound<i></i>on your own RTX 5090</div>
+</div></section>
+
+<section class="scene" id="question"><h1 class="shadow">How long does<br>one clip take?</h1></section>
+
+<section class="scene" id="lat">
+  <div class="head shadow"><h1 data-lat-title></h1><p data-lat-sub></p></div>
+  <div class="rows"></div>
+  <div class="x shadow" data-lat-x></div>
+</section>
+
+<section class="scene" id="modes">
+  <div class="head"><h1 class="shadow">Start from words or a single frame.</h1></div>
+  <div class="cards">
+    <div class="card"><div class="slot"></div><div class="cap"><b>Text to video</b><span>Describe the shot and its sound.</span></div></div>
+    <div class="card"><div class="slot"></div><div class="cap"><b>First frame to video</b><span>Bring a still image to life.</span></div></div>
+  </div>
+</section>
+
+<section class="scene" id="studio"><div class="tag shadow"><b data-st></b><span data-ss></span></div></section>
+<section class="scene" id="caption"><div class="c shadow"><span data-cap></span><small data-capsub></small></div></section>
+
+<section class="scene" id="end"><div class="wrap shadow">
+  <div class="logo">Sol-H3 <span>in ComfyUI</span></div>
+  <h2>MiniMax H3, running locally.</h2>
+  <div class="badge">Accelerated by Sol Engine · RTX 5090 · DGX Spark</div>
+  <div class="url">github.com/NVlabs/Sana/tree/sol-engine</div>
+</div></section>
+
+<script>
+// Easing and helpers -------------------------------------------------------------
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>1-Math.pow(1-clamp(x),3);              // easeOutCubic
+const inout=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const fade=(el,t,a,b,d=.35)=>{el.style.opacity=clamp((t-a)/d)*clamp((b-t)/d)};
+const rise=(el,t,start,dist=40,d=.6)=>{const p=ease((t-start)/d);el.style.opacity=p;el.style.transform=`translateY(${(1-p)*dist}px)`};
+const mmss=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const $=s=>document.querySelector(s);
+
+// Scene renderers: render(t, params, duration) -----------------------------------
+const scenes={
+  title(t,p,D){
+    const w=$('#title .wrap'); $('#title .scrim').style.opacity=clamp(t/.6)*clamp((D-t)/.45);
+    // The two marks arrive side by side, then the words unfold from between them, then the model title rises.
+    const imgs=[...document.querySelectorAll('#title .lock img')];
+    imgs.forEach((im,i)=>{const p=ease((t-.15-i*.18)/.6);im.style.opacity=p;im.style.transform=`scale(${.6+.4*p})`});
+    const open=inout((t-1.05)/.9);
+    document.querySelectorAll('#title .lock .w').forEach(w=>{w.style.width=(w.firstElementChild.scrollWidth*open)+'px';w.style.opacity=clamp(open*1.6)});
+    $('#title .lock .x').style.opacity=clamp((t-.7)/.4);
+    // The pair starts at frame centre, larger, and settles into the lock-up as the words open.
+    const lock=$('#title .lock'), settle=inout((t-.95)/1.0);
+    lock.style.transform=`translateY(${(1-settle)*-300}px) scale(${1.25-.25*settle})`;
+    rise($('#title h1'),t,1.85,60,.8); rise($('#title .line'),t,2.3,30,.7);
+    w.style.opacity=clamp((D-t)/.45);
+  },
+  question(t,p,D){const h=$('#question h1');rise(h,t,.1,50,.7);h.style.opacity=Math.min(+h.style.opacity,clamp((D-t)/.35))},
+  lat(t,p,D){
+    // Request → MP4 for one clip. Bars share one linear scale whose full track is p.scale seconds; a longer
+    // bar is drawn to the end of the track with a break mark, and its own measured value is printed.
+    $('[data-lat-title]').textContent=p.title; $('[data-lat-sub]').textContent=p.sub;
+    rise($('#lat .head'),t,.05,30,.6);
+    const rows=$('#lat .rows');
+    if(!rows.children.length) for(const r of p.rows){
+      const row=document.createElement('div'); row.className='row '+r.kind;
+      row.innerHTML=`<div class="dev"><img class="${r.device}" src="devices/${r.device}.svg" alt=""></div>`+
+        `<div class="who"><b>${r.name}</b><small>${r.where}</small></div>`+
+        `<div class="track"><div class="bar"></div><div class="cut"></div><div class="val"></div></div>`;
+      rows.append(row);
+    }
+    const trackW=rows.querySelector('.track').getBoundingClientRect().width-170;
+    [...rows.children].forEach((row,i)=>{
+      const r=p.rows[i], start=.45+i*p.stagger;
+      rise(row,t,start,24,.45);
+      const g=inout((t-start-.15)/p.growS), full=Math.min(1,r.s/p.scale);
+      const w=trackW*full*g;
+      row.querySelector('.bar').style.width=w+'px';
+      const v=row.querySelector('.val'); v.style.left=w+'px';
+      v.textContent=g>0?(r.s*g).toFixed(1)+' s':'';
+      v.style.opacity=clamp(g*4);
+      const cut=row.querySelector('.cut'); cut.style.left=(trackW*.82)+'px'; cut.style.opacity=r.s>p.scale&&g>.85?1:0;
+    });
+    const x=$('[data-lat-x]'); x.innerHTML=`<b>${p.speedup}</b>${p.speedupText}`;
+    rise(x,t,.45+(p.rows.length-1)*p.stagger+.15+p.growS+.2,20,.5);
+    $('#lat').style.opacity=clamp((D-t)/.4);
+  },
+  modes(t,p,D){
+    rise($('#modes .head'),t,.05,30,.6);
+    document.querySelectorAll('#modes .card').forEach((c,i)=>rise(c,t,.35+i*.18,50,.7));
+    $('#modes').style.opacity=clamp((D-t)/.4);
+  },
+  studio(t,p,D){
+    $('[data-st]').textContent=p.title; $('[data-ss]').textContent=p.sub||'';
+    const g=$('#studio .tag'); rise(g,t,.15,24,.5); g.style.opacity=Math.min(+g.style.opacity,clamp((D-t)/.35));
+  },
+  caption(t,p,D){
+    $('[data-cap]').textContent=p.text; $('[data-capsub]').textContent=p.sub||'';
+    const c=$('#caption .c'); rise(c,t,.12,24,.45); c.style.opacity=Math.min(+c.style.opacity,clamp((D-t)/.3));
+  },
+  end(t,p,D){
+    const els=['#end .logo','#end h2','#end .badge','#end .url'];
+    els.forEach((s,i)=>rise($(s),t,.2+i*.22,36,.7));
+  },
+};
+// Frame entry point used by the renderer.
+window.renderFrame=(name,t,params,D)=>{
+  document.querySelectorAll('.scene').forEach(s=>s.classList.toggle('on',s.id===name));
+  scenes[name](t,params||{},D);
+};
+</script>
+</body></html>

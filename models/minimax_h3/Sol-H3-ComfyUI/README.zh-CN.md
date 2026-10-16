@@ -40,9 +40,9 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
 - **32 GB 显卡可用**：DiT 按块流式加载，解码器只在运行时占用显卡；Qwen 常驻，请求之间停放在主机内存。
 - **进程隔离**：模型在独立 Python 环境的 worker 中运行，不改动 ComfyUI 的依赖；取消会停止 worker。
 
-## 完整复刻
+## 快速开始
 
-从权重到 Studio 的全流程；所有选项见 [docs/install.md](docs/install.md)。
+从权重到 Studio 的完整步骤；所有选项见 [docs/install.md](docs/install.md)。
 
 1. **运行环境**：Linux、一张 RTX 5090（32 GB）、≥ 90 GB 内存、CUDA 13 驱动。一个 Python 3.12 环境
    （PyTorch 2.12.0+cu130、Triton 3.7.0）运行 Qwen 和 H3 DiT，另装 FastVideo + FlashAttention 4（SM120）和为 SM120
@@ -88,7 +88,7 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
    第一次请求会加载并编译模型，之后复用。`scripts/hyperflow/e2e_comfy.py` 可以通过 ComfyUI API 对同一张图测速。
 
 只看前端：在本目录运行 `python3 -m http.server`，打开 `scripts/studio_preview.html`（模拟后端，不需要 GPU）。
-宣传片用 [`scripts/promo/`](scripts/promo/) 复刻。
+宣传片的制作脚本在 [`scripts/promo/`](scripts/promo/)。
 
 ## 目录
 

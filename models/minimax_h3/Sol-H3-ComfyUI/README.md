@@ -52,9 +52,9 @@ the DGX Spark row is the released Sol-H3-Spark package (mean of three). Details 
 - **Process isolation.** Models run in a worker with its own Python environment, so ComfyUI's
   packages are never touched. Cancel stops the worker.
 
-## Reproduce it
+## Getting started
 
-The full path from weights to the Studio; [docs/install.md](docs/install.md) has every option.
+From weights to the Studio; [docs/install.md](docs/install.md) has every option.
 
 1. **Runtime environment.** Linux, one RTX 5090 (32 GB), ≥ 90 GB host RAM, CUDA 13 driver. One
    Python 3.12 environment with PyTorch 2.12.0+cu130 and Triton 3.7.0 runs Qwen and the H3 DiT;

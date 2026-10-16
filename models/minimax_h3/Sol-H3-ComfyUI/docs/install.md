@@ -96,9 +96,10 @@ It runs the HyperFlow DiT with the LoRA merged into per-tensor FP8 weights, an e
 AdaLN lookup table instead of the 26 GB `adaln_proj` weights, Sol-Attn sparse attention
 (the `sol_attn` package in the HyperFlow overlay) with SageAttention 2.2 for the dense
 steps, regional `torch.compile` of each block, a resident Qwen worker parked in host
-RAM between requests, and — when given — the distilled noncausal VAE
-(`hp-l33/h3-fast-vae-noncausal`, not yet public). Without it the original H3 VAE decodes,
-about 10 s more per 768p clip.
+RAM between requests, and — when given — the distilled noncausal decoder
+[Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE): pass its `fast_h3_vae_noncausal_24l.safetensors` and its
+`code/` directory as `--fast-vae-code`. Without it the original H3 VAE decodes, about 10 s more
+per 768p clip.
 SageAttention must be built for SM120 in the runtime environment, and FlashAttention 4
 must be importable by the worker (for example `PYTHONPATH=/path/to/fa4-runtime`).
 Set `TORCHINDUCTOR_CACHE_DIR` to a persistent directory so later sessions reuse the
@@ -190,7 +191,7 @@ python3 scripts/configure.py \
   --output-dir ~/sol-h3-settings --gpu 0
 ```
 
-With the noncausal VAE, add `--hyperflow-fast-vae-weights` and `--fast-vae-code`.
+With [Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE), add `--hyperflow-fast-vae-weights` and `--fast-vae-code`.
 
 ## 3. Start ComfyUI
 

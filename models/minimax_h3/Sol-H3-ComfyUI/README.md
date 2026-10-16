@@ -60,8 +60,8 @@ the DGX Spark row is the released Sol-H3-Spark package (mean of three). Details 
 - [NVFP4 Qwen encoder](https://huggingface.co/Comfy-Org/MiniMax-H3) (`text_encoders/`)
 - [HyperFlow 8-step LoRA](https://huggingface.co/videorebirth/hyperflow)
 - [FastH3 dense-datafree adapter](https://huggingface.co/FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA)
-- Distilled noncausal VAE: optional, not yet public. Without it, one stage decodes with the
-  original H3 VAE, about 10 s slower per clip.
+- [Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE), the distilled noncausal decoder: optional. Without it, one stage decodes
+  with the original H3 VAE, about 10 s slower per clip.
 
 **Install**
 

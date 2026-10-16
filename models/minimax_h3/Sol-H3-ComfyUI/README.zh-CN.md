@@ -52,7 +52,7 @@ Sol-H3-Spark 包三次平均。详见 [测试记录](docs/validation.md)。
 - [NVFP4 Qwen 编码器](https://huggingface.co/Comfy-Org/MiniMax-H3)（`text_encoders/`）
 - [HyperFlow 8 步 LoRA](https://huggingface.co/videorebirth/hyperflow)
 - [FastH3 dense-datafree adapter](https://huggingface.co/FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA)
-- 蒸馏非因果 VAE：可选，尚未公开。不提供时单阶段用原版 H3 VAE 解码，每条约慢 10 秒。
+- [Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE)（蒸馏的非因果解码器）：可选。不提供时单阶段用原版 H3 VAE 解码，每条约慢 10 秒。
 
 **安装**
 

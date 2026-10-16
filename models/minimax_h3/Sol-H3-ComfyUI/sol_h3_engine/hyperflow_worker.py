@@ -323,7 +323,7 @@ class HyperFlow:
     fast_vae = None
 
     def load_fast_vae(self, config):
-        """Distilled noncausal decoder (hp-l33/h3-fast-vae-noncausal): replaces only the video decode."""
+        """Distilled noncausal decoder (Efficient-Large-Model/Sol-H3-VAE): replaces only the video decode."""
         sys.path.insert(0, config["code"])
         from spark_decoder import SparkFastH3VAEDecoder
         self.fast_vae = SparkFastH3VAEDecoder(config["vae_config"], config["weights"], engine="fast", max_engines=1)

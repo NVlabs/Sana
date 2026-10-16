@@ -27,6 +27,10 @@ def main():
     if options.get("precision") != "hyperflow":
         raise ValueError("%s is not a HyperFlow profile" % profile)
     options["hyperflow"]["fp8_dir"] = str(fp8_dir.resolve(strict=True))
+    weight_map = json.loads((fp8_dir / "diffusion_pytorch_model.safetensors.index.json").read_text())["weight_map"]
+    if not any(".adaln_proj." in key for key in weight_map):
+        raise ValueError("%s has no adaln_proj weights (converted with --drop-adaln); "
+                         "rerun convert_fp8.py without --drop-adaln" % fp8_dir)
     import torch
     from torch import nn
     from safetensors import safe_open

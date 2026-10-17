@@ -1,0 +1,294 @@
+{
+  "evidence_kind": "Historical deployed-runtime checks; not a new run of the packaged CLI",
+  "utc": "2026-09-16T02:33:45.136131+00:00",
+  "hardware": "8 x NVIDIA B200",
+  "steps": 8,
+  "dit_linear_dtype": "bfloat16",
+  "compute_quant": "none",
+  "lora_mode": "fused",
+  "source_runtime": "HyperFlow 1.0 with Sol-H3 LoRA consumer fusion (PR #503)",
+  "functional": {
+    "passed": true,
+    "cases": [
+      {
+        "task": "t2v",
+        "duration": 5,
+        "num_frames": 124,
+        "steps": 8
+      },
+      {
+        "task": "t2v",
+        "duration": 10,
+        "num_frames": 243,
+        "steps": 8
+      },
+      {
+        "task": "t2v",
+        "duration": 15,
+        "num_frames": 362,
+        "steps": 8
+      },
+      {
+        "task": "i2v",
+        "duration": 5,
+        "num_frames": 124,
+        "steps": 8
+      },
+      {
+        "task": "i2v",
+        "duration": 10,
+        "num_frames": 243,
+        "steps": 8
+      },
+      {
+        "task": "i2v",
+        "duration": 15,
+        "num_frames": 362,
+        "steps": 8
+      },
+      {
+        "task": "ref2va",
+        "duration": 5,
+        "num_frames": 124,
+        "steps": 8
+      },
+      {
+        "task": "ref2va",
+        "duration": 10,
+        "num_frames": 243,
+        "steps": 8
+      },
+      {
+        "task": "ref2va",
+        "duration": 15,
+        "num_frames": 362,
+        "steps": 8
+      }
+    ],
+    "four_step_request_rejected": true,
+    "attention_mode_switch_checks": [
+      {
+        "task": "t2v",
+        "mode": "quality",
+        "passed": true
+      },
+      {
+        "task": "ref2va",
+        "mode": "quality",
+        "passed": true
+      },
+      {
+        "task": "t2v",
+        "mode": "speed",
+        "passed": true
+      }
+    ]
+  },
+  "native_fused_parity": {
+    "passed": true,
+    "world_size": 8,
+    "steps": 8,
+    "scope": "Consumer fusion enabled versus disabled with all other deployed optimizations unchanged; tested 5-second cases",
+    "cases": [
+      {
+        "task": "t2v",
+        "all_ranks_dit_bitwise_equal": true,
+        "all_ranks_decoded_media_bitwise_equal": true,
+        "fusion_calls": {
+          "split_linear": 2400,
+          "qkv_pack": 400,
+          "attention_output": 400,
+          "swiglu": 400,
+          "ffn_output": 400
+        }
+      },
+      {
+        "task": "i2v",
+        "all_ranks_dit_bitwise_equal": true,
+        "all_ranks_decoded_media_bitwise_equal": true,
+        "fusion_calls": {
+          "split_linear": 2400,
+          "qkv_pack": 400,
+          "attention_output": 400,
+          "swiglu": 400,
+          "ffn_output": 400
+        }
+      },
+      {
+        "task": "ref2va",
+        "all_ranks_dit_bitwise_equal": true,
+        "all_ranks_decoded_media_bitwise_equal": true,
+        "fusion_calls": {
+          "split_linear": 2400,
+          "qkv_pack": 400,
+          "attention_output": 400,
+          "swiglu": 400,
+          "ffn_output": 400
+        }
+      }
+    ]
+  },
+  "conditioner_memory": {
+    "original_layers": 64,
+    "retained_layers": 51,
+    "selected_hidden_state": 50,
+    "unused_lm_head_removed": true,
+    "freed_bytes": 14233381376,
+    "text_and_image_embeddings_bitwise_equal": true
+  },
+  "media_checks": {
+    "passed": true,
+    "cases": [
+      {
+        "task": "t2v",
+        "duration": 5,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "124"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "163"
+          }
+        ]
+      },
+      {
+        "task": "t2v",
+        "duration": 10,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "243"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "318"
+          }
+        ]
+      },
+      {
+        "task": "t2v",
+        "duration": 15,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "362"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "473"
+          }
+        ]
+      },
+      {
+        "task": "i2v",
+        "duration": 5,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "124"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "163"
+          }
+        ]
+      },
+      {
+        "task": "i2v",
+        "duration": 10,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "243"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "318"
+          }
+        ]
+      },
+      {
+        "task": "i2v",
+        "duration": 15,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "362"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "473"
+          }
+        ]
+      },
+      {
+        "task": "ref2va",
+        "duration": 5,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "124"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "163"
+          }
+        ]
+      },
+      {
+        "task": "ref2va",
+        "duration": 10,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "243"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "318"
+          }
+        ]
+      },
+      {
+        "task": "ref2va",
+        "duration": 15,
+        "streams": [
+          {
+            "codec_type": "video",
+            "width": 1344,
+            "height": 768,
+            "nb_read_frames": "362"
+          },
+          {
+            "codec_type": "audio",
+            "nb_read_frames": "473"
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "No new GPU inference or perceptual evaluation was run while assembling this package.",
+    "Native/fused equality is not equality to an unoptimized upstream baseline.",
+    "Historical smoke latency included first-shape compilation and is omitted.",
+    "No 1/2/4-GPU or multiple-reference end-to-end validation is claimed."
+  ]
+}

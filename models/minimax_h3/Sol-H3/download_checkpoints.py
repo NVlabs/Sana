@@ -45,7 +45,7 @@ def main() -> int:
     )
     if args.task in {"t2v", "both"}:
         snapshot_download(
-            "FastVideo/FastH3-4-step-Preview-v1-LoRA",
+            "FastVideo/FastVideo-FastH3-4-step-Preview-v1-LoRA",
             local_dir=root / "FastH3-4-step-Preview-v1-LoRA",
             allow_patterns=["dense-datafree/adapter_model.safetensors"],
         )

@@ -12,6 +12,12 @@ The actual runtime adapter code lives under `models/<model_uid>/baseline/` and
 `techniques/`. (Both moved in the 2026-07-17 `efficiency/` -> `techniques/`
 reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 
+## SoL-Refiner
+
+[SoL-Refiner](sol-refiner/) provides the original LTX-2.3 one-step and multi-step
+refiners and the LTX-2.5 extension for MiniMax-H3. Each entry includes inference
+commands using the published Hugging Face models.
+
 ## A model profile contains
 
 - official config and runtime env

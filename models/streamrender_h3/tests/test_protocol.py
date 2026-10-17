@@ -41,6 +41,8 @@ class ProtocolTests(unittest.TestCase):
         inference = config["inference"]
         self.assertEqual(inference["models"]["backbone"]["args"]["num_layers"], 50)
         self.assertEqual(inference["diffusion"]["sampling_timesteps"]["args"]["num_sampling_steps"], 2)
+        for node in inference["diffusion"].values():
+            self.assertIsInstance(node["args"].get("T", 1.0), float)
         self.assertFalse(inference["meta_model"]["qwen_reference_video"])
         decoder = inference["models"]["video_decoder"]["args"]["decoder_config"]
         self.assertEqual(decoder['decoder_kwargs']['num_layers'], 24)

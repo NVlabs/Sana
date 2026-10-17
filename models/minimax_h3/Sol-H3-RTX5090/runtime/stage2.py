@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from contextlib import ExitStack
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import gc
 import os
 from pathlib import Path
@@ -104,6 +104,14 @@ def _refiner_class(base, compat, session):
             frames = min(int(latent.shape[2]), expected[2])
             conformed[:, :, :frames] = latent[:, :, :frames]
             return conformed.contiguous()
+
+        def prepare_multimodal_states(self, video_latent, audio_latent, conditionings, seed):
+            # The output keeps the H3 audio, so hold it clean and frozen (as in LTX-2 a2vid_two_stage).
+            video_state, audio_state, generator = super().prepare_multimodal_states(
+                video_latent, audio_latent, conditionings, seed)
+            audio_state = replace(audio_state, latent=audio_state.clean_latent,
+                                  denoise_mask=torch.zeros_like(audio_state.denoise_mask), frozen=True)
+            return video_state, audio_state, generator
 
         def _checked_attention_stats(self):
             stats = self.sol_attention.stats()

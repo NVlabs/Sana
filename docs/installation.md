@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- Python >= 3.10.0 (Recommend to use [Anaconda](https://www.anaconda.com/download/#linux) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html))
-- [PyTorch >= 2.5.1+cu12.4](https://pytorch.org/)
+- Python >= 3.11 (Recommend to use [Anaconda](https://www.anaconda.com/download/#linux) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html))
+- [PyTorch 2.9.1+cu128](https://pytorch.org/) (installed by `environment_setup.sh`)
 
 ## Quick Install
 

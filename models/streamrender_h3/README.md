@@ -3,23 +3,7 @@
 An end-to-end runtime connecting a controllable Three.js game engine to a
 resident, multi-GPU H3 streaming renderer and browser video feedback.
 
-```text
-player controls -> game engine -> semantic RGB frames
-    -> streaming TAE encoder -> two full H3 denoising evaluations
-    -> fast causal ViT24 decoder -> streaming RGB feedback in the browser
-```
-
-## Implementation and validation status
-
-- The engine, online worker, ordered frame protocol, bounded queues, session
-  reset, and browser feedback client are included here.
-- CPU protocol/configuration tests and the frontend production build pass.
-- The package-local H3 imports pass in the production Python environment.
-- The actual same-rack 8-GB200 browser/H3 loop passed in job **7848438**.
-  Final clean-exit verification **7848537** completed successfully (exit 0).
-  Results and timing boundaries are recorded in `VALIDATION.md`.
-- This runtime has its own entry point; it is not a SGLang `scripts/run.py`
-  model adapter. It can be launched independently from this model folder.
+[![Session setup and the interaction loop from player input to streaming video feedback](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/assets/interaction_loop.webp)](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/#2-3-a-real-time-interaction-loop-from-player-input-to-video-feedback)
 
 ## Runtime profile
 
@@ -68,6 +52,37 @@ bounded; the browser retries the same frame on backpressure.
 
 ## Assets and initialization
 
+The public checkpoint bundle is
+[Efficient-Large-Model/StreamRender-H3](https://huggingface.co/Efficient-Large-Model/StreamRender-H3).
+Download it with the Hugging Face client in the configured Python environment:
+
+```bash
+hf download Efficient-Large-Model/StreamRender-H3 --local-dir /your/code/models/StreamRender-H3
+python /your/code/models/StreamRender-H3/download_assets.py
+```
+
+The bundle is approximately 206.87 GB. The second command reconstructs the exact
+merged backbone from its shards and verifies its SHA-256; it needs another
+66.28 GB of disk space. Other weights need no conversion. The resulting
+`assets.json` is the runtime weight manifest. All five model components,
+including both Qwen storage formats, are supplied by this organization repository.
+
+**60 curated examples** are included in [`examples/`](examples/README.md).
+The default startup prompt is **B10_e-track-3_bluehour**. Semantic videos
+and reference pictures are downloaded from the linked GitHub Release;
+weights are downloaded from Hugging Face. To prepare the default example:
+
+```bash
+python scripts/prepare_example.py \
+  --assets /your/code/models/StreamRender-H3/assets.json
+GPUS=8 PYTHON_BIN=python bash scripts/launch_local.sh \
+  --assets configs/example.local.json
+```
+
+See the example README for media download, alternative prompts and prerecorded
+semantic-video playback. Existing local manifests retain their own prompts;
+use the selection script to opt into the new default.
+
 Weights are external assets, not Git contents. Copy
 `configs/assets.example.json` to a local manifest and fill its paths. The
 role of each path is specified in `asset_roles`. The required assets include:
@@ -76,12 +91,12 @@ role of each path is specified in `asset_roles`. The required assets include:
 2. Qwen model configuration, processor, tokenizer, and compatible DCP weights.
 3. Native TAE weights.
 4. Causal ViT24 decoder weights.
-5. Original H3 VAE weights used when constructing the decoder architecture.
-6. Audio VAE weights for the H3 model/codec contract.
-7. A photorealistic reference image aligned with the engine opening scene,
+5. Audio VAE weights for the H3 model/codec contract.
+6. A photorealistic reference image aligned with the engine opening scene,
    and its corresponding render prompt.
 
-The original H3 VAE is loaded for decoder construction; online reference
+The causal decoder is built directly from its configuration and trained
+weights. No original H3 video VAE checkpoint is loaded. Online reference
 encoding uses TAE and online video decoding uses the causal ViT24 implementation.
 Audio latents remain part of H3 inference, while this browser feedback path
 publishes RGB video only.
@@ -91,14 +106,6 @@ creation/editing is a setup asset-production step: provide its finished image
 in the manifest, then the worker encodes it once at session start. An image
 generation API is not required during the interaction loop.
 
-The current step224 merged backbone has SHA256:
-
-```text
-56c3ee3270db40354ef70fcbea16248809914cfa8f51acb57dae7d30fa4bb597
-```
-
-The runtime accepts paths relative to the manifest's directory as well as
-absolute paths. `*.local.json`, weights, outputs and caches are Git-ignored.
 
 ## Environment
 
@@ -176,34 +183,6 @@ Then open `http://127.0.0.1:5191` locally. Another site can use its equivalent
 SSH tunnel or an authenticated reverse proxy. Both services default to
 loopback; do not expose this development endpoint publicly.
 
-## Validation and timing boundaries
-
-```bash
-PYTHONPATH="$PWD/models/streamrender_h3" python -m unittest discover \
-  -s models/streamrender_h3/tests -v
-```
-
-Set `VALIDATE_BROWSER=1` when submitting the Slurm launcher to run a headless
-browser producing real game-engine frames and consuming rendered feedback.
-Provide `NODE_BIN` and, when necessary, `CHROMIUM_BIN`.
-This validation run exits after completion. Normal workers stay resident.
-
-Per-session output is written under `outputs/SESSION_ID/`:
-
-- `controls.jsonl`: frame-indexed actions, simulation state and chunk pairing.
-- `timings.jsonl`: chunk encode/render/decode, GPU RGB readiness, wall time
-  and publication intervals.
-
-There are no stage-level forced synchronizations; readiness is synchronized
-once at the chunk boundary. GPU RGB-ready timing excludes input PNG transport,
-PNG decode, H2D/resize, JPEG encoding and browser/network display.
-Publication intervals include waiting and host-side work between chunks;
-they are a different metric. The browser loop includes those transport
-operations and must be evaluated separately.
-
-An RGB-ready speed quoted for an older checkpoint/runner is not a performance
-claim for this newly integrated worker.
-
 ## Provenance and licenses
 
 The engine comes from `yitongl/CodeGameEngine`. Preserve the TORCS source
@@ -214,3 +193,18 @@ workspace; original file-level notices are retained.
 
 Deployment glue follows the repository's Apache-2.0 license. Model weights
 retain their upstream permissions and licenses and are not redistributed here.
+
+## Acknowledgements
+
+We thank the following projects and their authors:
+
+1. [MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) for the base video
+   generation model and native video/audio codecs. Our streaming renderer and
+   distilled causal decoder build on these components.
+2. [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) for the text and visual
+   conditioning model used to encode the prompt and initial reference image.
+3. [TAE / TAeHV](https://github.com/madebyollin/taehv), by Ollin Boer Bohan,
+   for the lightweight video autoencoder used by the reference-video encoder.
+
+These acknowledgements do not replace the upstream licenses and attribution
+notices, which remain applicable to the corresponding components.

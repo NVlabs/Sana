@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "name": "FastH3 dense direct768 four-update RTX5090 experiment",
+  "stage1": {
+    "width": 1344,
+    "height": 768,
+    "frames": 124,
+    "fps": 24,
+    "qwen": "NVFP4_AWQ_per_request",
+    "dit": "W8A8_FP8_after_BF16_LoRA_merge",
+    "lora": "FastH3_Dense_DataFree",
+    "lora_strength": 1.0,
+    "updates": 4,
+    "video_sigmas": [
+      1.0,
+      0.972972989,
+      0.923076928,
+      0.8,
+      0.0
+    ],
+    "audio_sigmas": [
+      1.0,
+      0.9,
+      0.75,
+      0.5,
+      0.0
+    ],
+    "attention": "FA4_dense",
+    "video_decode": true
+  },
+  "output": {
+    "width": 1344,
+    "height": 768,
+    "frames": 121,
+    "fps": 24,
+    "video_codec": "H264",
+    "crf": 19,
+    "preset": "veryfast",
+    "audio": "original_H3_PCM_to_AAC_stereo_32000Hz"
+  },
+  "decoder": {
+    "name": "original_H3_full_VAE",
+    "weights": "fp32",
+    "autocast": "fp16",
+    "cpu_offload": true,
+    "compile": true,
+    "crop": "first121 of124 native frames"
+  }
+}

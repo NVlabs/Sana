@@ -40,6 +40,7 @@ support a wider range of models.
 
 ## 📰 News
 
+- **[2026/10/11]** 🔥 **StreamRender-H3** \[[Code](models/streamrender_h3/) | [Weights](https://huggingface.co/Efficient-Large-Model/StreamRender-H3) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/)\] — code and weights for interactive code-driven worlds with real-time streaming diffusion render, connecting a controllable game engine to a two-step streaming renderer and causal video decoder.
 - **[2026/09/28]** 🔥 **SoL-Refiner** \[[Code](models/sol-refiner/) | [Weights](https://huggingface.co/collections/Efficient-Large-Model/sol-refiner-6aba664fa5a41296a351abad) | [Project Page](https://nvlabs.github.io/Sana/Sol-Refiner/)\] — code and pretrained weights for one-step high-resolution video refinement across base generators, including a dedicated refiner for MiniMax-H3.
 - **[2026/09/27]** 🔥 **Sol-H3 on NVIDIA GeForce RTX 5090** \[[Code](models/minimax_h3/Sol-H3-RTX5090/)\] — single-GPU CPU offload for the two-stage pipeline, generating 1344×768 video with original H3 audio. One 5-second T2VA request completed in **39.80 s** end-to-end.
 - **[2026/09/11]** 🔥 **Sol-H3 on NVIDIA DGX Spark** \[[Code](models/minimax_h3/Sol-H3-Spark/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/)\] — production two-stage MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On a single NVIDIA DGX Spark at 1344×768, T2V end-to-end latency is **56 s** for a 5-second output.
@@ -175,6 +176,13 @@ Built on [SGLang](https://github.com/sgl-project/sglang) and
 draw on TeaCache, EasyCache, SVDQuant/Nunchaku, FlashAttention,
 [TransformerEngine](https://github.com/NVIDIA/TransformerEngine), and the sparse-attention
 / token-reduction literature surveyed in the [docs](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
+
+For StreamRender-H3, we thank the [MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)
+team for the base video model and codecs, the
+[Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) team for the text and visual
+conditioning model, and [TAE / TAeHV](https://github.com/madebyollin/taehv)
+by Ollin Boer Bohan for the lightweight video autoencoder used for reference
+encoding. Their respective upstream licenses and attribution notices apply.
 
 ## 📌 Citation
 

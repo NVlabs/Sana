@@ -84,6 +84,26 @@ has a different workload and timing boundary from the baseline comparisons
 above; no cross-profile speedup is claimed. See
 [5090 validation](Sol-H3-RTX5090/docs/validation.md).
 
+## Sol-H3 in ComfyUI
+
+[Sol-H3 in ComfyUI](Sol-H3-ComfyUI/) brings these runtimes to a local RTX 5090 or DGX Spark
+behind **Sol-H3 Studio**, a full-screen creative workspace over ComfyUI (English and Chinese).
+It offers *one stage* (the [HyperFlow](HyperFlow/) eight-step LoRA with an FP8 DiT, an exact
+AdaLN table, Sol-Attn, regional compile and a distilled noncausal VAE; text, first frame and
+reference images at 768p or 480p) and *two stage* (the [Sol-H3-RTX5090](Sol-H3-RTX5090/) /
+[Sol-H3-Spark](Sol-H3-Spark/) runtime, unchanged, with a resident Qwen session on RTX 5090).
+
+| One 1344×768 clip with audio, request → MP4 through ComfyUI | Device | Latency |
+|---|---|---:|
+| Original MiniMax-H3, 50 steps | RTX 5090 | 989.0 s |
+| Sol-H3 · one stage | RTX 5090 | 67.2 s |
+| Sol-H3 · two stage | RTX 5090 | 35.5 s |
+| Sol-H3 · two stage | DGX Spark | 64.3 s |
+
+Qwen encoding and MP4 writing are included; model loading is excluded. The RTX 5090 rows were
+measured on a host with a 90 GB RAM limit. Media (film, gallery) live in
+[Sana-assets](https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/tree/main/Sol-Engine/Sol-H3-ComfyUI).
+
 ## Usage
 
 Run the launcher from the repository root and select the full-opt config for your GPU from the

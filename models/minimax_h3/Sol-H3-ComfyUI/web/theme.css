@@ -1,0 +1,37 @@
+/* Sol-H3 design tokens. Scoped to our own .sh-* surfaces; never restyle ComfyUI.
+   Pattern after FreeVideo's web/theme.css (Apache-2.0); values are Sol-H3's own. */
+:where(.sh-studio,.sh-pill,.sh-library){
+  /* Graphite surfaces, backdrop up to a hovered control. */
+  --sh-bg:#0c0e11;--sh-canvas:#101317;--sh-card:#15181d;--sh-raised:#1b1f25;--sh-hover:#232831;
+  --sh-border:#252a32;--sh-border-strong:#323844;
+  /* Ink. */
+  --sh-ink:#eef1f4;--sh-muted:#9199a6;--sh-faint:#626a77;
+  /* One accent: Sol green. */
+  --sh-accent:#76b900;--sh-accent-hover:#8bd10f;--sh-accent-ink:#0a0f02;
+  --sh-accent-soft:rgba(118,185,0,.12);--sh-accent-line:rgba(118,185,0,.45);
+  --sh-danger:#ff8a80;--sh-danger-soft:rgba(255,138,128,.1);
+  --sh-r-sm:8px;--sh-r-md:12px;--sh-r-lg:16px;
+  --sh-h-sm:30px;--sh-h:38px;--sh-h-lg:52px;
+  --sh-ease:cubic-bezier(.4,0,.2,1);--sh-ease-out:cubic-bezier(.22,1,.36,1);
+  --sh-font:Inter,"InterVariable",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei UI","Noto Sans SC",system-ui,sans-serif;
+  font-family:var(--sh-font);
+  color-scheme:dark;
+  -webkit-font-smoothing:antialiased;
+}
+.sh-wordmark{display:inline-flex;align-items:center;gap:10px;color:var(--sh-ink);white-space:nowrap;user-select:none}
+.sh-wordmark img{display:block;width:26px;height:26px}
+.sh-wordmark b{font-size:17px;font-weight:650;letter-spacing:-.02em}
+.sh-wordmark small{font-size:12px;font-weight:500;color:var(--sh-muted);letter-spacing:.01em;padding-left:10px;border-left:1px solid var(--sh-border-strong)}
+:where(.sh-studio,.sh-pill) :is(input,select,textarea,button){font-family:inherit}
+:where(.sh-studio,.sh-pill) :focus-visible{outline:2px solid var(--sh-accent);outline-offset:2px}
+.sh-studio:focus-visible{outline:none}
+.sh-studio[open]{animation:sh-enter .32s var(--sh-ease-out)}
+.sh-studio::backdrop{animation:sh-fade .24s ease}
+@keyframes sh-enter{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes sh-fade{from{opacity:0}to{opacity:1}}
+@keyframes sh-rise{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+@keyframes sh-shimmer{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@keyframes sh-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){
+  :where(.sh-studio,.sh-pill,.sh-library),:where(.sh-studio,.sh-pill,.sh-library) *,.sh-studio::backdrop{animation:none!important;transition:none!important}
+}

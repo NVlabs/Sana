@@ -16,8 +16,12 @@ from torch.distributed.fsdp.wrap import (
 
 
 def get_device_type() -> str:
-    """Device type of the active accelerator ('cpu' when there is none)."""
-    for name in ("cuda", "npu", "xpu", "mps"):
+    """Device type of the active accelerator ('cpu' when there is none).
+
+    `mps` is not listed: `torch.mps` has neither `set_device` nor `current_device`, so a Mac with
+    MPS keeps the historical CPU fallback instead of failing on device selection.
+    """
+    for name in ("cuda", "npu", "xpu"):
         backend = getattr(torch, name, None)
         if backend is not None and backend.is_available():
             return name

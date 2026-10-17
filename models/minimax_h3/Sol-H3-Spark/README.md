@@ -29,7 +29,7 @@ see [validation](docs/validation.md).
 | Draft attention | VSA, 90% video sparsity, 64-token blocks; optimized cuDNN BSA backend |
 | Latent transfer | Learned H3 ×2 upscaler, then H3-to-LTX VAE latent adapter |
 | Refinement context | Offline cached generic post-connector video **and** audio features |
-| Refinement | BF16 LTX-2.5 dev + distilled LoRA 450 at strength 0.8; 3 joint audio/video updates |
+| Refinement | BF16 LTX-2.5 dev + distilled LoRA 450 at strength 0.8; 3 video updates against the clean, frozen H3 audio |
 | Refiner attention | Triton Sol-Attn, step thresholds 1 / 1.25 / 1.5; first layer dense |
 | Output | Official Conv VideoVAE, H.264 video and original H3 audio as stereo AAC |
 

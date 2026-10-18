@@ -73,7 +73,8 @@ path for this model. Wait for the Runtime `/health` endpoint to report `availabl
 
 ## Prepare the optional official examples
 
-Use a Sana checkout at revision `62da34b14a53d7289e82fa56692f34e96e089bee`.
+Use a Sana checkout at revision `f479a31a98209566de43605dc06bb5960fcc88f4`.
+Fetch this exact commit from `NVlabs/Sana` if it is not on your local branch.
 Download the [official example media](https://github.com/NVlabs/Sana/releases/tag/streamrender-h3-examples-v1)
 into that checkout:
 
@@ -149,8 +150,8 @@ imports. `DistributedRunner` owns the existing workers. Source is pinned once
 in the manifest; native model code is shared with the upstream implementation.
 
 All 50 DiT layers, two denoising evaluations, native chunk scheduling and history
-policy are retained. The diffusion horizon is normalized to floating-point `1.0`
-to preserve the intended continuous two-step schedule after JSON loading.
+policy are retained. The pinned upstream configuration defines floating-point
+`T=1.0` for its continuous two-step schedule; it is used without adapter overrides.
 The adapter's playback and decoding do not establish universal visual fidelity:
 review each rendered trajectory against its paired input, particularly long runs.
 

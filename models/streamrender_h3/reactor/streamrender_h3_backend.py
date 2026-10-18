@@ -8,20 +8,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 
-def continuous_time_settings(settings: dict) -> dict:
-    """Keep H3's normalized diffusion clock continuous after JSON loading.
-
-    The upstream timestep class treats an integer T as a discrete schedule.
-    With T=1 that rounds both denoising stages to 1. Float horizons preserve
-    the released two-step shifts (video: 6, audio: 1.5).
-    """
-    for specification in settings["inference"]["diffusion"].values():
-        args = specification["args"]
-        if "T" in args:
-            args["T"] = float(args["T"])
-    return settings
-
-
 class StreamRenderBackend:
     def __init__(self):
         self.pipe = None
@@ -38,7 +24,6 @@ class StreamRenderBackend:
         settings, _ = config_module.load_config(
             root / "configs/runtime.json", assets_path
         )
-        continuous_time_settings(settings)
         sys.path.insert(0, str(root))
         config_module.mount_vendor()
 

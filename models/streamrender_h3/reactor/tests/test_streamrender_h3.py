@@ -8,32 +8,6 @@ import pytest
 from streamrender_h3_model import InvalidStream, StreamRenderInput, StreamRenderModel
 
 
-def test_continuous_clock_survives_integer_json_horizons():
-    from streamrender_h3_backend import continuous_time_settings
-
-    diffusion = {
-        "sampling_timesteps": {"args": {"T": 1, "num_sampling_steps": 2, "shift": 6}},
-        "audio_sampling_timesteps": {
-            "args": {"T": 1, "num_sampling_steps": 2, "shift": 1.5}
-        },
-        "schedule": {"args": {"T": 1, "pred_type": "x_0"}},
-        "sampler": {"args": {}},
-    }
-    settings = {"inference": {"diffusion": diffusion}, "unchanged": object()}
-    untouched = settings["unchanged"]
-    result = continuous_time_settings(settings)
-    for name in ("sampling_timesteps", "audio_sampling_timesteps", "schedule"):
-        assert type(result["inference"]["diffusion"][name]["args"]["T"]) is float
-        assert result["inference"]["diffusion"][name]["args"]["T"] == 1.0
-    assert diffusion["sampling_timesteps"]["args"]["num_sampling_steps"] == 2
-    assert diffusion["sampling_timesteps"]["args"]["shift"] == 6
-    assert diffusion["audio_sampling_timesteps"]["args"]["shift"] == 1.5
-    assert diffusion["schedule"]["args"]["pred_type"] == "x_0"
-    assert diffusion["sampler"]["args"] == {}
-    assert result["unchanged"] is untouched
-    assert continuous_time_settings(result) == result
-
-
 @pytest.mark.parametrize("format", ["PNG", "JPEG"])
 def test_reference_decoder_accepts_only_supported_formats(format, monkeypatch):
     import io

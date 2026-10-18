@@ -2,7 +2,7 @@ $schema: reactor/v2
 
 model:
   name: streamrender-h3
-  version: v0.2.0
+  version: v0.2.1
   description: Render recorded semantic videos with an aligned reference and prompt using StreamRender-H3.
   resources:
     gpu:
@@ -26,7 +26,7 @@ build:
   python_requirements: requirements.txt
   system_packages: [git, build-essential, libgl1, libglib2.0-0]
   run:
-    - git clone --branch sol-engine https://github.com/NVlabs/Sana.git /opt/streamrender-sana && git -C /opt/streamrender-sana checkout 62da34b14a53d7289e82fa56692f34e96e089bee
+    - git clone --branch sol-engine https://github.com/NVlabs/Sana.git /opt/streamrender-sana && git -C /opt/streamrender-sana fetch origin f479a31a98209566de43605dc06bb5960fcc88f4 && git -C /opt/streamrender-sana checkout --detach FETCH_HEAD
     - pip install -r /opt/streamrender-sana/models/streamrender_h3/requirements.txt
   runtime_env:
     STREAMRENDER_SOURCE: /opt/streamrender-sana

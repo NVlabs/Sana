@@ -352,6 +352,7 @@ class SanaPipelineInpaint(nn.Module):
         latent_mask = self.get_mask_latent(mask, use_resolution_binning, height, width)
 
         # 1. pre-compute negative embedding
+        null_caption_embs = self.null_caption_embs
         if negative_prompt != "":
             null_caption_token = self.tokenizer(
                 negative_prompt,
@@ -360,9 +361,7 @@ class SanaPipelineInpaint(nn.Module):
                 truncation=True,
                 return_tensors="pt",
             ).to(self.device)
-            self.null_caption_embs = self.text_encoder(null_caption_token.input_ids, null_caption_token.attention_mask)[
-                0
-            ]
+            null_caption_embs = self.text_encoder(null_caption_token.input_ids, null_caption_token.attention_mask)[0]
 
         if prompt is None:
             prompt = [""]
@@ -407,7 +406,7 @@ class SanaPipelineInpaint(nn.Module):
                     :, :, select_index
                 ].to(self.weight_dtype)
                 emb_masks = caption_token.attention_mask[:, select_index]
-                null_y = self.null_caption_embs.repeat(len(prompts), 1, 1)[:, None].to(self.weight_dtype)
+                null_y = null_caption_embs.repeat(len(prompts), 1, 1)[:, None].to(self.weight_dtype)
 
                 n = len(prompts)
                 if latents is None:

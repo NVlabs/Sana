@@ -154,16 +154,16 @@ BACKEND=passthrough bash scripts/launch_local.sh --assets configs/assets.local.j
 
 ## Inference with Reactor Runtime
 
-The [Reactor integration](../../reactor/README.md) serves StreamRender-H3 with a
+The [Reactor integration](reactor/README.md) serves StreamRender-H3 with a
 browser demo for recorded semantic videos, aligned reference images and prompts.
 Click **Connect**, choose one of the 60 official input combinations or upload
 your own inputs, then click **Start rendering**. Generated video streams one native
 chunk at a time with 24 FPS playback; the prompt and reference stay fixed per render.
 
-See the [Reactor guide](../../reactor/README.md) for weights, the YAML-defined
+See the [Reactor guide](reactor/README.md) for weights, the YAML-defined
 `reactor build` workflow, the required 2 GB of container shared memory, demo setup
-and SSH/WebRTC access. The adapter and demo live in the repository's `reactor/`
-directory; native inference code and launch paths are unchanged.
+and SSH/WebRTC access. The adapter and demo live in `models/streamrender_h3/reactor/`;
+native inference code and launch paths are unchanged.
 
 ## Slurm launch
 

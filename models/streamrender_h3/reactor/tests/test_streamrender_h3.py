@@ -34,6 +34,177 @@ def test_continuous_clock_survives_integer_json_horizons():
     assert continuous_time_settings(result) == result
 
 
+@pytest.mark.parametrize("format", ["PNG", "JPEG"])
+def test_reference_decoder_accepts_only_supported_formats(format, monkeypatch):
+    import io
+
+    from PIL import Image
+
+    from streamrender_h3_images import decode_reference
+
+    file = io.BytesIO()
+    Image.new("RGB", (12, 8), "red").save(file, format=format)
+    original_open = Image.open
+    calls = []
+
+    def restricted_open(*args, **kwargs):
+        calls.append(kwargs.get("formats"))
+        return original_open(*args, **kwargs)
+
+    monkeypatch.setattr(Image, "open", restricted_open)
+    pixels = decode_reference(file.getvalue())
+    assert pixels.shape == (8, 12, 3) and pixels.dtype == np.uint8
+    assert calls == [["PNG", "JPEG"]]
+
+
+@pytest.mark.parametrize("format", ["BMP", "GIF", "TIFF"])
+def test_reference_decoder_rejects_other_pillow_formats(format):
+    import io
+
+    from PIL import Image, UnidentifiedImageError
+
+    from streamrender_h3_images import decode_reference
+
+    file = io.BytesIO()
+    Image.new("RGB", (12, 8), "red").save(file, format=format)
+    with pytest.raises(UnidentifiedImageError):
+        decode_reference(file.getvalue())
+
+
+def test_reference_upload_is_private_temporary_and_cleared_on_reset(
+    tmp_path, monkeypatch
+):
+    from tempfile import TemporaryDirectory
+
+    import streamrender_h3_backend as backend_module
+
+    monkeypatch.setattr(
+        backend_module,
+        "TemporaryDirectory",
+        lambda **kwargs: TemporaryDirectory(dir=tmp_path, **kwargs),
+    )
+    backend = backend_module.StreamRenderBackend()
+    reference = np.zeros((8, 12, 3), np.uint8)
+    picture = backend._save_reference(reference)
+    assert picture.is_file()
+    assert picture.parent.parent == tmp_path
+    assert picture.parent.stat().st_mode & 0o777 == 0o700
+    backend.reset()
+    assert not picture.exists()
+    assert list(picture.parent.iterdir()) == []
+    # Preserve native path-derived RNG across resets in this worker lifetime.
+    assert backend._save_reference(reference) == picture
+    backend.reset()
+    backend.reset()
+    assert list(picture.parent.iterdir()) == []
+    backend._reference_directory.cleanup()
+
+
+def test_failed_reference_write_leaves_no_upload(tmp_path, monkeypatch):
+    from tempfile import TemporaryDirectory
+
+    from PIL import Image
+
+    import streamrender_h3_backend as backend_module
+
+    monkeypatch.setattr(
+        backend_module,
+        "TemporaryDirectory",
+        lambda **kwargs: TemporaryDirectory(dir=tmp_path, **kwargs),
+    )
+
+    def fail(*args, **kwargs):
+        raise OSError("disk write failed")
+
+    monkeypatch.setattr(Image.Image, "save", fail)
+    backend = backend_module.StreamRenderBackend()
+    with pytest.raises(OSError, match="disk write failed"):
+        backend._save_reference(np.zeros((8, 12, 3), np.uint8))
+    backend.reset()
+    assert not list(tmp_path.rglob("*.png"))
+    backend._reference_directory.cleanup()
+
+
+@pytest.mark.parametrize("write_failure", [False, True])
+def test_reference_path_and_write_error_are_shared_with_all_ranks(
+    monkeypatch, write_failure
+):
+    import sys
+    from contextlib import nullcontext
+    from pathlib import Path
+    from types import ModuleType, SimpleNamespace
+
+    from streamrender_h3_backend import StreamRenderBackend
+
+    names = [
+        "torch",
+        "torch.distributed",
+        "dev",
+        "dev.yanzuolu",
+        "dev.yanzuolu.common",
+        "dev.yanzuolu.common.distributed",
+        "dev.yanzuolu.common.distributed.unified_parallel",
+        "dev.yanzuolu.common.phase",
+    ]
+    modules = {}
+    for name in names:
+        module = ModuleType(name)
+        module.__path__ = []
+        modules[name] = module
+        monkeypatch.setitem(sys.modules, name, module)
+        if "." in name:
+            parent, attr = name.rsplit(".", 1)
+            setattr(modules[parent], attr, module)
+    rank, message = [0], []
+
+    def broadcast(status, src):
+        assert src == 0
+        if rank[0] == 0:
+            message[:] = status
+        else:
+            status[:] = message
+
+    modules["torch.distributed"].get_rank = lambda: rank[0]
+    modules["torch.distributed"].broadcast_object_list = broadcast
+    modules["dev.yanzuolu.common.distributed.unified_parallel"].use_unified_parallel = (
+        lambda size: nullcontext()
+    )
+    phase = modules["dev.yanzuolu.common.phase"]
+    phase.ExecutionPhase = SimpleNamespace(VALIDATION="validation")
+    phase.execution_phase = lambda value: nullcontext()
+    calls, backends = [], [StreamRenderBackend() for _ in range(4)]
+    reference = np.zeros((8, 12, 3), np.uint8)
+    if write_failure:
+
+        def fail(reference):
+            raise OSError("upload failed")
+
+        monkeypatch.setattr(backends[0], "_save_reference", fail)
+    try:
+        for index, backend in enumerate(backends):
+            rank[0] = index
+            backend.world_size = 4
+            backend.pipe = SimpleNamespace(start=lambda **kwargs: calls.append(kwargs))
+            if write_failure:
+                with pytest.raises(OSError, match="upload failed"):
+                    backend.start(reference, "prompt", 42)
+            else:
+                backend.start(reference, "prompt", 42)
+        if write_failure:
+            assert not calls
+        else:
+            assert len(calls) == 4
+            assert all(call == calls[0] for call in calls)
+            assert Path(calls[0]["picture"]).is_file()
+            assert all(b._reference_directory is None for b in backends[1:])
+    finally:
+        for backend in backends:
+            backend.pipe = None
+            backend.reset()
+        if backends[0]._reference_directory is not None:
+            backends[0]._reference_directory.cleanup()
+
+
 class Backend:
     def __init__(self):
         self.starts = []

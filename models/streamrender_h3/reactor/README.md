@@ -5,8 +5,6 @@ and [Reactor Runtime](https://reactor.inc). Choose an official multi-track examp
 or upload a semantic video, its aligned opening reference and a rendering prompt.
 The demo streams the generated video at 24 FPS.
 
-![StreamRender-H3 recorded-video demo](assets/demo.png)
-
 ## What you can do
 
 - Choose from **60 official input combinations**: 30 recorded semantic trajectories,
@@ -41,7 +39,7 @@ python /path/to/weights/download_assets.py
 ```
 
 Set `runtime.weights_path` in `reactor.yaml` to that directory, then build from
-the adapter directory (`reactor/` in Sana or `models/streamrender-h3/` in Cookbook):
+the adapter directory (`models/streamrender_h3/reactor/` in Sana):
 
 ```sh
 reactor build --no-dockerfile
@@ -56,10 +54,17 @@ GPUs. For the default four-GPU image, a local launch is:
 
 ```sh
 docker run --rm --gpus '"device=0,1,2,3"' --shm-size=2g \
-  -p 8080:8080 -v /path/to/weights:/weights \
+  -p 127.0.0.1:8080:8080 -v /path/to/weights:/weights \
   -e REACTOR_WEIGHTS_PATH=/weights -e STREAMRENDER_ASSETS=/weights/assets.json \
   reactor-local/streamrender-h3:dev
 ```
+
+The local service has no authentication; keep it bound to loopback. Use an
+authenticated gateway before exposing it to other users. Uploaded reference
+images are written to a private temporary directory, cleared on reset, outside
+the weights directory. Uploaded videos are decoded from memory and closed when
+the run ends. The native RNG includes the reference path: seeds reproduce within
+a worker lifetime, but a new worker's temporary path can change its output.
 
 Use the image name printed by `reactor build` if it differs. The manifest sets
 `STREAMRENDER_GPUS=4`; add `-e STREAMRENDER_GPUS=8` and expose eight GPUs for that layout.

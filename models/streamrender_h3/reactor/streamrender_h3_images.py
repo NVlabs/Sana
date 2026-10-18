@@ -11,7 +11,7 @@ def decode_reference(data: bytes) -> np.ndarray:
     if len(data) > 16 * 1024 * 1024:
         raise ValueError("Reference image exceeds 16 MiB")
     try:
-        with Image.open(io.BytesIO(data)) as image:
+        with Image.open(io.BytesIO(data), formats=["PNG", "JPEG"]) as image:
             if image.width * image.height > 16_000_000:
                 raise ValueError("Reference image exceeds 16 megapixels")
             return np.array(ImageOps.exif_transpose(image).convert("RGB"))

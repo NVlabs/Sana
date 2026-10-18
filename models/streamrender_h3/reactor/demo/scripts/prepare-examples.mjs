@@ -8,7 +8,7 @@ const demo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = path.resolve(
   process.argv[2] ||
     process.env.STREAMRENDER_SOURCE ||
-    path.join(demo, "../.."),
+    path.join(demo, "../../../.."),
 );
 const root = path.join(source, "models/streamrender_h3");
 const output = path.join(demo, "public");

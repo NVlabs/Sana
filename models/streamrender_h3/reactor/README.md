@@ -73,7 +73,7 @@ path for this model. Wait for the Runtime `/health` endpoint to report `availabl
 
 ## Prepare the optional official examples
 
-Use a Sana checkout at revision `f479a31a98209566de43605dc06bb5960fcc88f4`.
+Use a Sana checkout at revision `9f0af774e7be7a82cb429de7428e678e8157c750`.
 Fetch this exact commit from `NVlabs/Sana` if it is not on your local branch.
 Download the [official example media](https://github.com/NVlabs/Sana/releases/tag/streamrender-h3-examples-v1)
 into that checkout:

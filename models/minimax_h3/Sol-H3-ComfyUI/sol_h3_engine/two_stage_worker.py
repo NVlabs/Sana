@@ -10,6 +10,7 @@ checkpoint from disk — on a host whose RAM cap leaves no page cache for it tha
 option one Qwen session stays resident on the card (the package's own resident Session, as on DGX Spark) while the
 video stages keep their CPU offload; the request sequence and recipe are otherwise the package's own.
 """
+import inspect
 import json
 import signal
 import sys
@@ -111,8 +112,10 @@ def serve(options, write_json):
                 if cold:
                     progress("loading")
                     factory = ResidentQwenPipeline if settings.get("resident_qwen") else runtime_pipeline.Pipeline
-                    pipeline = factory(paths, root / "pipeline", offload_mode=settings.get("offload", "cpu"),
-                                       worker_factory=ReportingWorker)
+                    kwargs = {"worker_factory": ReportingWorker}
+                    if "offload_mode" in inspect.signature(runtime_pipeline.Pipeline).parameters:  # not on Spark
+                        kwargs["offload_mode"] = settings.get("offload", "cpu")
+                    pipeline = factory(paths, root / "pipeline", **kwargs)
                     pipeline.start(case)  # loads every stage and runs one full warmup request (seed 999)
                 row = pipeline.generate(case)
                 progress("saving")

@@ -43,6 +43,9 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
+- 🔥 [2026/10] 🎮 **StreamRender-H3** is released! A code-driven streaming render runtime connecting a controllable Three.js game engine to a multi-GPU H3 streaming renderer with browser video feedback. See [Project](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/) | [Code](https://github.com/NVlabs/Sana/tree/sol-engine/models/streamrender_h3).
+- 🔥 [2026/10] ⚡ **Sol-H3** brings MiniMax-H3 to a single RTX 5090 or DGX Spark, now also in ComfyUI: one 1344×768 clip with audio in **35.5 s** on one RTX 5090 (989.0 s for the original 50-step model). See [Project](https://nvlabs.github.io/Sana/Sol-H3/) | [Code](https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3).
+- 🔥 [2026/09] 🔍 **SoL-Refiner** is released! One-step refinement turns low-resolution video drafts into high-resolution video, with code and models for LTX-2.3 and MiniMax-H3. See [Project](https://nvlabs.github.io/Sana/Sol-Refiner/) | [Code](https://github.com/NVlabs/Sana/tree/sol-engine/models/sol-refiner).
 - 🔥 [2026/09] ⚡ **SANA-Video 2.0 5B 4-Step Preview** is released! The DMD preview generates 720p videos in four denoising steps and supports 5-second and 8-second outputs. See [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) | [4-Step Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Project](https://nvlabs.github.io/Sana/Video2/).
 - 🔥 [2026/08] 🎬 **SANA-Video 2.0** training, inference, model architecture, and 5B 720p checkpoint are released! The 8-second model supports both text-to-video and text-image-to-video generation, with hybrid linear/softmax attention and Attention Residuals. See [Online Demo](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo) | [Project](https://nvlabs.github.io/Sana/Video2/) | [Doc](https://nvlabs.github.io/Sana/docs/sana_video2/) | [Model Zoo](https://nvlabs.github.io/Sana/docs/model_zoo/#sana-video-20) | [Weights](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p).
 - 🔥 [2026/08] ⚡ **Sol Engine: Day-One MiniMax-H3 Acceleration** is available! The 33B omni-modal audio+video DiT runs **3.95×** faster on GB200, reached in 4.5 hours of optimization, and up to **4.52×** on hardware that sits on a desk — 3.92× on DGX Spark, 4.52× on GeForce RTX 5090 — with no distillation, no LoRA, and no calibration pass. See [GB200 Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/) | [On-Device Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/).
@@ -146,30 +149,13 @@ cd Sana && ./environment_setup.sh sana
 
 ### SANA-Video 2.0 5B release demo
 
-This sample was generated from the public 5B checkpoint with seed 4. The result
-contains 193 frames at 24 FPS in a 1280 × 736 bucket (8.04 seconds).
-
-Try your own prompt in the [SANA-Video 2.0 5B 720p 4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce the original 50-step sample below with its exact release command.
+Try your own prompt in the [SANA-Video 2.0 5B 720p 4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), or reproduce this 50-step sample (seed 4, 193 frames at 24 FPS):
 
 <p align="center">
   <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">
-    <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" width="90%" alt="SANA-Video 2.0 5B release demo: a cartoon rooster holding a beer bottle in a floral vintage room"/>
+    <img src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster_poster.png" width="60%" alt="SANA-Video 2.0 5B release demo: a cartoon rooster holding a beer bottle in a floral vintage room"/>
   </a>
 </p>
-
-<p align="center">
-  <a href="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video2/assets/release-demo/sana_video2_5b_720p_rooster.mp4">▶ Watch or download the generated video</a>
-</p>
-
-> **Prompt:** In a cozy, vintage room adorned with floral wallpaper, a cartoon
-> rooster sits comfortably in a floral-patterned armchair, sipping from a bottle
-> of beer. The rooster, with its vibrant red comb and wattle, displays a range of
-> expressions—smiling, nodding, and opening its beak wide in a cheerful manner.
-> The setting includes wooden furniture and another beer bottle on the table,
-> adding to the relaxed atmosphere. The camera captures the rooster from a
-> close-up angle, emphasizing its animated movements and lively demeanor.
-
-Run the exact release command used for the video above:
 
 ```bash
 bash inference_video_scripts/inference_sana_video.sh \
@@ -186,46 +172,7 @@ bash inference_video_scripts/inference_sana_video.sh \
   --work_dir output/sana_video2_t2v_720p_demo
 ```
 
-The online preview supports 5-second (81 frames at 16 FPS) and 8-second
-(193 frames at 24 FPS) outputs, and defaults to RL LoRA scale 0.7. Run the
-T2V-only full DMD checkpoint at its native RL scale 1.0 with the 5-second
-profile using:
-
-```bash
-bash inference_video_scripts/inference_sana_video.sh \
-  --np 1 \
-  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \
-  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/checkpoints/SANA_Video_2.0_5B_720p_4step.pth \
-  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \
-  --task=t2v \
-  --model.image_size=480 \
-  --custom_height_width='[736,1280]' \
-  --sampling_algo=fastvideo_dmd_4step \
-  --generator_sigma_profile=sana_shift6_dpm \
-  --cfg_scale=1.0 \
-  --flow_shift=1.0 \
-  --motion_score=20 \
-  --negative_prompt=None \
-  --num_frames=81 \
-  --step=4 \
-  --fps=16 \
-  --seed=4 \
-  --work_dir output/sana_video2_t2v_720p_4step_preview
-```
-
-The verified online seed-4 preview below uses the same prompt, temporal profile,
-and motion score, with the Space default RL LoRA scale 0.7 (1280 × 736,
-81 frames, 16 FPS, 5.06 seconds). The model card records its exact API call.
-
-<p align="center">
-  <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">
-    <img src="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4_poster.png" width="90%" alt="SANA-Video 2.0 5B four-step preview: a cartoon rooster holding a beer bottle in a floral vintage room"/>
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">▶ Watch or download the verified four-step video</a>
-</p>
+The four-step preview command and more examples are in the [SANA-Video 2.0 guide](docs/sana_video2.md).
 
 ### Inference with 🧨 diffusers
 
@@ -418,6 +365,16 @@ Thanks go to these wonderful contributors:
       primaryClass={cs.CV},
       url={https://arxiv.org/abs/2509.24695},
     }
+
+@misc{chen2026sanavideo2,
+      title={SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
+      author={Junsong Chen and Jincheng Yu and Yitong Li and Shuchen Xue and Haozhe Liu and Jingyu Xin and Yuyang Zhao and Tian Ye and Zhangjie Wu and Zian Wang and Daquan Zhou and Ping Luo and Song Han and Enze Xie},
+      year={2026},
+      eprint={2607.21553},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2607.21553},
+}
 
 @misc{li2026fp4,
       title={FP4 Explore, BF16 Train: Diffusion Reinforcement Learning via Efficient Rollout Scaling},

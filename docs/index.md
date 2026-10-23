@@ -51,6 +51,10 @@ ______________________________________________________________________
 | **Sana-Video** | Efficient video generation with Block Linear Attention |
 | **Sana-Video 2.0** | 5B/14B hybrid-attention video models with Attention Residuals; [project page](https://nvlabs.github.io/Sana/Video2/), [4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo), and [50-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) / [4-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) weights released |
 | **LongSana** | Minute-length real-time video generation (with LongLive) |
+| **SANA-WM** | 2.6B world model for 720p, minute-scale video with 6-DoF camera control; [docs](sana_wm.md) |
+| **SANA-Streaming** | 2B real-time streaming video editing at 720p; [docs](sana_streaming.md) |
+| **Sol-RL** | NVFP4-rollout, BF16-training diffusion RL; [docs](sol_rl.md) |
+| **Sol-Engine** | Inference acceleration for video diffusion models; [docs](https://nvlabs.github.io/Sana/Sol-Engine/docs/) |
 
 ### Key Techniques
 

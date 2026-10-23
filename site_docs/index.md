@@ -17,6 +17,7 @@ Sol-Engine is an efficiency-oriented inference framework for high-resolution vid
 | [Wan2.2 TI2V-5B (1xGB200)](pipelines/wan5b.md) | 5B | EasyCache + kernel fusion + compile | 2.89x |
 | [Wan2.2-A14B (1xGB200)](pipelines/wan14b.md) | 14B | kernel fusion + EasyCache + PISA | 2.17x |
 | [LingBot-Video (4xGB200)](pipelines/lingbot.md) | 30B-A3B | kernel fusion + refiner PISA + EasyCache | 2.60x |
+| [MiniMax-H3 (8xGB200)](pipelines/minimax_h3.md) | 33B | kernel + Sol-Attn + cache + memory-efficient decoding | 3.95x |
 
 ## The five acceleration methods
 
@@ -49,6 +50,8 @@ your specific machine.
 
 - [Installation](installation.md): environment creation, CUDA JIT fixups, and model downloads.
 - [Pipelines](pipelines/cosmos3.md): optimized launch paths for all six models (Cosmos3-Super, LTX-2.3, SANA-Video, Wan-5B, Wan-14B, LingBot-Video).
+- [StreamRender-H3](pipelines/streamrender_h3.md): real-time streaming H3 render driven by a Three.js game engine.
+- [SoL-Refiner](pipelines/sol_refiner.md): one-step high-resolution video refinement.
 - [Techniques](techniques/cache.md): the five acceleration methods and where they apply.
 - [Agent workflow](agent-workflow.md): the orchestration (master/executors, quality gates) behind the agent-native quick start.
 

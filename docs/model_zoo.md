@@ -42,7 +42,7 @@
 | LongSANA-Video-2B-ODE-Init | 480p | [LongSANA_2B_480p_ode](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_ode) | --- | bf16 | LongSANA first step model initialized from ODE trajectories |
 | LongSANA-Video-2B-Self-Forcing | 480p | [LongSANA_2B_480p_self_forcing](https://huggingface.co/Efficient-Large-Model/LongSANA_2B_480p_self_forcing) | --- | bf16 | LongSANA second step model trained by Self-Forcing |
 
-### [SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/)
+### [SANA-Video 2.0](https://arxiv.org/abs/2607.21553)
 
 [Documentation](sana_video2.md) · [4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
 
@@ -51,6 +51,24 @@
 | SANA-Video 2.0 5B | 720p | [SANA-Video_2.0_5B_720p](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p) | --- | bf16 inference | 8s T2V/TI2V ReFL model (193 frames at 24 FPS) |
 | SANA-Video 2.0 5B 4-step preview | 720p | [SANA-Video_2.0_5B_720p_4step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step) | --- | bf16 inference | T2V-only DMD preview (81 frames at 16 FPS or 193 frames at 24 FPS) |
 | SANA-Video 2.0 14B | 480p | Coming soon | Coming soon | bf16 | 40-layer hybrid-attention model |
+
+### [SANA-WM](https://arxiv.org/abs/2605.15178)
+
+[Documentation](sana_wm.md)
+
+| Model | Reso | pth link | Description |
+| --- | --- | --- | --- |
+| SANA-WM 2.6B bidirectional | 720p | [SANA-WM_bidirectional](https://huggingface.co/Efficient-Large-Model/SANA-WM_bidirectional) | 1-min world model with 6-DoF camera control |
+| SANA-WM streaming | 720p | [SANA-WM_streaming](https://huggingface.co/Efficient-Large-Model/SANA-WM_streaming) | Streaming (chunk-causal) variant |
+
+### [SANA-Streaming](https://arxiv.org/abs/2605.30409)
+
+[Documentation](sana_streaming.md)
+
+| Model | Reso | pth link | Description |
+| --- | --- | --- | --- |
+| SANA-Streaming 2B | 720p | [SANA-Streaming](https://huggingface.co/Efficient-Large-Model/SANA-Streaming) | 1-min streaming video editing |
+| SANA-Streaming 2B bidirectional | 720p | [SANA-Streaming_bidirectional](https://huggingface.co/Efficient-Large-Model/SANA-Streaming_bidirectional) | 5-second bidirectional video editing |
 
 ______________________________________________________________________
 

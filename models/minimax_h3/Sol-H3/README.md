@@ -193,3 +193,29 @@ with MiniMaxH3Inference(MODEL_PATH, REF2VA_ADAPTER_PATH, task="ref2va") as engin
     if result is not None:
         result.save("output.mp4")
 ```
+
+### Custom resident text encoder
+
+Python services can replace the checkpoint's text encoder without first loading
+the default component. Pass a factory that receives the current rank's CUDA
+device and returns a `torch.nn.Module` compatible with the Diffusers MiniMax-H3
+text-encoder interface:
+
+```python
+def load_conditioner(device):
+    return MyConditioner.from_pretrained(CONDITIONER_PATH, device=device)
+
+with MiniMaxH3Inference(
+    MODEL_PATH,
+    ADAPTER_PATH,
+    text_encoder_factory=load_conditioner,
+) as engine:
+    result = engine.generate(prompt, duration=5)
+```
+
+The factory runs once per process after Sol selects the local CUDA device and
+initializes distributed state. Sol registers its result before
+`load_components()`, so Diffusers skips the model index's default text encoder
+and does not create its transient memory peak. The factory owns checkpoint
+loading and any additional process groups; each rank must return a complete
+conditioner for the pipeline interface it selects.

@@ -1,0 +1,17 @@
+name: Block workflow changes from forks
+# Runs the main-branch copy of this file and never checks out PR code.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/**'
+permissions: {}
+jobs:
+  guard:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject changes under .github/ from forks
+        run: |
+          echo "::error::Pull requests from forks may not modify files under .github/. Please open an issue or ask a maintainer to make this change."
+          exit 1

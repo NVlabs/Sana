@@ -50,6 +50,11 @@ from diffusion.model.ops.fused_gdn_chunkwise import cam_scan_chunkwise
 # =============================================================================
 
 
+# Triton on ROCm accepts only "ieee" / "bf16x3" / "bf16x6" for tl.dot(input_precision=...);
+# "tf32" is CUDA-only, so every TF32 request resolves through this constant.
+TF32_INPUT_PRECISION = tl.constexpr("tf32" if torch.version.cuda is not None else "ieee")
+
+
 def _invert_SE3(transforms: torch.Tensor) -> torch.Tensor:
     """Invert a 4x4 SE(3) matrix batch (closed-form).
 
@@ -689,14 +694,14 @@ def _cam_scan_kernel(
                     K,
                     state_prev,
                     out_dtype=tl.float32,
-                    input_precision="tf32",
+                    input_precision=TF32_INPUT_PRECISION,
                 )
                 dv = (V - V_pred) * bt[:, None]
                 state_curr += tl.dot(
                     tl.trans(K),
                     dv,
                     out_dtype=tl.float32,
-                    input_precision="tf32",
+                    input_precision=TF32_INPUT_PRECISION,
                 )
 
         if SAVE_STATES:
@@ -723,7 +728,7 @@ def _cam_scan_kernel(
                 Q,
                 state_out,
                 out_dtype=tl.float32,
-                input_precision="tf32",
+                input_precision=TF32_INPUT_PRECISION,
             )
 
             # Store transposed into (B, H, D, N):
@@ -845,7 +850,7 @@ def _cam_scan_bwd_kernel(
     # bf16 operands for tl.dot keep shared-memory pressure manageable for large
     # BLOCK_D (e.g., 128 in reference). fp32 accumulators preserve precision.
     grad_dtype = tl.bfloat16
-    grad_ip: tl.constexpr = "tf32"
+    grad_ip: tl.constexpr = TF32_INPUT_PRECISION
 
     # Reverse-time accumulator: gradient w.r.t. ``state_post`` for the iter
     # currently being processed.

@@ -172,6 +172,7 @@ def get_args():
         help="Path to the model file (positional)",
     )
     parser.add_argument("--output", default="./", type=str)
+    parser.add_argument("--share", action="store_true")
     parser.add_argument("--bs", default=1, type=int)
     parser.add_argument("--image_size", default=1024, type=int)
     parser.add_argument("--cfg_scale", default=5.0, type=float)
@@ -562,4 +563,4 @@ with gr.Blocks(css=css) as demo:
 
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=True, share=True)
+    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=DEMO_PORT, debug=True, share=args.share)

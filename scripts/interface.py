@@ -71,6 +71,7 @@ class SanaInference(SanaConfig):
     seed: int = 42
     step: int = -1
     port: int = 7788
+    share: bool = False
     custom_image_size: Optional[int] = None
     shield_model_path: str = field(
         default="google/shieldgemma-2b",
@@ -383,4 +384,4 @@ if __name__ == "__main__":
         description=DESCRIPTION,
         examples=examples,
     )
-    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=True)
+    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=args.share)

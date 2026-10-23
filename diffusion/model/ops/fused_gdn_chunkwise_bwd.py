@@ -37,6 +37,10 @@ from diffusion.model.ops.fused_gdn_chunkwise import (
 # BLOCK_D × BLOCK_D bf16 dA+dP buffers alone exceed SRAM. Real fix is a
 # D-tile rewrite, deferred. NVIDIA GPUs work fine.)
 # ──────────────────────────────────────────────────────────────────
+# Triton on ROCm accepts only "ieee" / "bf16x3" / "bf16x6" for tl.dot(input_precision=...);
+# "tf32" is CUDA-only, so every TF32 request resolves through this constant.
+TF32_INPUT_PRECISION = tl.constexpr("tf32" if torch.version.cuda is not None else "ieee")
+
 _BWD_LAUNCH_PARAMS: dict[str, dict] = {
     "ampere": {"BLOCK_S": 64, "phase_c_ns": 2, "phase_a_ns": 1},
     "hopper": {"BLOCK_S": 64, "phase_c_ns": 2, "phase_a_ns": 1},
@@ -81,7 +85,7 @@ def _phase_c_bwd_kernel(
     # while avoiding the 3× Markidis fp32 IEEE penalty that dominates at P0.
     # cos_sim bar is 0.999; measured cos_dx stays at 0.999+.
     dot_dtype = tl.bfloat16
-    dot_ip: tl.constexpr = "tf32"
+    dot_ip: tl.constexpr = TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     b = pid // F
@@ -245,7 +249,7 @@ def _phase_b_bidi_bwd_kernel(
             I_minus_P_T.to(tl.bfloat16),
             accum.to(tl.bfloat16),
             out_dtype=tl.float32,
-            input_precision="ieee" if DOT_PRECISION == 2 else "tf32",
+            input_precision="ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION,
         )
         new_accum = g_val * new_accum
         dMC_f = tl.load(dM_C_fwd_ptr + bh_F_DD + f * BLOCK_D * BLOCK_D + offs_dd, mask=mask_dd, other=0.0).to(
@@ -262,7 +266,7 @@ def _phase_b_bidi_bwd_kernel(
         I_minus_P0_T.to(tl.bfloat16),
         accum.to(tl.bfloat16),
         out_dtype=tl.float32,
-        input_precision="ieee" if DOT_PRECISION == 2 else "tf32",
+        input_precision="ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION,
     )
     tl.store(dM_init_ptr + bh_DD + offs_dd, dM_init, mask=mask_dd)
 
@@ -280,7 +284,7 @@ def _phase_b_bidi_bwd_kernel(
             I_minus_P_T.to(tl.bfloat16),
             accum.to(tl.bfloat16),
             out_dtype=tl.float32,
-            input_precision="ieee" if DOT_PRECISION == 2 else "tf32",
+            input_precision="ieee" if DOT_PRECISION == 2 else TF32_INPUT_PRECISION,
         )
         new_accum = g_val * new_accum
         dMC_f1 = tl.load(dM_C_rev_ptr + bh_F_DD + (f + 1) * BLOCK_D * BLOCK_D + offs_dd, mask=mask_dd, other=0.0).to(
@@ -436,7 +440,7 @@ def _phase_a_kv_bwd_kernel(
     # Backward kernels use bf16 TC (with fp32 accumulate) — enough precision for gradients
     # while avoiding the 3× Markidis fp32 IEEE penalty that dominates at P0.
     # cos_sim bar is 0.999; measured cos_dx stays at 0.999+.
-    dot_ip: tl.constexpr = "tf32"
+    dot_ip: tl.constexpr = TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     b = pid // F
@@ -557,7 +561,7 @@ def _phase_a_z_bwd_kernel(
     # Backward kernels use bf16 TC (with fp32 accumulate) — enough precision for gradients
     # while avoiding the 3× Markidis fp32 IEEE penalty that dominates at P0.
     # cos_sim bar is 0.999; measured cos_dx stays at 0.999+.
-    dot_ip: tl.constexpr = "tf32"
+    dot_ip: tl.constexpr = TF32_INPUT_PRECISION
 
     pid = tl.program_id(0)
     b = pid // F

@@ -363,6 +363,16 @@ Thanks go to these wonderful contributors:
       url={https://arxiv.org/abs/2509.24695},
     }
 
+@misc{chen2026sanavideo2,
+      title={SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
+      author={Junsong Chen and Jincheng Yu and Yitong Li and Shuchen Xue and Haozhe Liu and Jingyu Xin and Yuyang Zhao and Tian Ye and Zhangjie Wu and Zian Wang and Daquan Zhou and Ping Luo and Song Han and Enze Xie},
+      year={2026},
+      eprint={2607.21553},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2607.21553},
+}
+
 @misc{li2026fp4,
       title={FP4 Explore, BF16 Train: Diffusion Reinforcement Learning via Efficient Rollout Scaling},
       author={Li, Yitong and Chen, Junsong and Xue, Shuchen and Zeren, Pengcuo and Fu, Siyuan and Yang, Dinghao and Tang, Yangyang and Bai, Junjie and Luo, Ping and Han, Song and others},

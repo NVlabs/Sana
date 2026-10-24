@@ -201,15 +201,41 @@ forwards), with alpha 8 for Ref2VA or 64 for T2V/I2V. Alternative adapters must
 use their own training schedule and alpha; the filename is not automatically
 interpreted.
 
-To run without an adapter,
-replace `--adapter PATH` with `--no-adapter --num-inference-steps 29` for a
+For Base inference, replace `--adapter PATH` with
+`--no-adapter --num-inference-steps 29` for a
 28-forward trajectory. `--no-adapter` requires an explicit point count to avoid
 silently running Base weights with the default distilled four-forward schedule.
 The model, task, input, output, and attention arguments are otherwise unchanged.
 
 Python callers can pass `adapter_path=None` and `num_inference_steps=29` to
 `MiniMaxH3Inference`. For an alternative adapter, use the scheduler point count
-and alpha documented by that artifact. The point count is fixed per engine because AdaLN projection
-tables are precomputed for its trajectory; construct a separate engine to use
-a different schedule. These options do not disable the other runtime
+and alpha documented by that artifact. The point count is fixed per engine
+because AdaLN projection tables are precomputed for its trajectory; construct a
+separate engine to use a different schedule. These options do not disable the other runtime
 optimizations, establish a full-precision baseline, or assert quality parity.
+
+### Custom resident text encoder
+
+Python services can replace the checkpoint's text encoder without first loading
+the default component. Pass a factory that receives the current rank's CUDA
+device and returns a `torch.nn.Module` compatible with the Diffusers MiniMax-H3
+text-encoder interface:
+
+```python
+def load_conditioner(device):
+    return MyConditioner.from_pretrained(CONDITIONER_PATH, device=device)
+
+with MiniMaxH3Inference(
+    MODEL_PATH,
+    ADAPTER_PATH,
+    text_encoder_factory=load_conditioner,
+) as engine:
+    result = engine.generate(prompt, duration=5)
+```
+
+The factory runs once per process after Sol selects the local CUDA device and
+initializes distributed state. Sol registers its result before
+`load_components()`, so Diffusers skips the model index's default text encoder
+and does not create its transient memory peak. The factory owns checkpoint
+loading and any additional process groups; each rank must return a complete
+conditioner for the pipeline interface it selects.

@@ -59,5 +59,8 @@ def test_constructor_resolves_schedule_before_model_loading(monkeypatch, adapter
     monkeypatch.setattr(torch.cuda, 'set_device', stop)
     engine = object.__new__(MiniMaxH3Inference)
     with pytest.raises(StopBeforeCuda):
-        engine.__init__('unused', adapter, num_inference_steps=points)
+        engine.__init__(
+            'unused', adapter, 'sol_bsa', 't2v', 'match', 'none', 'merged',
+            lambda _device: torch.nn.Identity(), num_inference_steps=points,
+        )
     assert engine.num_inference_steps == expected

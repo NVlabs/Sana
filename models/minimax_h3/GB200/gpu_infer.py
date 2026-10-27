@@ -103,7 +103,7 @@ def install_stack(pipe, config: dict):
             sink_mode=config["sol_sink_mode"])
         undo.append(lambda: sol_attn_h3.uninstall(pipe.transformer))
 
-    if config["kernel"] and world > 1:
+    if config["kernel"] and (world > 1 or sparse is not None):
         undo.append(ulysses_custom.install(pipe.transformer, packed=True, attention_fn=sparse))
 
     if config["cache"] is not None:

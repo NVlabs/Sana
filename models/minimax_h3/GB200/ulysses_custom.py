@@ -190,12 +190,12 @@ def install(transformer, packed: bool = True, group=None, use_fusion: bool = Tru
     what lets `test_packed_equiv.py` ask whether the pack, the collective and the relayout are
     correct without the answer being clouded by the fusion's own reassociation.
     """
-    if not (dist.is_available() and dist.is_initialized()):
-        return lambda: None
-
-    group = group or dist.group.WORLD
-    world = dist.get_world_size(group)
-    if world == 1 or not packed:
+    # Single GPU: no exchange, but the same projection/qk-norm/rope path, so a sequence-level
+    # `attention_fn` (Sol-Attn) still has somewhere to sit. Without it there is nothing to install.
+    distributed = dist.is_available() and dist.is_initialized()
+    group = (group or dist.group.WORLD) if distributed else None
+    world = dist.get_world_size(group) if distributed else 1
+    if not packed or (world == 1 and attention_fn is None):
         return lambda: None
 
     from cache_line import with_cp_reapplied
@@ -238,8 +238,9 @@ def install(transformer, packed: bool = True, group=None, use_fusion: bool = Tru
             else:
                 q, k = attn.norm_q(q), attn.norm_k(k)
 
-            packed = _packed_qkv_all_to_all(q, k, v, world=world, group=group)
-            q, k, v = packed.split(head_dim, dim=-1)    # strided views; SDPA needs only stride(-1)==1
+            if world > 1:
+                packed = _packed_qkv_all_to_all(q, k, v, world=world, group=group)
+                q, k, v = packed.split(head_dim, dim=-1)    # strided views; SDPA needs only stride(-1)==1
 
             # This is the one point in the whole model where a rank holds the entire packed
             # sequence, so it is the only place a sequence-level operator — sparse attention —
@@ -258,7 +259,8 @@ def install(transformer, packed: bool = True, group=None, use_fusion: bool = Tru
                 )
                 out = out.squeeze(0).transpose(0, 1).contiguous()   # (rows_full, heads_local, dim)
 
-            out = _packed_out_all_to_all(out, rows_local, world, group)
+            if world > 1:
+                out = _packed_out_all_to_all(out, rows_local, world, group)
             out = out.reshape(batch, rows_local, heads * head_dim).to(hidden_states.dtype)
             return attn.to_out[1](attn.to_out[0](out))
 

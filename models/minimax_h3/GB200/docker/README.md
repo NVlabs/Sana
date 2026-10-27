@@ -23,6 +23,10 @@ docker run --rm --gpus all -v /data/models:/models --entrypoint python sol-engin
   --checkpoint_path /models/MiniMax-H3/FL2VA --output_path /models/MiniMax-H3-diffusers
 ```
 
+The converter symlinks `text_encoder/`, `processor/` and `tokenizer/` into the original FL2VA folder.
+Convert inside the container as above (the links then name `/models/...`), or mount the original
+folder at the path the links name. The server refuses to start when a component link is broken.
+
 ## Run
 
 ```bash

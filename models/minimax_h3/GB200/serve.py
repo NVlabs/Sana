@@ -55,6 +55,13 @@ def relocate_checkpoint(model: str, scratch: str) -> str:
     model = os.path.abspath(model)
     with open(os.path.join(model, "modular_model_index.json")) as f:
         index = json.load(f)
+    # diffusers only warns when a component fails to load and the request dies much later, so check
+    # here. The converter symlinks text_encoder/processor/tokenizer into the original FL2VA folder;
+    # in a container that folder must be mounted at the path the links name.
+    broken = [f"{name} -> {os.readlink(os.path.join(model, name))}" for name in sorted(os.listdir(model))
+              if os.path.islink(os.path.join(model, name)) and not os.path.exists(os.path.join(model, name))]
+    if broken:
+        raise SystemExit("checkpoint components point at paths that are not mounted: " + "; ".join(broken))
     changed = False
     for value in index.values():
         if isinstance(value, list) and len(value) == 3 and isinstance(value[2], dict):

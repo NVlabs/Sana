@@ -17,11 +17,14 @@ ENV PATH=/opt/sol-engine/venv/bin:$PATH \
 # dependencies first, so a code change rebuilds only the cheap layers below.  Optional mirrors for
 # networks where the upstream ones are slow (e.g. APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports
 # PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple); empty = upstream.
+# APT_NO_SANDBOX=1 for daemonless builders running under a single-uid user namespace (kaniko inside
+# enroot/pyxis), where apt cannot drop to the _apt user.  Plain Dockerfile syntax only, so docker build,
+# buildx and kaniko all accept it.
 ARG APT_MIRROR=
 ARG PIP_INDEX=
+ARG APT_NO_SANDBOX=
 COPY docker/gb200/install.sh docker/gb200/requirements.txt /src/
-RUN --mount=type=cache,target=/var/cache/uv \
-    APT_MIRROR=${APT_MIRROR} PIP_INDEX=${PIP_INDEX} UV_CACHE_DIR=/var/cache/uv KEEP_UV_CACHE=1 \
+RUN APT_MIRROR=${APT_MIRROR} PIP_INDEX=${PIP_INDEX} APT_NO_SANDBOX=${APT_NO_SANDBOX} \
     bash /src/install.sh /src /opt/sol-engine && rm -rf /src /root/.cache
 COPY models/minimax_h3/GB200 /opt/sol-engine/models/minimax_h3/GB200
 COPY models/wan22/GB200 /opt/sol-engine/models/wan22/GB200

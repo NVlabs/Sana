@@ -9,6 +9,9 @@ DIFFUSERS_COMMIT=abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc   # huggingface/diffus
 
 export DEBIAN_FRONTEND=noninteractive
 if command -v apt-get >/dev/null && [ "$(id -u)" = 0 ]; then
+  if [ "${APT_NO_SANDBOX:-}" = 1 ]; then
+    echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99-no-sandbox
+  fi
   if [ -n "${APT_MIRROR:-}" ]; then
     sed -i -E "s#https?://(ports|archive|security)\.ubuntu\.com/ubuntu(-ports)?/?#${APT_MIRROR%/}/#g" \
       /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
@@ -16,7 +19,7 @@ if command -v apt-get >/dev/null && [ "$(id -u)" = 0 ]; then
   # only the toolchain Triton/Inductor JIT needs; Python comes from uv (apt's drags in tzdata)
   apt-get update
   apt-get install -y --no-install-recommends build-essential git ca-certificates curl
-  rm -rf /var/lib/apt/lists/*
+  rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/99-no-sandbox
 fi
 
 mkdir -p $PREFIX/bin

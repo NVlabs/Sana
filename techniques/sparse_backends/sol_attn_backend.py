@@ -249,6 +249,7 @@ def _parse_layer_ranges(spec: str) -> frozenset[int]:
 class _SolContext:
     step = -1
     layer = 0
+    last_timestep = None
     dense_steps = 0
     dense_layers = frozenset()
     tau = DEFAULT_TAU
@@ -268,9 +269,25 @@ _SOL_STATS = {
 }
 
 
-def sol_attn_begin_forward() -> None:
-    """Advance the denoising-step clock and reset the layer counter."""
+def sol_attn_begin_forward(timestep=None) -> None:
+    """Advance the denoising-step clock and reset the layer counter.
 
+    Without ``timestep`` every transformer forward counts as one step. Pipelines that
+    run classifier-free guidance as separate cond/uncond forwards (diffusers
+    ``WanPipeline``) must pass the forward's ``timestep`` instead: the clock then
+    advances only when the timestep changes, so ``dense_steps`` counts denoising
+    steps, and it restarts when the timestep goes back up (a new generation).
+    """
+
+    if timestep is not None:
+        value = float(timestep.reshape(-1)[0]) if hasattr(timestep, "reshape") else float(timestep)
+        last = _SOL_CTX.last_timestep
+        _SOL_CTX.layer = 0
+        if last is not None and value == last:
+            return
+        if last is not None and value > last:
+            _SOL_CTX.step = -1
+        _SOL_CTX.last_timestep = value
     _SOL_CTX.step += 1
     _SOL_CTX.layer = 0
 
@@ -280,6 +297,7 @@ def reset_sol_attn_state() -> None:
 
     _SOL_CTX.step = -1
     _SOL_CTX.layer = 0
+    _SOL_CTX.last_timestep = None
     for key in _SOL_STATS:
         _SOL_STATS[key] = 0
 

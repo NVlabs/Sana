@@ -26,7 +26,8 @@ $PREFIX/bin/uv python install 3.12
 $PREFIX/bin/uv venv --python 3.12 --seed $PREFIX/venv
 PIP="$PREFIX/bin/uv pip install --python $PREFIX/venv/bin/python"
 [ -n "${PIP_INDEX:-}" ] && export UV_DEFAULT_INDEX=$PIP_INDEX      # torch keeps its own --index-url below
-$PIP --index-url https://download.pytorch.org/whl/cu130 torch==2.10.0 torchvision==0.25.0
+# the CUDA build, from the PyTorch index only (a PyPI mirror in UV_DEFAULT_INDEX would win and give +cpu)
+env -u UV_DEFAULT_INDEX $PIP --index-url https://download.pytorch.org/whl/cu130 torch==2.10.0+cu130 torchvision==0.25.0+cu130
 $PIP -r $SRC/requirements.txt
 # packages pinned outside their own dependency metadata:
 #   cuDNN 9.24 (torch's wheel pins an older 9.x; 9.24 is what the Wan numbers were measured with)
@@ -45,9 +46,10 @@ git -C $PREFIX/diffusers checkout -q $DIFFUSERS_COMMIT
 $PIP --no-deps -e $PREFIX/diffusers
 [ "${KEEP_UV_CACHE:-0}" = 1 ] || rm -rf ${UV_CACHE_DIR}
 
+$PREFIX/venv/bin/python -c "import torch; assert torch.version.cuda, 'torch is a CPU build: ' + torch.__version__"
 $PREFIX/venv/bin/python -c "import torch, triton, diffusers, transformers, fastapi
 from diffusers import WanPipeline
-print('torch', torch.__version__, 'cudnn', torch.backends.cudnn.version(), 'triton', triton.__version__,
+print('torch', torch.__version__, 'cuda', torch.version.cuda, 'triton', triton.__version__,
       'diffusers', diffusers.__version__, 'transformers', transformers.__version__)"
 # CuTe DSL / FA4 may need the driver (libcuda) at import; a build host has none, so only warn here.
 $PREFIX/venv/bin/python -c "from flash_attn.cute.interface import _flash_attn_fwd; print('fa4 import ok')" \

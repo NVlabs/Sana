@@ -258,6 +258,8 @@ class H3SparseAttention:
             self.dense_calls += 1
             return _dense(q, k, v)
 
+        if os.environ.get("H3_SPARSE_IMPL", "sol") == "fa4sol":
+            return self._fa4sol_call(q, k, v)
         sol_attn = _import_kernel()
         # The kernel wants contiguous BTHD. `ulysses_custom` hands over strided views into the
         # packed QKV buffer (SDPA needs only stride(-1) == 1), so this copies: three times
@@ -288,6 +290,29 @@ class H3SparseAttention:
             lo, hi = self.sink_start, self.sink_start + self.sink_tokens
             out[:, lo:hi] = _dense(qb[0, lo:hi], kb[0], vb[0]).unsqueeze(0)
 
+        self.sparse_calls += 1
+        return out.squeeze(0)
+
+    def _fa4sol_call(self, q, k, v):
+        """Sol routing on FA4 block-sparse tiles (q256 x kv128) + Sol centroid approximation for the rest.
+
+        The prefix [0, video_start) is the exact-KV sink, as with the Sol kernel; its own query rows are
+        then recomputed densely, as the MMDiT contract requires.
+        """
+        if getattr(self, "_fa4sol", None) is None:
+            if _RELEASE_ROOT not in sys.path:          # sol_fa4 lives next to sol_attn
+                sys.path.insert(0, _RELEASE_ROOT)
+            from sol_fa4 import FA4Sol
+            self._fa4sol = FA4Sol()
+            print(f"[sol_attn_h3] sparse impl = FA4Sol rho={self._fa4sol.rho}", flush=True)
+        qb, kb, vb = (x.unsqueeze(0).contiguous() for x in (q, k, v))
+        sink_end = self.sink_start + self.sink_tokens if self.sink_tokens else 0
+        if self.sink_tokens and self.sink_start != 0:
+            raise RuntimeError("FA4Sol sink must start at row 0")
+        out = self._fa4sol(qb, kb, vb, sink_end=sink_end)
+        if self.sink_tokens:
+            lo, hi = self.sink_start, self.sink_start + self.sink_tokens
+            out[:, lo:hi] = _dense(qb[0, lo:hi], kb[0], vb[0]).unsqueeze(0)
         self.sparse_calls += 1
         return out.squeeze(0)
 

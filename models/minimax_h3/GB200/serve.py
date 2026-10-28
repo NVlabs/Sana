@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MiniMax-H3 single-GB200 HTTP server, SGLang-compatible video API.
 
-    python serve.py --model /models/MiniMax-H3-diffusers --precision fp8 --attention sol --port 30000
+    python serve.py --model /models/MiniMax-H3-diffusers --precision bf16 --attention fa4sol --port 30000
 
 Endpoints (same paths and response schema as `sglang serve --model-type diffusion`):
 
@@ -106,7 +106,9 @@ class H3Engine:
         args = SimpleNamespace(model_path=model_path, attention_backend=None)
         self.pipe, _ = build_pipeline(args, "cuda:0")
         log(f"pipeline loaded in {time.perf_counter() - t0:.1f}s")
-        config = dict(kernel=True, sol_attn=attention == "sol", sol_tau=1.0, sol_thresh_type="diag",
+        if attention == "fa4sol":                     # Sol routing on FA4 block-sparse tiles
+            os.environ["H3_SPARSE_IMPL"] = "fa4sol"
+        config = dict(kernel=True, sol_attn=attention in ("sol", "fa4sol"), sol_tau=1.0, sol_thresh_type="diag",
                       sol_dense_steps=10, sol_dense_layers=2, sol_sink_mode="prefix", cache=None,
                       shard_vae=vae_compile, vae_batched=True, vae_compile="default" if vae_compile else None)
         _, self.sparse = gpu_infer.install_stack(self.pipe, config)
@@ -365,8 +367,10 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--model", default=os.environ.get("H3_MODEL_PATH", "/models/MiniMax-H3-diffusers"),
                    help="converted diffusers checkpoint directory")
-    p.add_argument("--precision", choices=("bf16", "fp8"), default=os.environ.get("H3_PRECISION", "fp8"))
-    p.add_argument("--attention", choices=("sol", "dense"), default=os.environ.get("H3_ATTENTION", "sol"))
+    p.add_argument("--precision", choices=("bf16", "fp8"), default=os.environ.get("H3_PRECISION", "bf16"))
+    p.add_argument("--attention", choices=("fa4sol", "sol", "dense"), default=os.environ.get("H3_ATTENTION", "fa4sol"))
+    p.add_argument("--rho", type=float, default=float(os.environ.get("WAN_FA4SOL_RHO", 0.35)),
+                   help="fa4sol: fraction of (q256, kv128) blocks computed exactly")
     p.add_argument("--fp8-blocks", default=os.environ.get("H3_FP8_BLOCKS", "all"))
     p.add_argument("--no-vae-compile", action="store_true")
     p.add_argument("--host", default="0.0.0.0")
@@ -377,6 +381,7 @@ def main() -> int:
     p.add_argument("--default-seconds", type=float, default=5.0)
     p.add_argument("--default-steps", type=int, default=50)
     a = p.parse_args()
+    os.environ["WAN_FA4SOL_RHO"] = str(a.rho)
     os.makedirs(a.output_dir, exist_ok=True)
     defaults = SimpleNamespace(seconds=a.default_seconds, steps=a.default_steps, seed=0)
 

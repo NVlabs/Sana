@@ -9,6 +9,10 @@ DIFFUSERS_COMMIT=abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc   # huggingface/diffus
 
 export DEBIAN_FRONTEND=noninteractive
 if command -v apt-get >/dev/null && [ "$(id -u)" = 0 ]; then
+  if [ -n "${APT_MIRROR:-}" ]; then
+    sed -i -E "s#https?://(ports|archive|security)\.ubuntu\.com/ubuntu(-ports)?/?#${APT_MIRROR%/}/#g" \
+      /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+  fi
   # only the toolchain Triton/Inductor JIT needs; Python comes from uv (apt's drags in tzdata)
   apt-get update
   apt-get install -y --no-install-recommends build-essential git ca-certificates curl
@@ -21,6 +25,7 @@ export UV_PYTHON_INSTALL_DIR=$PREFIX/python UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/uv
 $PREFIX/bin/uv python install 3.12
 $PREFIX/bin/uv venv --python 3.12 --seed $PREFIX/venv
 PIP="$PREFIX/bin/uv pip install --python $PREFIX/venv/bin/python"
+[ -n "${PIP_INDEX:-}" ] && export UV_DEFAULT_INDEX=$PIP_INDEX      # torch keeps its own --index-url below
 $PIP --index-url https://download.pytorch.org/whl/cu130 torch==2.10.0 torchvision==0.25.0
 $PIP -r $SRC/requirements.txt
 # packages pinned outside their own dependency metadata:

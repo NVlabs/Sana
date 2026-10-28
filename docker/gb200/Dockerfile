@@ -14,9 +14,13 @@ ENV PATH=/opt/sol-engine/venv/bin:$PATH \
     TRITON_CACHE_DIR=/cache/triton TORCHINDUCTOR_CACHE_DIR=/cache/inductor CUTE_DSL_CACHE_DIR=/cache/cute \
     HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 
-# dependencies first, so a code change rebuilds only the cheap layers below
+# dependencies first, so a code change rebuilds only the cheap layers below.  Optional mirrors for
+# networks where the upstream ones are slow (e.g. APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports
+# PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple); empty = upstream.
+ARG APT_MIRROR=
+ARG PIP_INDEX=
 COPY docker/gb200/install.sh docker/gb200/requirements.txt /src/
-RUN bash /src/install.sh /src /opt/sol-engine && rm -rf /src /root/.cache
+RUN APT_MIRROR=${APT_MIRROR} PIP_INDEX=${PIP_INDEX} bash /src/install.sh /src /opt/sol-engine && rm -rf /src /root/.cache
 COPY models/minimax_h3/GB200 /opt/sol-engine/models/minimax_h3/GB200
 COPY models/wan22/GB200 /opt/sol-engine/models/wan22/GB200
 COPY techniques/sparse_backends /opt/sol-engine/techniques/sparse_backends

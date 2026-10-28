@@ -66,16 +66,18 @@ All profiles share the NVFP4 Qwen encoder, CPU offload and FlashAttention 4.
 
 ### Optional noncausal VAE
 
-For the FastH3 noncausal profile, add all three options to `configure.py`:
+For the FastH3 noncausal profile, add all three options to `configure.py`
+([Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE) provides the first two):
 
 ```bash
-  --fast-vae-code /path/to/fast-vae-code \
-  --fast-vae-weights /path/to/fast_h3_vae_noncausal_24l.safetensors \
+  --fast-vae-code /path/to/Sol-H3-VAE/code \
+  --fast-vae-weights /path/to/Sol-H3-VAE/sol_h3_vae.safetensors \
   --fast-vae-diffusers-source /path/to/fast-vae-diffusers
 ```
 
-`fast-vae-code` contains the color-corrected `spark_decoder.py`; the Diffusers
-source overlay carries QuACK 0.5.3 (newer QuACK compiles asynchronously and is
+`fast-vae-code` is the directory holding the `sol_h3_vae` package. On SM120 (RTX 5090, DGX
+Spark) the engine applies a FlashAttention-4 varlen guard (`sol_h3_engine/fa4_sm120.py`)
+before building the decoder. The Diffusers source overlay carries QuACK 0.5.3 (newer QuACK compiles asynchronously and is
 incompatible with FastVideo's daemon workers). The overlay is visible only
 inside the H3 worker. Decoder weights move to CPU between requests to fit 32 GB;
 upload, decode, RGB conversion and offload all count toward the reported time.
@@ -88,8 +90,8 @@ given together with `--hyperflow-weights` and `--hyperflow-deps`; the last two a
 ```bash
   --hyperflow-fp8-dir /path/to/transformer_hf8 \
   --hyperflow-adaln-table /path/to/transformer_hf8/adaln_table.pt \
-  --hyperflow-fast-vae-weights /path/to/fast_h3_vae_noncausal_24l.safetensors \
-  --fast-vae-code /path/to/fast-vae-code
+  --hyperflow-fast-vae-weights /path/to/Sol-H3-VAE/sol_h3_vae.safetensors \
+  --fast-vae-code /path/to/Sol-H3-VAE/code
 ```
 
 It runs the HyperFlow DiT with the LoRA merged into per-tensor FP8 weights, an exact
@@ -97,8 +99,8 @@ AdaLN lookup table instead of the 26 GB `adaln_proj` weights, Sol-Attn sparse at
 (the `sol_attn` package in the HyperFlow overlay) with SageAttention 2.2 for the dense
 steps, regional `torch.compile` of each block, a resident Qwen worker parked in host
 RAM between requests, and — when given — the distilled noncausal decoder
-[Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE): pass its `fast_h3_vae_noncausal_24l.safetensors` and its
-`code/` directory as `--fast-vae-code`. Without it the original H3 VAE decodes, about 10 s more
+[Sol-H3-VAE](https://huggingface.co/Efficient-Large-Model/Sol-H3-VAE): pass its `sol_h3_vae.safetensors` and its `code/`
+directory as `--fast-vae-code`. Without it the original H3 VAE decodes, about 10 s more
 per 768p clip.
 SageAttention must be built for SM120 in the runtime environment, and FlashAttention 4
 must be importable by the worker (for example `PYTHONPATH=/path/to/fa4-runtime`).

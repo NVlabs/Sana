@@ -20,7 +20,9 @@ ENV PATH=/opt/sol-engine/venv/bin:$PATH \
 ARG APT_MIRROR=
 ARG PIP_INDEX=
 COPY docker/gb200/install.sh docker/gb200/requirements.txt /src/
-RUN APT_MIRROR=${APT_MIRROR} PIP_INDEX=${PIP_INDEX} bash /src/install.sh /src /opt/sol-engine && rm -rf /src /root/.cache
+RUN --mount=type=cache,target=/var/cache/uv \
+    APT_MIRROR=${APT_MIRROR} PIP_INDEX=${PIP_INDEX} UV_CACHE_DIR=/var/cache/uv KEEP_UV_CACHE=1 \
+    bash /src/install.sh /src /opt/sol-engine && rm -rf /src /root/.cache
 COPY models/minimax_h3/GB200 /opt/sol-engine/models/minimax_h3/GB200
 COPY models/wan22/GB200 /opt/sol-engine/models/wan22/GB200
 COPY techniques/sparse_backends /opt/sol-engine/techniques/sparse_backends

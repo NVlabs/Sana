@@ -30,8 +30,12 @@ $PIP --index-url https://download.pytorch.org/whl/cu130 torch==2.10.0 torchvisio
 $PIP -r $SRC/requirements.txt
 # packages pinned outside their own dependency metadata:
 #   cuDNN 9.24 (torch's wheel pins an older 9.x; 9.24 is what the Wan numbers were measured with)
-#   FlashAttention-4 4.0.0b36 for the fa4sol sparse backend (its cutlass-dsl / tvm-ffi are in requirements)
-$PIP --no-deps nvidia-cudnn-cu13==9.24.0.43 flash-attn-4==4.0.0b36 quack-kernels==0.6.5 torch-c-dlpack-ext==0.1.5
+#   CuTe DSL 4.8 (FA4 needs >= 4.6.2; its metadata asks for protobuf >= 4.21 but the H3 text stack pins
+#     3.20.3, and 4.8 runs on 3.20.3 -- the combination every 2026-10-28 measurement used)
+#   FlashAttention-4 4.0.0b36 for the fa4sol sparse backend
+$PIP --no-deps nvidia-cudnn-cu13==9.24.0.43 nvidia-cutlass-dsl==4.8.0 nvidia-cutlass-dsl-libs-base==4.8.0 \
+  nvidia-cutlass-dsl-libs-core==4.8.0 nvidia-cutlass-dsl-libs-cu13==4.8.0 \
+  flash-attn-4==4.0.0b36 quack-kernels==0.6.5 torch-c-dlpack-ext==0.1.5
 
 if [ ! -d $PREFIX/diffusers/.git ]; then
   git clone --filter=blob:none https://github.com/huggingface/diffusers.git $PREFIX/diffusers
@@ -39,7 +43,7 @@ fi
 git -C $PREFIX/diffusers fetch --depth 1 origin $DIFFUSERS_COMMIT 2>/dev/null || true
 git -C $PREFIX/diffusers checkout -q $DIFFUSERS_COMMIT
 $PIP --no-deps -e $PREFIX/diffusers
-rm -rf ${UV_CACHE_DIR}
+[ "${KEEP_UV_CACHE:-0}" = 1 ] || rm -rf ${UV_CACHE_DIR}
 
 $PREFIX/venv/bin/python -c "import torch, triton, diffusers, transformers, fastapi
 from diffusers import WanPipeline

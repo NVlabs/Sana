@@ -36,7 +36,7 @@ def main():
     parser.add_argument("--hyperflow-adaln-table", type=Path,
                         help="exact AdaLN table from scripts/hyperflow/build_adaln_table.py")
     parser.add_argument("--hyperflow-fast-vae-weights", type=Path,
-                        help="fast_h3_vae_noncausal_24l.safetensors for one stage's video decode (optional; "
+                        help="Sol-H3-VAE sol_h3_vae.safetensors for one stage's video decode (optional; "
                              "without it the original H3 VAE decodes)")
     parser.add_argument("--hyperflow-ref-fp8-dir", type=Path,
                         help="transformer_ref (reference images) FP8 checkpoint + adaln_table.pt from scripts/hyperflow/convert_ref.py")

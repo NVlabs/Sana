@@ -28,6 +28,10 @@ Qwen calls the separately installed ComfyUI runtime; its GPL terms continue
 to apply. The root repository license does not relicense ComfyUI, LTX, model
 weights or CUDA libraries.
 
+`sol_h3_engine/fa4_sm120_flash_fwd.py` is FlashAttention-4's `flash_fwd.py` with an
+SM120 varlen work-tile guard added; it keeps the BSD-3-Clause terms, whose text is in
+`licenses/flash-attention.txt`.
+
 `patches/fastvideo-spark-loader.patch` modifies three Apache-2.0 FastVideo
 loader files. The companion JSON records the upstream revision, patch SHA-256
 and each pristine/patched file SHA-256. The public patch is required for the

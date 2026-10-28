@@ -325,8 +325,10 @@ class HyperFlow:
     def load_fast_vae(self, config):
         """Distilled noncausal decoder (Efficient-Large-Model/Sol-H3-VAE): replaces only the video decode."""
         sys.path.insert(0, config["code"])
-        from spark_decoder import SparkFastH3VAEDecoder
-        self.fast_vae = SparkFastH3VAEDecoder(config["vae_config"], config["weights"], engine="fast", max_engines=1)
+        import fa4_sm120
+        from sol_h3_vae import SolH3VAEDecoder
+        fa4_sm120.install()
+        self.fast_vae = SolH3VAEDecoder(config["vae_config"], config["weights"], engine="fast", max_engines=1)
         self.fast_vae.model.to("cpu")
         self.fast_vae_pinned = PinnedModule(self.fast_vae.model)
 
@@ -341,7 +343,7 @@ class HyperFlow:
             latents = block_state.latents  # (1, 24, T, H, W), normalized
             # Eager engine per request: a captured CUDA graph would keep the weight addresses of this visit, and
             # the weights go back to pinned host memory afterwards (the decoder alone peaks near 30 GB at 768p).
-            from noncausal_fast3 import NonCausalFast3
+            from sol_h3_vae.fast import NonCausalFast3
             _, _, frames, height, width = latents.shape
             engine = NonCausalFast3(self.fast_vae.model, frames, height, width, cuda_graph=False)
             pixels = engine.decode(latents.transpose(1, 2).float().contiguous())

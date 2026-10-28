@@ -1,4 +1,4 @@
-"""Adapter for the user's external, corrected noncausal VAE delivery."""
+"""Adapter for the Sol-H3-VAE decoder (Efficient-Large-Model/Sol-H3-VAE) in the FastH3 runtimes."""
 import json
 import os
 import sys
@@ -12,10 +12,12 @@ def settings():
 
 class Decoder:
     def __init__(self, config):
-        # The delivery owns its implementation; no checkpoint/code is bundled.
+        # Sol-H3-VAE ships its own code; no checkpoint/code is bundled here.
         sys.path.insert(0, config["code"])
-        from spark_decoder import SparkFastH3VAEDecoder
-        self.decoder = SparkFastH3VAEDecoder(
+        import fa4_sm120
+        from sol_h3_vae import SolH3VAEDecoder
+        fa4_sm120.install()
+        self.decoder = SolH3VAEDecoder(
             config["vae_config"], config["weights"], engine="fast", max_engines=1)
 
     def decode(self, batch, args):
@@ -29,7 +31,7 @@ class Decoder:
         # The student checkpoint already contains latent mean/std. Do not apply
         # native VAE denormalize_latents before passing this normalized tensor.
         with torch.no_grad():
-            from noncausal_fast3 import NonCausalFast3
+            from sol_h3_vae.fast import NonCausalFast3
             engine = None
             try:
                 self.decoder.model.to("cuda")
@@ -40,7 +42,7 @@ class Decoder:
                 engine = NonCausalFast3(self.decoder.model, frames, height, width, cuda_graph=False)
                 pixels = engine.decode(latent.transpose(1, 2).float().contiguous()).cpu()
                 # Convert on CPU to avoid additional full-video GPU buffers.
-                batch.output = self.decoder.vae.processor.revert_tensor(pixels).clamp_(0, 1)
+                batch.output = self.decoder.processor.revert_tensor(pixels).clamp_(0, 1)
             finally:
                 del engine
                 self.decoder.model.to("cpu")

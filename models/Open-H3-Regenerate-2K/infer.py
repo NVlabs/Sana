@@ -15,8 +15,11 @@
     # two refine steps from a lower start noise (0.7) instead of three
     python infer.py ... --steps 2
 
-    # another output size (768p / 1080p / 2k / 4k), e.g. 4K from a refined 768P latent, re-noised to 0.8
-    python infer.py ... --input-latents refined768.pt --resolution 4k --start-sigma 0.8
+    # another output size (768p / 1080p / 2k / 4k), e.g. 4K from a refined 768P latent, re-noised to 0.7
+    python infer.py ... --input-latents refined768.pt --resolution 4k --start-sigma 0.7
+
+    # a second pass at the same size: a latent already on the --resolution grid is refined without upscaling
+    python infer.py ... --input-latents refined4k.pt --resolution 4k --start-sigma 0.6
 
     # released H3 VAE decoder instead of the fast one (the default with --fwd sol_engine)
     python infer.py ... --vae standard
@@ -48,7 +51,8 @@ def main():
                         help="video decoder: released H3 VAE or the fast H3 VAE decoder (default: fast with sol_engine)")
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--input-latents", type=Path,
-                        help="torch.save dict with a normalized 'video_latents' [24,37,48,84] (768P) or [24,37,36,64] (576P)")
+                        help="torch.save dict with a normalized 'video_latents' [24,37,48,84] (768P) or [24,37,36,64] (576P), "
+                             "or a latent already on the --resolution grid (refined again without upscaling)")
     parser.add_argument("--input-video", type=Path, help="draft video; the first 121 frames at 24 fps are encoded")
     parser.add_argument("--input-size", choices=sorted(INPUT_SIZES), default="768p",
                         help="size the draft video is encoded at: 768p = 1344x768, 576p = 1024x576")
@@ -69,8 +73,10 @@ def main():
     if args.input_latents is not None:
         native = torch.load(args.input_latents, map_location="cpu", weights_only=True)["video_latents"]
         native = native[0] if native.ndim == 5 else native
-        if tuple(native.shape) not in NATIVE_SHAPES.values() or not torch.isfinite(native).all():
-            raise ValueError(f"expected a finite normalized latent of shape {sorted(NATIVE_SHAPES.values())}, got {tuple(native.shape)}")
+        height, width, _ = RESOLUTIONS[args.resolution]
+        shapes = sorted(NATIVE_SHAPES.values()) + [(24, 37, height // 16, width // 16)]
+        if tuple(native.shape) not in shapes or not torch.isfinite(native).all():
+            raise ValueError(f"expected a finite normalized latent of shape {shapes}, got {tuple(native.shape)}")
 
     torch.cuda.set_device(0)
     if args.input_video is not None:

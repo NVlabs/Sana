@@ -100,9 +100,11 @@ python infer.py ... --resolution 4k
 # a different start noise; the steps follow the same shift-6 rule
 python infer.py ... --start-sigma 0.8
 
-# the project page's resolution ladder: refine the 768P draft at 768P, then upscale that result and refine it again
-python infer.py ... --fwd standard --resolution 768p --start-sigma 0.8 --save-latents --output dance-768p.mp4
-python infer.py ... --fwd standard --input-latents dance-768p.latents.pt --resolution 4k --start-sigma 0.8 --output dance-4k.mp4
+# the project page's resolution ladder: refine the 768P draft at 768P, upscale that result and refine it again, then refine
+# once more at the same size (a latent already on the --resolution grid is not upscaled)
+python infer.py ... --fwd standard --resolution 768p --start-sigma 0.7 --save-latents --output dance-768p.mp4
+python infer.py ... --fwd standard --input-latents dance-768p.latents.pt --resolution 4k --start-sigma 0.7 --save-latents --output dance-4k-pass1.mp4
+python infer.py ... --fwd standard --input-latents dance-4k-pass1.latents.pt --resolution 4k --start-sigma 0.6 --output dance-4k.mp4
 
 # two refine steps from a lower start noise (0.7) instead of three
 python infer.py ... --steps 2

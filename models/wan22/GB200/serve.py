@@ -41,9 +41,9 @@ NEG = ("色调艳丽，过曝，静态，细节模糊不清，字幕，风格，
        "静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走")
 # the official standard workloads; request fields override them
 DEFAULTS = {
-    "a14b": dict(name="Wan-AI/Wan2.2-T2V-A14B-Diffusers", width=1280, height=720, num_frames=81, fps=16,
+    "a14b": dict(name="Wan-AI/Wan2.2-T2V-A14B-Diffusers", align=16, width=1280, height=720, num_frames=81, fps=16,
                  num_inference_steps=40, guidance_scale=4.0, guidance_scale_2=3.0, flow_shift=12.0),
-    "5b": dict(name="Wan-AI/Wan2.2-TI2V-5B-Diffusers", width=1280, height=704, num_frames=121, fps=24,
+    "5b": dict(name="Wan-AI/Wan2.2-TI2V-5B-Diffusers", align=32, width=1280, height=704, num_frames=121, fps=24,
                num_inference_steps=50, guidance_scale=5.0, guidance_scale_2=None, flow_shift=5.0),
 }
 
@@ -60,7 +60,8 @@ def model_kind(path: str) -> str:
 # -- engine -------------------------------------------------------------------------------------
 
 class WanEngine:
-    def __init__(self, model_path: str, precision: str, attention: str, rho: float, vae_compile: bool):
+    def __init__(self, model_path: str, precision: str, attention: str, rho: float, vae_compile: bool,
+                 expert_swap: str = "auto"):
         import torch
         import torch.distributed as dist
 
@@ -92,6 +93,11 @@ class WanEngine:
         if vae_compile and self.world == 1:          # the row-sharded VAE is eager
             self.pipe.vae.decoder = torch.compile(self.pipe.vae.decoder, mode="default", dynamic=False)
         info = wan_fast.install_pipeline(self.pipe, precision, "dense" if attention == "dense" else "sol")
+        # A14B holds two 14B experts; on GPUs under 120 GB keep only the expert in use resident
+        gpu_gb = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / 2**30
+        self.expert_swap = self.kind == "a14b" and (expert_swap == "on" or (expert_swap == "auto" and gpu_gb < 120))
+        if self.expert_swap:
+            info.update(wan_fast.enable_expert_swap(self.pipe))
         self.sol = info.get("sol")
         self.parallel = {"world": self.world}
         if self.world > 1:
@@ -101,7 +107,7 @@ class WanEngine:
             if attention == "fa4sol" and self.parallel.get("P", 1) > 1:
                 os.environ["WAN_FA4SOL_GRAPH"] = "1"
         self._calls, self._steps = 0, 1
-        log(f"{self.kind} loaded in {time.perf_counter() - t0:.1f}s: precision={precision} attention={attention} "
+        log(f"{self.kind} loaded in {time.perf_counter() - t0:.1f}s: expert_swap={self.expert_swap} precision={precision} attention={attention} "
             f"rho={rho} parallel={self.parallel}")
 
     @property
@@ -178,8 +184,9 @@ def resolve_request(body: dict, d: dict) -> dict:
     if not (width and height) and body.get("size"):
         width, height = (int(x) for x in str(body["size"]).lower().split("x"))
     width, height = int(width or d["width"]), int(height or d["height"])
-    if width % 32 or height % 32:
-        raise ValueError(f"width/height must be multiples of 32, got {width}x{height}")
+    # VAE spatial stride x patch size: 8 x 2 for A14B, 16 x 2 for TI2V-5B
+    if width % d["align"] or height % d["align"]:
+        raise ValueError(f"width/height must be multiples of {d['align']}, got {width}x{height}")
     frames = int(body.get("num_frames") or d["num_frames"])
     if (frames - 1) % 4:
         raise ValueError(f"num_frames must be 4n+1, got {frames}")
@@ -339,6 +346,8 @@ def main() -> int:
     p.add_argument("--rho", type=float, default=float(os.environ.get("WAN_FA4SOL_RHO", 0.35)),
                    help="fa4sol: fraction of (q256, kv128) blocks computed exactly")
     p.add_argument("--no-vae-compile", action="store_true")
+    p.add_argument("--expert-swap", choices=("auto", "on", "off"), default=os.environ.get("WAN_EXPERT_SWAP", "auto"),
+                   help="A14B: keep only the expert in use on the GPU (auto: when the GPU has < 120 GB)")
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=int(os.environ.get("PORT", 30000)))
     p.add_argument("--output-dir", default=os.environ.get("WAN_OUTPUT_DIR", "/outputs"))
@@ -349,7 +358,8 @@ def main() -> int:
     if a.num_gpus > 1 and "LOCAL_RANK" not in os.environ:
         relaunch_under_torchrun(a)
 
-    engine = WanEngine(a.model, a.precision, a.attention, a.rho, vae_compile=not a.no_vae_compile)
+    engine = WanEngine(a.model, a.precision, a.attention, a.rho, vae_compile=not a.no_vae_compile,
+                       expert_swap=a.expert_swap)
     d = DEFAULTS[engine.kind]
     for i in range(a.warmup):                         # every rank runs the warmups in lockstep
         t = time.perf_counter()

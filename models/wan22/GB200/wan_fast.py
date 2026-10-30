@@ -480,6 +480,51 @@ class WanFast:
         return out.flatten(6, 7).flatten(4, 5).flatten(2, 3)
 
 
+def enable_expert_swap(pipe):
+    """Wan2.2-A14B on GPUs that cannot hold both experts: keep only the expert in use on the GPU.
+
+    The two experts run in disjoint phases of a request (high-noise steps, then low-noise steps), so the idle one
+    lives in pinned host memory and the two trade places at the phase switch: one full-expert copy each way,
+    about 0.6 s over PCIe Gen5 for 28.6 GB, twice per request.  Call after install_pipeline (it wraps the
+    forwards installed there) and after pipe.to("cuda").
+    """
+    models = [pipe.transformer, pipe.transformer_2]
+    host = {}                                         # id(tensor) -> pinned host copy, allocated once
+    state = {"resident": 0}
+
+    def tensors(m):
+        return list(m.parameters()) + list(m.buffers())
+
+    def evict(m):
+        for t in tensors(m):
+            if id(t) not in host:
+                host[id(t)] = torch.empty(t.shape, dtype=t.dtype, pin_memory=True)
+            host[id(t)].copy_(t.data, non_blocking=True)
+        torch.cuda.synchronize()
+        for t in tensors(m):
+            t.data = host[id(t)]
+        torch.cuda.empty_cache()
+
+    def load(m):
+        for t in tensors(m):
+            t.data = host[id(t)].to("cuda", non_blocking=True)
+        torch.cuda.synchronize()
+
+    def make(i, fwd):
+        def forward(*args, **kwargs):
+            if state["resident"] != i:
+                evict(models[state["resident"]])
+                load(models[i])
+                state["resident"] = i
+            return fwd(*args, **kwargs)
+        return forward
+
+    for i, m in enumerate(models):
+        m.forward = make(i, m.forward)
+    evict(models[1])
+    return {"expert_swap": True}
+
+
 def install_pipeline(pipe, precision="bf16", attention="dense", dense_steps=10, dense_layers=(0,), tau=1.0):
     """Replace every transformer's forward in a WanPipeline with the batched-CFG fast forward."""
     from diffusers.models.modeling_outputs import Transformer2DModelOutput

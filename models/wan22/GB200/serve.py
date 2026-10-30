@@ -131,7 +131,7 @@ class WanEngine:
             return kw
         kw = dict(prompt=req["prompt"], negative_prompt=req["negative_prompt"], height=req["height"],
                   width=req["width"], num_frames=req["num_frames"], num_inference_steps=req["num_inference_steps"],
-                  guidance_scale=req["guidance_scale"], output_type="np", callback_on_step_end=cb,
+                  guidance_scale=req["guidance_scale"], output_type="pt", callback_on_step_end=cb,
                   generator=torch.Generator(device="cuda").manual_seed(req["seed"]))
         if self.kind == "a14b" and req.get("guidance_scale_2") is not None:
             kw["guidance_scale_2"] = req["guidance_scale_2"]
@@ -142,7 +142,9 @@ class WanEngine:
         if self.world > 1:
             self.dist.barrier(group=self.ctrl)
         t0 = time.perf_counter()
-        frames = self.pipe(**kw).frames[0]
+        frames = self.pipe(**kw).frames[0]                       # (F, C, H, W) float in [0, 1], on the GPU
+        if self.rank == 0:                                       # uint8 HWC on the GPU, then one 1-byte copy
+            frames = (frames.clamp(0, 1) * 255).round().to(torch.uint8).permute(0, 2, 3, 1).contiguous().cpu()
         torch.cuda.synchronize()
         stats = {"inference_time_s": round(time.perf_counter() - t0, 3),
                  "peak_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1)}
@@ -167,9 +169,16 @@ class WanEngine:
 
 
 def write_mp4(frames, fps: int, path: str) -> float:
-    from diffusers.utils import export_to_video
+    """uint8 (F, H, W, 3) -> H.264 mp4 with the settings SGLang's video writer uses (libx264 preset fast,
+    crf 25 = quality 5, yuv420p), raw frames piped to ffmpeg."""
+    import subprocess
+    import imageio_ffmpeg
     t = time.perf_counter()
-    export_to_video(list(frames), path, fps=fps)
+    f, h, w, _ = frames.shape
+    cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo", "-vcodec", "rawvideo",
+           "-s", f"{w}x{h}", "-pix_fmt", "rgb24", "-r", f"{fps:.02f}", "-i", "pipe:0", "-an",
+           "-vcodec", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p", "-crf", "25", path]
+    subprocess.run(cmd, input=frames.numpy().tobytes(), check=True)
     return round(time.perf_counter() - t, 3)
 
 

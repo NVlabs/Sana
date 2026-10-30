@@ -9,16 +9,21 @@
     # draft video -> H3 VAE encode (1344x768 by default, --input-size 576p for 1024x576) -> 2560x1440 refine
     python infer.py --weights ./weights --input-video draft.mp4 --prompt "..." --output out.mp4
 
-    # unaccelerated reference forward
+    # forwards: sol_engine (default), sol_engine_fast (fastest), standard (unaccelerated reference).
+    # Upscale + 3-step refine on one GB200: 40.6 s / 20.5 s / 73.1 s; see README "Forwards".
+    python infer.py ... --fwd sol_engine_fast
     python infer.py ... --fwd standard
 
     # two refine steps from a lower start noise (0.7) instead of three
     python infer.py ... --steps 2
 
-    # another output size (768p / 1080p / 2k / 4k), e.g. 4K from a refined 768P latent, re-noised to 0.8
-    python infer.py ... --input-latents refined768.pt --resolution 4k --start-sigma 0.8
+    # another output size (768p / 1080p / 2k / 4k), e.g. 4K from a refined 768P latent, re-noised to 0.7
+    python infer.py ... --input-latents refined768.pt --resolution 4k --start-sigma 0.7
 
-    # released H3 VAE decoder instead of the fast one (the default with --fwd sol_engine)
+    # a second pass at the same size: a latent already on the --resolution grid is refined without upscaling
+    python infer.py ... --input-latents refined4k.pt --resolution 4k --start-sigma 0.6
+
+    # released H3 VAE decoder instead of the fast one (the default with both sol_engine forwards)
     python infer.py ... --vae standard
 
 --warmup / --runs repeat the request for timing; per-stage seconds go to <output>.json.
@@ -38,17 +43,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--weights", type=Path, required=True, help="directory filled by download.py")
     parser.add_argument("--base-model", type=Path, help="MiniMax-H3 Diffusers folder (default: <weights>/base_model)")
-    parser.add_argument("--fwd", choices=["sol_engine", "standard"], default="sol_engine")
+    parser.add_argument("--fwd", choices=["sol_engine", "sol_engine_fast", "standard"], default="sol_engine",
+                        help="sol_engine: refine step 0 dense, then sparse; sol_engine_fast: all refine steps sparse, "
+                             "fastest; standard: unaccelerated reference")
     parser.add_argument("--steps", type=int, choices=sorted(SCHEDULES), default=3,
                         help="refine steps: 3 = sigmas 0.909375, 0.857, 0.667; 2 = sigmas 0.7, 0.494 (shift 6)")
     parser.add_argument("--start-sigma", type=float,
                         help="start noise of the refine; the steps follow the shift-6 rule (default: the --steps grid)")
     parser.add_argument("--resolution", choices=list(RESOLUTIONS), default="2k", help="output size (default 2560x1440)")
     parser.add_argument("--vae", choices=["standard", "fast"],
-                        help="video decoder: released H3 VAE or the fast H3 VAE decoder (default: fast with sol_engine)")
+                        help="video decoder: released H3 VAE or the fast H3 VAE decoder (default: fast with the "
+                             "sol_engine forwards)")
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--input-latents", type=Path,
-                        help="torch.save dict with a normalized 'video_latents' [24,37,48,84] (768P) or [24,37,36,64] (576P)")
+                        help="torch.save dict with a normalized 'video_latents' [24,37,48,84] (768P) or [24,37,36,64] (576P), "
+                             "or a latent already on the --resolution grid (refined again without upscaling)")
     parser.add_argument("--input-video", type=Path, help="draft video; the first 121 frames at 24 fps are encoded")
     parser.add_argument("--input-size", choices=sorted(INPUT_SIZES), default="768p",
                         help="size the draft video is encoded at: 768p = 1344x768, 576p = 1024x576")
@@ -69,14 +78,16 @@ def main():
     if args.input_latents is not None:
         native = torch.load(args.input_latents, map_location="cpu", weights_only=True)["video_latents"]
         native = native[0] if native.ndim == 5 else native
-        if tuple(native.shape) not in NATIVE_SHAPES.values() or not torch.isfinite(native).all():
-            raise ValueError(f"expected a finite normalized latent of shape {sorted(NATIVE_SHAPES.values())}, got {tuple(native.shape)}")
+        height, width, _ = RESOLUTIONS[args.resolution]
+        shapes = sorted(NATIVE_SHAPES.values()) + [(24, 37, height // 16, width // 16)]
+        if tuple(native.shape) not in shapes or not torch.isfinite(native).all():
+            raise ValueError(f"expected a finite normalized latent of shape {shapes}, got {tuple(native.shape)}")
 
     torch.cuda.set_device(0)
     if args.input_video is not None:
         native = encode_video(base, args.input_video, args.input_size, args.vae_seed)
     text = encode_prompt(base, args.prompt)
-    vae = args.vae or ("fast" if args.fwd == "sol_engine" else "standard")
+    vae = args.vae or ("standard" if args.fwd == "standard" else "fast")
     pipe = Pipeline(args.weights, base, fwd=args.fwd, steps=args.steps, start_sigma=args.start_sigma,
                     resolution=args.resolution, vae=vae,
                     hyperflow=args.weights / HYPERFLOW_FILE if args.hyperflow else None)

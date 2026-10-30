@@ -43,8 +43,31 @@ class SolPolicy:
         return self._kernel
 
 
+_DENSE_IMPL = {}
+
+
+def _dense_impl(device):
+    """Hopper: FlashAttention-4's sm90 kernel (673-703 TF/s at the Wan shapes on H100 vs cuDNN 560-583, same
+    result to bf16 rounding).  Blackwell: cuDNN SDPA (on par with FA4 there).  WAN_DENSE_ATTN=cudnn|fa4 overrides."""
+    key = device.index
+    if key not in _DENSE_IMPL:
+        want = os.environ.get("WAN_DENSE_ATTN", "auto")
+        impl = "cudnn"
+        if want == "fa4" or (want == "auto" and torch.cuda.get_device_capability(device)[0] == 9):
+            try:
+                from flash_attn.cute.interface import _flash_attn_fwd
+                impl = _flash_attn_fwd
+            except Exception:                                # FA4 not installed: stay on cuDNN
+                impl = "cudnn"
+        _DENSE_IMPL[key] = impl
+    return _DENSE_IMPL[key]
+
+
 def _dense_attn(q, k, v):
-    """(B, S, H, D) in and out; cuDNN SDPA on Blackwell."""
+    """(B, S, H, D) in and out."""
+    impl = _dense_impl(q.device)
+    if impl != "cudnn":
+        return impl(q.contiguous(), k.contiguous(), v.contiguous())[0]
     return F.scaled_dot_product_attention(q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)).transpose(1, 2)
 
 

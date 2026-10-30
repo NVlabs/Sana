@@ -9,7 +9,9 @@
     # draft video -> H3 VAE encode (1344x768 by default, --input-size 576p for 1024x576) -> 2560x1440 refine
     python infer.py --weights ./weights --input-video draft.mp4 --prompt "..." --output out.mp4
 
-    # unaccelerated reference forward
+    # forwards: sol_engine (default), sol_engine_fast (fastest), standard (unaccelerated reference).
+    # Upscale + 3-step refine on one GB200: 40.6 s / 20.5 s / 73.1 s; see README "Forwards".
+    python infer.py ... --fwd sol_engine_fast
     python infer.py ... --fwd standard
 
     # two refine steps from a lower start noise (0.7) instead of three
@@ -21,7 +23,7 @@
     # a second pass at the same size: a latent already on the --resolution grid is refined without upscaling
     python infer.py ... --input-latents refined4k.pt --resolution 4k --start-sigma 0.6
 
-    # released H3 VAE decoder instead of the fast one (the default with --fwd sol_engine)
+    # released H3 VAE decoder instead of the fast one (the default with both sol_engine forwards)
     python infer.py ... --vae standard
 
 --warmup / --runs repeat the request for timing; per-stage seconds go to <output>.json.
@@ -41,14 +43,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--weights", type=Path, required=True, help="directory filled by download.py")
     parser.add_argument("--base-model", type=Path, help="MiniMax-H3 Diffusers folder (default: <weights>/base_model)")
-    parser.add_argument("--fwd", choices=["sol_engine", "standard"], default="sol_engine")
+    parser.add_argument("--fwd", choices=["sol_engine", "sol_engine_fast", "standard"], default="sol_engine",
+                        help="sol_engine: refine step 0 dense, then sparse; sol_engine_fast: all refine steps sparse, "
+                             "fastest; standard: unaccelerated reference")
     parser.add_argument("--steps", type=int, choices=sorted(SCHEDULES), default=3,
                         help="refine steps: 3 = sigmas 0.909375, 0.857, 0.667; 2 = sigmas 0.7, 0.494 (shift 6)")
     parser.add_argument("--start-sigma", type=float,
                         help="start noise of the refine; the steps follow the shift-6 rule (default: the --steps grid)")
     parser.add_argument("--resolution", choices=list(RESOLUTIONS), default="2k", help="output size (default 2560x1440)")
     parser.add_argument("--vae", choices=["standard", "fast"],
-                        help="video decoder: released H3 VAE or the fast H3 VAE decoder (default: fast with sol_engine)")
+                        help="video decoder: released H3 VAE or the fast H3 VAE decoder (default: fast with the "
+                             "sol_engine forwards)")
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--input-latents", type=Path,
                         help="torch.save dict with a normalized 'video_latents' [24,37,48,84] (768P) or [24,37,36,64] (576P), "
@@ -82,7 +87,7 @@ def main():
     if args.input_video is not None:
         native = encode_video(base, args.input_video, args.input_size, args.vae_seed)
     text = encode_prompt(base, args.prompt)
-    vae = args.vae or ("fast" if args.fwd == "sol_engine" else "standard")
+    vae = args.vae or ("standard" if args.fwd == "standard" else "fast")
     pipe = Pipeline(args.weights, base, fwd=args.fwd, steps=args.steps, start_sigma=args.start_sigma,
                     resolution=args.resolution, vae=vae,
                     hyperflow=args.weights / HYPERFLOW_FILE if args.hyperflow else None)

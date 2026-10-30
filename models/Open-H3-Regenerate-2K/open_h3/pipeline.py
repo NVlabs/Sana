@@ -25,7 +25,12 @@ UPSCALED_SHAPE = (24, 37, 90, 160)     # 2560x1440
 # patches) and the centre 1080 / 2160 rows are kept
 RESOLUTIONS = {"768p": (768, 1344, 768), "1080p": (1088, 1920, 1080), "2k": (1440, 2560, 1440), "4k": (2176, 3840, 2160)}
 UPSCALER_FILE = "latent_upsampler/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors"
-FORWARDS = {"standard": standard_fwd, "sol_engine": sol_engine_fwd}
+# --fwd -> installer: sol_engine (default), sol_engine_fast (fastest), standard (unaccelerated reference)
+FORWARDS = {
+    "sol_engine": lambda model: sol_engine_fwd.install(model, "sol_engine"),
+    "sol_engine_fast": lambda model: sol_engine_fwd.install(model, "sol_engine_fast"),
+    "standard": standard_fwd.install,
+}
 
 
 def encode_prompt(base_model, prompt):
@@ -145,7 +150,7 @@ class Pipeline:
         stages["refine"] = [(lora, 1.0)]
         model.requires_grad_(False)
         self.model = model.to(self.device).eval()
-        self.fwd = FORWARDS[fwd].install(self.model)
+        self.fwd = FORWARDS[fwd](self.model)
         self.merger = adapters.StageMerger(self.model, stages, self.device, resident=self.fwd.resident)
         if self.fwd.mx_layers:
             self.merger.attach_quantized(self.fwd.mx_layers)
@@ -282,7 +287,7 @@ class Pipeline:
     def __call__(self, text, native=None, hf_seed=42, refine_seed=1766580932):
         """Returns (frames uint8 [121, rows, width, 3], latents dict, per-stage seconds)."""
         times = {}
-        if self.fwd.name == "sol_engine":
+        if self.fwd.plan is not None:
             sol_engine_fwd.set_prompt_length(self.fwd, text["text_token_tags"].numel())
 
         def stage(name, fn):

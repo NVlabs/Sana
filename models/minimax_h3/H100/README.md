@@ -65,3 +65,29 @@ and partition settings remain external to the config.
 ## Outputs
 
 The run bundle stores `out.mp4`, `benchmark.json`, and launch logs under `runs/`.
+
+## Sol-Engine runtime without SGLang (`h3_h100.py`)
+
+The GB200 stack (fused bf16 kernels, AdaLN precompute, Sol-Attn, sharded VAE decode) on N x 80 GB GPUs, no step
+cache. The DiT blocks and the Qwen3-VL decoder layers are sharded 1/N per rank and rebuilt per layer by an
+all-gather that hides behind compute (`shard.py`); the block stack runs Ulysses over the packed sequence
+(`forward_mp.py`). Dense attention on Hopper uses FlashAttention-4's sm90 kernel. Run it from the sol-engine image
+with this directory next to `../GB200`, on the converted diffusers checkpoint:
+
+```bash
+torchrun --standalone --nproc_per_node 4 h3_h100.py --model-path /models/MiniMax-H3-diffusers \
+  --prompt-file ../demo_prompt.json --attention sol      # or dense
+```
+
+768p, 5 s, 50 steps, seed 0, warm, one H100 node (seconds; quality = PSNR vs this runtime's dense output):
+
+| runtime | GPUs | time | vs SGLang |
+|---|---:|---:|---:|
+| SGLang 0.5.22, TP2 x Ulysses2 (its H100 recipe) | 4 | 77.53 | 1.00x |
+| SGLang 0.5.22, `--dit-layerwise-offload --text-encoder-cpu-offload` | 1 | 281.6 | — |
+| `h3_h100.py --attention dense` | 4 | 78.15 | 0.99x |
+| `h3_h100.py --attention sol` (19.67 dB) | 4 | 61.11 | 1.27x |
+
+Between the two exact runtimes (this dense vs SGLang) the PSNR is 19.31 dB. Peak 67.3 GiB per GPU (first
+request, before the AdaLN weights are freed), 47.9 GiB after. The pinned nightly image above is no longer on
+Docker Hub (404 as of 2026-10-30).

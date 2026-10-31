@@ -10,6 +10,9 @@ The math is untouched: every kernel reads the same weights it would read from a 
     shards = LayerShards(blocks, group, device, exclude=lambda name: name.startswith("adaln_proj."))
     shards.before(i)            # call right before layer i runs (DiT: from the block loop;
                                 # transformers decoders: install_pre_hooks)
+
+`group=None` is the one-GPU offload mode: a layer's flat parameters stay whole in pinned host memory and the
+side stream copies them in (H2D) instead of all-gathering them, with the same double buffer and prefetch.
 """
 from __future__ import annotations
 
@@ -21,8 +24,9 @@ class LayerShards:
     def __init__(self, layers, group, device, exclude=lambda name: False):
         self.layers = list(layers)
         self.group = group
-        self.world = dist.get_world_size(group)
-        self.rank = dist.get_rank(group)
+        self.offload = group is None
+        self.world = 1 if self.offload else dist.get_world_size(group)
+        self.rank = 0 if self.offload else dist.get_rank(group)
         self.device = torch.device(device)
         self.meta, self.shards = [], []
         sizes: dict = {}
@@ -48,7 +52,10 @@ class LayerShards:
                     p.data = torch.empty(0, dtype=dt, device=self.device)
                     off += n
                 per = padded // self.world
-                shard[dt] = flat[self.rank * per:(self.rank + 1) * per].to(self.device)
+                if self.offload:
+                    shard[dt] = flat.pin_memory()
+                else:
+                    shard[dt] = flat[self.rank * per:(self.rank + 1) * per].to(self.device)
                 meta[dt] = entries
                 sizes[dt] = max(sizes.get(dt, 0), padded)
                 del flat
@@ -60,7 +67,8 @@ class LayerShards:
 
     @property
     def resident_bytes(self) -> int:
-        shards = sum(t.numel() * t.element_size() for s in self.shards for t in s.values())
+        """GPU bytes: the shards (none when offloaded) plus the two layer buffers."""
+        shards = 0 if self.offload else sum(t.numel() * t.element_size() for s in self.shards for t in s.values())
         bufs = sum(t.numel() * t.element_size() for b in self.bufs for t in b.values())
         return shards + bufs
 
@@ -69,7 +77,10 @@ class LayerShards:
         with torch.cuda.stream(self.stream):
             for dt, shard in self.shards[i].items():
                 full = buf[dt][:shard.numel() * self.world]
-                dist.all_gather_into_tensor(full, shard, group=self.group)
+                if self.offload:
+                    full.copy_(shard, non_blocking=True)
+                else:
+                    dist.all_gather_into_tensor(full, shard, group=self.group)
                 for p, off, n, shape in self.meta[i][dt]:
                     p.data = full[off:off + n].view(shape)
             ev = torch.cuda.Event()

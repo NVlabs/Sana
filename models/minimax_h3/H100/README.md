@@ -71,7 +71,9 @@ The run bundle stores `out.mp4`, `benchmark.json`, and launch logs under `runs/`
 The GB200 stack (fused bf16 kernels, AdaLN precompute, Sol-Attn, sharded VAE decode) on N x 80 GB GPUs, no step
 cache. The DiT blocks and the Qwen3-VL decoder layers are sharded 1/N per rank and rebuilt per layer by an
 all-gather that hides behind compute (`shard.py`); the block stack runs Ulysses over the packed sequence
-(`forward_mp.py`). Dense attention on Hopper uses FlashAttention-4's sm90 kernel. Run it from the sol-engine image
+(`forward_mp.py`). On one GPU the same layers stay in pinned host memory and are copied in per layer behind
+compute instead (offload mode, automatic at `--nproc_per_node 1`). Dense attention on Hopper uses
+FlashAttention-4's sm90 kernel. Run it from the sol-engine image
 with this directory next to `../GB200`, on the converted diffusers checkpoint:
 
 ```bash
@@ -84,10 +86,13 @@ torchrun --standalone --nproc_per_node 4 h3_h100.py --model-path /models/MiniMax
 | runtime | GPUs | time | vs SGLang |
 |---|---:|---:|---:|
 | SGLang 0.5.22, TP2 x Ulysses2 (its H100 recipe) | 4 | 77.53 | 1.00x |
-| SGLang 0.5.22, `--dit-layerwise-offload --text-encoder-cpu-offload` | 1 | 281.6 | — |
 | `h3_h100.py --attention dense` | 4 | 78.15 | 0.99x |
 | `h3_h100.py --attention sol` (19.67 dB) | 4 | 61.11 | 1.27x |
+| SGLang 0.5.22, `--dit-layerwise-offload --text-encoder-cpu-offload` | 1 | 278.23 | 1.00x |
+| `h3_h100.py --attention dense`, offload | 1 | 270.95 | 1.03x |
+| `h3_h100.py --attention sol`, offload (19.67 dB) | 1 | 204.65 | 1.36x |
 
-Between the two exact runtimes (this dense vs SGLang) the PSNR is 19.31 dB. Peak 67.3 GiB per GPU (first
-request, before the AdaLN weights are freed), 47.9 GiB after. The pinned nightly image above is no longer on
+The 4-GPU rows share one node, the 1-GPU rows another. Between the two exact runtimes (this dense vs SGLang)
+the PSNR is 19.31 dB (4 GPU) / 17.66 dB (1 GPU); this dense at 1 vs 4 GPUs: 42.5 dB. Peak 67.3 GiB per GPU at 4 GPUs
+(first request, before the AdaLN weights are freed), 47.9 GiB after; 43.8 / 27.3 GiB at 1 GPU. The pinned nightly image above is no longer on
 Docker Hub (404 as of 2026-10-30).

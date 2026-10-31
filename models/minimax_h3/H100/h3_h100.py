@@ -7,6 +7,7 @@ Same request, kernels and Sol-Attn policy as the GB200 single-GPU runtime; what 
 the pipeline is loaded on the host, the small components go to every GPU, the DiT blocks and the
 Qwen3-VL decoder layers are sharded 1/N per rank and rebuilt per layer by an all-gather that hides
 behind compute (`shard.LayerShards`), and the block stack runs Ulysses-sharded (`forward_mp`).
+On one GPU the same layers stay in pinned host memory and are copied in per layer instead (offload mode).
 """
 import argparse
 import json
@@ -52,7 +53,8 @@ def main() -> int:
     torch.cuda.set_device(local)
     device = torch.device("cuda", local)
     dist.init_process_group("nccl", device_id=device)
-    wgroup = dist.new_group(backend="nccl")             # weight gathers on their own communicator
+    # weight gathers on their own communicator; one GPU: no group = per-layer offload from pinned host memory
+    wgroup = dist.new_group(backend="nccl") if world > 1 else None
     prompt = json.load(open(a.prompt_file))["prompt"]
 
     import adaln
@@ -103,7 +105,8 @@ def main() -> int:
     forward_mp.install(tr, attn_core, group=None, block_pre=dit.before)
     undo_vae = vae_shard.install(pipe.vae, batched=True, compile_mode="default")
     torch.cuda.synchronize()
-    log(f"sharded in {time.perf_counter() - t1:.1f}s: DiT {len(dit.layers)} blocks ({gib(dit.resident_bytes)} GiB/rank), "
+    log(f"{'offloaded' if dit.offload else 'sharded'} in {time.perf_counter() - t1:.1f}s: "
+        f"DiT {len(dit.layers)} blocks ({gib(dit.resident_bytes)} GiB/rank), "
         f"text encoder {te_name} {len(tes.layers)} layers ({gib(tes.resident_bytes)} GiB/rank); "
         f"allocated {gib(torch.cuda.memory_allocated())} GiB")
 

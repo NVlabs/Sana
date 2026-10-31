@@ -3,17 +3,32 @@
 
     serve.py --model /models/<checkpoint> [server options]
 
-    MiniMax-H3   (modular_model_index.json)           -> models/minimax_h3/GB200/serve.py
+    MiniMax-H3   (modular_model_index.json)           -> models/minimax_h3/GB200/serve.py      (GPUs >= 120 GB)
+                                                      -> models/minimax_h3/H100/serve_h100.py  (80 GB GPUs; 1-8)
     Wan2.2 5B/A14B (model_index.json: WanPipeline)    -> models/wan22/GB200/serve.py
 
 Every option after the model is passed through unchanged; see each server's --help.
+H3_SERVER=gb200|h100 overrides the choice by GPU memory.
 """
 import json
 import os
 import sys
 
 ROOT = os.environ.get("SOL_ENGINE_ROOT", "/opt/sol-engine")
-SERVERS = {"minimax_h3": "models/minimax_h3/GB200/serve.py", "wan22": "models/wan22/GB200/serve.py"}
+SERVERS = {"minimax_h3": "models/minimax_h3/GB200/serve.py", "wan22": "models/wan22/GB200/serve.py",
+           "minimax_h3_h100": "models/minimax_h3/H100/serve_h100.py"}
+
+
+def h3_server() -> str:
+    """MiniMax-H3 needs ~121 GB on one GPU: the single-GPU server on GB200-class memory, the sharded /
+    offloading one on 80 GB GPUs."""
+    choice = os.environ.get("H3_SERVER")
+    if choice:
+        return {"gb200": "minimax_h3", "h100": "minimax_h3_h100"}[choice]
+    import subprocess
+    out = subprocess.run(["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+                         capture_output=True, text=True, check=True).stdout.split()
+    return "minimax_h3" if min(int(x) for x in out) >= 120 * 1024 else "minimax_h3_h100"
 
 
 def model_family(path: str) -> str:
@@ -41,6 +56,8 @@ def main() -> None:
     family = model_family(model)
     if "--model" not in argv and not any(a.startswith("--model=") for a in argv):
         argv = ["--model", model] + argv
+    if family == "minimax_h3":
+        family = h3_server()
     server = os.path.join(ROOT, SERVERS[family])
     print(f"[sol-engine] {family}: {server} {' '.join(argv)}", flush=True)
     os.execv(sys.executable, [sys.executable, server] + argv)

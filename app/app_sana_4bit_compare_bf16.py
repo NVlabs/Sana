@@ -133,6 +133,12 @@ def get_args() -> argparse.Namespace:
     )
     parser.add_argument("--use-qencoder", action="store_true", help="Whether to use 4-bit text encoder")
     parser.add_argument("--no-safety-checker", action="store_true", help="Disable safety checker")
+    parser.add_argument(
+        "--shield_model_path",
+        type=str,
+        help="The path to shield model, we employ ShieldGemma-2B by default.",
+        default="google/shieldgemma-2b",
+    )
     parser.add_argument("--count-use", action="store_true", help="Whether to count the number of uses")
     parser.add_argument("--share", action="store_true")
     return parser.parse_args()
@@ -157,12 +163,14 @@ for i, precision in enumerate(args.precisions):
         pipeline_init_kwargs["text_encoder"] = pipeline.text_encoder
 
 # safety checker
-safety_checker_tokenizer = AutoTokenizer.from_pretrained(args.shield_model_path)
-safety_checker_model = AutoModelForCausalLM.from_pretrained(
-    args.shield_model_path,
-    device_map="auto",
-    torch_dtype=torch.bfloat16,
-).to(pipeline.device)
+safety_checker_tokenizer = safety_checker_model = None
+if not args.no_safety_checker:
+    safety_checker_tokenizer = AutoTokenizer.from_pretrained(args.shield_model_path)
+    safety_checker_model = AutoModelForCausalLM.from_pretrained(
+        args.shield_model_path,
+        device_map="auto",
+        torch_dtype=torch.bfloat16,
+    ).to(pipeline.device)
 
 
 @spaces.GPU(enable_queue=True)
@@ -176,7 +184,10 @@ def generate(
 ):
     print(f"Prompt: {prompt}")
     is_unsafe_prompt = False
-    if safety_check.is_dangerous(safety_checker_tokenizer, safety_checker_model, prompt, threshold=0.2):
+    if safety_checker_model is not None and safety_check.is_dangerous(
+        safety_checker_tokenizer, safety_checker_model, prompt, threshold=0.2
+    ):
+        is_unsafe_prompt = True
         prompt = "A peaceful world."
     images, latency_strs = [], []
     for i, pipeline in enumerate(pipelines):

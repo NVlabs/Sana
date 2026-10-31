@@ -1,7 +1,8 @@
 """Build the fixed Stage2 AV context cache using native INT8 Gemma/connector math.
 
-Run offline in the Stage2 environment on one SM121 GPU. Model loading is
-resident for this isolated encode; generation never loads these weights.
+Run offline in the Stage2 environment on one SM120 (RTX 5090) or SM121 (DGX
+Spark) GPU. Model loading is resident for this isolated encode; generation
+never loads these weights.
 """
 from __future__ import annotations
 
@@ -13,6 +14,20 @@ import sys
 import time
 
 from .prompt_cache import FIXED_PROMPT, RECIPE, fingerprint, load_cache, validate_payload
+
+# The INT8 Gemma/connector encode has no SM121-specific kernel requirement; the
+# SM121-only gate was inherited from the Spark package. Accept the RTX 5090 too.
+SUPPORTED_CAPABILITIES = ((12, 0), (12, 1))
+
+
+def validate_device(torch):
+    """Require exactly one visible SM120 or SM121 GPU; return its capability."""
+    count = torch.cuda.device_count()
+    capability = tuple(torch.cuda.get_device_capability()) if count == 1 else None
+    if capability not in SUPPORTED_CAPABILITIES:
+        raise RuntimeError("offline cache generation requires one SM120 or SM121 GPU; "
+                           f"got {count} devices and capability {capability}")
+    return capability
 
 
 def prompt_stats(tokenizer, prompt):
@@ -104,8 +119,7 @@ def build_cache(paths: dict, output):
         raise ValueError("tokenizer must come from the exact INT8 Gemma checkpoint")
 
     import torch
-    if torch.cuda.device_count() != 1 or tuple(torch.cuda.get_device_capability()) != (12, 1):
-        raise RuntimeError("offline cache generation requires one SM121 GPU")
+    capability = validate_device(torch)
     started = time.monotonic_ns()
     output.parent.mkdir(parents=True, exist_ok=True)
     gemma_builder, connector_builder = _text_builders(gemma_path, connector_path)
@@ -157,6 +171,7 @@ def build_cache(paths: dict, output):
         receipt = {
             "status": "PASS", "output": str(output), "prompt_cache_path": str(output),
             "bytes": output.stat().st_size, "elapsed_s": (time.monotonic_ns() - started) / 1e9,
+            "build_device_capability": list(capability),
             "saved_contexts_bitwise_equal_fresh": True, "video_model_load_count": 0,
             "gemma_encode_calls": 1, "connector_process_calls": 1,
             "fingerprint": fingerprint(FIXED_PROMPT), "tensor_manifest": payload["tensor_manifest"],

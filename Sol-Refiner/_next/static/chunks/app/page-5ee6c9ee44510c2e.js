@@ -1,8 +1,9 @@
 (self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[974],{181:(e,r,t)=>{"use strict";t.d(r,{default:()=>l});var n=t(5155),a=t(2115);let i=`@misc{liu2026solrefiner,
   title       = {{SoL-Refiner}: Speed-of-Light One-Step Refinement for High-Resolution Video},
-  author      = {Haozhe Liu and Tian Ye and Shuchen Xue and Yitong Li and
-                 Junsong Chen and Haopeng Li and Jincheng Yu and Duomin Wang and
-                 Ruihua Zhang and Lei Zhu and Song Han and Enze Xie},
+  author      = {Haozhe Liu and Tian Ye and Shuchen Xue and Sensen Gao and
+                 Yitong Li and Junsong Chen and Haopeng Li and Jincheng Yu and
+                 Duomin Wang and Ruihua Zhang and Lei Zhu and Jia-Wang Bian and
+                 Song Han and Enze Xie},
   year        = {2026},
   eprint      = {2609.37969},
   archivePrefix = {arXiv},

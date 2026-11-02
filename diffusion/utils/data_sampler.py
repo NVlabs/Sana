@@ -74,7 +74,7 @@ class AspectRatioBatchSampler(BatchSampler):
             logger.info(f"Loading cached file for multi-scale training: {cache_file}")
             try:
                 self.cached_idx = json.load(open(cache_file))
-            except:
+            except Exception:
                 logger.info(f"Failed loading: {cache_file}")
                 self.cached_idx = {}
         else:

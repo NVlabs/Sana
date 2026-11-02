@@ -108,7 +108,7 @@ class SanaImgDataset(Dataset):
             if os.path.exists(caption_json_path):
                 try:
                     caption_json = lru_json_load(caption_json_path)
-                except:
+                except Exception:
                     caption_json = {}
                 if self.key in caption_json:
                     info.update(caption_json[self.key])
@@ -186,7 +186,7 @@ class SanaImgDataset(Dataset):
             if os.path.exists(clipscore_json_path):
                 try:
                     clipscore_json = lru_json_load(clipscore_json_path)
-                except:
+                except Exception:
                     clipscore_json = {}
                 if self.key in clipscore_json:
                     clip_scores = clipscore_json[self.key]
@@ -334,7 +334,7 @@ class SanaWebDataset(Dataset):
             if os.path.exists(caption_json_path):
                 try:
                     caption_json = lru_json_load(caption_json_path)
-                except:
+                except Exception:
                     caption_json = {}
                 if self.key in caption_json:
                     info.update(caption_json[self.key])
@@ -411,7 +411,7 @@ class SanaWebDataset(Dataset):
             if os.path.exists(clipscore_json_path):
                 try:
                     clipscore_json = lru_json_load(clipscore_json_path)
-                except:
+                except Exception:
                     clipscore_json = {}
                 if self.key in clipscore_json:
                     clip_scores = clipscore_json[self.key]

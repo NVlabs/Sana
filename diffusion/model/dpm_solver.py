@@ -407,7 +407,7 @@ def model_wrapper(
             _, sigma_t = noise_schedule.marginal_alpha(t_continuous), noise_schedule.marginal_std(t_continuous)
             try:
                 noise = (1 - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x)) * output + x
-            except:
+            except Exception:
                 noise = (1 - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x)) * output[0] + x
 
             return noise
@@ -422,7 +422,7 @@ def model_wrapper(
             _, sigma_t = noise_schedule.marginal_alpha(t_continuous), noise_schedule.marginal_std(t_continuous)
             try:
                 x0 = x - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x) * output
-            except:
+            except Exception:
                 x0 = x - expand_dims(sigma_t, x.ndim - sigma_t.ndim + 1).to(x) * output[0]
 
             return {"x0": x0, "model_output": output}
@@ -479,7 +479,7 @@ def model_wrapper(
                     c_in = torch.cat([unconditional_condition, condition])
                 try:
                     noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in).chunk(2)
-                except:
+                except Exception:
                     noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(2)
 
                 return noise_uncond + guidance_scale * (noise - noise_uncond)
@@ -506,7 +506,7 @@ def model_wrapper(
 
             try:
                 chunks = noise_pred_fn(x_in, t_in, cond=c_in).chunk(num_inputs)
-            except:
+            except Exception:
                 chunks = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(num_inputs)
 
             if guidance_scale == 1.0:
@@ -542,7 +542,7 @@ def model_wrapper(
 
                 try:
                     noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in).chunk(2)
-                except:
+                except Exception:
                     noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(num_inputs)
                 return noise_uncond + guidance_scale * (noise - noise_uncond)
             else:
@@ -566,7 +566,7 @@ def model_wrapper(
 
                 try:
                     noise_uncond, noise, noise_perturb = noise_pred_fn(x_in, t_in, cond=c_in).chunk(3)
-                except:
+                except Exception:
                     noise_uncond, noise, noise_perturb = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(3)
 
                 for i in pag_applied_layers:
@@ -590,7 +590,7 @@ def model_wrapper(
                 model_output = output["model_output"]
                 try:
                     x0_uncond, x0 = output["x0"].chunk(2)
-                except:
+                except Exception:
                     x0_uncond, x0 = output["x0"][0].chunk(2)
 
                 x0 = apg(x0, x0_uncond)[0]
@@ -606,7 +606,7 @@ def model_wrapper(
 
             try:
                 chunks = noise_pred_fn(x_in, t_in, cond=c_in).chunk(num_inputs)
-            except:
+            except Exception:
                 chunks = noise_pred_fn(x_in, t_in, cond=c_in)[0].chunk(num_inputs)
             for i in stg_applied_layers:
                 if isinstance(model, torch.nn.Module):
@@ -622,7 +622,7 @@ def model_wrapper(
                     model_kwargs["mask"] = mask[x.shape[0] :]
             try:
                 noise_perturb = noise_pred_fn(x, t_continuous, cond=condition[None])
-            except:
+            except Exception:
                 noise_perturb = noise_pred_fn(x, t_continuous, cond=condition[None])[0]
 
             model_kwargs = model_kwargs_ori
@@ -774,7 +774,7 @@ class DPM_Solver:
         if hasattr(self, "progress_fn"):
             try:
                 self.progress_fn(step / total_steps, desc=f"Generating {step}/{total_steps}")
-            except:
+            except Exception:
                 self.progress_fn(step, total_steps)
 
         else:

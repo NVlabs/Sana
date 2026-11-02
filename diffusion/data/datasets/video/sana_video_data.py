@@ -302,7 +302,7 @@ class SanaZipDataset(Dataset):
             if os.path.exists(caption_json_path):
                 try:
                     caption_json = SanaZipDataset.lru_json_load(caption_json_path)
-                except:
+                except Exception:
                     caption_json = {}
                 if self.key in caption_json:
                     external_caption_info = caption_json[self.key]

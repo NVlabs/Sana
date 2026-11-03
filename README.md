@@ -10,6 +10,10 @@
 </h3>
 
 <p align="center">
+  <b>English</b> · <a href="https://github.com/NVlabs/Sana/blob/main/README.zh.md">简体中文</a>
+</p>
+
+<p align="center">
   <a href="https://nv-sana.mit.edu/"><img src="https://img.shields.io/static/v1?label=Demo:6x3090&message=SANA&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/4bit/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=4bit&color=yellow"></a> &ensp;
   <a href="https://nv-sana.mit.edu/ctrlnet/"><img src="https://img.shields.io/static/v1?label=Demo:1x3090&message=ControlNet&color=yellow"></a> &ensp;

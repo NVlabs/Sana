@@ -715,7 +715,7 @@ class SanaTrainingPipeline:
             cum_vk, cum_k_sum = None, None
             #
             #  accumulate the incremental of all historical blocks
-            start_chunk_idx = chunk_idx - self.num_cached_blocks if self.num_cached_blocks > 0 else 0
+            start_chunk_idx = max(chunk_idx - self.num_cached_blocks, 0) if self.num_cached_blocks > 0 else 0
             for i in range(start_chunk_idx, chunk_idx):
                 prev = kv_cache[i][block_id]
                 if prev[0] is not None and prev[1] is not None:

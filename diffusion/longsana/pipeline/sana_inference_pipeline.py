@@ -247,7 +247,7 @@ class SanaInferencePipeline:
         for block_id in range(self.num_model_blocks):
             cur_kv_cache[block_id][2] = kv_cache[chunk_idx - 1][block_id][2]
             cum_vk, cum_k_sum = None, None
-            start_chunk_idx = chunk_idx - self.num_cached_blocks if self.num_cached_blocks > 0 else 0
+            start_chunk_idx = max(chunk_idx - self.num_cached_blocks, 0) if self.num_cached_blocks > 0 else 0
             for i in range(start_chunk_idx, chunk_idx):
                 prev = kv_cache[i][block_id]
                 if prev[0] is not None and prev[1] is not None:

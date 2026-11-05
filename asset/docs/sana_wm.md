@@ -119,7 +119,7 @@ as the matching `--action` string.
 
 For the fixed 80-scene, 60s SANA-WM benchmark release and reproducible
 bidirectional inference/evaluation workflow, see
-[SANA-WM benchmark guide](sana-wm-bench.md).
+[SANA-WM benchmark guide](../../docs/sana-wm-bench.md).
 
 ### Lower memory
 

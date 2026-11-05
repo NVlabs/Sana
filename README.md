@@ -82,7 +82,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 - ✅ [2025/2/10] 🚀Sana + ControlNet is released. [[Guidance]](https://nvlabs.github.io/Sana/docs/sana_controlnet/) | [[Model]](https://nvlabs.github.io/Sana/docs/model_zoo/#sana) | [[Demo]](https://nv-sana.mit.edu/ctrlnet/)
 - ✅ [2025/1/30] Release CAME-8bit optimizer code. Saving more GPU memory during training. [[How to config]](https://github.com/NVlabs/Sana/blob/main/configs/sana_config/1024ms/Sana_1600M_img1024_CAME8bit.yaml#L86)
 - ✅ [2025/1/29] 🎉 🎉 🎉**SANA 1.5 is out! Figure out how to do efficient training & inference scaling!** 🚀[[Tech Report]](https://arxiv.org/abs/2501.18427)
-- ✅ [2025/1/24] 4bit-Sana is released, powered by [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku) inference engine. Now run your Sana within **8GB** GPU VRAM [[Guidance]](https://nvlabs.github.io/Sana/docs/4bit_sana/) [[Demo]](https://svdquant.mit.edu/) [[Model]](https://nvlabs.github.io/Sana/docs/model_zoo/#sana)
+- ✅ [2025/1/24] 4bit-Sana is released, powered by [SVDQuant and Nunchaku](https://github.com/nunchux-ai/nunchaku) inference engine. Now run your Sana within **8GB** GPU VRAM [[Guidance]](https://nvlabs.github.io/Sana/docs/4bit_sana/) [[Demo]](https://svdquant.mit.edu/) [[Model]](https://nvlabs.github.io/Sana/docs/model_zoo/#sana)
 - ✅ [2025/1/24] DCAE-1.1 is released, better reconstruction quality. [[Model]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1) [[diffusers]](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers)
 - ✅ [2025/1/23] **Sana is accepted as Oral by ICLR-2025.** 🎉🎉🎉
 - ✅ [2025/1/12] DC-AE tiling makes Sana-4K inferences 4096x4096px images within 22GB GPU memory. With model offload and 8bit/4bit quantize. The 4K Sana run within **8GB** GPU VRAM. [[Guidance]](https://nvlabs.github.io/Sana/docs/model_zoo/#3-2k-4k-models)
@@ -289,7 +289,7 @@ Thanks to the following open-sourced projects:
 - [diffusers](https://github.com/huggingface/diffusers)
 - [Efficient-ViT](https://github.com/mit-han-lab/efficientvit)
 - [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels)
-- [SVDQuant and Nunchaku](https://github.com/mit-han-lab/nunchaku)
+- [SVDQuant and Nunchaku](https://github.com/nunchux-ai/nunchaku)
 - [Open-Sora](https://github.com/hpcaitech/Open-Sora)
 - [Wan](https://github.com/Wan-Video/Wan2.1)
 - [LTX-2](https://github.com/Lightricks/LTX-2)

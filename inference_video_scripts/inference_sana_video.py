@@ -34,7 +34,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore")  # ignore warning
 os.environ["DISABLE_XFORMERS"] = "1"
 
-from diffusion import DPMS, FastVideoDMD4Step, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
+from diffusion import DPMS, ChunkFlowEuler, FastVideoDMD4Step, FlowEuler, LongLiveFlowEuler, LTXFlowEuler
 from diffusion.data.datasets.utils import *
 from diffusion.data.transforms import read_image_from_path
 from diffusion.guiders import AdaptiveProjectedGuidance
@@ -48,6 +48,7 @@ from diffusion.model.builder import (
 )
 from diffusion.model.utils import get_weight_dtype, prepare_prompt_ar
 from diffusion.scheduler.fastvideo_dmd_sampler import resolve_fastvideo_dmd_generator_sigmas
+from diffusion.utils.chunk_utils import get_chunk_index_from_config
 from diffusion.utils.config import SanaVideoConfig, model_video_init_config
 from diffusion.utils.logger import get_root_logger
 from tools.download import find_model
@@ -148,7 +149,6 @@ class DistributePromptsDataset(torch.utils.data.Dataset):
 
 @torch.inference_mode()
 def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
-
     cur_seed = args.seed + int(rank)
     generator = torch.Generator(device=device).manual_seed(cur_seed)
     tqdm_desc = f"{save_root.split('/')[-1]} Using GPU: {args.gpu_id}: {args.start_index}-{args.end_index}"
@@ -313,6 +313,28 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
                     steps=sample_steps,
                     generator=generator,
                 )
+            elif args.sampling_algo == "chunk_flow_euler":
+                chunk_index = get_chunk_index_from_config(config, num_frames=z.shape[2])
+                if chunk_index is None:
+                    raise ValueError("chunk_flow_euler requires model.chunk_size or model.chunk_index")
+                interval_k = args.interval_k
+                if interval_k == 0:
+                    interval_k = 1.0 / len(ChunkFlowEuler.create_temporal_chunks(z.shape[2], chunk_index))
+                flow_solver = ChunkFlowEuler(
+                    model,
+                    condition=caption_embs,
+                    uncondition=negative_embs,
+                    cfg_scale=cfg_scale,
+                    flow_shift=flow_shift,
+                    model_kwargs=model_kwargs,
+                )
+                samples = flow_solver.sample(
+                    z,
+                    steps=sample_steps,
+                    generator=generator,
+                    chunk_index=chunk_index,
+                    interval_k=interval_k,
+                )
             elif args.sampling_algo == "flow_euler":
                 flow_solver = FlowEuler(
                     model,
@@ -451,7 +473,6 @@ class SanaInference(SanaVideoConfig):
 
 
 if __name__ == "__main__":
-
     args = get_args()
     config = args = pyrallis.parse(config_class=SanaInference, config_path=args.config)
 

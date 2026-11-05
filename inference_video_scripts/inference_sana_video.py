@@ -185,7 +185,7 @@ def visualize(config, args, model, items, bs, sample_steps, cfg_scale):
         # check exists
         exist = False
         for i in range(bs):
-            save_file_name = f"{chunk['global_idx'][i]}. {chunk['key'][i]}.mp4"
+            save_file_name = f"{chunk['global_idx'][i]:03d}. {chunk['key'][i]}.mp4"
             save_path = os.path.join(save_root, save_file_name)
             exist = os.path.exists(save_path)
             if not exist:

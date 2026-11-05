@@ -494,8 +494,8 @@ class ChunkCausalAttention(LiteLAReLURope):
         out_list = []
         for _q_rotated, _k_rotated, _v, _q, _k in zip(q_rotated_list, k_rotated_list, v_list, q_list, k_list):
             _vk = torch.matmul(_v, _k_rotated.transpose(-1, -2))
-            cumsum_vk += _vk
-            cumsum_k_sum += _k.sum(dim=-1, keepdim=True).transpose(-2, -1)
+            cumsum_vk = cumsum_vk + _vk
+            cumsum_k_sum = cumsum_k_sum + _k.sum(dim=-1, keepdim=True).transpose(-2, -1)
             # shape: _k_rotated: B, h, h_d, 1 -> B, h, 1, h_d @ _q_rotated: B,h,h_d,N -> B, h, 1, N
             z = 1 / (cumsum_k_sum @ _q + self.eps)
             out = torch.matmul(cumsum_vk, _q_rotated)

@@ -8,7 +8,7 @@
 
 --weights is the checkpoint: a Hub repo id (default, downloaded at the pinned revision) or a local folder (the repository
 root or one partition folder). --base-model is the MiniMax-H3 snapshot (text encoder, VAEs, tokenizer, processors).
-Presets: ours (Sol-Engine recipe, default) | stock. --attention-backend dense keeps the rest of the preset and turns Sol-Attn
+Presets: sol-engine (Sol-Engine recipe, default) | official (the checkpoint as released). --attention-backend dense keeps the rest of the preset and turns Sol-Attn
 off. ref2va reads the prompt and the ordered references from a request json (sol_hyperflow_flash/references.py).
 """
 from __future__ import annotations
@@ -34,7 +34,7 @@ def main():
     ap.add_argument("--task", default="t2v", choices=("t2v", "ref2va"))
     ap.add_argument("--request", help="ref2va request json (prompt + references)")
     ap.add_argument("--media-dir", default="", help="ref2va: base of relative media paths (default: the request's directory)")
-    ap.add_argument("--preset", default="ours", choices=("ours", "stock"))
+    ap.add_argument("--preset", default="sol-engine", choices=("sol-engine", "official"))
     ap.add_argument("--attention-backend", default="sol", choices=("sol", "dense"))
     text = ap.add_mutually_exclusive_group()
     text.add_argument("--prompt")

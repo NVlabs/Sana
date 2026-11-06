@@ -52,7 +52,7 @@ def test_sampler_six_steps_two_time_pairs():
                                prompt_embeds=None, position_ids=torch.zeros(S, 3), token_tags=torch.zeros(S, dtype=torch.long),
                                video_indices=video_i, audio_indices=audio_i, text_indices=text_i, attention_kwargs=None,
                                num_condition_video_rows=0, num_condition_audio_rows=0, noise_pred=None, audio_noise_pred=None)
-    ctl.preset = C.get("stock")
+    ctl.preset = C.get("official")
     Wrapper().__call__(types.SimpleNamespace(transformer=fake_tr), bs)
     assert len(seen) == 6
     k0 = seen[0]
@@ -75,7 +75,7 @@ def test_ref2va_sampler_reference_groups_and_layout():
     ctl = Controller(torch)
     info = SM.install(ctl, torch, denoise_module=_denoise_module(), component="transformer_ref")
     sv = info["video_sigmas"]
-    ctl.preset = C.get("stock", task="ref2va")
+    ctl.preset = C.get("official", task="ref2va")
     lat, alat = torch.randn(14, 3, generator=gen), torch.randn(6, 3, generator=gen)
     cond, acond = lat[:ncv].clone(), alat[:nca].clone()
     seen = []
@@ -111,7 +111,7 @@ def test_ref2va_sampler_reference_groups_and_layout():
 ])
 def test_schedule_counts(task, live, expected):
     ctl = Controller(torch)
-    for name, exp in (("stock", {"stock": 6 * len(live)}), ("ours", expected)):
+    for name, exp in (("official", {"stock": 6 * len(live)}), ("sol-engine", expected)):
         ctl.preset = C.get(name, task=task)
         cnt = {}
         for step in range(6):
@@ -119,24 +119,27 @@ def test_schedule_counts(task, live, expected):
             for b in live:
                 cnt[ctl.backend(b)] = cnt.get(ctl.backend(b), 0) + 1
         assert cnt == exp, (task, name, cnt)
-    ctl.preset = C.get("ours", task=task, attention_backend="dense")
+    ctl.preset = C.get("sol-engine", task=task, attention_backend="dense")
     assert {ctl.backend(b) for b in live} == {"stock"}
 
 
 def test_presets():
-    t, r = C.get("ours"), C.get("ours", task="ref2va")
+    t, r = C.get("sol-engine"), C.get("sol-engine", task="ref2va")
     assert (t.tau, t.dense_steps, t.edge_blocks, t.fusions, t.merge_tuned, t.vae, t.te_trim, t.transport, t.sink) == \
         (1.25, 2, (0, 1, 48, 49), True, True, "solh3", True, "int8fp8-sparse", "prefix")
     assert (r.sink, r.ref_encode, r.encode_compile, r.prep_threads) == ("text_audio", "global", True, 32)
     assert r.as_dict() | dict(sink="prefix", ref_encode="stock", encode_compile=False, prep_threads=0, notes="") == \
         t.as_dict() | dict(notes="")
-    s = C.get("stock")
+    s = C.get("official")
     assert not (s.sparse or s.fusions or s.te_trim) and s.vae == "stock" and s.transport == "bf16"
-    d = C.get("ours", attention_backend="dense")
-    assert not d.sparse and d.fusions and d.name == "ours-dense"
-    assert C.get("ours", tau=1.5).tau == 1.5
+    d = C.get("sol-engine", attention_backend="dense")
+    assert not d.sparse and d.fusions and d.name == "sol-engine-dense"
+    assert C.get("sol-engine", tau=1.5).tau == 1.5
     with pytest.raises(KeyError):
         C.get("unknown")
+    for gone in ("stock", "ours"):
+        with pytest.raises(KeyError):
+            C.get(gone)
 
 
 def test_text_audio_sink_and_routable_blocks():
@@ -147,7 +150,7 @@ def test_text_audio_sink_and_routable_blocks():
     assert routable_blocks(torch, 10, 380, mask, "cpu").tolist() == [2, 3, 6, 7, 8, 9]
     assert routable_blocks(torch, 10, 380, None, "cpu").tolist() == [6, 7, 8, 9]
     ctl = Controller(torch)
-    ctl.preset = C.get("ours", task="ref2va")
+    ctl.preset = C.get("sol-engine", task="ref2va")
     ctl.video_start = 380
     ctl.on_layout(torch.cat([torch.arange(100, 300), torch.arange(380, 640)]), ai9, t9, 200, 40, 640)
     assert ctl.layout["sink"] == "text_audio" and ctl.layout["sink_rows"] == 180

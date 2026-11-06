@@ -25,10 +25,10 @@ conditioning, other step counts and other resolutions are not exposed by this ru
 
 | Preset | What runs |
 |---|---|
-| `stock` | The checkpoint on the MiniMax-H3 modular pipeline: dense attention (diffusers dispatch, BF16), diffusers VAE decode / encode on every rank. With more than one GPU the live DiT blocks run under Ulysses sequence parallelism (`sol_hyperflow_flash/sp.py`). |
-| `ours` | Sol-Engine recipe, below. |
+| `official` | The checkpoint as released, on the MiniMax-H3 modular pipeline: dense attention (diffusers dispatch, BF16), diffusers VAE decode / encode on every rank. With more than one GPU the live DiT blocks run under Ulysses sequence parallelism (`sol_hyperflow_flash/sp.py`). |
+| `sol-engine` | The Sol-Engine recipe below (default). |
 
-`ours`:
+`sol-engine`:
 
 - **Attention:** dense at steps 0-1 and in blocks 0, 1, 48 and 49. Every other call uses Sol-Attn (`sol_bsa`, tau 1.25) with an exact sink: the text + audio prefix for t2v; for ref2va, the 64-blocks holding text or audio rows (Sol-H3's ref2va policy). The residual merge uses a tuned launch.
 - **Fusions:** Sol-H3 block fusions on all six steps (RMSNorm + modulate, residual-gate-norm, SwiGLU, QK-norm + partial RoPE).
@@ -78,13 +78,13 @@ torchrun --standalone --nproc_per_node 4 infer.py --task ref2va --request exampl
   --weights checkpoints/hyperflow-h3-flash --out outputs/ref2va.mp4
 ```
 
-`--preset stock` runs the baseline, `--warmup` runs one untimed request first (kernel compilation), `--te-offload`
+`--preset official` runs the baseline, `--warmup` runs one untimed request first (kernel compilation), `--te-offload`
 keeps the text encoder on the host between requests. `--sol-h3-dir` defaults to `../Sol-H3` of this checkout.
 
 ## Performance
 
 End-to-end seconds per request on **NVIDIA GB200** (1344 x 768, 24 FPS, video and stereo audio, fixed seed). Each cell
-is the median of two timed requests after one warmup; stock and ours ran in the same process on the same node(s).
+is the median of two timed requests after one warmup; official and sol-engine ran in the same process on the same node(s).
 Time covers conditioning, reference encoding, the six DiT forwards, video / audio VAE decoding and synchronization
 across all GPUs; it excludes model loading, warmup and MP4 encoding. Measured on 2026-11-05 with a pre-release copy of
 the checkpoint whose weight shards are byte-identical to the pinned revision, and with Sol-H3 `h3_runtime` sources
@@ -95,11 +95,11 @@ identical to the ones at this branch's base commit. Re-timing with the released 
 
 | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| stock\* | 25.1 | 6.6 | 3.6 | 66.0 | 17.9 | 8.6 | 117.5 | 31.0 | 16.3 |
-| ours | **13.0** | **3.4** | **1.9** | **35.3** | **9.2** | **4.6** | **66.6** | **16.1** | **8.5** |
+| official\* | 25.1 | 6.6 | 3.6 | 66.0 | 17.9 | 8.6 | 117.5 | 31.0 | 16.3 |
+| sol-engine | **13.0** | **3.4** | **1.9** | **35.3** | **9.2** | **4.6** | **66.6** | **16.1** | **8.5** |
 
-\* This t2v stock row ran the pre-release model code's INT8 kernels: the Triton INT8 GEMM and unpadded low-rank ranks.
-It also decoded with Sol-H3's parallel compiled VAE, so that it isolates the DiT. The `stock` preset of this runner
+\* This t2v official row ran the pre-release model code's INT8 kernels: the Triton INT8 GEMM and unpadded low-rank ranks.
+It also decoded with Sol-H3's parallel compiled VAE, so that it isolates the DiT. The `official` preset of this runner
 differs on both counts: it uses the released code's cuBLASLt INT8 GEMM and 64-padded ranks, and the diffusers VAE on
 every rank. This row will be replaced by the re-timing.
 
@@ -107,15 +107,15 @@ every rank. This row will be replaced by the re-timing.
 
 | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| stock | 33.2 | 15.8 | 12.2 | 74.6 | 31.8 | 23.3 | 132.1 | 52.5 | 37.1 |
-| ours | **23.1** | **6.8** | **4.0** | **49.5** | **13.6** | **7.5** | **85.1** | **23.4** | **12.1** |
+| official | 33.2 | 15.8 | 12.2 | 74.6 | 31.8 | 23.3 | 132.1 | 52.5 | 37.1 |
+| sol-engine | **23.1** | **6.8** | **4.0** | **49.5** | **13.6** | **7.5** | **85.1** | **23.4** | **12.1** |
 
 **ref2va, MiniMax-H3's reproducible ref2va request** (a 5 s reference video with its soundtrack, plus a voice clip):
 
 | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| stock | 73.9 | 35.1 | 28.6 | 145.6 | 59.6 | 46.0 | 209.9 | 85.0 | 61.9 |
-| ours | **46.7** | **13.2** | **7.8** | **93.0** | **24.3** | **13.7** | **135.1** | **37.3** | **19.9** |
+| official | 73.9 | 35.1 | 28.6 | 145.6 | 59.6 | 46.0 | 209.9 | 85.0 | 61.9 |
+| sol-engine | **46.7** | **13.2** | **7.8** | **93.0** | **24.3** | **13.7** | **135.1** | **37.3** | **19.9** |
 
 ## Numerics
 
@@ -142,7 +142,7 @@ Done:
 
 In progress, on the pinned revision and this branch's Sol-H3:
 
-- GPU numerics gate: stock preset vs the measured configuration;
+- GPU numerics gate: official preset vs the measured configuration;
 - 1 / 4 / 8 GPU smoke runs of both tasks;
 - re-timing of the tables above.
 

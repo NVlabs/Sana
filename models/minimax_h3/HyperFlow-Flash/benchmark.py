@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Time stock and ours in one process (same request, same node), one JSON line per timed request plus a summary per preset.
+"""Time official and sol-engine in one process (same request, same node), one JSON line per timed request plus a summary per preset.
 
     python benchmark.py --task t2v --prompt-file prompt.txt --duration 5 --base-model checkpoints/MiniMax-H3 --out runs/t2v.jsonl
     torchrun --standalone --nproc_per_node 4 benchmark.py --task ref2va --request examples/ref2va_request.json ...
@@ -35,7 +35,7 @@ def main():
     ap.add_argument("--media-dir", default="")
     ap.add_argument("--prompt")
     ap.add_argument("--prompt-file")
-    ap.add_argument("--presets", default="stock,ours")
+    ap.add_argument("--presets", default="official,sol-engine")
     ap.add_argument("--attention-backend", default="sol", choices=("sol", "dense"))
     ap.add_argument("--duration", type=int, choices=sorted(DURATION_FRAMES), default=5)
     ap.add_argument("--seed", type=int, default=0)

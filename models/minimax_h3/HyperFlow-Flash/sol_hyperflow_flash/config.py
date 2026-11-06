@@ -1,4 +1,4 @@
-"""Presets: `stock` (the checkpoint on the MiniMax-H3 modular pipeline) and `ours` (the Sol-Engine recipe).
+"""Presets: `official` (the checkpoint on the MiniMax-H3 modular pipeline, as released) and `sol-engine` (the Sol-Engine recipe).
 
 Every optimisation is an independent switch:
 
@@ -51,15 +51,15 @@ class Preset:
         return d
 
 
-_OURS = dict(sparse=True, fusions=True, merge_tuned=True, vae="solh3", te_trim=True, transport="int8fp8-sparse")
+_SOL_ENGINE = dict(sparse=True, fusions=True, merge_tuned=True, vae="solh3", te_trim=True, transport="int8fp8-sparse")
 
 PRESETS = {
-    "stock": Preset("stock", notes="checkpoint on the MiniMax-H3 modular pipeline, dense attention"),
-    "ours": Preset("ours", **_OURS, notes="Sol-Engine recipe"),
+    "official": Preset("official", notes="checkpoint on the MiniMax-H3 modular pipeline, dense attention"),
+    "sol-engine": Preset("sol-engine", **_SOL_ENGINE, notes="Sol-Engine recipe"),
 }
 REF2VA = {
-    "stock": PRESETS["stock"],
-    "ours": Preset("ours", **_OURS, sink="text_audio", ref_encode="global", encode_compile=True, prep_threads=32,
+    "official": PRESETS["official"],
+    "sol-engine": Preset("sol-engine", **_SOL_ENGINE, sink="text_audio", ref_encode="global", encode_compile=True, prep_threads=32,
                    notes="Sol-Engine recipe + sharded compiled reference encode + threaded reference prep"),
 }
 

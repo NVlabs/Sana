@@ -2,7 +2,7 @@
 
     from sol_hyperflow_flash import config, runtime
     rt = runtime.HyperFlowFlashRuntime(weights, base_model, task="t2va")      # torchrun with world > 1: Ulysses SP
-    rt.apply(config.get("ours"))
+    rt.apply(config.get("sol-engine"))
     rec, media = rt.generate(prompt, num_frames=124, seed=0, keep=True)
 """
 __version__ = "0.1.0"

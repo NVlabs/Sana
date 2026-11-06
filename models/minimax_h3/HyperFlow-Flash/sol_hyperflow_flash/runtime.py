@@ -2,7 +2,7 @@
 plus the Sol-Engine optimisations of `config` switched per preset.
 
     rt = HyperFlowFlashRuntime(weights, base_model)               # torchrun with world > 1: Ulysses sequence parallelism
-    rt.apply(config.get("ours"))
+    rt.apply(config.get("sol-engine"))
     rec, media = rt.generate(prompt, num_frames=124, seed=0, keep=True)
 
     rt = HyperFlowFlashRuntime(weights, base_model, task="ref2va")      # the ref2va partition as `transformer_ref`

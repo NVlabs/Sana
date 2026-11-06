@@ -209,12 +209,18 @@ def test_per_rank_cache_defaults(tmp_path, monkeypatch):
     monkeypatch.setenv("RANK", "1")
     monkeypatch.setenv("LOCAL_RANK", "1")
     monkeypatch.setenv("WORLD_SIZE", "2")
-    RT.per_rank_caches()
     import os
 
-    for var in RT.COMPILE_CACHES:
-        path = os.environ[var]
-        assert path.startswith(str(tmp_path)) and path.endswith("_rank1") and os.path.isdir(path), (var, path)
+    for run_id, port, key in (("3f2a-9c", "29500", "_3f2a-9c"), ("none", "29511", "_port29511")):
+        for var in RT.COMPILE_CACHES:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("TORCHELASTIC_RUN_ID", run_id)
+        monkeypatch.setenv("MASTER_PORT", port)
+        RT.per_rank_caches()
+        for var in RT.COMPILE_CACHES:
+            path = os.environ[var]
+            assert path.startswith(str(tmp_path)) and path.endswith("_rank1") and os.path.isdir(path), (var, path)
+            assert key + os.sep in path, (key, path)
 
 
 def test_fused_projections_rejected():

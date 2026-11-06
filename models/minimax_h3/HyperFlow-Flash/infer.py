@@ -3,7 +3,8 @@
 
     python infer.py --prompt "A red fox trots through fresh snow at dawn" --duration 5 --out fox.mp4 \
         --base-model /path/to/MiniMax-H3
-    torchrun --standalone --nproc_per_node 8 infer.py ...            # Ulysses sequence parallelism over 8 GPUs
+    torchrun --standalone --nproc_per_node 4 infer.py ...            # Ulysses sequence parallelism over 4 GPUs
+    (8 GPUs = two 4-GPU nodes: see the two-node torchrun example in README.md)
     python infer.py --task ref2va --request examples/ref2va_request.json --duration 5 --out ref.mp4 --base-model ...
 
 --weights is the checkpoint: a Hub repo id (default, downloaded at the pinned revision) or a local folder (the repository

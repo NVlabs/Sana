@@ -10,19 +10,21 @@ drives it inside the diffusers MiniMax-H3 modular pipeline, with the Sol-H3 runt
 
 ## Performance
 
-| GPUs | Workload | Official (s) | Sol-Engine (s) | Speedup |
-|---:|---|---:|---:|---:|
-| 1 | t2v 5 s | 25.1\* | 13.0 | **1.93x** |
-| 4 | t2v 5 s | 6.6\* | 3.4 | **1.94x** |
-| 8 | t2v 5 s / 10 s / 15 s | 3.6\* / 8.6\* / 16.3\* | 1.9 / 4.6 / 8.5 | **1.89x / 1.87x / 1.92x** |
-| 1 | ref2va, one image, 5 s | 33.2 | 23.1 | **1.44x** |
-| 4 | ref2va, one image, 5 s | 15.8 | 6.8 | **2.32x** |
-| 8 | ref2va, one image, 5 s / 10 s / 15 s | 12.2 / 23.3 / 37.1 | 4.0 / 7.5 / 12.1 | **3.05x / 3.11x / 3.07x** |
-| 8 | ref2va, video + voice, 5 s / 10 s / 15 s | 28.6 / 46.0 / 61.9 | 7.8 / 13.7 / 19.9 | **3.67x / 3.36x / 3.11x** |
+| Workload | 1 GPU (s) | 4 GPUs (s) | 8 GPUs (s) |
+|---|---:|---:|---:|
+| t2v 5 s | 13.0 | 3.4 | 1.9 |
+| t2v 10 s | 35.3 | 9.2 | 4.6 |
+| t2v 15 s | 66.6 | 16.1 | 8.5 |
+| ref2va, one image, 5 s | 23.1 | 6.8 | 4.0 |
+| ref2va, one image, 10 s | 49.5 | 13.6 | 7.5 |
+| ref2va, one image, 15 s | 85.1 | 23.4 | 12.1 |
+| ref2va, video + voice, 5 s | 46.7 | 13.2 | 7.8 |
+| ref2va, video + voice, 10 s | 93.0 | 24.3 | 13.7 |
+| ref2va, video + voice, 15 s | 135.1 | 37.3 | 19.9 |
 
-Official is the checkpoint as released, on the diffusers MiniMax-H3 pipeline with dense attention. Times are end-to-end,
-measured on GB200 on 2026-11-05 with byte-identical weights. \*The t2v official cells ran pre-release INT8 kernels and
-are being re-timed. All cells, the protocol and the validation status are in [VALIDATION.md](VALIDATION.md).
+End-to-end seconds per request with the `sol-engine` preset (warm: median of two requests after one warmup), measured
+on GB200 on 2026-11-05 with byte-identical weights. Protocol, breakdowns and validation status are in
+[VALIDATION.md](VALIDATION.md).
 
 ## Full-Opt
 
@@ -53,8 +55,8 @@ torchrun --standalone --nproc_per_node 8 infer.py --task ref2va --preset sol-eng
   --base-model checkpoints/MiniMax-H3 --weights checkpoints/hyperflow-h3-flash --out outputs/ref2va.mp4
 ```
 
-Use `--preset official` for the baseline and `--attention-backend dense` to turn Sol-Attn off. `benchmark.py` times both
-presets in one process.
+`--preset official` runs the checkpoint as released, without Sol-Engine optimizations. `--attention-backend dense` turns
+Sol-Attn off. `benchmark.py` times presets in one process.
 
 ## Environment
 

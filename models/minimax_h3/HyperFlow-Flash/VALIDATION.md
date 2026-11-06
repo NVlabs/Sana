@@ -40,13 +40,12 @@ Both presets load the checkpoint with the same run-time settings, none of which 
 - **DiT:** sum of the six transformer forwards on rank 0.
 - **Peak:** maximum over ranks of `torch.cuda.max_memory_allocated`.
 - **Measured:** 2026-11-05, with a pre-release copy of the checkpoint whose weight shards are byte-identical to `9e9ed14b`.
-- **Caveat for the t2v official row:** it ran the pre-release model code's Triton INT8 GEMM with unpadded ranks, and it decoded with Sol-H3's parallel compiled VAE.
+- **t2v:** only the `sol-engine` preset is listed; the earlier official t2v cells used pre-release INT8 kernels and are not reported.
 
 ## End-to-end time (s)
 
 | Workload | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| t2v | official\* | 25.1 | 6.6 | 3.6 | 66.0 | 17.9 | 8.6 | 117.5 | 31.0 | 16.3 |
 | t2v | sol-engine | 13.0 | 3.4 | 1.9 | 35.3 | 9.2 | 4.6 | 66.6 | 16.1 | 8.5 |
 | ref2va, one image | official | 33.2 | 15.8 | 12.2 | 74.6 | 31.8 | 23.3 | 132.1 | 52.5 | 37.1 |
 | ref2va, one image | sol-engine | 23.1 | 6.8 | 4.0 | 49.5 | 13.6 | 7.5 | 85.1 | 23.4 | 12.1 |
@@ -57,7 +56,6 @@ Both presets load the checkpoint with the same run-time settings, none of which 
 
 | Workload | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| t2v | official\* | 21.7 | 5.9 | 3.1 | 59.3 | 16.6 | 7.8 | 107.5 | 29.1 | 15.2 |
 | t2v | sol-engine | 9.7 | 2.7 | 1.5 | 28.6 | 7.9 | 3.8 | 53.1 | 14.2 | 7.4 |
 | ref2va, one image | official | 24.9 | 7.2 | 3.7 | 60.7 | 17.0 | 8.7 | 111.6 | 31.8 | 15.9 |
 | ref2va, one image | sol-engine | 18.3 | 5.2 | 2.7 | 41.3 | 11.3 | 5.9 | 73.6 | 20.5 | 10.2 |
@@ -68,7 +66,6 @@ Both presets load the checkpoint with the same run-time settings, none of which 
 
 | Workload | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| t2v | official\* | 98 | 95 | 94 | 106 | 97 | 95 | 113 | 105 | 102 |
 | t2v | sol-engine | 99 | 95 | 94 | 107 | 100 | 98 | 115 | 105 | 102 |
 | ref2va, video + voice | official | 106 | 96 | 96 | 114 | 99 | 98 | 122 | 102 | 101 |
 | ref2va, video + voice | sol-engine | 105 | 96 | 95 | 113 | 99 | 98 | 121 | 104 | 101 |

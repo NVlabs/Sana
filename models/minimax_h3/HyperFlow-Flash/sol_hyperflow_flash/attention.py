@@ -358,13 +358,15 @@ def routable_blocks(torch, nb, video_start, sink_block_mask, device):
 def make_processor(ctl, block_idx, rope_fn):
     """Attention processor of one live block: MiniMaxH3AttnProcessor's math up to the attention back-end, plus the optional
     fused QK-norm / RoPE (ctl.fused_qknorm_rope)."""
-    from diffusers.models.attention_dispatch import dispatch_attention_fn
 
     class FlashAttnProcessor:
         _attention_backend = None
         _parallel_config = None
 
         def __call__(self, attn, hidden_states, rotary_emb=None, attention_mask=None):
+            if getattr(attn, "fused_projections", False):
+                # HyperFlow H3 Flash quantizes to_q / to_k / to_v separately; this runner never fuses them
+                raise RuntimeError("fused QKV projections are not supported by this processor; do not call fuse_projections()")
             query = attn.to_q(hidden_states).unflatten(-1, (attn.heads, -1))
             key = attn.to_k(hidden_states).unflatten(-1, (attn.heads, -1))
             value = attn.to_v(hidden_states).unflatten(-1, (attn.heads, -1))
@@ -389,6 +391,8 @@ def make_processor(ctl, block_idx, rope_fn):
                     key = rope_fn(key, *rotary_emb)
 
             def dense():
+                from diffusers.models.attention_dispatch import dispatch_attention_fn
+
                 return dispatch_attention_fn(query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False,
                                              backend=self._attention_backend, parallel_config=self._parallel_config)
 

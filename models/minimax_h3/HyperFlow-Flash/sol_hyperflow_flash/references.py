@@ -87,3 +87,12 @@ def describe(refs):
             d.update(audio_shape=list(r.audio.shape), sample_rate=r.sample_rate)
         out.append(d)
     return out
+
+
+def resolve_seed(cli_seed, spec=None) -> int:
+    """Seed precedence: the command line, then the request file's "seed", then 0."""
+    if cli_seed is not None:
+        return int(cli_seed)
+    if spec is not None and spec.get("seed") is not None:
+        return int(spec["seed"])
+    return 0

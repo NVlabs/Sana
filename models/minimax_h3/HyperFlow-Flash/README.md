@@ -12,18 +12,18 @@ drives it inside the diffusers MiniMax-H3 modular pipeline, with the Sol-H3 runt
 
 | Workload | 1 GPU (s) | 4 GPUs (s) | 8 GPUs (s) |
 |---|---:|---:|---:|
-| t2v 5 s | 13.0 | 3.4 | 1.9 |
-| t2v 10 s | 35.3 | 9.2 | 4.6 |
-| t2v 15 s | 66.6 | 16.1 | 8.5 |
-| ref2va, one image, 5 s | 23.1 | 6.8 | 4.0 |
-| ref2va, one image, 10 s | 49.5 | 13.6 | 7.5 |
-| ref2va, one image, 15 s | 85.1 | 23.4 | 12.1 |
-| ref2va, video + voice, 5 s | 46.7 | 13.2 | 7.8 |
-| ref2va, video + voice, 10 s | 93.0 | 24.3 | 13.7 |
-| ref2va, video + voice, 15 s | 135.1 | 37.3 | 19.9 |
+| t2v, 5 s | 13.0 | 3.4 | 2.0 |
+| t2v, 10 s | 33.7 | 8.8 | 4.7 |
+| t2v, 15 s | 61.7 | 16.5 | 8.5 |
+| ref2va, one image, 5 s | 23.4 | 6.8 | 4.1 |
+| ref2va, one image, 10 s | 50.5 | 14.0 | 7.7 |
+| ref2va, one image, 15 s | 85.7 | 23.1 | 12.4 |
+| ref2va, video + voice, 5 s | 47.4 | 13.4 | 7.5 |
+| ref2va, video + voice, 10 s | 90.4 | 25.0 | 13.7 |
+| ref2va, video + voice, 15 s | 138.7 | 37.3 | 20.1 |
 
-End-to-end seconds per request with the `sol-engine` preset (warm: median of two requests after one warmup), measured
-on GB200 on 2026-11-05 with byte-identical weights. Protocol, breakdowns and validation status are in
+End-to-end seconds per request with the `sol-engine` preset on the released checkpoint revision (warm: median of two
+requests after one warmup), measured on GB200 on 2026-11-06. Protocol, breakdowns and validation status are in
 [VALIDATION.md](VALIDATION.md).
 
 ## Full-Opt

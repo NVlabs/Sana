@@ -11,7 +11,7 @@ plus the Sol-Engine optimisations of `config` switched per preset.
 t2va: the H3 `t2va` modular pipeline; ref2va: diffusers MiniMaxH3Ref2VABlocks (setup, Qwen3-VL text encoder over the prompt and
 the image / video references, reference VAE encoders, packed layout, latents, denoise, decode). Text encoder, layout, latents (CPU
 generator), video VAE and audio VAE are the base pipeline's. Under sequence parallelism the live DiT blocks are parallel (`sp`);
-presets with `vae="solh3"` run Sol-H3's parallel compiled video VAE decode and presets with `ref_encode` != "stock" shard the
+presets with `vae="solh3"` run Sol-H3's parallel compiled video VAE decode and presets with `ref_encode` != "diffusers" shard the
 reference encode (`vae_par`); `prep_threads` resizes the reference video frames on a host thread pool (same PIL calls, bitwise).
 """
 from __future__ import annotations
@@ -57,7 +57,7 @@ class HyperFlowFlashRuntime:
         self.sol_h3_dir = sol_h3_dir
         self.te_offload = te_offload
         self.pvae = None              # vae_par.ParallelVAE, created by the first preset that needs it
-        self.prep_threads = 0         # host threads for the reference-frame resize of the ref2va setup step (0 = stock)
+        self.prep_threads = 0         # host threads for the reference-frame resize of the ref2va setup step (0 = the diffusers loop)
         self.audit = False            # stage audit: host-synced per-block wall times + SP collective times, gathered per rank
         torch.backends.cuda.matmul.allow_tf32 = False
         self.dev = torch.device("cuda", self.local_rank)
@@ -110,7 +110,7 @@ class HyperFlowFlashRuntime:
 
         from diffusers.models.transformers.transformer_minimax_h3 import _apply_rotary_emb
 
-        self.stock_procs = {i: b.attn.processor for i, b in self.live}
+        self.orig_procs = {i: b.attn.processor for i, b in self.live}
         if self.world > 1:
             from . import sp as SPM
 
@@ -136,7 +136,7 @@ class HyperFlowFlashRuntime:
             # decoder's batched tiles) so they cannot slow the next preset's allocations
             self.torch.cuda.empty_cache()
         ctl.preset = preset
-        if (preset.vae != "stock" or preset.ref_encode != "stock" or preset.encode_compile) and self.pvae is None:
+        if (preset.vae != "diffusers" or preset.ref_encode != "diffusers" or preset.encode_compile) and self.pvae is None:
             from . import solh3, vae_par
 
             vp = solh3.load(self.sol_h3_dir, modules=("vae_parallel",)).vae_parallel
@@ -151,7 +151,7 @@ class HyperFlowFlashRuntime:
         self.set_te_trim(preset.te_trim)
         plain = not (preset.sparse or preset.fusions) and ctl.sp is None
         for i, b in self.live:
-            b.attn.set_processor(self.stock_procs[i] if plain else self.side_procs[i])
+            b.attn.set_processor(self.orig_procs[i] if plain else self.side_procs[i])
         ctl.block_fused = True
         ctl.fused_qknorm_rope = preset.fusions
         if preset.fusions and not self._fusion_restores:
@@ -192,10 +192,10 @@ class HyperFlowFlashRuntime:
     def expected_counts(self, preset: C.Preset, steps=SM.N_STEPS):
         live = {i for i, _ in self.live}
         if not preset.sparse:
-            return {"stock": steps * len(live)} if (self.ctl.sp is not None) else {}
+            return {"dense": steps * len(live)} if (self.ctl.sp is not None) else {}
         edge = len(set(preset.edge_blocks) & live)
         dense = min(preset.dense_steps, steps)
-        return {"stock": dense * len(live) + (steps - dense) * edge, "solbsa": (steps - dense) * (len(live) - edge)}
+        return {"dense": dense * len(live) + (steps - dense) * edge, "solbsa": (steps - dense) * (len(live) - edge)}
 
     # ---- timers ----------------------------------------------------------------------------------------------------------------
     def _install_timers(self):
@@ -304,7 +304,7 @@ class HyperFlowFlashRuntime:
     def _install_prep_threads(self):
         """ref2va setup step: resize the reference video frames on `self.prep_threads` host threads. Same function body as
         diffusers packing_ref2va.prepare_reference_frames (one PIL LANCZOS resize per frame, np.stack in frame order), so the
-        result is bitwise the stock one; PIL releases the GIL inside resize."""
+        result is bitwise the diffusers one; PIL releases the GIL inside resize."""
         from concurrent.futures import ThreadPoolExecutor
 
         import numpy as np
@@ -312,15 +312,15 @@ class HyperFlowFlashRuntime:
         from diffusers.modular_pipelines.minimax_h3 import packing_ref2va as pr
         from PIL import Image
 
-        stock = be.prepare_reference_frames
-        self._prep_stock = stock
+        orig = be.prepare_reference_frames
+        self._prep_orig = orig
 
         def threaded(frames, num_frames):
             n = self.prep_threads
             if n <= 0:
-                return stock(frames, num_frames)
+                return orig(frames, num_frames)
             if frames.ndim != 4 or frames.shape[3] != 3:
-                return stock(frames, num_frames)          # stock raises its own error
+                return orig(frames, num_frames)           # diffusers raises its own error
             frames = frames[:num_frames]
             height, width = pr.resolve_canvas_size(frames.shape[2], frames.shape[1])
             if frames.shape[1:3] == (height, width):

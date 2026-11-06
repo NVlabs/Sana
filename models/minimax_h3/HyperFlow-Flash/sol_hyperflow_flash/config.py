@@ -11,11 +11,11 @@ Every optimisation is an independent switch:
   fusions       Sol-H3 block fusions on the live blocks: RMSNorm + AdaLN modulate, residual + gate + RMSNorm + modulate,
                 SwiGLU, per-head QK RMSNorm + partial RoPE.
   merge_tuned   Sol residual merge launched with block_n 128 / 4 warps / 1 stage (same kernel and math).
-  vae           "stock": diffusers decode on every rank. "solh3": Sol-H3's compiled tile-parallel decode of the same H3 VAE
+  vae           "diffusers": diffusers decode on every rank. "solh3": Sol-H3's compiled tile-parallel decode of the same H3 VAE
                 (1 GPU: compiled decoder only).
-  ref_encode    ref2va reference encode: "stock" | "sharded" (Sol-H3 encode_parallel, one clip's tiles over the ranks) |
+  ref_encode    ref2va reference encode: "diffusers" | "sharded" (Sol-H3 encode_parallel, one clip's tiles over the ranks) |
                 "global" (every clip's tiles over the ranks, one gather); encode_compile: compiled encoder.
-  prep_threads  ref2va: reference video frames resized on this many host threads (same PIL calls; 0 = stock).
+  prep_threads  ref2va: reference video frames resized on this many host threads (same PIL calls; 0 = the diffusers loop).
   te_trim       Qwen3-VL conditioner run only up to the layer whose pre-norm output MiniMax-H3 reads (bitwise).
   transport     Ulysses all-to-all format (world > 1): "bf16" | "int8fp8" (Sol-H3 compressed transport on every call) |
                 "int8fp8-sparse" (only on the Sol-Attn calls).
@@ -37,8 +37,8 @@ class Preset:
     fusions: bool = False
     sink: str = "prefix"
     merge_tuned: bool = False
-    vae: str = "stock"
-    ref_encode: str = "stock"
+    vae: str = "diffusers"
+    ref_encode: str = "diffusers"
     encode_compile: bool = False
     prep_threads: int = 0
     transport: str = "bf16"

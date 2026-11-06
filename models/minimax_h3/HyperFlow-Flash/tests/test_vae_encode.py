@@ -1,4 +1,4 @@
-"""The globally sharded reference encode is bitwise the stock `_encode` (fake VAE with the diffusers tiling / blending)."""
+"""The globally sharded reference encode is bitwise the diffusers `_encode` (fake VAE with the diffusers tiling / blending)."""
 import math
 import types
 
@@ -9,7 +9,7 @@ from sol_hyperflow_flash import vae_par as VP
 
 
 class FakeVAE(torch.nn.Module):
-    """Stock AutoencoderKLMiniMaxH3 tiling, blending and temporal chunking (diffusers code, small geometry)."""
+    """Diffusers AutoencoderKLMiniMaxH3 tiling, blending and temporal chunking (diffusers code, small geometry)."""
 
     def __init__(self):
         super().__init__()
@@ -82,7 +82,7 @@ class FakeVAE(torch.nn.Module):
 
 
 @pytest.mark.parametrize("world", [1, 2, 3, 5, 8, 64])
-def test_global_encode_matches_stock(world):
+def test_global_encode_matches_diffusers(world):
     fv = FakeVAE()
     gen = torch.Generator().manual_seed(0)
     with torch.no_grad():
@@ -95,7 +95,7 @@ def test_global_encode_matches_stock(world):
 
 
 @pytest.mark.parametrize("world", [1, 2, 3, 7])
-def test_single_clip_tile_split_matches_stock(world):
+def test_single_clip_tile_split_matches_diffusers(world):
     fv = FakeVAE()
     gen = torch.Generator().manual_seed(1)
     with torch.no_grad():

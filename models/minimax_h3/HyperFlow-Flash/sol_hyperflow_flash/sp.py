@@ -2,7 +2,7 @@
 
 Parallelised: every live transformer block (AdaLN modulation, norms, the model's INT8 / low-rank linears, SwiGLU) on a contiguous
 sequence shard of the packed [text | audio | video] rows (rank r owns rows [r*ceil(S/W), (r+1)*ceil(S/W))); attention is head-parallel
-after an all-to-all (each rank: the FULL sequence for H/W heads) - so the attention back-end (stock cuDNN SDPA, Sol-Attn) sees exactly the full-sequence inputs of its heads; a second all-to-all returns the sequence shards. The last live block's
+after an all-to-all (each rank: the FULL sequence for H/W heads) - so the attention back-end (dense cuDNN SDPA, Sol-Attn) sees exactly the full-sequence inputs of its heads; a second all-to-all returns the sequence shards. The last live block's
 output is all-gathered. Replicated on every rank (not parallelised): text encoder, token refiner, input projections / time embedding,
 norm_out / proj_out, the sampler update, video and audio VAE decode.
 

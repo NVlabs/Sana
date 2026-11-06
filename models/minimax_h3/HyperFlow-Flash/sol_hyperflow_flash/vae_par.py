@@ -1,38 +1,38 @@
 """Parallel H3 video VAE for multi-GPU (and the compiled decoder on 1 GPU): Sol-H3's own implementation, switchable per preset.
 
-Same weights and the same stock diffusers AutoencoderKLMiniMaxH3.
+Same weights and the same diffusers AutoencoderKLMiniMaxH3.
 
 decode "solh3"   Sol-H3 `h3_runtime/vae_parallel.install(vae, batched=True, compile_mode="default", encode_parallel=True)`
                  (the call of Sol-H3 engine.py and of the HyperFlow runner):
                  the ViT decoder compiled (torch.compile mode "default", dynamic=False) on every world size; world > 1:
                  the equal-size (temporal clip x spatial tile) decode tiles of the whole clip split contiguously over the
-                 ranks, decoded as ONE batch per rank, all_gather_into_tensor, blended by the stock _stitch_tiles / _blend
-                 (vae_parallel.py:222-323). 1 GPU: compiled decoder, stock per-tile loop (vae_parallel.py:84-100).
-decode "stock"   the diffusers decode, replicated on every rank.
+                 ranks, decoded as ONE batch per rank, all_gather_into_tensor, blended by the diffusers _stitch_tiles / _blend
+                 (vae_parallel.py:222-323). 1 GPU: compiled decoder, diffusers per-tile loop (vae_parallel.py:84-100).
+decode "diffusers"   the diffusers decode, replicated on every rank.
 
 reference encode (video VAE encode of image / video references; ref2va only):
-  "stock"        diffusers: every rank encodes every tile of every 17-frame clip.
+  "diffusers"        diffusers: every rank encodes every tile of every 17-frame clip.
   "sharded"      Sol-H3 encode_parallel (vae_parallel.py:170-185): the spatial tiles of ONE clip split over the ranks, per-tile
-                 encoder loop as stock, per-clip all-gather, stock stitch. Images (one clip) the same.
+                 encoder loop as diffusers, per-clip all-gather, diffusers stitch. Images (one clip) the same.
   "global"       this runner (Sol-H3's tiling + blending rules, its global-decode scheme applied to the encoder): every (clip, tile)
-                 pair of the whole reference video split contiguously over the ranks, per-tile encoder loop as stock, ONE
-                 all-gather, then the stock per-clip stitch, concatenation and token drop of `_encode`. Images go through
+                 pair of the whole reference video split contiguously over the ranks, per-tile encoder loop as diffusers, ONE
+                 all-gather, then the diffusers per-clip stitch, concatenation and token drop of `_encode`. Images go through
                  "sharded" (one clip).
   encode_compile this runner: the encoder compiled (torch.compile mode "default", dynamic=False); Sol-H3 compiles only the decoder.
-Every tile is encoded by the same encoder call on the same input view as stock, so the eager sharded / global encodes are
+Every tile is encoded by the same encoder call on the same input view as diffusers, so the eager sharded / global encodes are
 expected to be bitwise equal to the single-GPU encode (checked by the encode gate); the compiled encoder is not bitwise.
 """
 from __future__ import annotations
 
 import math
 
-ENCODE_MODES = ("stock", "sharded", "global")
-DECODE_MODES = ("stock", "solh3")
+ENCODE_MODES = ("diffusers", "sharded", "global")
+DECODE_MODES = ("diffusers", "solh3")
 _PATCHED = ("_decode", "_decode_clip", "_encode_clip")
 
 
 def encode_geometry(vae, height, width):
-    """Spatial tiles of `_encode_clip` (pixel coords) and the latent-space overlaps of `_stitch_tiles`: the stock rules."""
+    """Spatial tiles of `_encode_clip` (pixel coords) and the latent-space overlaps of `_stitch_tiles`: the diffusers rules."""
     yi, yl, yo = vae._split_tiles(height, vae.tile_sample_min_height, vae.tile_sample_min_overlap_height)
     xi, xl, xo = vae._split_tiles(width, vae.tile_sample_min_width, vae.tile_sample_min_overlap_width)
     coords = [(yi[i], yl[i], xi[j], xl[j]) for i in range(len(yi)) for j in range(len(xi))]
@@ -71,7 +71,7 @@ def global_encode_local(torch, vae, x, rank, world):
 
 
 def global_encode_assemble(torch, vae, flat, plan):
-    """Stock stitch of every clip from the rank-major gathered tiles, concatenated in time, `token_drop` applied (= `_encode`)."""
+    """Diffusers stitch of every clip from the rank-major gathered tiles, concatenated in time, `token_drop` applied (= `_encode`)."""
     yi, yo, xi, xo = plan["geom"]
     moments = torch.cat([stitch(vae, flat, c * plan["tiles"], yi, yo, xi, xo) for c in range(plan["n_clips"])], dim=2)
     if vae.config.token_drop > 0 and plan.get("token_drop", True):
@@ -97,7 +97,7 @@ def global_encode(torch, vae, x, rank, world, gather):
 
 class ParallelVAE:
     """Installs Sol-H3's vae_parallel once (its compiled decoder + patched methods are kept) and switches the VAE between
-    stock and the parallel paths per preset without recompiling (Sol-H3's own uninstall resets dynamo)."""
+    diffusers and the parallel paths per preset without recompiling (Sol-H3's own uninstall resets dynamo)."""
 
     def __init__(self, torch, vae, vae_parallel_mod, *, compile_mode="default", deterministic=False):
         import torch.distributed as dist
@@ -122,7 +122,7 @@ class ParallelVAE:
         self._compiled_encoder = None
         self.group = None             # encode subgroup (text / encode split: ranks 1..W-1), None = every rank
         self.decode_mode, self.encode_mode, self.encode_compile = None, None, None
-        self.set("stock", "stock", False)
+        self.set("diffusers", "diffusers", False)
 
     def compiled_encoder(self):
         if self._compiled_encoder is None:
@@ -172,7 +172,7 @@ class ParallelVAE:
         else:
             setattr(self.vae, name, fn)
 
-    def set(self, decode="stock", encode="stock", encode_compile=False):
+    def set(self, decode="diffusers", encode="diffusers", encode_compile=False):
         if decode not in DECODE_MODES or encode not in ENCODE_MODES:
             raise ValueError(f"vae decode {decode!r} / encode {encode!r}")
         v = self.vae
@@ -219,7 +219,7 @@ def _sync_ms(torch, fn):
 
 
 def decode_gate(torch, pvae, vae, z):
-    """Decoder input `z` (exactly what the pipeline handed to vae.decode) decoded by the stock path and twice by Sol-H3's path,
+    """Decoder input `z` (exactly what the pipeline handed to vae.decode) decoded by the diffusers path and twice by Sol-H3's path,
     under the pipeline's fp16 autocast. Decoder-space deviation (Sol-H3's metrics: max_abs, rel L2, PSNR with peak-to-peak 2)
     and the uint8 video after the pipeline's de-normalisation + clamp; determinism = the two Sol-H3 decodes bitwise equal."""
     from diffusers.modular_pipelines.minimax_h3 import decoders as D
@@ -234,12 +234,12 @@ def decode_gate(torch, pvae, vae, z):
             return _sync_ms(torch, lambda: vae.decode(z, return_dict=False)[0])
 
     try:
-        ref, t_ref = dec("stock")
+        ref, t_ref = dec("diffusers")
         a, t_a = dec("solh3")
         b, t_b = dec("solh3")
     finally:
         pvae.set(*state)
-    r = dict(_diff(torch, a, ref), psnr_range2_db=None, deterministic=bool(torch.equal(a, b)), stock_ms=t_ref,
+    r = dict(_diff(torch, a, ref), psnr_range2_db=None, deterministic=bool(torch.equal(a, b)), diffusers_ms=t_ref,
              solh3_first_ms=t_a, solh3_second_ms=t_b, shape=list(a.shape), dtype=str(a.dtype))
     r["psnr_range2_db"] = psnr_range2(r["mse"])
     r["where_max"] = locate_max(torch, vae, a, ref)
@@ -271,7 +271,7 @@ def locate_max(torch, vae, a, ref):
     chunk = vae.tokens_chunk_size * vae.temporal_compression_ratio - vae.frame_pre_padding
     q = torch.quantile(d.flatten()[::97].float(), torch.tensor([0.5, 0.999, 0.999999], device=d.device))
     return dict(channel=c, frame=t, y=y, x=x, tile_rows=tiles_y, tile_cols=tiles_x, in_spatial_overlap=len(tiles_y) > 1 or
-                len(tiles_x) > 1, temporal_chunk_approx=t // max(chunk, 1), stock_value=float(ref[0, c, t, y, x]),
+                len(tiles_x) > 1, temporal_chunk_approx=t // max(chunk, 1), diffusers_value=float(ref[0, c, t, y, x]),
                 ours_value=float(a[0, c, t, y, x]), n_over_0p02=int((d > 0.02).sum()), n_over_0p05=int((d > 0.05).sum()),
                 n_values=int(d.numel()), abs_diff_quantiles_sampled={"p50": float(q[0]), "p99.9": float(q[1]),
                                                                      "p99.9999": float(q[2])},
@@ -282,7 +282,7 @@ def encode_compare(torch, pvae, encode_references, args, modes):
     """Run the pipeline's reference encode (`encode_references(*args)`, i.e. MiniMaxH3Ref2VAReferenceEncoderStep with the
     prepared references of a real request) under each (mode, compile) of `modes`: the first call per mode is untimed (warms /
     compiles), the second one is timed; outputs (video rows, audio rows: posterior-sampled, fp16-rounded, normalised) compared
-    with the first mode (stock)."""
+    with the first mode (diffusers)."""
     state = (pvae.decode_mode, pvae.encode_mode, pvae.encode_compile)
     out, ref = [], None
     try:

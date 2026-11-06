@@ -1,9 +1,9 @@
 """Attention of the live HyperFlow H3 Flash blocks: a dense / sparse schedule over Sol-Attn (Sol-H3 ``sol_bsa``).
 
-Schedule (preset.sparse): steps < dense_steps -> every live block stock attention; later steps -> blocks in edge_blocks stock
+Schedule (preset.sparse): steps < dense_steps -> every live block dense attention; later steps -> blocks in edge_blocks dense
 attention, every other live block Sol-Attn via h3_runtime.sparse_attention._sol_bsa_attention with the packed text + audio
 prefix as an exact KV sink (dense query rows), thresh_type "diag", 64-token blocks, tau = preset.tau. Dropped blocks stay
-identity. Stock attention = diffusers dispatch_attention_fn (backend None -> cuDNN SDPA on GB200, BF16).
+identity. Dense attention = diffusers dispatch_attention_fn (backend None -> cuDNN SDPA on GB200, BF16).
 
 Under Ulysses sequence parallelism (`sp`) the processor exchanges q / k / v to (full sequence, H / W heads) so every back-end
 call sees exactly the full-sequence inputs of its heads, then exchanges back. Presets with `transport` != "bf16" use Sol-H3's
@@ -131,9 +131,9 @@ class Controller:
     def backend(self, block: int) -> str:
         p = self.preset
         if p is None or not p.sparse:
-            return "stock"
+            return "dense"
         if self.step < p.dense_steps or block in p.edge_blocks:
-            return "stock"
+            return "dense"
         return "solbsa"
 
     def _sol(self, q, k, v, collect, valid_tokens=None):
@@ -161,13 +161,13 @@ class Controller:
                                           sink_tokens=int(self.video_start), collect_stats=collect,
                                           compile_bucket_size=self.bucket)
 
-    def attend(self, q, k, v, block, mask, stock_fn):
+    def attend(self, q, k, v, block, mask, dense_fn):
         if self.sp is not None and self.sp.W > 1:
             return self.attend_sp(q, k, v, block, mask)
         be = self.backend(block)
         self.counts[be] = self.counts.get(be, 0) + 1
-        if be == "stock":
-            return stock_fn()
+        if be == "dense":
+            return dense_fn()
         if mask is not None:
             raise RuntimeError("attention mask given to the mask-free sparse back-end")
         if self.check_exact and self.exact_report is None:
@@ -216,7 +216,7 @@ class Controller:
                 qb, kb, vb = cq.dequantize_qkv_padded(packed, S, hl, cap)
             else:
                 qb, kb, vb = (x.unsqueeze(0) for x in packed.split(D, dim=-1))
-            if be == "stock":
+            if be == "dense":
                 from diffusers.models.attention_dispatch import dispatch_attention_fn
 
                 of = dispatch_attention_fn(qb, kb, vb, attn_mask=None, dropout_p=0.0, is_causal=False, backend=None)
@@ -250,7 +250,7 @@ class Controller:
         S, D = self.sp.S, q.shape[-1]
         xf = self.sp.seq_to_head(torch.cat([q, k, v], -1), S)          # [1, S, H/W, 3D]; q / k / v = packed views
         qf, kf, vf = xf[..., :D], xf[..., D:2 * D], xf[..., 2 * D:]
-        if be == "stock":
+        if be == "dense":
             from diffusers.models.attention_dispatch import dispatch_attention_fn
 
             of = dispatch_attention_fn(qf, kf, vf, attn_mask=None, dropout_p=0.0, is_causal=False, backend=None)
@@ -388,11 +388,11 @@ def make_processor(ctl, block_idx, rope_fn):
                     query = rope_fn(query, *rotary_emb)
                     key = rope_fn(key, *rotary_emb)
 
-            def stock():
+            def dense():
                 return dispatch_attention_fn(query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False,
                                              backend=self._attention_backend, parallel_config=self._parallel_config)
 
-            out = ctl.attend(query, key, value, block_idx, attention_mask, stock)
+            out = ctl.attend(query, key, value, block_idx, attention_mask, dense)
             out = out.flatten(2, 3).type_as(query)
             out = attn.to_out[0](out)
             return attn.to_out[1](out)

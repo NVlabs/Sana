@@ -106,12 +106,12 @@ def test_ref2va_sampler_reference_groups_and_layout():
 
 
 @pytest.mark.parametrize("task,live,expected", [
-    ("t2va", LIVE_T2V, {"stock": 110, "solbsa": 172}),
-    ("ref2va", LIVE_REF, {"stock": 114, "solbsa": 180}),
+    ("t2va", LIVE_T2V, {"dense": 110, "solbsa": 172}),
+    ("ref2va", LIVE_REF, {"dense": 114, "solbsa": 180}),
 ])
 def test_schedule_counts(task, live, expected):
     ctl = Controller(torch)
-    for name, exp in (("official", {"stock": 6 * len(live)}), ("sol-engine", expected)):
+    for name, exp in (("official", {"dense": 6 * len(live)}), ("sol-engine", expected)):
         ctl.preset = C.get(name, task=task)
         cnt = {}
         for step in range(6):
@@ -120,7 +120,7 @@ def test_schedule_counts(task, live, expected):
                 cnt[ctl.backend(b)] = cnt.get(ctl.backend(b), 0) + 1
         assert cnt == exp, (task, name, cnt)
     ctl.preset = C.get("sol-engine", task=task, attention_backend="dense")
-    assert {ctl.backend(b) for b in live} == {"stock"}
+    assert {ctl.backend(b) for b in live} == {"dense"}
 
 
 def test_presets():
@@ -128,10 +128,10 @@ def test_presets():
     assert (t.tau, t.dense_steps, t.edge_blocks, t.fusions, t.merge_tuned, t.vae, t.te_trim, t.transport, t.sink) == \
         (1.25, 2, (0, 1, 48, 49), True, True, "solh3", True, "int8fp8-sparse", "prefix")
     assert (r.sink, r.ref_encode, r.encode_compile, r.prep_threads) == ("text_audio", "global", True, 32)
-    assert r.as_dict() | dict(sink="prefix", ref_encode="stock", encode_compile=False, prep_threads=0, notes="") == \
+    assert r.as_dict() | dict(sink="prefix", ref_encode="diffusers", encode_compile=False, prep_threads=0, notes="") == \
         t.as_dict() | dict(notes="")
     s = C.get("official")
-    assert not (s.sparse or s.fusions or s.te_trim) and s.vae == "stock" and s.transport == "bf16"
+    assert not (s.sparse or s.fusions or s.te_trim) and s.vae == "diffusers" and s.transport == "bf16"
     d = C.get("sol-engine", attention_backend="dense")
     assert not d.sparse and d.fusions and d.name == "sol-engine-dense"
     assert C.get("sol-engine", tau=1.5).tau == 1.5

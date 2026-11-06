@@ -187,3 +187,40 @@ def test_sequence_parallel_data_movement(world, heads):
     padded = [torch.nn.functional.pad(s[0, :, 0], (0, 0, 0, c - s.shape[1])) for s in shards]
     g = SPM.SP(world, 1, a2a=noop, allgather=lambda out, inp: out.copy_(torch.cat(padded, 0))).gather(shards[1][:, :, 0], S)
     assert torch.equal(g, full[:, :, 0])
+
+
+def test_seed_precedence():
+    from sol_hyperflow_flash.references import resolve_seed
+
+    assert resolve_seed(7, {"seed": 3}) == 7
+    assert resolve_seed(None, {"seed": 3}) == 3
+    assert resolve_seed(None, {"seed": None}) == 0 and resolve_seed(None) == 0
+    assert resolve_seed(0, {"seed": 3}) == 0
+
+
+def test_per_rank_cache_defaults(tmp_path, monkeypatch):
+    import tempfile
+
+    from sol_hyperflow_flash import runtime as RT
+
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    for var in (*RT.COMPILE_CACHES, "CUDA_CACHE_PATH", "XDG_CACHE_HOME", "TMPDIR"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("RANK", "1")
+    monkeypatch.setenv("LOCAL_RANK", "1")
+    monkeypatch.setenv("WORLD_SIZE", "2")
+    RT.per_rank_caches()
+    import os
+
+    for var in RT.COMPILE_CACHES:
+        path = os.environ[var]
+        assert path.startswith(str(tmp_path)) and path.endswith("_rank1") and os.path.isdir(path), (var, path)
+
+
+def test_fused_projections_rejected():
+    from sol_hyperflow_flash.attention import make_processor
+
+    proc = make_processor(Controller(torch), 0, None)
+    attn = types.SimpleNamespace(fused_projections=True)
+    with pytest.raises(RuntimeError, match="fused QKV"):
+        proc(attn, torch.zeros(1, 4, 8))

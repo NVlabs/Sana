@@ -47,13 +47,18 @@ hf download MiniMaxAI/MiniMax-H3 --revision 6818f6c32d12b210915e44ad56a4228c2608
 hf download VideoRebirthAI/hyperflow-h3-flash --revision 9e9ed14b8be4b751d7517b8ca58dd199d509720c \
   --include "fl2va_int8_convrot/*" "ref2va_int8_convrot/*" --local-dir checkpoints/hyperflow-h3-flash
 
-torchrun --standalone --nproc_per_node 8 infer.py --task t2v --preset sol-engine --duration 5 \
+# 4 GPUs on one GB200 node
+torchrun --standalone --nproc_per_node 4 infer.py --task t2v --preset sol-engine --duration 5 \
   --prompt "A red fox trots through fresh snow at dawn" \
   --base-model checkpoints/MiniMax-H3 --weights checkpoints/hyperflow-h3-flash --out outputs/t2v.mp4
-torchrun --standalone --nproc_per_node 8 infer.py --task ref2va --preset sol-engine --duration 5 \
-  --request examples/ref2va_request.json --media-dir /path/to/media \
+# 8 GPUs = two 4-GPU GB200 nodes: run on each node with NODE_RANK=0 / 1 and MASTER_ADDR = the first node
+torchrun --nnodes 2 --node_rank $NODE_RANK --nproc_per_node 4 --master_addr $MASTER_ADDR --master_port 29500 \
+  infer.py --task ref2va --preset sol-engine --duration 5 --request examples/ref2va_request.json --media-dir /path/to/media \
   --base-model checkpoints/MiniMax-H3 --weights checkpoints/hyperflow-h3-flash --out outputs/ref2va.mp4
 ```
+
+The 8-GPU numbers above are two-node runs; a single 8-GPU host (`--standalone --nproc_per_node 8`) is not measured.
+`--seed` defaults to the request's `seed` (ref2va), else 0.
 
 `--preset official` runs the checkpoint as released, without Sol-Engine optimizations. `--attention-backend dense` turns
 Sol-Attn off. `benchmark.py` times presets in one process.

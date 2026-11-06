@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sol_hyperflow_flash import checkpoint as CK  # noqa: E402
 from sol_hyperflow_flash import config as C  # noqa: E402
+from sol_hyperflow_flash.references import resolve_seed  # noqa: E402
 from sol_hyperflow_flash.runtime import DURATION_FRAMES, HyperFlowFlashRuntime, per_rank_caches  # noqa: E402
 
 
@@ -40,7 +41,7 @@ def main():
     text.add_argument("--prompt")
     text.add_argument("--prompt-file", help="UTF-8 text file, or a json with a 'prompt' field")
     ap.add_argument("--duration", type=int, choices=sorted(DURATION_FRAMES), default=5)
-    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seed", type=int, default=None, help="default: the request's seed (ref2va), else 0")
     ap.add_argument("--warmup", action="store_true", help="run one untimed request first (kernel compilation)")
     ap.add_argument("--te-offload", action="store_true", help="keep the text encoder on the host between requests")
     ap.add_argument("--out", required=True)
@@ -54,11 +55,13 @@ def main():
 
         spec = parse_request(a.request, a.media_dir or None)
         a.prompt, refs = spec["prompt"], build_references(spec)
+        a.seed = resolve_seed(a.seed, spec)
     elif a.prompt is None and a.prompt_file is None:
         ap.error("--prompt or --prompt-file is required")
     elif a.prompt is None:
         raw = Path(a.prompt_file).read_text(encoding="utf-8")
         a.prompt = json.loads(raw)["prompt"] if a.prompt_file.endswith(".json") else raw.strip()
+    a.seed = resolve_seed(a.seed)
     per_rank_caches()
     preset = C.get(a.preset, task=task, attention_backend=a.attention_backend)
     need = ("sparse", "fusions") if (preset.sparse or preset.fusions) else ()

@@ -16,7 +16,8 @@ Endpoints (same paths and response schema as `sglang serve --model-type diffusio
 Request size/length, in the order they are honoured:
     width/height | size "WxH" | target.short_edge + target.aspect_ratio (H3 extension)   -> 1344x768
     num_frames   | target.duration_seconds | seconds -> frames = align_17n+5(round(s * 24))  -> 124
-num_inference_steps counts denoising updates, as in SGLang (default 49 = 49 transformer forwards).
+num_inference_steps counts denoising updates, as in SGLang (default 49 = 49 transformer forwards); a
+server serves exactly its --default-steps, since the AdaLN table is precomputed for that schedule.
 Encoding: x264_preset + output_compression (SGLang) or video_codec_options {preset, crf} (vLLM-Omni);
 default libx264 medium, CRF 18. Prompt conditioning is never cached across requests.
 
@@ -181,6 +182,11 @@ class H3Engine:
         # Sol-Attn closes the previous request itself when the timestep jumps back; closing it here
         # as well would hand the strict guard an empty request.
         self._calls, self._steps = 0, max(1, req["steps"] - 1)
+        if self.world > 1:
+            # Ulysses caches every rank's shard size per packed length, and the packed length
+            # follows the prompt; every rank resets here, in lockstep, so the re-gather stays matched.
+            import ulysses_custom
+            ulysses_custom.reset_row_counts()
         torch.cuda.reset_peak_memory_stats()
         torch.cuda.synchronize()
         t0 = time.perf_counter()
@@ -311,8 +317,11 @@ def resolve_request(body: dict, defaults: SimpleNamespace) -> dict:
     # forwards). The diffusers scheduler counts sigma grid points, terminal 0 included, so the
     # pipeline is called with one more.
     updates = int(body.get("num_inference_steps") or defaults.steps)
-    if not 1 <= updates <= 99:
-        raise ValueError(f"num_inference_steps must be within [1, 99], got {updates}")
+    # The AdaLN modulation table is precomputed from the warmup's schedule and the projection
+    # weights are freed, so another step count would index past the table or read the wrong rows.
+    if updates != defaults.steps:
+        raise ValueError(f"this server serves num_inference_steps={defaults.steps} (its AdaLN table is "
+                         f"precomputed for that schedule; restart with --default-steps {updates}), got {updates}")
     preset, crf = resolve_encoding(body)
     # The released checkpoint fixes these (guidance-distilled, flow shifts 12 / 3); report any request
     # that asks for something else rather than silently pretending to honour it.

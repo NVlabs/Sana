@@ -118,7 +118,7 @@ concatenated along the rank axis, so it equals the two adapters exactly) plus Sh
 | `ref2va_ic/hyperflow.py`, `sharp.py`, `lora.py` | the three adapters |
 | `ref2va_ic/cp.py` | Ulysses context parallelism and the per-step transformer call |
 | `ref2va_ic/upscale.py`, `upscaler_node.py` | the author latent upscaler outside ComfyUI (`upscaler_node.py` unchanged, MIT) |
-| `ref2va_ic/fast_vae/` | fast H3 VAE decoder: the modules of `models/Open-H3-Regenerate-2K/open_h3/fast_vae/`, with the v2 weights (`vae_fast/fast_h3_vae_v2_24l.safetensors`) and an automatic engine choice |
+| `ref2va_ic/fast_vae/` | fast H3 VAE decoder: the modules of `../open_h3/fast_vae/`, with the v2 weights (`vae_fast/fast_h3_vae_v2_24l.safetensors`) and an automatic engine choice |
 
 ## Acknowledgements
 
@@ -129,7 +129,7 @@ concatenated along the rank axis, so it equals the two adapters exactly) plus Sh
 - [LMS Sharp](https://huggingface.co/Alissonerdx/Minimax-H3-ComfyUI) by Alissonerdx.
 - [H3 latent upscaler](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler) by LBH-123-AI.
 - [StreamRender-H3](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/): the fast H3 VAE decoder.
-- [Open-H3-Regenerate-2K](../Open-H3-Regenerate-2K/), [SoL-Refiner](https://nvlabs.github.io/Sana/Sol-Refiner/) and
+- [Open-H3-Regenerate-2K](../), [SoL-Refiner](https://nvlabs.github.io/Sana/Sol-Refiner/) and
   [SoL-Engine](https://nvlabs.github.io/Sana/Sol-Engine/).
 
 ## License

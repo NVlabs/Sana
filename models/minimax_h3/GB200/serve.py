@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""MiniMax-H3 single-GB200 HTTP server, SGLang-compatible video API.
+"""MiniMax-H3 GB200 HTTP server (1, 2, 4 or 8 GPUs), SGLang-compatible video API.
 
     python serve.py --model /models/MiniMax-H3-diffusers --precision bf16 --attention fa4sol --port 30000
+    python serve.py --model <snapshot> --num-gpus 4 --attention sol     # re-launches itself under torchrun
 
 Endpoints (same paths and response schema as `sglang serve --model-type diffusion`):
 
@@ -103,71 +104,127 @@ def align_frame_count(frames: int) -> int:
 # -- engine -------------------------------------------------------------------------------------
 
 class H3Engine:
+    """One GPU: the owned block loop of `fast_forward` (v2 kernels, optional MXFP8). N GPUs (under
+    torchrun): the measured multi-GPU stack of `gpu_infer` -- every rank holds the whole pipeline,
+    the packed sequence is split by context parallelism (Ulysses over N), Sol-Attn runs per rank on
+    its heads, and the VAE decode is sharded. Rank 0 serves HTTP and hands each request to the other
+    ranks over a gloo group, so idle ranks wait on CPU rather than inside an NCCL call."""
+
     def __init__(self, model_path: str, precision: str, attention: str, fp8_blocks: str,
                  vae_compile: bool) -> None:
         import torch
-        import fast_forward
+        import torch.distributed as dist
         import gpu_infer
-        from gpu_infer_cp import build_pipeline
+        from gpu_infer_cp import build_pipeline, enable_context_parallel
 
-        self.torch = torch
+        self.torch, self.dist = torch, dist
         self.precision, self.attention = precision, attention
+        self.world = int(os.environ.get("WORLD_SIZE", "1"))
+        self.rank = int(os.environ.get("RANK", "0"))
+        local = int(os.environ.get("LOCAL_RANK", "0"))
+        torch.cuda.set_device(local)
+        device = f"cuda:{local}"
+        self.ctrl = None
+        if self.world > 1:
+            from datetime import timedelta
+            dist.init_process_group("nccl", rank=self.rank, world_size=self.world,
+                                    device_id=torch.device(device))
+            self.ctrl = dist.new_group(backend="gloo", timeout=timedelta(days=365))
         t0 = time.perf_counter()
         args = SimpleNamespace(model_path=model_path, attention_backend=None)
-        self.pipe, _ = build_pipeline(args, "cuda:0")
-        log(f"pipeline loaded in {time.perf_counter() - t0:.1f}s")
+        # one rank at a time: each stages the full pipeline in host memory on its way to the GPU
+        for turn in range(self.world):
+            if turn == self.rank:
+                self.pipe, _ = build_pipeline(args, device)
+            if self.ctrl is not None:
+                dist.barrier(group=self.ctrl)
+        log(f"pipeline loaded on {self.world} GPU(s) in {time.perf_counter() - t0:.1f}s")
         if attention == "fa4sol":                     # Sol routing on FA4 block-sparse tiles
             os.environ["H3_SPARSE_IMPL"] = "fa4sol"
+        if self.world > 1:
+            enable_context_parallel(self.pipe, self.world, True, self.rank)
         config = dict(kernel=True, sol_attn=attention in ("sol", "fa4sol"), sol_tau=1.0, sol_thresh_type="diag",
                       sol_dense_steps=10, sol_dense_layers=2, sol_sink_mode="prefix", cache=None,
                       shard_vae=vae_compile, vae_batched=True, vae_compile="default" if vae_compile else None)
         _, self.sparse = gpu_infer.install_stack(self.pipe, config)
         tr = self.pipe.transformer
-        if self.sparse is not None:
-            tr._h3_attn_core = self.sparse
+        if self.world == 1:
+            import fast_forward
+            if self.sparse is not None:
+                tr._h3_attn_core = self.sparse
+            else:
+                from sol_attn_h3 import _dense
+                tr._h3_attn_core = _dense
+            n = len(tr.transformer_blocks)
+            blocks = () if precision == "bf16" else _parse_blocks(fp8_blocks, n)
+            self.applied = fast_forward.install(tr, blocks, kernels="v2")
         else:
-            from sol_attn_h3 import _dense
-            tr._h3_attn_core = _dense
-        n = len(tr.transformer_blocks)
-        blocks = () if precision == "bf16" else _parse_blocks(fp8_blocks, n)
-        self.applied = fast_forward.install(tr, blocks, kernels="v2")
+            blocks = ()
+            self.applied = {"num_gpus": self.world, "ulysses_degree": self.world, "kernels": "install_stack"}
         self._calls = 0
         self._steps = 1
-        original = tr.forward
 
-        def counted(*a, **kw):
+        def counted(module, args, kwargs=None):
             self._calls += 1
-            return original(*a, **kw)
-        tr.forward = counted
-        log(f"stack installed: precision={precision} attention={attention} fp8_blocks={len(blocks)}")
+        tr.register_forward_pre_hook(counted)
+        log(f"stack installed: gpus={self.world} precision={precision} attention={attention} "
+            f"fp8_blocks={len(blocks)}")
 
     @property
     def progress(self) -> int:
         return min(99, int(100 * self._calls / max(1, self._steps)))
 
-    def generate(self, prompt: str, width: int, height: int, num_frames: int, steps: int, seed: int,
-                 out_path: str, preset: str = DEFAULT_PRESET, crf: int = DEFAULT_CRF) -> dict:
-        """`steps` = sigma grid points (diffusers), i.e. denoising updates + 1."""
+    def run(self, req: dict, out_path: str | None) -> dict:
+        """One request; with N GPUs every rank runs it in lockstep and rank 0 encodes the mp4.
+        `req["steps"]` = sigma grid points (diffusers), i.e. denoising updates + 1."""
         torch = self.torch
         # Sol-Attn closes the previous request itself when the timestep jumps back; closing it here
         # as well would hand the strict guard an empty request.
-        self._calls, self._steps = 0, max(1, steps - 1)
+        self._calls, self._steps = 0, max(1, req["steps"] - 1)
         torch.cuda.reset_peak_memory_stats()
         torch.cuda.synchronize()
         t0 = time.perf_counter()
-        state = self.pipe(prompt=prompt, height=height, width=width, num_frames=num_frames,
-                          num_inference_steps=steps, generator=torch.Generator().manual_seed(seed))
+        state = self.pipe(prompt=req["prompt"], height=req["height"], width=req["width"],
+                          num_frames=req["num_frames"], num_inference_steps=req["steps"],
+                          generator=torch.Generator().manual_seed(req["seed"]))
         torch.cuda.synchronize()
         inference_s = time.perf_counter() - t0
-        videos = getattr(state, "videos", None)
-        if videos is None:
-            videos = getattr(state, "frames")
-        audio = getattr(state, "audio", None)
-        rate = int(getattr(state, "sampling_rate", 32000) or 32000)
-        t1 = time.perf_counter()
-        _write_mp4(videos[0], audio, rate, out_path, preset, crf)
-        return {"inference_time_s": round(inference_s, 3), "encode_s": round(time.perf_counter() - t1, 3),
-                "peak_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1)}
+        stats = {"inference_time_s": round(inference_s, 3),
+                 "peak_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1)}
+        if self.rank == 0 and out_path:
+            videos = getattr(state, "videos", None)
+            if videos is None:
+                videos = getattr(state, "frames")
+            audio = getattr(state, "audio", None)
+            rate = int(getattr(state, "sampling_rate", 32000) or 32000)
+            t1 = time.perf_counter()
+            _write_mp4(videos[0], audio, rate, out_path, req.get("preset", DEFAULT_PRESET),
+                       req.get("crf", DEFAULT_CRF))
+            stats["encode_s"] = round(time.perf_counter() - t1, 3)
+        return stats
+
+    def broadcast(self, msg):
+        if self.ctrl is None:
+            return msg
+        box = [msg]
+        self.dist.broadcast_object_list(box, src=0, group=self.ctrl)
+        return box[0]
+
+    # rank 0, from the HTTP worker thread
+    def generate(self, prompt: str, width: int, height: int, num_frames: int, steps: int, seed: int,
+                 out_path: str, preset: str = DEFAULT_PRESET, crf: int = DEFAULT_CRF) -> dict:
+        req = {"prompt": prompt, "width": width, "height": height, "num_frames": num_frames,
+               "steps": steps, "seed": seed, "preset": preset, "crf": crf}
+        self.broadcast(req)
+        return self.run(req, out_path)
+
+    # ranks > 0
+    def worker_loop(self) -> None:
+        while True:
+            req = self.broadcast(None)
+            if req is None:
+                return
+            self.run(req, None)
 
 
 def _parse_blocks(spec: str, n: int):
@@ -427,24 +484,42 @@ def main() -> int:
     p.add_argument("--default-steps", type=int, default=49, help="denoising updates when a request names none")
     p.add_argument("--disable-conditioning-cache", action="store_true",
                    help="accepted for SGLang parity; this server never caches prompt conditioning")
+    p.add_argument("--num-gpus", type=int, choices=(1, 2, 4, 8), default=int(os.environ.get("NUM_GPUS", 1)),
+                   help=">1: Ulysses context parallelism over N GPUs under torchrun (bf16 only)")
     a = p.parse_args()
+    if a.num_gpus > 1 and a.precision != "bf16":
+        p.error("--precision fp8 is single-GPU only (it lives in the single-GPU block loop)")
+    if a.num_gpus > 1 and "LOCAL_RANK" not in os.environ:
+        cmd = [sys.executable, "-m", "torch.distributed.run", "--standalone", f"--nproc_per_node={a.num_gpus}"]
+        os.execv(sys.executable, cmd + [os.path.abspath(__file__)] + sys.argv[1:])
     os.environ["WAN_FA4SOL_RHO"] = str(a.rho)
+    rank = int(os.environ.get("RANK", "0"))
     os.makedirs(a.output_dir, exist_ok=True)
     defaults = SimpleNamespace(seconds=a.default_seconds, steps=a.default_steps, seed=0)
 
-    model = relocate_checkpoint(a.model, os.environ.get("H3_SCRATCH", os.path.join(a.output_dir, ".scratch")))
+    scratch = os.environ.get("H3_SCRATCH", os.path.join(a.output_dir, ".scratch"))
+    model = relocate_checkpoint(a.model, os.path.join(scratch, f"rank{rank}"))
     engine = H3Engine(model, a.precision, a.attention, a.fp8_blocks, vae_compile=not a.no_vae_compile)
-    for i in range(a.warmup):
+    if engine.world != a.num_gpus:
+        raise SystemExit(f"--num-gpus {a.num_gpus} but WORLD_SIZE={engine.world}")
+    warmup = {"prompt": "A calm lake at sunrise, gentle waves, birds singing.", "width": 1344, "height": 768,
+              "num_frames": align_frame_count(round(a.default_seconds * FPS)), "steps": a.default_steps + 1,
+              "seed": 0}
+    for i in range(a.warmup):                            # every rank runs the warmups in lockstep
         t = time.perf_counter()
-        r = engine.generate("A calm lake at sunrise, gentle waves, birds singing.", 1344, 768,
-                            align_frame_count(round(a.default_seconds * FPS)), a.default_steps + 1, 0,
-                            os.path.join(a.output_dir, f"_warmup_{i}.mp4"))
+        r = engine.run(warmup, os.path.join(a.output_dir, f"_warmup_{i}.mp4"))
         log(f"warmup {i}: {time.perf_counter() - t:.1f}s {json.dumps(r)}")
+    if rank != 0:
+        engine.worker_loop()
+        return 0
 
     import uvicorn
     app = build_app(engine, a.output_dir, defaults, a.served_model_name)
-    log(f"serving on {a.host}:{a.port}")
-    uvicorn.run(app, host=a.host, port=a.port, log_level="warning")
+    log(f"serving on {a.host}:{a.port} ({engine.world} GPU, {a.attention})")
+    try:
+        uvicorn.run(app, host=a.host, port=a.port, log_level="warning")
+    finally:
+        engine.broadcast(None)                           # release the worker ranks
     return 0
 
 

@@ -105,10 +105,10 @@ def align_frame_count(frames: int) -> int:
 # -- engine -------------------------------------------------------------------------------------
 
 class H3Engine:
-    """One GPU: the owned block loop of `fast_forward` (v2 kernels, optional MXFP8). N GPUs (under
-    torchrun): the measured multi-GPU stack of `gpu_infer` -- every rank holds the whole pipeline,
-    the packed sequence is split by context parallelism (Ulysses over N), Sol-Attn runs per rank on
-    its heads, and the VAE decode is sharded. Rank 0 serves HTTP and hands each request to the other
+    """The owned block loop of `fast_forward` (v2 kernels, optional MXFP8 on one GPU). N GPUs (under
+    torchrun): every rank holds the whole pipeline, the packed sequence is split by context
+    parallelism (Ulysses over N), the attention core (FA4Sol by default) runs per rank on its heads
+    over the whole sequence, and the VAE decode is sharded. Rank 0 serves HTTP and hands each request to the other
     ranks over a gloo group, so idle ranks wait on CPU rather than inside an NCCL call."""
 
     def __init__(self, model_path: str, precision: str, attention: str, fp8_blocks: str,
@@ -149,19 +149,17 @@ class H3Engine:
                       shard_vae=vae_compile, vae_batched=True, vae_compile="default" if vae_compile else None)
         _, self.sparse = gpu_infer.install_stack(self.pipe, config)
         tr = self.pipe.transformer
-        if self.world == 1:
-            import fast_forward
-            if self.sparse is not None:
-                tr._h3_attn_core = self.sparse
-            else:
-                from sol_attn_h3 import _dense
-                tr._h3_attn_core = _dense
-            n = len(tr.transformer_blocks)
-            blocks = () if precision == "bf16" else _parse_blocks(fp8_blocks, n)
-            self.applied = fast_forward.install(tr, blocks, kernels="v2")
+        import fast_forward
+        if self.sparse is not None:
+            tr._h3_attn_core = self.sparse
         else:
-            blocks = ()
-            self.applied = {"num_gpus": self.world, "ulysses_degree": self.world, "kernels": "install_stack"}
+            from sol_attn_h3 import _dense
+            tr._h3_attn_core = _dense
+        n = len(tr.transformer_blocks)
+        blocks = () if precision == "bf16" else _parse_blocks(fp8_blocks, n)
+        cp = (self.world, self.rank, dist.group.WORLD) if self.world > 1 else None
+        self.applied = fast_forward.install(tr, blocks, kernels="v2", cp=cp)
+        self.applied["num_gpus"] = self.world
         self._calls = 0
         self._steps = 1
 

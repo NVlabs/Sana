@@ -12,6 +12,13 @@ kernels="v2"  the tuned kernels in `kern.py`, and the single-GPU attention wrapp
 `fp8_blocks` names the blocks whose four linears run as MXFP8 (E4M3 values, one E8M0 scale per 32
 along K); in those blocks the norm/modulate and SwiGLU kernels emit the quantized activation
 directly. Everything outside the block stack is upstream code, unchanged.
+
+`cp=(world, rank, group)` runs the same loop under Ulysses context parallelism (kernels="v2" only).
+The diffusers CP hooks still split `rope`'s output and `norm_out`'s index and gather at the heads,
+but they sit on the block modules this loop never calls, so the loop takes its own rows of the
+packed sequence and its own rows of the AdaLN index, with the same `tensor_split` the hooks use.
+Attention trades rows for heads in one packed all-to-all (`ulysses_custom`), runs the attention
+core on the whole sequence and its local heads, and trades back.
 """
 import torch
 
@@ -20,7 +27,7 @@ from diffusers.models.transformers.transformer_minimax_h3 import (
 )
 
 
-def install(tr, fp8_blocks=(), kernels="v1"):
+def install(tr, fp8_blocks=(), kernels="v1", cp=None):
     import kern
     from fusions import fused_residual_gate_rmsnorm_modulate, fused_rmsnorm_modulate, fused_swiglu
 
@@ -36,6 +43,11 @@ def install(tr, fp8_blocks=(), kernels="v1"):
             blk.ff.net[2] = mxfp8.MXFP8Linear(blk.ff.net[2])
         torch.cuda.empty_cache()
     v2 = kernels == "v2"
+    world, rank, group = cp if cp is not None else (1, 0, None)
+    if world > 1:
+        if not v2:
+            raise ValueError("fast_forward under context parallelism needs kernels='v2'")
+        import ulysses_custom
 
     def norm_mod(i, h, w, scale, shift, idx, eps):
         if i in fp8_blocks:
@@ -70,8 +82,14 @@ def install(tr, fp8_blocks=(), kernels="v1"):
         q, k = kern.qknorm_rope_v3(q, k, a.norm_q.weight, a.norm_k.weight, cos, sin, a.norm_q.eps,
                                    tok=8, num_warps=4)
         rows = b * s
-        out = attn_core(q.view(rows, a.heads, a.head_dim), k.view(rows, a.heads, a.head_dim),
-                        v.view(rows, a.heads, a.head_dim))
+        q, k, v = (x.reshape(rows, a.heads, a.head_dim) for x in (q, k, v))
+        if world > 1:
+            packed = ulysses_custom._packed_qkv_all_to_all(q, k, v, world=world, group=group)
+            q, k, v = packed.split(a.head_dim, dim=-1)
+            out = attn_core(q, k, v).contiguous()
+            out = ulysses_custom._packed_out_all_to_all(out, rows, world, group)
+        else:
+            out = attn_core(q, k, v)
         return a.to_out[0](out.reshape(b, s, a.heads * a.head_dim))
 
     def forward(hidden_states, audio_hidden_states, encoder_hidden_states, timestep, timestep_indices,
@@ -93,6 +111,11 @@ def install(tr, fp8_blocks=(), kernels="v1"):
         idx = timestep_indices * MINIMAX_H3_MODALITY_NUM + token_tags.clamp(min=0)
         if bool((token_tags < 0).any()):
             raise RuntimeError("fast_forward assumes a padless packed sequence")
+        if world > 1:                       # this rank's rows; `rope` is already split by its hook
+            h = h.tensor_split(world, dim=1)[rank]
+            idx = idx.tensor_split(world)[rank]
+            if rotary_emb[0].shape[0] != h.shape[1]:
+                raise RuntimeError(f"rope rows {rotary_emb[0].shape[0]} != local rows {h.shape[1]}")
 
         pending = None      # (ff_output, gate_mlp) of the previous block, not yet added to h
         for i, blk in enumerate(self.transformer_blocks):
@@ -117,4 +140,4 @@ def install(tr, fp8_blocks=(), kernels="v1"):
         return MiniMaxH3TransformerOutput(sample=video_output, audio_sample=audio_output)
 
     tr.forward = forward
-    return {"fp8_blocks": sorted(fp8_blocks), "kernels": kernels}
+    return {"fp8_blocks": sorted(fp8_blocks), "kernels": kernels, "ulysses_degree": world}

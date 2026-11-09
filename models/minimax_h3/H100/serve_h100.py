@@ -69,7 +69,8 @@ class H3H100Engine:
                  "peak_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1)}
         if self.rank == 0 and out_path:
             t = time.perf_counter()
-            self.h3.write_state_mp4(state, out_path)
+            self.h3.write_state_mp4(state, out_path, req.get("preset", gb200_serve.DEFAULT_PRESET),
+                                    req.get("crf", gb200_serve.DEFAULT_CRF))
             stats["encode_s"] = round(time.perf_counter() - t, 3)
         return stats
 
@@ -79,9 +80,11 @@ class H3H100Engine:
         return box[0]
 
     # rank 0, from the HTTP worker thread
-    def generate(self, out_path, prompt, width, height, num_frames, steps, seed) -> dict:
+    def generate(self, out_path, prompt, width, height, num_frames, steps, seed,
+                 preset=gb200_serve.DEFAULT_PRESET, crf=gb200_serve.DEFAULT_CRF) -> dict:
+        """`steps` = sigma grid points (diffusers), i.e. denoising updates + 1."""
         req = {"prompt": prompt, "width": width, "height": height, "num_frames": num_frames, "steps": steps,
-               "seed": seed}
+               "seed": seed, "preset": preset, "crf": crf}
         self.broadcast(req)
         return self.run(req, out_path)
 
@@ -113,7 +116,9 @@ def main() -> int:
     p.add_argument("--served-model-name", default=gb200_serve.MODEL_ID)
     p.add_argument("--warmup", type=int, default=1, help="warmup requests before /health answers")
     p.add_argument("--default-seconds", type=float, default=5.0)
-    p.add_argument("--default-steps", type=int, default=50)
+    p.add_argument("--default-steps", type=int, default=49, help="denoising updates when a request names none")
+    p.add_argument("--disable-conditioning-cache", action="store_true",
+                   help="accepted for SGLang parity; this server never caches prompt conditioning")
     a = p.parse_args()
     if "LOCAL_RANK" not in os.environ:
         relaunch_under_torchrun(a.num_gpus)
@@ -129,7 +134,7 @@ def main() -> int:
     for i in range(a.warmup):                            # every rank runs the warmups in lockstep
         t = time.perf_counter()
         r = engine.run({"prompt": WARMUP_PROMPT, "width": 1344, "height": 768, "num_frames": frames,
-                        "steps": a.default_steps, "seed": 0}, os.path.join(a.output_dir, f"_warmup_{i}.mp4"))
+                        "steps": a.default_steps + 1, "seed": 0}, os.path.join(a.output_dir, f"_warmup_{i}.mp4"))
         log(f"warmup {i}: {time.perf_counter() - t:.1f}s {json.dumps(r)}")
     if rank != 0:
         engine.worker_loop()

@@ -117,13 +117,13 @@ def run_request(engine, prompt, height, width, num_frames, steps, seed):
     return state, time.perf_counter() - t
 
 
-def write_state_mp4(state, path):
+def write_state_mp4(state, path, preset="medium", crf=18):
     import serve                                         # ../GB200/serve.py
     videos = getattr(state, "videos", None)
     if videos is None:
         videos = getattr(state, "frames")
     serve._write_mp4(videos[0], getattr(state, "audio", None), int(getattr(state, "sampling_rate", 32000) or 32000),
-                     path)
+                     path, preset, crf)
 
 
 def main() -> int:

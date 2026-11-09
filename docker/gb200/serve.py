@@ -45,6 +45,9 @@ def main() -> None:
     if not argv or argv[0] in ("-h", "--help"):
         print(__doc__)
         sys.exit(0)
+    # `--model-path` (SGLang's spelling, which InferenceX recipes bind) is the same option as `--model`
+    argv = ["--model" if a == "--model-path" else
+            "--model=" + a.split("=", 1)[1] if a.startswith("--model-path=") else a for a in argv]
     model = os.environ.get("MODEL_PATH")
     for i, a in enumerate(argv):
         if a == "--model" and i + 1 < len(argv):

@@ -15,6 +15,9 @@ Endpoints (same paths and response schema as `sglang serve --model-type diffusio
 Request size/length, in the order they are honoured:
     width/height | size "WxH" | target.short_edge + target.aspect_ratio (H3 extension)   -> 1344x768
     num_frames   | target.duration_seconds | seconds -> frames = align_17n+5(round(s * 24))  -> 124
+num_inference_steps counts denoising updates, as in SGLang (default 49 = 49 transformer forwards).
+Encoding: x264_preset + output_compression (SGLang) or video_codec_options {preset, crf} (vLLM-Omni);
+default libx264 medium, CRF 18. Prompt conditioning is never cached across requests.
 
 The engine is the measured single-GPU stack: AdaLN table, Triton fusions, Sol-Attn (or dense
 cuDNN), the owned block loop of `fast_forward` (v2 kernels), optional MXFP8 linears, compiled VAE
@@ -40,6 +43,9 @@ if HERE not in sys.path:
 
 FPS = 24
 MODEL_ID = "MiniMaxAI/MiniMax-H3"
+X264_PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower",
+                "veryslow", "placebo")
+DEFAULT_PRESET, DEFAULT_CRF = "medium", 18
 
 
 def log(msg: str) -> None:
@@ -47,9 +53,12 @@ def log(msg: str) -> None:
 
 
 def relocate_checkpoint(model: str, scratch: str) -> str:
-    """The converter writes absolute paths into `modular_model_index.json`. When the checkpoint is
-    mounted somewhere else (a container), point every component at the mounted directory through a
-    shadow directory of symlinks plus a rewritten index; the weights are never copied."""
+    """Point every component of `modular_model_index.json` at the directory being served.
+
+    The converter writes absolute paths into the index, and the published Hugging Face snapshot names
+    the hub repository (`MiniMaxAI/MiniMax-H3`), which an offline server cannot resolve. Either way,
+    every component is pointed at the served directory through a shadow directory of symlinks plus a
+    rewritten index; the weights are never copied."""
     import hashlib
 
     model = os.path.abspath(model)
@@ -66,7 +75,8 @@ def relocate_checkpoint(model: str, scratch: str) -> str:
     for value in index.values():
         if isinstance(value, list) and len(value) == 3 and isinstance(value[2], dict):
             path = value[2].get("pretrained_model_name_or_path")
-            if path and os.path.isabs(path) and os.path.realpath(path) != os.path.realpath(model):
+            if path and (path == MODEL_ID or os.path.isabs(path)) and \
+                    os.path.realpath(path) != os.path.realpath(model):
                 value[2]["pretrained_model_name_or_path"] = model
                 changed = True
     if not changed:
@@ -136,7 +146,8 @@ class H3Engine:
         return min(99, int(100 * self._calls / max(1, self._steps)))
 
     def generate(self, prompt: str, width: int, height: int, num_frames: int, steps: int, seed: int,
-                 out_path: str) -> dict:
+                 out_path: str, preset: str = DEFAULT_PRESET, crf: int = DEFAULT_CRF) -> dict:
+        """`steps` = sigma grid points (diffusers), i.e. denoising updates + 1."""
         torch = self.torch
         # Sol-Attn closes the previous request itself when the timestep jumps back; closing it here
         # as well would hand the strict guard an empty request.
@@ -154,7 +165,7 @@ class H3Engine:
         audio = getattr(state, "audio", None)
         rate = int(getattr(state, "sampling_rate", 32000) or 32000)
         t1 = time.perf_counter()
-        _write_mp4(videos[0], audio, rate, out_path)
+        _write_mp4(videos[0], audio, rate, out_path, preset, crf)
         return {"inference_time_s": round(inference_s, 3), "encode_s": round(time.perf_counter() - t1, 3),
                 "peak_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1)}
 
@@ -168,8 +179,9 @@ def _parse_blocks(spec: str, n: int):
     return [int(x) for x in spec.split(",")]
 
 
-def _write_mp4(frames, audio, rate: int, path: str) -> None:
-    """H.264 video + AAC stereo in one ffmpeg call, frames piped as raw RGB."""
+def _write_mp4(frames, audio, rate: int, path: str, preset: str = "medium", crf: int = 18) -> None:
+    """H.264 video + AAC stereo in one ffmpeg call, frames piped as raw RGB. The audio is padded with
+    silence to the video's length, so `-shortest` can never drop video frames."""
     import numpy as np
     import imageio_ffmpeg
     from scipy.io import wavfile
@@ -187,8 +199,9 @@ def _write_mp4(frames, audio, rate: int, path: str) -> None:
             a = audio.detach().float().cpu().numpy()
             a = a.reshape(-1, a.shape[-1]).T            # (samples, channels)
             wavfile.write(wav, rate, np.clip(a, -1, 1).astype(np.float32))
-            cmd += ["-i", wav, "-c:a", "aac", "-b:a", "192k", "-shortest"]
-        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-movflags", "+faststart", path]
+            cmd += ["-i", wav, "-af", "apad", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+        cmd += ["-c:v", "libx264", "-preset", preset, "-pix_fmt", "yuv420p", "-crf", str(crf),
+                "-movflags", "+faststart", path]
         subprocess.run(cmd, input=arr.tobytes(), check=True)
 
 
@@ -237,15 +250,46 @@ def resolve_request(body: dict, defaults: SimpleNamespace) -> dict:
         frames = align_frame_count(int(round(seconds * FPS)))
     seed = body.get("seed")
     seed = int(seed[0] if isinstance(seed, list) else (seed if seed is not None else defaults.seed))
-    steps = int(body.get("num_inference_steps") or defaults.steps)
-    if not 2 <= steps <= 100:
-        raise ValueError(f"num_inference_steps must be within [2, 100], got {steps}")
+    # `num_inference_steps` counts denoising updates, as in SGLang's API (49 -> 49 transformer
+    # forwards). The diffusers scheduler counts sigma grid points, terminal 0 included, so the
+    # pipeline is called with one more.
+    updates = int(body.get("num_inference_steps") or defaults.steps)
+    if not 1 <= updates <= 99:
+        raise ValueError(f"num_inference_steps must be within [1, 99], got {updates}")
+    preset, crf = resolve_encoding(body)
     # The released checkpoint fixes these (guidance-distilled, flow shifts 12 / 3); report any request
     # that asks for something else rather than silently pretending to honour it.
     fixed = {"flow_shift": 12.0, "audio_flow_shift": 3.0, "guidance_scale": None}
     ignored = {k: body[k] for k, v in fixed.items() if body.get(k) is not None and float(body[k]) != v}
     return {"prompt": str(body["prompt"]), "width": width, "height": height, "num_frames": frames,
-            "steps": steps, "seed": seed, "seconds": frames / FPS, "ignored": ignored}
+            "steps": updates + 1, "seed": seed, "seconds": frames / FPS, "preset": preset, "crf": crf,
+            "ignored": ignored}
+
+
+def resolve_encoding(body: dict) -> tuple[str, int]:
+    """libx264 preset and CRF for the delivered mp4.
+
+    SGLang's fields: `x264_preset`, and `output_compression` (0-100) with
+    crf = int((1 - output_compression / 100) * 51). vLLM-Omni's: `video_codec_options` {preset, crf}.
+    """
+    options = body.get("video_codec_options") or {}
+    if isinstance(options, str):
+        options = json.loads(options)
+    preset = body.get("x264_preset") or options.get("preset") or DEFAULT_PRESET
+    if preset not in X264_PRESETS:
+        raise ValueError(f"unknown x264 preset {preset!r}")
+    if body.get("output_compression") is not None:
+        compression = float(body["output_compression"])
+        if not 0 <= compression <= 100:
+            raise ValueError(f"output_compression must be within [0, 100], got {compression:g}")
+        crf = int((1 - compression / 100) * 51)
+    elif options.get("crf") is not None:
+        crf = int(float(options["crf"]))
+    else:
+        crf = DEFAULT_CRF
+    if not 0 <= crf <= 51:
+        raise ValueError(f"crf must be within [0, 51], got {crf}")
+    return preset, crf
 
 
 # -- HTTP ---------------------------------------------------------------------------------------
@@ -276,7 +320,8 @@ def build_app(engine: H3Engine, out_dir: str, defaults: SimpleNamespace, served_
         try:
             with lock:
                 r = engine.generate(out_path=path, **{k: job["_req"][k] for k in
-                                                     ("prompt", "width", "height", "num_frames", "steps", "seed")})
+                                                     ("prompt", "width", "height", "num_frames", "steps", "seed",
+                                                      "preset", "crf")})
             job.update(status="completed", completed_at=int(time.time()), file_path=path, file_paths=[path],
                        url=f"/v1/videos/{job_id}/content", urls=[f"/v1/videos/{job_id}/content"], num_outputs=1,
                        inference_time_s=r["inference_time_s"], peak_memory_mb=r["peak_memory_mb"])
@@ -379,7 +424,9 @@ def main() -> int:
     p.add_argument("--served-model-name", default=MODEL_ID)
     p.add_argument("--warmup", type=int, default=1, help="warmup requests before /health answers")
     p.add_argument("--default-seconds", type=float, default=5.0)
-    p.add_argument("--default-steps", type=int, default=50)
+    p.add_argument("--default-steps", type=int, default=49, help="denoising updates when a request names none")
+    p.add_argument("--disable-conditioning-cache", action="store_true",
+                   help="accepted for SGLang parity; this server never caches prompt conditioning")
     a = p.parse_args()
     os.environ["WAN_FA4SOL_RHO"] = str(a.rho)
     os.makedirs(a.output_dir, exist_ok=True)
@@ -390,7 +437,7 @@ def main() -> int:
     for i in range(a.warmup):
         t = time.perf_counter()
         r = engine.generate("A calm lake at sunrise, gentle waves, birds singing.", 1344, 768,
-                            align_frame_count(round(a.default_seconds * FPS)), a.default_steps, 0,
+                            align_frame_count(round(a.default_seconds * FPS)), a.default_steps + 1, 0,
                             os.path.join(a.output_dir, f"_warmup_{i}.mp4"))
         log(f"warmup {i}: {time.perf_counter() - t:.1f}s {json.dumps(r)}")
 

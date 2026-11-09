@@ -37,7 +37,7 @@ python download.py --out ./weights
 | `latent_upsampler/` | 3D-conv latent upscaler (start point of `up3` / `up4`) |
 | `vae_fast/` | fast H3 VAE decoder v2 (non-causal, 24 layers), distilled from the H3 VAE decoder as in StreamRender-H3 |
 | `assets/` | silent audio latent (the audio rows of the Ref2VA sequence) |
-| `base_model/` | MiniMax-H3 @ `42ed227` from [MiniMaxAI/MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3), unmodified: `transformer_ref`, VAE, Qwen3-VL text encoder, tokenizer, processor, scheduler |
+| `base_model/` | MiniMax-H3 Diffusers components, unmodified copy of revision `42ed227`: `transformer_ref`, VAE, Qwen3-VL text encoder, tokenizer, processor, scheduler (`--base-from-minimax` fetches them from [MiniMaxAI/MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) instead) |
 | `sharp/` | LMS Sharp's `[1025, 8]` `adaln_t_table`, read by byte range from [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/e5eb578a89295337b8ff433a035929ce0279e0b6) |
 
 ## Run

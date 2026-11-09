@@ -6,6 +6,10 @@ upscaled in latent space and regenerated at **2560×1440** with **three** denois
 [Project page](https://nvlabs.github.io/Sana/Open-H3-Regenerate-2K/) ·
 [Weights](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K)
 
+**IC version:** [`IC/`](IC/) regenerates a draft at 1080P / 2K / 4K with the draft kept in MiniMax-H3's Ref2VA
+context, so faces, lip sync and lettering stay as in the draft
+([weights](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K-IC)).
+
 ```
 768P H3 latent ──► latent upscaler (whole latent, 2×) ──► 3-step refine (MiniMax-H3 + merged LoRA) ──► VAE ──► 2560×1440
 ```

@@ -219,8 +219,12 @@ python inference_video_scripts/v2v/inference_sana_streaming.py \
 
 The release includes three source videos under
 [`Efficient-Large-Model/SANA-Streaming`](https://huggingface.co/Efficient-Large-Model/SANA-Streaming/tree/main/source).
-The same examples can be run with both `long_streaming` and
-`bidirectional_short` by changing `--mode`.
+The same source videos and prompts can be used with both `long_streaming`
+and `bidirectional_short`. If you rely on mode-specific defaults, omit
+`--config`, `--model_path`, `--num_frames`, `--step`, and `--cfg_scale`: the
+script selects those defaults from `--mode`. When copying either full command
+above, update all of these explicit arguments together; changing only `--mode`
+does not replace an explicitly supplied config, checkpoint or sampling setting.
 
 | Example | Source video | Prompt |
 |---------|--------------|--------|
@@ -241,7 +245,7 @@ The same examples can be run with both `long_streaming` and
 | `--model_path` | DiT checkpoint path. Defaults to the released Hugging Face checkpoints. |
 | `--num_frames` | Frames decoded from the source video (`969` for streaming, `81` for bidirectional). |
 | `--height / --width` | Center-cropped output resolution (`704 × 1280`). |
-| `--fps` | Output MP4 frame rate (`16`). |
+| `--fps` | Saved MP4 playback frame rate (`16`); does not set or measure inference throughput. |
 | `--step` | Denoising steps (`4` for streaming, `50` for bidirectional). |
 | `--cfg_scale` | CFG scale (`1.0` for streaming, `6.0` for bidirectional). |
 | `--flow_shift` | Optional scheduler flow-shift override. |
@@ -249,6 +253,15 @@ The same examples can be run with both `long_streaming` and
 | `--negative_prompt` | Optional negative prompt. Bidirectional mode uses a built-in default if omitted. |
 | `--num_cached_blocks` | Streaming cache window size (`2`). |
 | `--sink_token` | Keep the first chunk in the streaming cache window (`true`). |
+
+### Interpreting playback FPS
+
+The script reads frames from `--video_path`, runs inference, then passes
+`--fps` to the output video writer. Raising this value makes the saved frames
+play faster; it does not make the model generate more frames per second. For a
+performance report, record the generated frame count, elapsed inference time,
+hardware and sampling configuration separately. The paper's deployment figures
+above and the saved file's playback clock measure different things.
 
 ## 📁 HF Repository Layout
 

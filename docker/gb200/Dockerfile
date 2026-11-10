@@ -1,5 +1,5 @@
-# Sol-Engine on GB200 / H100: SGLang-compatible HTTP video servers for MiniMax-H3 (GB200: 1 GPU; H100: 1, 2, 4,
-# 8 GPUs) and Wan2.2 TI2V-5B / T2V-A14B (1-8 GPUs).  One image; the model, GPU count and attention are chosen at `docker run`.
+# Sol-Engine on GB200 / H100: SGLang-compatible HTTP video servers for MiniMax-H3 (GB200: 1, 2, 4 GPUs, fp8 on
+# 1 GPU only; H100: 1, 2, 4, 8 GPUs) and Wan2.2 TI2V-5B / T2V-A14B (1-8 GPUs).  One image; the model, GPU count and attention are chosen at `docker run`.
 # Build from the repository root (docker/gb200/build.sh sets the git-revision tag and labels):
 #   docker build -f docker/gb200/Dockerfile -t sol-engine-gb200:<ver> .
 ARG BASE=nvidia/cuda:13.0.2-runtime-ubuntu24.04

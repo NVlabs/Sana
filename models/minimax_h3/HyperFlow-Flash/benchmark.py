@@ -21,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sol_hyperflow_flash import checkpoint as CK  # noqa: E402
 from sol_hyperflow_flash import config as C  # noqa: E402
+from sol_hyperflow_flash.references import resolve_seed  # noqa: E402
 from sol_hyperflow_flash.runtime import DURATION_FRAMES, HyperFlowFlashRuntime, per_rank_caches  # noqa: E402
 
 
@@ -38,7 +39,7 @@ def main():
     ap.add_argument("--presets", default="official,sol-engine")
     ap.add_argument("--attention-backend", default="sol", choices=("sol", "dense"))
     ap.add_argument("--duration", type=int, choices=sorted(DURATION_FRAMES), default=5)
-    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seed", type=int, default=None, help="default: the request's seed (ref2va), else 0")
     ap.add_argument("--warmup", type=int, default=1)
     ap.add_argument("--reps", type=int, default=2)
     ap.add_argument("--dump", default="", help="directory for the numerics-gate dump (rank 0)")
@@ -51,11 +52,13 @@ def main():
 
         spec = parse_request(a.request, a.media_dir or None)
         prompt, refs = spec["prompt"], build_references(spec)
+        a.seed = resolve_seed(a.seed, spec)
     elif a.prompt is not None:
         prompt = a.prompt
     else:
         raw = Path(a.prompt_file).read_text(encoding="utf-8")
         prompt = json.loads(raw)["prompt"] if a.prompt_file.endswith(".json") else raw.strip()
+    a.seed = resolve_seed(a.seed)
     per_rank_caches()
     presets = [C.get(p, task=task, attention_backend=a.attention_backend) for p in a.presets.split(",")]
     need = ("sparse", "fusions") if any(p.sparse or p.fusions for p in presets) else ()

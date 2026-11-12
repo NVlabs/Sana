@@ -3,7 +3,8 @@
 
     python infer.py --prompt "A red fox trots through fresh snow at dawn" --duration 5 --out fox.mp4 \
         --base-model /path/to/MiniMax-H3
-    torchrun --standalone --nproc_per_node 8 infer.py ...            # Ulysses sequence parallelism over 8 GPUs
+    torchrun --standalone --nproc_per_node 4 infer.py ...            # Ulysses sequence parallelism over 4 GPUs
+    (8 GPUs = two 4-GPU nodes: see the two-node torchrun example in README.md)
     python infer.py --task ref2va --request examples/ref2va_request.json --duration 5 --out ref.mp4 --base-model ...
 
 --weights is the checkpoint: a Hub repo id (default, downloaded at the pinned revision) or a local folder (the repository
@@ -22,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sol_hyperflow_flash import checkpoint as CK  # noqa: E402
 from sol_hyperflow_flash import config as C  # noqa: E402
+from sol_hyperflow_flash.references import resolve_seed  # noqa: E402
 from sol_hyperflow_flash.runtime import DURATION_FRAMES, HyperFlowFlashRuntime, per_rank_caches  # noqa: E402
 
 
@@ -40,7 +42,7 @@ def main():
     text.add_argument("--prompt")
     text.add_argument("--prompt-file", help="UTF-8 text file, or a json with a 'prompt' field")
     ap.add_argument("--duration", type=int, choices=sorted(DURATION_FRAMES), default=5)
-    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seed", type=int, default=None, help="default: the request's seed (ref2va), else 0")
     ap.add_argument("--warmup", action="store_true", help="run one untimed request first (kernel compilation)")
     ap.add_argument("--te-offload", action="store_true", help="keep the text encoder on the host between requests")
     ap.add_argument("--out", required=True)
@@ -54,11 +56,13 @@ def main():
 
         spec = parse_request(a.request, a.media_dir or None)
         a.prompt, refs = spec["prompt"], build_references(spec)
+        a.seed = resolve_seed(a.seed, spec)
     elif a.prompt is None and a.prompt_file is None:
         ap.error("--prompt or --prompt-file is required")
     elif a.prompt is None:
         raw = Path(a.prompt_file).read_text(encoding="utf-8")
         a.prompt = json.loads(raw)["prompt"] if a.prompt_file.endswith(".json") else raw.strip()
+    a.seed = resolve_seed(a.seed)
     per_rank_caches()
     preset = C.get(a.preset, task=task, attention_backend=a.attention_backend)
     need = ("sparse", "fusions") if (preset.sparse or preset.fusions) else ()

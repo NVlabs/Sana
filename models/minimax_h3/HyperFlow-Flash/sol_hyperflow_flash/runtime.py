@@ -458,15 +458,30 @@ HyperFlowFlashRuntime._audit_rank = _audit_rank
 HyperFlowFlashRuntime._gather_audit = _gather_audit
 
 
+COMPILE_CACHES = ("TRITON_CACHE_DIR", "CUTE_DSL_CACHE_DIR", "TORCHINDUCTOR_CACHE_DIR")
+
+
 def per_rank_caches():
     """world > 1: give every rank its own compile-cache directories (seeded from the single-GPU caches when they exist), so
-    concurrent Triton / CuTe DSL / inductor compiles never race on one directory. Call before importing torch."""
+    concurrent Triton / CuTe DSL / inductor compiles never race on one directory. Compile caches that are not set get a
+    default under the system temp directory first, keyed by user and launch (torchrun's TORCHELASTIC_RUN_ID, else
+    MASTER_PORT), so independent jobs on one host do not share them. Call before importing torch."""
+    import getpass
     import shutil
+    import tempfile
 
     rank, _, world = dist_env()
     if world <= 1:
         return
-    for var in ("TRITON_CACHE_DIR", "CUTE_DSL_CACHE_DIR", "TORCHINDUCTOR_CACHE_DIR", "CUDA_CACHE_PATH", "XDG_CACHE_HOME", "TMPDIR"):
+    run = os.environ.get("TORCHELASTIC_RUN_ID", "")
+    if run in ("", "none"):                      # torchrun without --standalone uses the rendezvous id "none" by default
+        run = "port" + os.environ.get("MASTER_PORT", "0")
+    run = "".join(c if c.isalnum() or c in "-_." else "_" for c in run)
+    root = os.path.join(tempfile.gettempdir(), f"sol_hyperflow_flash_{getpass.getuser()}_{run}")
+    for var in COMPILE_CACHES:
+        if not os.environ.get(var):
+            os.environ[var] = os.path.join(root, var.lower())
+    for var in (*COMPILE_CACHES, "CUDA_CACHE_PATH", "XDG_CACHE_HOME", "TMPDIR"):
         base = os.environ.get(var)
         if base:
             new = base.rstrip("/") + f"_rank{rank}"

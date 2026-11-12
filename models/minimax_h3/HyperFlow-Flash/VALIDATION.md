@@ -5,11 +5,11 @@
 | Check | Status |
 |---|---|
 | CPU tests (`pip install -r requirements-test.txt && pytest tests`) | pass |
-| Pinned checkpoint `9e9ed14b` vs the weights measured below | byte-identical shards and index files (sha256 in `PROVENANCE.json`) |
+| Pinned checkpoint `9e9ed14b` vs the weights measured below | byte-identical shards and index files; the 7 shards re-hashed on the measurement nodes match the sha256 in `PROVENANCE.json` |
 | Sol-H3 `h3_runtime` modules used vs the measured snapshot | identical at this branch's base commit |
-| GPU numerics gate: `official` on the released remote code vs the measured configuration | in progress |
-| 1 / 4 / 8 GPU smoke, t2v and ref2va | in progress |
-| Re-timing of the tables below with the released remote code | in progress |
+| GPU numerics gate: `official` on the released remote code vs the configuration measured on 2026-11-05 | pass, bitwise (t2v and ref2va one image, 5 s, 1 GPU): decoder-input latents, video and audio identical |
+| 1 / 4 / 8 GPU smoke, t2v and ref2va | pass: all 27 `sol-engine` cells below, finite outputs, expected dense / Sol-Attn call counts |
+| `sol-engine` timing with the released remote code | done (2026-11-06, runs R1-R5 below) |
 
 The released remote code renames the transformer and INT8 classes and moves low-rank padding and the INT8 kernel choice
 into load-time options. `sol_hyperflow_flash/checkpoint.py` finds them by feature and applies the settings the
@@ -35,42 +35,55 @@ Both presets load the checkpoint with the same run-time settings, none of which 
   - t2v: one prompt (`../demo_prompt.json`), seed 0;
   - ref2va, one image: one reference image, seed 0;
   - ref2va, video + voice: MiniMax-H3's reproducible ref2va request (a 5 s reference video with its soundtrack, plus a voice clip).
-- **Timing:** each cell is the median of two timed requests after one warmup. Official and Sol-Engine run in the same process on the same node(s). 8 GPUs = two 4-GPU nodes.
+- **Timing:** each cell is the median of two timed requests after one warmup, on fresh processes per cell. 8 GPUs = two 4-GPU nodes.
 - **e2e:** host wall clock around the pipeline call, with device syncs and barriers. It covers conditioning, reference encoding, the six DiT forwards and VAE decoding. It excludes model loading, warmup and MP4 encoding.
 - **DiT:** sum of the six transformer forwards on rank 0.
 - **Peak:** maximum over ranks of `torch.cuda.max_memory_allocated`.
-- **Measured:** 2026-11-05, with a pre-release copy of the checkpoint whose weight shards are byte-identical to `9e9ed14b`.
+- **Measured:**
+  - `sol-engine` rows: 2026-11-06, the released remote code at `9e9ed14b`, Sol-H3 at this branch's base (runs R1-R5).
+  - `official` ref2va rows and the stage split: 2026-11-05, a pre-release copy of the checkpoint with byte-identical shards, official and Sol-Engine in the same process. The numerics gate shows the released code reproduces that configuration bitwise.
 - **t2v:** only the `sol-engine` preset is listed; the earlier official t2v cells used pre-release INT8 kernels and are not reported.
 
 ## End-to-end time (s)
 
 | Workload | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| t2v | sol-engine | 13.0 | 3.4 | 1.9 | 35.3 | 9.2 | 4.6 | 66.6 | 16.1 | 8.5 |
-| ref2va, one image | official | 33.2 | 15.8 | 12.2 | 74.6 | 31.8 | 23.3 | 132.1 | 52.5 | 37.1 |
-| ref2va, one image | sol-engine | 23.1 | 6.8 | 4.0 | 49.5 | 13.6 | 7.5 | 85.1 | 23.4 | 12.1 |
-| ref2va, video + voice | official | 73.9 | 35.1 | 28.6 | 145.6 | 59.6 | 46.0 | 209.9 | 85.0 | 61.9 |
-| ref2va, video + voice | sol-engine | 46.7 | 13.2 | 7.8 | 93.0 | 24.3 | 13.7 | 135.1 | 37.3 | 19.9 |
+| t2v | sol-engine (2026-11-06) | 13.0 | 3.4 | 2.0 | 33.7 | 8.8 | 4.7 | 61.7 | 16.5 | 8.5 |
+| ref2va, one image | official (2026-11-05) | 33.2 | 15.8 | 12.2 | 74.6 | 31.8 | 23.3 | 132.1 | 52.5 | 37.1 |
+| ref2va, one image | sol-engine (2026-11-06) | 23.4 | 6.8 | 4.1 | 50.5 | 14.0 | 7.7 | 85.7 | 23.1 | 12.4 |
+| ref2va, video + voice | official (2026-11-05) | 73.9 | 35.1 | 28.6 | 145.6 | 59.6 | 46.0 | 209.9 | 85.0 | 61.9 |
+| ref2va, video + voice | sol-engine (2026-11-06) | 47.4 | 13.4 | 7.5 | 90.4 | 25.0 | 13.7 | 138.7 | 37.3 | 20.1 |
 
 ## DiT time (s)
 
 | Workload | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| t2v | sol-engine | 9.7 | 2.7 | 1.5 | 28.6 | 7.9 | 3.8 | 53.1 | 14.2 | 7.4 |
-| ref2va, one image | official | 24.9 | 7.2 | 3.7 | 60.7 | 17.0 | 8.7 | 111.6 | 31.8 | 15.9 |
-| ref2va, one image | sol-engine | 18.3 | 5.2 | 2.7 | 41.3 | 11.3 | 5.9 | 73.6 | 20.5 | 10.2 |
-| ref2va, video + voice | official | 54.2 | 15.3 | 8.3 | 117.7 | 31.1 | 16.5 | 175.6 | 50.4 | 25.9 |
-| ref2va, video + voice | sol-engine | 37.6 | 10.4 | 5.6 | 79.7 | 20.6 | 11.0 | 115.9 | 32.7 | 16.7 |
+| t2v | sol-engine (2026-11-06) | 9.4 | 2.7 | 1.5 | 27.0 | 7.5 | 3.9 | 52.3 | 14.6 | 7.4 |
+| ref2va, one image | official (2026-11-05) | 24.9 | 7.2 | 3.7 | 60.7 | 17.0 | 8.7 | 111.6 | 31.8 | 15.9 |
+| ref2va, one image | sol-engine (2026-11-06) | 18.3 | 5.2 | 2.8 | 41.8 | 11.7 | 6.0 | 74.2 | 20.3 | 10.4 |
+| ref2va, video + voice | official (2026-11-05) | 54.2 | 15.3 | 8.3 | 117.7 | 31.1 | 16.5 | 175.6 | 50.4 | 25.9 |
+| ref2va, video + voice | sol-engine (2026-11-06) | 38.4 | 10.5 | 5.4 | 77.3 | 21.1 | 10.9 | 119.8 | 32.5 | 16.9 |
 
 ## Peak GPU memory (GiB per GPU)
 
 | Workload | Preset | 5 s<br>1 GPU | 5 s<br>4 GPU | 5 s<br>8 GPU | 10 s<br>1 GPU | 10 s<br>4 GPU | 10 s<br>8 GPU | 15 s<br>1 GPU | 15 s<br>4 GPU | 15 s<br>8 GPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| t2v | sol-engine | 99 | 95 | 94 | 107 | 100 | 98 | 115 | 105 | 102 |
-| ref2va, video + voice | official | 106 | 96 | 96 | 114 | 99 | 98 | 122 | 102 | 101 |
-| ref2va, video + voice | sol-engine | 105 | 96 | 95 | 113 | 99 | 98 | 121 | 104 | 101 |
+| t2v | sol-engine (2026-11-06) | 94 | 92 | 92 | 99 | 97 | 95 | 105 | 102 | 99 |
+| ref2va, one image | sol-engine (2026-11-06) | 96 | 93 | 93 | 102 | 98 | 96 | 108 | 102 | 99 |
+| ref2va, video + voice | official (2026-11-05) | 106 | 96 | 96 | 114 | 99 | 98 | 122 | 102 | 101 |
+| ref2va, video + voice | sol-engine (2026-11-06) | 101 | 95 | 95 | 108 | 99 | 97 | 114 | 103 | 100 |
 
-## Stage split at 8 GPUs (s, min-max over the 8 ranks; one audited request)
+## Runs
+
+| Run | GPUs | Cells (sol-engine) |
+|---|---|---|
+| R1 | 1 / 4 | t2v 5 s @ 1; t2v 5 s @ 4; ref2va, one image 5 s @ 1; ref2va, one image 5 s @ 4; ref2va, video + voice 5 s @ 4 |
+| R2 | 8 | t2v 5 s @ 8; ref2va, one image 5 s @ 8; ref2va, video + voice 5 s @ 8 |
+| R3 | 4 | t2v 10 s @ 4; t2v 15 s @ 4; ref2va, one image 10 s @ 4; ref2va, one image 15 s @ 4; ref2va, video + voice 10 s @ 4; ref2va, video + voice 15 s @ 4 |
+| R4 | 1 | t2v 10 s @ 1; t2v 15 s @ 1; ref2va, one image 10 s @ 1; ref2va, one image 15 s @ 1; ref2va, video + voice 5 s @ 1; ref2va, video + voice 10 s @ 1; ref2va, video + voice 15 s @ 1 |
+| R5 | 8 | t2v 10 s @ 8; t2v 15 s @ 8; ref2va, one image 10 s @ 8; ref2va, one image 15 s @ 8; ref2va, video + voice 10 s @ 8; ref2va, video + voice 15 s @ 8 |
+
+## Stage split at 8 GPUs (2026-11-05; s, min-max over the 8 ranks; one audited request)
 
 Video + voice, 15 s output:
 

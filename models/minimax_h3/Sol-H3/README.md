@@ -194,6 +194,26 @@ with MiniMaxH3Inference(MODEL_PATH, REF2VA_ADAPTER_PATH, task="ref2va") as engin
         result.save("output.mp4")
 ```
 
+### Explicit Base and alternative adapter schedules
+
+The existing adapter invocation still uses five scheduler points (four DiT
+forwards), with alpha 8 for Ref2VA or 64 for T2V/I2V. Alternative adapters must
+use their own training schedule and alpha; the filename is not automatically
+interpreted.
+
+For Base inference, replace `--adapter PATH` with
+`--no-adapter --num-inference-steps 29` for a
+28-forward trajectory. `--no-adapter` requires an explicit point count to avoid
+silently running Base weights with the default distilled four-forward schedule.
+The model, task, input, output, and attention arguments are otherwise unchanged.
+
+Python callers can pass `adapter_path=None` and `num_inference_steps=29` to
+`MiniMaxH3Inference`. For an alternative adapter, use the scheduler point count
+and alpha documented by that artifact. The point count is fixed per engine
+because AdaLN projection tables are precomputed for its trajectory; construct a
+separate engine to use a different schedule. These options do not disable the other runtime
+optimizations, establish a full-precision baseline, or assert quality parity.
+
 ### Custom resident text encoder
 
 Python services can replace the checkpoint's text encoder without first loading

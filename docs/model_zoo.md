@@ -181,9 +181,9 @@ image[0].save("sana_4K.png")
 
 ## ❗ 4. int4 inference
 
-This int4 model is quantized with [SVDQuant-Nunchaku](https://github.com/mit-han-lab/nunchaku). You need first follow the [guidance of installation](https://github.com/mit-han-lab/nunchaku?tab=readme-ov-file#installation) of nunchaku engine, then you can use the following code snippet to perform inference with int4 Sana model.
+This int4 model is quantized with [SVDQuant-Nunchaku](https://github.com/nunchux-ai/nunchaku). You need first follow the [guidance of installation](https://github.com/nunchux-ai/nunchaku?tab=readme-ov-file#installation) of nunchaku engine, then you can use the following code snippet to perform inference with int4 Sana model.
 
-Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the [SanaPAGPipeline](https://github.com/mit-han-lab/nunchaku/blob/main/examples/sana_1600m_pag.py) section.
+Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the [SanaPAGPipeline](https://github.com/nunchux-ai/nunchaku/blob/main/examples/sana1.6b_pag.py) section.
 
 ```python
 import torch

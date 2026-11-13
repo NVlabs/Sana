@@ -44,7 +44,7 @@
 
 ### [SANA-Video 2.0](https://arxiv.org/abs/2607.21553)
 
-[Documentation](sana_video2.md) · [4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
+[Project](https://nvlabs.github.io/Sana/Video2/) · [Documentation](sana_video2.md) · [4-step preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
 
 | Model | Reso | pth link | diffusers | Precision | Description |
 | --- | --- | --- | --- | --- | --- |

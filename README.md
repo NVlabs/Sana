@@ -172,7 +172,41 @@ bash inference_video_scripts/inference_sana_video.sh \
   --work_dir output/sana_video2_t2v_720p_demo
 ```
 
-The four-step preview command and more examples are in the [SANA-Video 2.0 guide](docs/sana_video2.md).
+The four-step DMD preview runs the same prompt with four denoising steps and
+supports an 81 frames at 16 FPS (5-second) or 193 frames at 24 FPS (8-second)
+profile. The [online preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo)
+defaults to the 5-second profile with RL LoRA scale 0.7. Locally, the preview
+runs at the checkpoint's native RL scale 1.0:
+
+<p align="center">
+  <a href="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4.mp4">
+    <img src="https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/resolve/main/demo/sana_video2_5b_720p_4step_rooster_seed4_poster.png" width="60%" alt="SANA-Video 2.0 5B 4-step preview: a cartoon rooster holding a beer bottle in a floral vintage room"/>
+  </a>
+</p>
+
+```bash
+bash inference_video_scripts/inference_sana_video.sh \
+  --np 1 \
+  --config configs/sana_video2/SanaVideo2_5B_720p.yaml \
+  --model_path hf://Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step/checkpoints/SANA_Video_2.0_5B_720p_4step.pth \
+  --txt_file=asset/samples/sana_video2_5b_720p_demo.txt \
+  --task=t2v \
+  --model.image_size=480 \
+  --custom_height_width='[736,1280]' \
+  --sampling_algo=fastvideo_dmd_4step \
+  --generator_sigma_profile=sana_shift6_dpm \
+  --cfg_scale=1.0 \
+  --flow_shift=1.0 \
+  --motion_score=20 \
+  --negative_prompt=None \
+  --num_frames=81 \
+  --step=4 \
+  --fps=16 \
+  --seed=4 \
+  --work_dir output/sana_video2_t2v_720p_4step_preview
+```
+
+More examples are in the [SANA-Video 2.0 guide](docs/sana_video2.md).
 
 ### Inference with 🧨 diffusers
 

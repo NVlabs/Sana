@@ -402,8 +402,41 @@ def _agree(passed: bool) -> bool:
     return bool(flag.item())
 
 
+_DENSE_CORE = os.environ.get("H3_DENSE_CORE", "fa4")   # fa4 | sdpa (cuDNN) | sdpa_perturb
+# FA4's non-causal hd128 forward computes ~1/5 of the softmax exp2s with an FMA polynomial to offload
+# MUFU (ex2_emu_freq=10). Under the GB200 1200 W cap all-hardware ex2.approx (freq 0, as cuDNN) is
+# 1.4-1.5% faster per attention call at 56 and 14 heads. Both are rounding-level exp2 implementations.
+# H3_FA4_EX2_EMU=keep leaves FA4's default; otherwise the value is the emulation frequency.
+_FA4_EX2_EMU = os.environ.get("H3_FA4_EX2_EMU", "0")
+_fa4_tuned = False
+
+
+def _fa4_tune():
+    global _fa4_tuned
+    _fa4_tuned = True
+    if _FA4_EX2_EMU == "keep":
+        return
+    import flash_attn.cute.flash_fwd_sm100 as fwd_mod
+    cfgs = getattr(fwd_mod, "_TUNING_CONFIG", {})
+    for key, cfg in cfgs.items():   # (?, causal, head_dim, ?): must be set before the first compile
+        if key[1] is False and key[2] == 128 and "ex2_emu_freq" in cfg:
+            cfgs[key] = dict(cfg, ex2_emu_freq=int(_FA4_EX2_EMU))
+
+
 def _dense(q, k, v):
-    """SDPA on `(rows, heads, dim)`, same layout out. The kernel's scale default matches."""
+    """SDPA on `(rows, heads, dim)`, same layout out. The kernel's scale default matches.
+
+    Default H3_DENSE_CORE=fa4: FlashAttention-4 (flash_attn.cute, exact dense softmax), 1-2% faster than
+    cuDNN SDPA at the serving shapes (H3_DENSE_CORE=sdpa restores cuDNN);
+    it takes `(batch, rows, heads, dim)`, so no transposes."""
+    if _DENSE_CORE == "fa4":
+        if not _fa4_tuned:
+            _fa4_tune()
+        from flash_attn.cute import flash_attn_func
+        out = flash_attn_func(q.unsqueeze(0), k.unsqueeze(0), v.unsqueeze(0), causal=False)
+        return (out[0] if isinstance(out, tuple) else out).squeeze(0)
+    if _DENSE_CORE == "sdpa_perturb":      # quality-gate rounding control only, never a default
+        q = (q.contiguous().view(torch.int16) ^ 1).view(q.dtype)   # flip the bf16 LSB: exactly 1 ulp per element
     out = F.scaled_dot_product_attention(
         q.transpose(0, 1).unsqueeze(0), k.transpose(0, 1).unsqueeze(0),
         v.transpose(0, 1).unsqueeze(0), dropout_p=0.0, is_causal=False)

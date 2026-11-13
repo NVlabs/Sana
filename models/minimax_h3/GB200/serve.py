@@ -166,6 +166,14 @@ class H3Engine:
         def counted(module, args, kwargs=None):
             self._calls += 1
         tr.register_forward_pre_hook(counted)
+        # H3_PHASE_LOG=1: device time per phase (denoise forwards, VAE decode, text encoder) per request
+        self._timers = None
+        if os.environ.get("H3_PHASE_LOG") == "1":
+            from gpu_infer_cp import GpuTimer, instrument
+            self._timers = {k: GpuTimer() for k in ("denoise", "decode", "text")}
+            instrument(tr, self._timers["denoise"])
+            instrument(self.pipe.vae, self._timers["decode"], method="decode")
+            instrument(self.pipe.text_encoder.model, self._timers["text"])
         log(f"stack installed: gpus={self.world} precision={precision} attention={attention} "
             f"fp8_blocks={len(blocks)}")
 
@@ -186,17 +194,32 @@ class H3Engine:
             import ulysses_custom
             ulysses_custom.reset_row_counts()
         torch.cuda.reset_peak_memory_stats()
+        for timer in (self._timers or {}).values():
+            timer.reset()
         torch.cuda.synchronize()
         t0 = time.perf_counter()
+        # The pipeline's default output is PIL: every rank copies the float32 video (1.5 GB at
+        # 124x768x1344) to the host and rounds it to uint8 there, frame by frame. Instead take the
+        # tensor and round on the GPU with the same float32 math (x * 255, round half to even, cast):
+        # identical bytes, and only rank 0 copies 0.4 GB of uint8 to the host. H3_GPU_FRAMES=0 = PIL.
+        gpu_frames = os.environ.get("H3_GPU_FRAMES", "1") != "0"
         state = self.pipe(prompt=req["prompt"], height=req["height"], width=req["width"],
                           num_frames=req["num_frames"], num_inference_steps=req["steps"],
-                          generator=torch.Generator().manual_seed(req["seed"]))
+                          generator=torch.Generator().manual_seed(req["seed"]),
+                          **({"output_type": "pt"} if gpu_frames else {}))
+        frames = None
+        if gpu_frames and self.rank == 0 and out_path:
+            video = state.videos[0]                         # (frames, 3, H, W) float32 in [0, 1]
+            frames = (video * 255).round().to(torch.uint8).permute(0, 2, 3, 1).contiguous().cpu().numpy()
         torch.cuda.synchronize()
         inference_s = time.perf_counter() - t0
         stats = {"inference_time_s": round(inference_s, 3),
                  "peak_memory_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1)}
+        for name, timer in (self._timers or {}).items():
+            total = timer.total()
+            stats[f"{name}_s"] = None if total is None else round(total, 3)
         if self.rank == 0 and out_path:
-            videos = getattr(state, "videos", None)
+            videos = [frames] if frames is not None else getattr(state, "videos", None)
             if videos is None:
                 videos = getattr(state, "frames")
             audio = getattr(state, "audio", None)
@@ -263,7 +286,8 @@ def _write_mp4(frames, audio, rate: int, path: str, preset: str = "medium", crf:
             cmd += ["-i", wav, "-af", "apad", "-c:a", "aac", "-b:a", "192k", "-shortest"]
         cmd += ["-c:v", "libx264", "-preset", preset, "-pix_fmt", "yuv420p", "-crf", str(crf),
                 "-movflags", "+faststart", path]
-        subprocess.run(cmd, input=arr.tobytes(), check=True)
+        arr = np.ascontiguousarray(arr)
+        subprocess.run(cmd, input=memoryview(arr).cast("B"), check=True)   # no 0.4 GB tobytes() copy
 
 
 # -- request parsing ----------------------------------------------------------------------------

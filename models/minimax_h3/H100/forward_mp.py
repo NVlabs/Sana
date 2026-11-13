@@ -10,23 +10,67 @@ q/k-norm + RoPE).  What changes for N ranks:
   * `block_pre(i)` runs before block i, which is where `shard.LayerShards` rebuilds the block's weights;
   * after the stack the row shards are gathered back, and the output head runs on the full sequence.
 """
+import os
+
 import torch
 import torch.distributed as dist
 from diffusers.models.transformers.transformer_minimax_h3 import (
     MINIMAX_H3_MODALITY_NUM, MiniMaxH3TransformerOutput,
 )
 
+# ---------------------------------------------------------------------------------------------
+# MEASUREMENT INSTRUMENT, NOT A FEATURE.  `H3_FAKE_A2A=1` keeps every kernel of the step but drops
+# the two Ulysses all-to-alls, feeding attention (and the out projection) a persistent zero buffer
+# of the right shape instead.  The velocities it produces are WRONG BY CONSTRUCTION; it exists only
+# to measure the floor of the current layout -- what the step would cost if the exchange were free
+# -- including whatever the node's 700 W power cap takes back when the idle windows disappear.
+# Never enable it for anything whose output is looked at.  Default off, zero cost when off.
+#
+# `H3_FAKE_A2A=2` is the control for mode 1: instead of dropping the exchange it replaces it with a
+# local device-to-device copy of exactly the same number of bytes into exactly the same destination
+# buffer.  Mode 1 removes NCCL *and* the HBM write traffic the exchange causes; mode 2 removes only
+# NCCL.  The difference between them says which of the two slows the compute kernels down.
+#
+# The buffer is filled with random values of a plausible magnitude, NOT zeros. On a GPU sitting at
+# its power cap, bf16 tensor-core work on an all-zero operand draws far less dynamic power and
+# therefore clocks higher: the first version of this instrument used `torch.zeros` and measured
+# attention at 330 ms against 369 in the real step, which is an artefact of the data, not of the
+# exchange. Random data keeps the switching activity realistic, so what mode 1 removes is the
+# exchange and nothing else.
+_FAKE_BUFS: dict = {}
 
-def install(tr, attn_core, group=None, block_pre=None):
+
+def _fake_buf(shape, dtype, device):
+    t = _FAKE_BUFS.get(shape)
+    if t is None:
+        g = torch.Generator(device=device).manual_seed(1234)
+        t = _FAKE_BUFS[shape] = (torch.randn(shape, generator=g, device=device,
+                                             dtype=torch.float32) * 0.1).to(dtype)
+    return t
+
+
+def install(tr, attn_core, group=None, block_pre=None, balancer=None):
     import kern
     import ulysses_custom as U
     from fusions import fused_rmsnorm_modulate
 
     world = dist.get_world_size(group) if dist.is_initialized() else 1
     rank = dist.get_rank(group) if dist.is_initialized() else 0
+    fake_a2a = int(os.environ.get("H3_FAKE_A2A", 0))
+    if fake_a2a and rank == 0:
+        print(f"[h3-h100] WARNING: H3_FAKE_A2A={fake_a2a} -- the Ulysses exchanges are "
+              f"{'skipped' if fake_a2a == 1 else 'replaced by a local copy'}, the output is "
+              f"meaningless. Timing instrument only.", flush=True)
 
     def rows_of(n):
-        sizes = [n // world + (1 if r < n % world else 0) for r in range(world)]
+        # `balancer` (see balance.py) gives the slower GPUs of the node fewer rows, so the step —
+        # which costs the slowest rank, every layer ending in a collective — stops paying the ~6%
+        # spread between the eight H100s. Attention is unaffected (it runs on the whole sequence for
+        # this rank's heads whatever the row split is); the GEMMs just get a different M.
+        if balancer is not None:
+            sizes = balancer.rows(n)
+        else:
+            sizes = [n // world + (1 if r < n % world else 0) for r in range(world)]
         return sizes, sum(sizes[:rank])
 
     def take_rows(t, r0, r1):                 # RoPE tables are (S, d) or (1, S, d)
@@ -44,9 +88,36 @@ def install(tr, attn_core, group=None, block_pre=None):
         rows, hd = b * s, a.head_dim
         q, k, v = q.view(rows, a.heads, hd), k.view(rows, a.heads, hd), v.view(rows, a.heads, hd)
         if world > 1:
-            x = U._packed_qkv_all_to_all(q, k, v, world, group)          # (rows_full, heads/N, 3*hd)
-            o = attn_core(x[..., :hd], x[..., hd:2 * hd], x[..., 2 * hd:])
-            out = U._packed_out_all_to_all(o.contiguous(), rows, world, group)
+            if fake_a2a:
+                # Everything the real path does except the collective: the destination-major pack
+                # still runs (and is thrown away), attention still reads a (rows_full, heads/N, 3*hd)
+                # buffer. Zeros, so the values are wrong and the kernel times are not.
+                from relayout import can_pack_qkv, pack_qkv_destination_major, pack_qkv_reference
+                counts = U._row_counts(rows, world, group)
+                pack = pack_qkv_destination_major if can_pack_qkv(q, k, v) else pack_qkv_reference
+                packed = pack(q, k, v, world)
+                x = _fake_buf((sum(counts), a.heads // world, 3 * hd), q.dtype, q.device)
+                if fake_a2a == 2:                      # same bytes into the same buffer, no NCCL
+                    n = min(packed.numel(), x.numel())   # world*rows can exceed sum(counts) by one row
+                    x.view(-1)[:n].copy_(packed.view(-1)[:n])
+            else:
+                x = U._packed_qkv_all_to_all(q, k, v, world, group)      # (rows_full, heads/N, 3*hd)
+            if balancer is None:
+                o = attn_core(x[..., :hd], x[..., hd:2 * hd], x[..., 2 * hd:])
+            else:
+                # The one piece of per-rank work whose shape does not depend on the row split, so
+                # timing it is a clock probe that is independent of what it controls.
+                balancer.begin()
+                o = attn_core(x[..., :hd], x[..., hd:2 * hd], x[..., 2 * hd:])
+                balancer.end()
+            o = o.contiguous()
+            if fake_a2a:
+                out = _fake_buf((rows, a.heads * hd), o.dtype, o.device)
+                if fake_a2a == 2:
+                    n = min(o.numel(), out.numel())
+                    out.view(-1)[:n].copy_(o.view(-1)[:n])
+            else:
+                out = U._packed_out_all_to_all(o, rows, world, group)
         else:
             out = attn_core(q, k, v)
         return a.to_out[0](out.reshape(b, s, a.heads * hd))
@@ -72,6 +143,8 @@ def install(tr, attn_core, group=None, block_pre=None):
         if bool((token_tags < 0).any()):
             raise RuntimeError("forward_mp assumes a padless packed sequence")
 
+        if balancer is not None:
+            balancer.open_forward()
         if world > 1:                                                     # my contiguous row shard
             sizes, r0 = rows_of(S)
             r1 = r0 + sizes[rank]
@@ -108,6 +181,8 @@ def install(tr, attn_core, group=None, block_pre=None):
         h = self.norm_out(h, temb, timestep_indices).to(self.proj_out.weight.dtype)
         video_output = self.proj_out(h).index_select(1, video_indices)
         audio_output = self.audio_proj_out(h).index_select(1, audio_indices)
+        if balancer is not None:
+            balancer.close_forward()      # may re-derive the row split for the next forward
         if not return_dict:
             return (video_output, audio_output)
         return MiniMaxH3TransformerOutput(sample=video_output, audio_sample=audio_output)

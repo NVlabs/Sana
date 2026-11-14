@@ -21,16 +21,27 @@ import torch.distributed as dist
 
 
 class LayerShards:
-    def __init__(self, layers, group, device, exclude=lambda name: False):
+    def __init__(self, layers, group, device, exclude=lambda name: False, resident=0):
+        """`resident`: keep the last `resident` layers whole on the GPU instead of sharding them.
+
+        Those layers cost `(1 - 1/world)` extra layer-bytes per rank and in exchange never move over the
+        interconnect again: their all-gather (0.77 GiB per DiT layer, 49x per request) disappears, which
+        frees NVLink bandwidth and SMs for the Ulysses all-to-all and for compute. Same weights, same
+        kernels, same math — a replay against the unmodified build comes out bit-identical. The *last*
+        layers are chosen so that a gathered layer always has a full layer of compute in front of its
+        prefetch at the head of the stack.
+        """
         self.layers = list(layers)
         self.group = group
         self.offload = group is None
         self.world = 1 if self.offload else dist.get_world_size(group)
         self.rank = 0 if self.offload else dist.get_rank(group)
         self.device = torch.device(device)
+        resident = max(0, min(int(resident), len(self.layers)))
+        self.resident = set(range(len(self.layers) - resident, len(self.layers))) if self.world > 1 else set()
         self.meta, self.shards = [], []
         sizes: dict = {}
-        for layer in self.layers:
+        for li, layer in enumerate(self.layers):
             by_dtype: dict = {}
             for name, p in layer.named_parameters():
                 if exclude(name):
@@ -52,12 +63,18 @@ class LayerShards:
                     p.data = torch.empty(0, dtype=dt, device=self.device)
                     off += n
                 per = padded // self.world
-                if self.offload:
+                if li in self.resident:                             # whole layer, never gathered again
+                    full = flat.to(self.device)
+                    for p, off, n, shape in entries:
+                        p.data = full[off:off + n].view(shape)
+                    shard[dt] = full
+                elif self.offload:
                     shard[dt] = flat.pin_memory()
                 else:
                     shard[dt] = flat[self.rank * per:(self.rank + 1) * per].to(self.device)
                 meta[dt] = entries
-                sizes[dt] = max(sizes.get(dt, 0), padded)
+                if li not in self.resident:
+                    sizes[dt] = max(sizes.get(dt, 0), padded)
                 del flat
             self.meta.append(meta)
             self.shards.append(shard)
@@ -89,6 +106,9 @@ class LayerShards:
 
     def before(self, i: int) -> None:
         main = torch.cuda.current_stream(self.device)
+        if i in self.resident:                                      # weights already whole on this GPU
+            self._prefetch_next(i, main)
+            return
         if self.ready[i] is None:                                   # first layer of a pass: not prefetched
             free = torch.cuda.Event()
             free.record(main)
@@ -96,13 +116,17 @@ class LayerShards:
             self._gather(i)
         main.wait_event(self.ready[i])
         self.ready[i] = None
+        self._prefetch_next(i, main)
+
+    def _prefetch_next(self, i: int, main) -> None:
         nxt = (i + 1) % len(self.layers)
-        if self.ready[nxt] is None:
-            # layer nxt reuses the buffer of layer i-1, whose compute is already queued on `main` before this point
-            free = torch.cuda.Event()
-            free.record(main)
-            self.stream.wait_event(free)
-            self._gather(nxt)
+        if nxt in self.resident or self.ready[nxt] is not None:
+            return
+        # layer nxt reuses the buffer of the last gathered layer, whose compute is already queued on `main`
+        free = torch.cuda.Event()
+        free.record(main)
+        self.stream.wait_event(free)
+        self._gather(nxt)
 
     def install_pre_hooks(self) -> list:
         return [layer.register_forward_pre_hook(lambda m, args, i=i: self.before(i))

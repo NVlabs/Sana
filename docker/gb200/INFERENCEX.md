@@ -1,10 +1,11 @@
 # Sol-Engine images for InferenceX (MiniMax-H3 video)
 
-Two images serve MiniMax-H3 for the InferenceX VideoGenX board (`h3-v2.yaml` release-v1):
+Images serving MiniMax-H3 for the InferenceX VideoGenX board (`h3-v2.yaml` release-v1):
 
 | Platform | GPUs | InferenceX PR | Source commit | Image |
 |---|---|---|---|---|
-| GB200 (`linux/arm64`) | 1, 2, 4 | #4940 | [`d23f2ebf5`](https://github.com/NVlabs/Sana/commit/d23f2ebf58b69292ffb6a0ab850a989cf0685323) | `ghcr.io/lyttttt3333/sol-engine-gb200:0.6.0-gd23f2ebf5` |
+| B200 (`linux/amd64`) | 1, 2, 4, 8 | #4940 | [`d23f2ebf5`](https://github.com/NVlabs/Sana/commit/d23f2ebf58b69292ffb6a0ab850a989cf0685323) | `ghcr.io/lyttttt3333/sol-engine-b200:0.6.0-gd23f2ebf5` |
+| GB200 (`linux/arm64`) | 1, 2, 4 | (measured locally) | [`d23f2ebf5`](https://github.com/NVlabs/Sana/commit/d23f2ebf58b69292ffb6a0ab850a989cf0685323) | `ghcr.io/lyttttt3333/sol-engine-gb200:0.6.0-gd23f2ebf5` |
 | H100 (`linux/amd64`) | 2, 4, 8 | #4938 | [`d8fee0c4f`](https://github.com/NVlabs/Sana/commit/d8fee0c4f636a22f5a1bd96837c26f2084428341) | `ghcr.io/lyttttt3333/sol-engine-h100:0.6.0-gd8fee0c4f` |
 
 Each image is built from this repository at its source commit, with `docker/gb200/Dockerfile`
@@ -18,6 +19,34 @@ Both images use the base image `nvidia/cuda:13.0.2-runtime-ubuntu24.04`, index
 `sha256:6a0e31b59e70890446f2c17356d6efc0d54260090a8c63d6ca7c2ad049db95d2`
 (linux/arm64 `sha256:bbfc230dfd4c3bb2eadacdc22cb7e2ea3453e93bb3ee40e241357eb0bcd5c6a6`,
 linux/amd64 `sha256:121b25126d81cddeae4c048aa46e94050514ca6b8609a124027b38073e7ef4b6`).
+
+## B200
+
+The same source commit and code path as GB200 (`models/minimax_h3/GB200`, Blackwell sm_100),
+built for `linux/amd64`. The only package difference from the GB200 image is
+`cuda-python`/`cuda-bindings` 13.0.3 (pinned by `requirements.txt` for x86, where
+torch 2.10.0+cu130 requires it) instead of 13.3.1 + `cuda-core`.
+
+| | |
+|---|---|
+| Source | `NVlabs/Sana` commit [`d23f2ebf58b69292ffb6a0ab850a989cf0685323`](https://github.com/NVlabs/Sana/commit/d23f2ebf58b69292ffb6a0ab850a989cf0685323) |
+| Platform | `linux/amd64` |
+| Image | `ghcr.io/lyttttt3333/sol-engine-b200:0.6.0-gd23f2ebf5@sha256:0567bfe20783d06aad24fe24a6125997a8cdef2bb645dabf4a31a821824d4a4a` |
+| Python packages | [`inferencex-b200-packages.txt`](./inferencex-b200-packages.txt): every package installed in `/opt/sol-engine/venv`, with versions |
+
+```bash
+git clone https://github.com/NVlabs/Sana && cd Sana
+git checkout d23f2ebf58b69292ffb6a0ab850a989cf0685323
+docker buildx build --platform linux/amd64 \
+  -f docker/gb200/Dockerfile \
+  --build-arg BASE=nvidia/cuda:13.0.2-runtime-ubuntu24.04@sha256:6a0e31b59e70890446f2c17356d6efc0d54260090a8c63d6ca7c2ad049db95d2 \
+  --build-arg GIT_SHA=d23f2ebf58b69292ffb6a0ab850a989cf0685323 \
+  --build-arg VERSION=0.6.0-gd23f2ebf5 \
+  -t sol-engine-b200:0.6.0-gd23f2ebf5 --load .
+```
+
+We have no B200 nodes, so this image has not been run on B200; its code was measured on GB200
+(below). The 8-GPU point, which needs an 8-GPU node, has not been run either.
 
 ## GB200
 
@@ -85,7 +114,7 @@ With kaniko (no Docker daemon on our clusters), from a checkout of the source co
 
 A rebuild will not have the same image digest (layer timestamps, and Ubuntu packages from the
 base image's apt mirrors change over time). Check it against the published image by its Python
-packages instead (from the same clone; shown for H100, use `gb200` for GB200):
+packages instead (from the same clone; shown for H100, use `b200` or `gb200` for the others):
 
 ```bash
 docker run --rm sol-engine-h100:0.6.0-gd8fee0c4f /opt/sol-engine/venv/bin/python -c '
@@ -95,7 +124,7 @@ print("\n".join(f"{n}=={v}" for n, v in sorted(rows)))' \
   | diff - <(git show origin/inferencex/h3:docker/gb200/inferencex-h100-packages.txt)
 ```
 
-and by running the InferenceX recipe `h3/sol-engine/{h100,gb200}-bf16/serving-client.yaml` with it.
+and by running the InferenceX recipe `h3/sol-engine/{h100,b200}-bf16/serving-client.yaml` with it.
 
 The measurements above use InferenceX `infx.bench video serve` / `video client` on h3-v2
 release-v1 (20 prompts, C1, 49 denoising updates).

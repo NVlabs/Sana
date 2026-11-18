@@ -172,7 +172,7 @@ PYTHONPATH=techniques/sparse_backends python \
 
 The benchmark uses the candidate's public API and isolates the baseline's
 module names and compilation caches without changing its kernel bodies. It
-checks bitwise equality with the baseline before and after timing and during
+checks bitwise equality (including signed zero) with the baseline before and after timing and during
 CUDA graph replay. Original SOL, candidate SOL, and cuDNN dense attention run
 in rotating and reversing order. The JSON includes every CUDA-event and
 synchronized wall-time sample, paired speedups, variation, and source hashes.

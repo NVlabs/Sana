@@ -60,6 +60,17 @@ def baseline(root, generated):
     return loaded.sol_attn, hashes
 
 
+def assert_bitwise_equal(actual, expected):
+    """Compare value bits as well as numbers, including the sign of zero."""
+    torch.testing.assert_close(actual, expected, atol=0, rtol=0)
+    torch.testing.assert_close(
+        actual.contiguous().view(torch.uint8),
+        expected.contiguous().view(torch.uint8),
+        atol=0,
+        rtol=0,
+    )
+
+
 def save(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
@@ -107,7 +118,7 @@ def measure(q, k, v, mask, options, old, modes, warmup, repeats):
         "dense": dense,
     }
     reference = functions["baseline"]()
-    torch.testing.assert_close(functions["candidate"](), reference, atol=0, rtol=0)
+    assert_bitwise_equal(functions["candidate"](), reference)
     report = dict(
         shape=list(q.shape),
         options=options,
@@ -128,7 +139,7 @@ def measure(q, k, v, mask, options, old, modes, warmup, repeats):
                 graph.replay()
                 torch.cuda.synchronize()
                 if name != "dense":
-                    torch.testing.assert_close(output, reference, atol=0, rtol=0)
+                    assert_bitwise_equal(output, reference)
                 graphs.append((graph, output))
                 calls[name] = graph.replay
             else:
@@ -179,7 +190,7 @@ def measure(q, k, v, mask, options, old, modes, warmup, repeats):
             paired_speedup_median=statistics.median(ratios),
             paired_speedups=ratios,
         )
-    torch.testing.assert_close(functions["candidate"](), reference, atol=0, rtol=0)
+    assert_bitwise_equal(functions["candidate"](), reference)
     return report
 
 
@@ -252,7 +263,7 @@ def main():
                             v.mul_(2.0**-130)
                         expected = old(q, k, v, **options, exact_block_mask=mask)
                         actual = sol_attn(q, k, v, **options, exact_block_mask=mask)
-                        torch.testing.assert_close(actual, expected, atol=0, rtol=0)
+                        assert_bitwise_equal(actual, expected)
                         report["cases"].append(
                             dict(tokens=tokens, kind=kind, bitwise_equal=True)
                         )

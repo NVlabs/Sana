@@ -133,6 +133,7 @@ class SolAttnForwardSm89(FlashAttentionForwardSm80):
         softmax_scale: Float32,
         sink_start_block: Int32,
         sink_end_block: Int32,
+        exact_block_mask: cute.Tensor | None,
         stream: cuda.CUstream,
     ):
         assert q.element_type == cutlass.BFloat16
@@ -195,6 +196,7 @@ class SolAttnForwardSm89(FlashAttentionForwardSm80):
             softmax_scale * 1.4426950408889634,
             sink_start_block,
             sink_end_block,
+            exact_block_mask,
             self.sQ_layout,
             self.sK_layout,
             self.sV_layout,
@@ -228,6 +230,7 @@ class SolAttnForwardSm89(FlashAttentionForwardSm80):
         scale_softmax_log2e: Float32,
         sink_start_block: Int32,
         sink_end_block: Int32,
+        exact_block_mask: cute.Tensor | None,
         sQ_layout: cute.ComposedLayout,
         sK_layout: cute.ComposedLayout,
         sV_layout: cute.ComposedLayout,
@@ -440,7 +443,7 @@ class SolAttnForwardSm89(FlashAttentionForwardSm80):
                         col_mean = col_sum * scale_softmax_log2e / Float32(q_len)
                         kv_block = group_start + off
                         exact = sol_attn_route_is_exact(
-                            q_tile_idx, kv_block, col_mean, threshold, valid
+                            q_tile_idx, kv_block, col_mean, threshold, valid, exact_block_mask
                         )
                         exact = exact or (
                             kv_block >= sink_start_block

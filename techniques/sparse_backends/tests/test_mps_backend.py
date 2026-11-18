@@ -17,6 +17,15 @@ def test_mps_backend_selection_does_not_require_hardware():
     assert get_sol_attn_backend("mps") == "metal"
 
 
+def test_mps_dispatch_does_not_silently_drop_exact_block_mask(monkeypatch):
+    import sol_attn.interface as interface
+
+    monkeypatch.setattr(interface, "_validate_inputs", lambda *args: None)
+    tensor = SimpleNamespace(shape=(1, 65, 2, 128))
+    with pytest.raises(NotImplementedError, match="exact_block_mask"):
+        sol_attn(tensor, tensor, tensor, exact_block_mask=torch.ones(2, dtype=torch.bool))
+
+
 def test_default_backend_selects_metal_on_mps_only_system(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)

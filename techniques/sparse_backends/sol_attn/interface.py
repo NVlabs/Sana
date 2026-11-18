@@ -11,6 +11,7 @@ _CUTE_BACKENDS = {
     (8, 9): "cute_sm89",
     (9, 0): "cute_sm90",
     (10, 0): "cute_sm100",
+    (10, 3): "cute_sm100",
     (12, 0): "cute_sm120",
 }
 _compiled = {}
@@ -23,6 +24,7 @@ def _validate_inputs(
     thresh_type,
     sink_tokens=0,
     sink_start=None,
+    exact_block_mask=None,
 ):
     if q.ndim != 4 or q.shape != k.shape or q.shape != v.shape:
         raise ValueError("q, k, and v must share shape [B, T, H, 128]")
@@ -51,6 +53,19 @@ def _validate_inputs(
             raise ValueError("sink_start must be in [0, T]")
         if sink_start + sink_tokens > q.shape[1]:
             raise ValueError("sink_start + sink_tokens must be <= T")
+
+    if exact_block_mask is not None:
+        if not isinstance(exact_block_mask, torch.Tensor):
+            raise TypeError("exact_block_mask must be a tensor or None")
+        if (
+            exact_block_mask.dtype != torch.bool
+            or exact_block_mask.device != q.device
+            or exact_block_mask.shape != ((q.shape[1] + BLOCK_SIZE - 1) // BLOCK_SIZE,)
+            or not exact_block_mask.is_contiguous()
+        ):
+            raise ValueError(
+                "exact_block_mask must be a contiguous bool vector of ceil(T/64) blocks on q.device"
+            )
 
     if q.device.type == "mps":
         return None
@@ -149,6 +164,7 @@ def _compile_sm90(
     tokens,
     kv_splits,
     sink_range,
+    exact_block_mask,
     stream,
 ):
     import cutlass.cute as cute
@@ -162,6 +178,7 @@ def _compile_sm90(
         *args,
         scale,
         sink_range,
+        exact_block_mask,
         stream=stream,
         options="--enable-tvm-ffi",
     )
@@ -175,6 +192,7 @@ def _compile_sm89(
     scale,
     sink_start_block,
     sink_end_block,
+    exact_block_mask,
     stream,
 ):
     import cutlass.cute as cute
@@ -189,6 +207,7 @@ def _compile_sm89(
         scale,
         sink_start_block,
         sink_end_block,
+        exact_block_mask,
         stream=stream,
         options="--enable-tvm-ffi",
     )
@@ -202,6 +221,7 @@ def _compile_sm100(
     scale,
     sink_start_block,
     sink_end_block,
+    exact_block_mask,
     stream,
 ):
     import cutlass.cute as cute
@@ -215,6 +235,7 @@ def _compile_sm100(
         scale,
         sink_start_block,
         sink_end_block,
+        exact_block_mask,
         stream=stream,
         options="--enable-tvm-ffi",
     )
@@ -228,6 +249,7 @@ def _compile_sm120(
     scale,
     sink_start_block,
     sink_end_block,
+    exact_block_mask,
     stream,
 ):
     import cutlass.cute as cute
@@ -242,6 +264,7 @@ def _compile_sm120(
         scale,
         sink_start_block,
         sink_end_block,
+        exact_block_mask,
         stream=stream,
         options="--enable-tvm-ffi",
     )
@@ -261,7 +284,9 @@ def _sol_attn_cute(
     kv_splits,
     sink_tokens,
     sink_start,
+    exact_block_mask,
 ):
+    from .common import to_cute_tensor
     from .preprocess import prepare
 
     batch, tokens, heads, _ = q.shape
@@ -282,7 +307,13 @@ def _sol_attn_cute(
             dtype=torch.float32,
         )
         stream = _stream(q.device)
-        key = (q.device.index, arch, batch, tokens, heads, kv_splits)
+        key = (q.device.index, arch, batch, tokens, heads, kv_splits, exact_block_mask is not None)
+        # Bool views can start at any byte offset; do not assume 16-byte alignment.
+        # Reinterpret storage without a copy for CuTe's DLPack bridge.
+        mask_arg = (
+            None if exact_block_mask is None
+            else to_cute_tensor(exact_block_mask.view(torch.uint8), assumed_align=1)
+        )
 
         if arch == (8, 9):
             sink_start_block, sink_end_block = _sink_block_range(
@@ -299,6 +330,7 @@ def _sol_attn_cute(
                     scale,
                     sink_start_block,
                     sink_end_block,
+                    mask_arg,
                     stream,
                 )
             else:
@@ -308,6 +340,7 @@ def _sol_attn_cute(
                 scale,
                 sink_start_block,
                 sink_end_block,
+                mask_arg,
                 stream=stream,
             )
         elif arch == (9, 0):
@@ -345,6 +378,7 @@ def _sol_attn_cute(
                     tokens,
                     kv_splits,
                     sink_range,
+                    mask_arg,
                     stream,
                 )
             else:
@@ -353,9 +387,10 @@ def _sol_attn_cute(
                 *args,
                 scale,
                 sink_range,
+                mask_arg,
                 stream=stream,
             )
-        elif arch == (10, 0):
+        elif arch in ((10, 0), (10, 3)):
             sink_start_block, sink_end_block = _sink_block_range(
                 tokens,
                 sink_start,
@@ -370,6 +405,7 @@ def _sol_attn_cute(
                     scale,
                     sink_start_block,
                     sink_end_block,
+                    mask_arg,
                     stream,
                 )
             else:
@@ -379,6 +415,7 @@ def _sol_attn_cute(
                 scale,
                 sink_start_block,
                 sink_end_block,
+                mask_arg,
                 stream=stream,
             )
         else:
@@ -396,6 +433,7 @@ def _sol_attn_cute(
                     scale,
                     sink_start_block,
                     sink_end_block,
+                    mask_arg,
                     stream,
                 )
             else:
@@ -405,6 +443,7 @@ def _sol_attn_cute(
                 scale,
                 sink_start_block,
                 sink_end_block,
+                mask_arg,
                 stream=stream,
             )
     return output
@@ -421,12 +460,15 @@ def sol_attn(
     kv_splits: int = 1,
     sink_tokens: int = 0,
     sink_start: int | None = None,
+    exact_block_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Compute noncausal Sol-Attn for contiguous BF16 BTHD tensors.
 
     ``sink_start`` and ``sink_tokens`` keep every KV block overlapping the
     corresponding contiguous token range exact for all queries. Omitting
-    ``sink_start`` places the range at the token suffix.
+    ``sink_start`` places the range at the token suffix. ``exact_block_mask``
+    additionally marks arbitrary 64-token blocks whose Q rows and KV columns
+    must be exact. The Boolean vector is shared across batch items and heads.
     """
 
     arch = _validate_inputs(
@@ -436,6 +478,7 @@ def sol_attn(
         thresh_type,
         sink_tokens,
         sink_start,
+        exact_block_mask,
     )
     if kv_splits not in (1, 2, 4):
         raise ValueError("kv_splits must be 1, 2, or 4")
@@ -444,6 +487,8 @@ def sol_attn(
     tau = float(tau)
 
     if backend == "metal":
+        if exact_block_mask is not None:
+            raise NotImplementedError("exact_block_mask is currently supported by CUDA SOL kernels only")
         from .mps import sol_attn as mps_sol_attn
 
         return mps_sol_attn(
@@ -472,6 +517,7 @@ def sol_attn(
             thresh_type=thresh_type,
             sink_tokens=sink_tokens,
             sink_start=sink_start,
+            exact_block_mask=exact_block_mask,
         )
 
     _validate_cute(arch, q.shape[1], kv_splits)
@@ -486,6 +532,7 @@ def sol_attn(
         kv_splits=kv_splits,
         sink_tokens=sink_tokens,
         sink_start=sink_start,
+        exact_block_mask=exact_block_mask,
     )
 
 

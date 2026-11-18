@@ -378,6 +378,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
         mGlobalThresh: cute.Tensor,
         softmax_scale_log2: Float32,
         sink_range: Int32,
+        exact_block_mask: cute.Tensor | None,
         assume_full_route_group: cutlass.Constexpr[bool] = False,
         physical_route_tile_n: cutlass.Constexpr[int] = 64,
         route_mask_words_override: cutlass.Constexpr[int] = 0,
@@ -520,6 +521,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
                         col_mean0,
                         thresh,
                         True,
+                        exact_block_mask,
                     )
                     exact1 = sol_attn_selector.sol_attn_route_is_exact(
                         m_block,
@@ -527,6 +529,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
                         col_mean1,
                         thresh,
                         True,
+                        exact_block_mask,
                     )
                     if sink_enabled:
                         exact0 = exact0 or (
@@ -569,6 +572,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
                                 col_mean,
                                 thresh,
                                 valid,
+                                exact_block_mask,
                             )
                             if sink_enabled:
                                 exact = exact or (
@@ -637,6 +641,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
                         col_mean,
                         thresh,
                         valid,
+                        exact_block_mask,
                     )
                     if sink_enabled:
                         exact = exact or (
@@ -848,6 +853,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
         mLSE: Optional[cute.Tensor],
         softmax_scale: Float32,
         sink_range: Int32,
+        exact_block_mask: cute.Tensor | None,
         stream: cuda.CUstream = None,
     ):
         """Configure and launch the Hopper Sol-Attn kernel."""
@@ -1121,6 +1127,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
             softmax_scale_log2,
             softmax_scale,
             sink_range,
+            exact_block_mask,
             window_size_left,
             window_size_right,
             learnable_sink,
@@ -1176,6 +1183,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
         softmax_scale_log2: Float32,
         softmax_scale: Optional[Float32],
         sink_range: Int32,
+        exact_block_mask: cute.Tensor | None,
         window_size_left: Optional[Int32],
         window_size_right: Optional[Int32],
         learnable_sink: Optional[cute.Tensor],
@@ -1376,6 +1384,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
             softmax_scale_log2,
             softmax_scale,
             sink_range,
+            exact_block_mask,
             block_info,
         )
 
@@ -1548,6 +1557,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
         softmax_scale_log2: Float32,
         softmax_scale: Float32,
         sink_range: Int32,
+        exact_block_mask: cute.Tensor | None,
         block_info: BlockInfo,
     ):
         """Run the fused route, approximate, and exact attention mainloop."""
@@ -1816,6 +1826,7 @@ class SolAttnMainloopSm90(FlashAttentionForwardBase):
                         mGlobalThresh,
                         softmax_scale_log2,
                         sink_range,
+                        exact_block_mask,
                         False,
                         route_mask_words_override=2,
                     )

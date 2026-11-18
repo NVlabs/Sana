@@ -49,6 +49,8 @@ def _forward_tma(
     T,
     sink_start_block,
     sink_end_block,
+    exact_block_mask,
+    HAS_EXACT_BLOCK_MASK: tl.constexpr,
     HAS_SINK: tl.constexpr,
     H: tl.constexpr,
     D: tl.constexpr,
@@ -103,6 +105,10 @@ def _forward_tma(
                 (block_indices >= sink_start_block)
                 & (block_indices < sink_end_block)
             )
+        if HAS_EXACT_BLOCK_MASK:
+            protected_q = tl.load(exact_block_mask + q_block)
+            protected_k = tl.load(exact_block_mask + block_indices, mask=valid, other=0)
+            exact = exact | protected_q | protected_k
         exact = exact & valid
 
         approximate = valid & ~exact
@@ -197,6 +203,8 @@ def _forward_ptr(
     NPAD,
     sink_start_block,
     sink_end_block,
+    exact_block_mask,
+    HAS_EXACT_BLOCK_MASK: tl.constexpr,
     HAS_SINK: tl.constexpr,
     H: tl.constexpr,
     D: tl.constexpr,
@@ -261,6 +269,10 @@ def _forward_ptr(
                 (block_indices >= sink_start_block)
                 & (block_indices < sink_end_block)
             )
+        if HAS_EXACT_BLOCK_MASK:
+            protected_q = tl.load(exact_block_mask + q_block)
+            protected_k = tl.load(exact_block_mask + block_indices, mask=valid, other=0)
+            exact = exact | protected_q | protected_k
         exact = exact & valid
 
         approximate = valid & ~exact
@@ -373,6 +385,7 @@ def sol_attn(
     thresh_type: str = "diag",
     sink_tokens: int = 0,
     sink_start: int | None = None,
+    exact_block_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Run Triton Sol-Attn on contiguous BF16 BTHD inputs."""
 
@@ -383,6 +396,7 @@ def sol_attn(
         thresh_type,
         sink_tokens,
         sink_start,
+        exact_block_mask,
     )
     if arch[0] < 8:
         raise RuntimeError(
@@ -428,6 +442,8 @@ def sol_attn(
             tokens,
             sink_start_block,
             sink_end_block,
+            exact_block_mask,
+            exact_block_mask is not None,
             sink_tokens > 0,
             heads,
             head_dim,
@@ -462,6 +478,8 @@ def sol_attn(
         kc.shape[1],
         sink_start_block,
         sink_end_block,
+        exact_block_mask,
+        HAS_EXACT_BLOCK_MASK=exact_block_mask is not None,
         HAS_SINK=sink_tokens > 0,
         H=heads,
         D=head_dim,

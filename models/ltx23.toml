@@ -2,7 +2,7 @@
 #
 # Config manifests declare required capabilities; dry-run validation creates
 # a minimal manifest-derived ModelSpec rather than importing a built-in
-# per-model spec file. The 22B runtime glue stays in Sol-LTX-Infer; the two
+# per-model spec file. The 22B runtime glue stays in the SGLang runtime; the two
 # runnable arms (baseline / optimized) are vendored under models/ltx23/.
 
 id = "ltx23"
@@ -19,7 +19,7 @@ run_script = "scripts/run_ltx23_gpu.sh"
 eval_profile = "evals/profiles/official_video_t2v_ltx23.toml"
 model_contract = "models/ltx23/model.toml"
 # No base_commit: launch_config.py compares it against the *submodule's* git
-# commit, and the submodule is this repo's vendored arm. The Sol-LTX-Infer pin
+# commit, and the submodule is this repo's vendored arm. The SGLang runtime pin
 # that actually matters lives in models/ltx23/model.toml as
 # [[baseline.reference_only]].commit, where it is declarative.
 
@@ -40,7 +40,7 @@ stage2_lora_strength = 0.5
 
 # No measured wall clock is recorded here yet. The one published LTX-2.3 timing
 # (119.811s Diffusers no-compile / 59.332s SGLang, docs/diffusion/
-# ltx2_1080p_speedup.md in Sol-LTX-Infer) is for the 30-step stage-1 config, NOT
+# ltx2_1080p_speedup.md in the SGLang runtime) is for the 30-step stage-1 config, NOT
 # the 15-step HQ config these two arms run — the numbers are not comparable and
 # must not be copied in. Fill [baseline] from a measured run of
 # config/ltx23/baseline.toml.
@@ -52,13 +52,13 @@ total_s = 0.0
 measured = false
 
 [env]
-SOL_LTX_INFER_ROOT = "/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer"
+SGLANG_RUNTIME_ROOT = "/path/to/sglang-runtime"
 # PYTHON_BIN is deliberately absent: the launch body derives it as
-# $SOL_LTX_INFER_ROOT/.conda/ltx23/bin/python. Pinning it here as well made the
+# $SGLANG_RUNTIME_ROOT/.conda/ltx23/bin/python. Pinning it here as well made the
 # pair separable, and they came apart -- on a cluster whose checkout is at a
-# different path, overriding SOL_LTX_INFER_ROOT alone left the interpreter
+# different path, overriding SGLANG_RUNTIME_ROOT alone left the interpreter
 # pointing into the old root and the run died in 19s on a missing python.
-# Override SOL_LTX_INFER_ROOT alone; set PYTHON_BIN only to use an interpreter
+# Override SGLANG_RUNTIME_ROOT alone; set PYTHON_BIN only to use an interpreter
 # that is genuinely not the one inside that checkout.
 HF_HUB_OFFLINE = "1"
 CUDA_VISIBLE_DEVICES = "0"
@@ -70,7 +70,7 @@ TWO_STAGE_DEVICE_MODE = "resident"
 
 # Per-seam wiring status. Config dry-run checks use manifest-declared
 # capabilities; real GPU usefulness still depends on the runtime consuming the
-# corresponding env/config/path in Sol-LTX-Infer.
+# corresponding env/config/path in the SGLang runtime.
 [seam_status]
 blocks = "wired"                 # LTX2TwoStageHQPipeline stage-1/stage-2 transformers
 kernel_fusion = "wired"          # SGLANG_LTX2_FUSED_* / COMPILE_* -> ltx2_*.py Triton kernels

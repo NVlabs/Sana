@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-08-22",
+  "component": "minimax_h3_super_acceleration_v2",
+  "profile": "MiniMax-H3 Stage1 direct tensor handoff to LTX-2.5 Stage2 on GB200",
+  "release_status": "integration_candidate_smoke_validated_pending_formal_and_license_gate",
+  "target_repository_head_at_import": "5fe5febdf0f59fee1c0b44a5ce6665df0dabd247",
+  "origin": {
+    "experiment_repository_head": "42edc9416fcd55da3179eac4afcff74cf97410d9",
+    "head_reproduces_imported_sources": false,
+    "note": "The formal integration and final Refiner files were untracked, and sglang_h3_hybrid_overlay.py contained an uncommitted TP1 fused-FFN LoRA fix. The file hashes below, not the origin commit alone, identify the imported source."
+  },
+  "benchmark_binding": {
+    "slurm_job_id": 6304303,
+    "hot_samples": 20,
+    "formal_source_identity": "historical hashes in BENCHMARK_REFERENCE.json",
+    "current_integration_matches_formal_bit_for_bit": false,
+    "current_integration_gpu_revalidated": false,
+    "current_integration_gpu_smoke_validated": true,
+    "note": "The current integration preserves the measured v2 algorithm but adds path, cache-lock, first-frame identity, and content-addressed container hardening after the formal run. One-hot-per-pair smoke job 6449281 passed; the 20-hot formal has not been rerun."
+  },
+  "cpu_validation": {
+    "slurm_job_id": 16368855,
+    "status": "COMPLETED_0_0",
+    "tests_run": 10,
+    "tests_passed": 10,
+    "scope": [
+      "bash_syntax_for_launcher_and_workers",
+      "fixed_profile_and_topology_contract",
+      "content_addressed_stage1_container_contract",
+      "first_frame_SHA256_handshake",
+      "Stage2_Sol_layer_policy",
+      "authenticated_tensor_protocol"
+    ],
+    "gpu_coverage": false
+  },
+  "gpu_smoke_validation": {
+    "slurm_job_id": 6449281,
+    "run_date": "2026-08-22",
+    "status": "COMPLETED_0_0",
+    "elapsed": "00:17:31",
+    "scope": "one_hot_request_on_each_of_two_independent_H3_to_LTX_pairs",
+    "hot_samples_total": 2,
+    "e2e_values_seconds": [6.675905103, 6.701609667],
+    "e2e_median_seconds": 6.688757385,
+    "stage1_wall_median_seconds": 4.2576221645,
+    "stage2_service_median_seconds": 2.4162235,
+    "per_request_technique_contract": {
+      "dense_calls": 3,
+      "sol_calls": 141,
+      "actual_kernel_calls": 141,
+      "selected_backend": "cute_sm100"
+    },
+    "media_contract": "two_nonempty_verified_H264_1344x768_121f_24fps_outputs_with_original_H3_audio_mux",
+    "container_reference": "docker://lmsysorg/sglang@sha256:71145ca99ebc458265e93cebd00b52bb9f419f052e7d0de09a54fa0f72fed888",
+    "sol_backend_sha256": "a4602c4b48e805babd0a3095e514ba28298f83b73d81cf286a61bd803c5b7825",
+    "post_smoke_source_delta": "The launcher default and two Stage-1 provenance constants were changed from the deleted tag to the exact digest exercised through H3_SUPER_SGLANG_IMAGE by this job; runtime code and container bytes are unchanged.",
+    "durable_evidence": "/home/yitongl/slurm_logs/h3-super-smoke-6449281.out",
+    "ephemeral_outputs_retained": false,
+    "formal_performance_or_quality_gate": false
+  },
+  "contract_lineage": {
+    "frozen_document": {
+      "name": "FINAL_REFINER_HANDOFF.md",
+      "sha256": "379d9880c87dd9311807211618f137fbf31f46006e247d70616a39b10d14d529",
+      "document_date": "2026-08-17",
+      "bundled": false
+    },
+    "intentional_v2_semantic_deltas": [
+      {
+        "field": "stage2_input_transport",
+        "frozen": "existing_H3_MP4_decode",
+        "v2": "direct_contiguous_BF16_video_and_FP32_PCM_with_destination_CUDA_ack"
+      },
+      {
+        "field": "input_video_vae_temporal_tile",
+        "frozen": "default",
+        "v2": "full_121_frames_in_one_128_frame_tile"
+      }
+    ],
+    "unchanged_core_stage2_contract": [
+      "original_LTX25_Video_VAE_input_encoder",
+      "official_learned_x2_latent_upsampler",
+      "original_Video_VAE_high_resolution_first_frame_condition",
+      "original_Audio_VAE_joint_audio_video_denoising",
+      "three_updates_sigmas_0.909375_0.725_0.421875_0",
+      "layer0_dense_layers1_through_47_strict_Sol",
+      "three_dense_141_Sol_141_actual_kernel_calls_per_request",
+      "compile_only_48_transformer_blocks",
+      "TAEHV_output_decode",
+      "original_H3_audio_mux"
+    ],
+    "stage2_hash_drift": [
+      {
+        "path": "stage2/refiner_encoder_ablation_single_gpu.py",
+        "frozen_sha256": "aeaa4a93ffa423d009e7ad26fd4dec407476f838d573e1bb5c717522308eb54c",
+        "formal_v2_sha256": "aeaa4a93ffa423d009e7ad26fd4dec407476f838d573e1bb5c717522308eb54c",
+        "integration_sha256": "aeaa4a93ffa423d009e7ad26fd4dec407476f838d573e1bb5c717522308eb54c",
+        "status": "unchanged"
+      },
+      {
+        "path": "stage2/official_compat_h3_refiner_diagnostic.py",
+        "frozen_sha256": "69c3f1c1b45386a00eaea71ac03b57aeea1d1a2d8dc8b28bdc7b9e699ef2a591",
+        "formal_v2_sha256": "226dfcaab2d3fd90a2f3034a256be2933c51deb157e1c5db964546a45cebbbf9",
+        "integration_sha256": "2498594958bf67d5600ff5df6fe709898100b05259f62ea4a14f32681232f660",
+        "status": "v2_algorithm_drift_then_integration_asset_safety_hardening"
+      },
+      {
+        "path": "stage2/sol_attention.py",
+        "frozen_sha256": "e9cebc23f2eba37efa157aa074dc6d7b2453193bd9053980ad2a8744a3d78aae",
+        "formal_v2_sha256": "e9cebc23f2eba37efa157aa074dc6d7b2453193bd9053980ad2a8744a3d78aae",
+        "integration_sha256": "e9cebc23f2eba37efa157aa074dc6d7b2453193bd9053980ad2a8744a3d78aae",
+        "status": "unchanged"
+      }
+    ]
+  },
+  "integration_hardening_after_job_6304303": [
+    {
+      "path": "run_gb200.sh",
+      "formal_sha256": "8120d7f22bfbe8e3c9c1caedea0090cf9c3549ac7adcaf2bcb272de85dcaf757",
+      "integration_sha256": "bc63fd54891785da776dac3e4cb2d649076bde0e996baed5e8339cb9101f6178",
+      "change": "repo_relative_layout_sbatch_spool_safe_root_site_parameterization_isolated_runtime_mounts_opt_in_tmp_cleanup_and_content_addressed_container"
+    },
+    {
+      "path": "stage1/stage1_producer.py",
+      "formal_sha256": "94d5898f8ed17bfa4b73ebcec8941313e35730d73ebe7e9c3cf85fc922fa154c",
+      "integration_sha256": "f1510e770099a5129211e642456313556418ea4feaf9c1dffab6f3d5da00b44a",
+      "change": "first_frame_SHA256_handshake"
+    },
+    {
+      "path": "stage1/sglang_firstframe_single_gpu.py",
+      "pre_digest_pin_sha256": "f533de419f6a7e9e1724d3963230989dc407c01b7ae4b4bfc6593f9db79110cc",
+      "integration_sha256": "3074baa4ac7a169af38795b0638944c53944e157f5c0aa69543c6ef6ea889c9d",
+      "change": "provenance_default_pinned_to_the_content_addressed_container_used_by_GPU_smoke"
+    },
+    {
+      "path": "stage1/sglang_stage1_grid_single_gpu.py",
+      "pre_digest_pin_sha256": "18ad23f504f8d9b29df9e19994198d0a2f28feec7e0eda7be24a01837e96295d",
+      "integration_sha256": "e99494fed0c8dbfe7f5a0011a5a312d0c82b7cb6cbbda2c2d2d82d9dac7222de",
+      "change": "provenance_default_pinned_to_the_content_addressed_container_used_by_GPU_smoke"
+    },
+    {
+      "path": "stage1/run_worker.sh",
+      "formal_sha256": "6dd27ba3d627aa141980216a7c330d5d37a15ce163ba75a56cde3b9baae63d41",
+      "integration_sha256": "fda920b69a688e06d68dc28869b0210170b457ed12ab7394c0f3728889f49e13",
+      "change": "repo_relative_paths_and_compile_cache_lock"
+    },
+    {
+      "path": "stage2/official_compat_h3_refiner_diagnostic.py",
+      "formal_sha256": "226dfcaab2d3fd90a2f3034a256be2933c51deb157e1c5db964546a45cebbbf9",
+      "integration_sha256": "2498594958bf67d5600ff5df6fe709898100b05259f62ea4a14f32681232f660",
+      "change": "safe_relative_first_frame_asset_resolution_and_SHA256_validation"
+    },
+    {
+      "path": "stage2/stage2_server.py",
+      "formal_sha256": "1dd02c87c4d170165a60e48c8f910fddce678d5e3348e88a550627f3ca8939ce",
+      "integration_sha256": "8b1e38394e4c293d385f38fd3c7df70aee61c41fdcc27d1eab1f4a9775decdad",
+      "change": "control_request_first_frame_SHA256_comparison"
+    },
+    {
+      "path": "stage2/run_worker.sh",
+      "formal_sha256": "fd14f490d09acc41e89f90a71222e86b08b79ab594959d4853e0228bec274db2",
+      "integration_sha256": "9e2b669c489adadcc47920164034bac194eba045f8c0d64645f7ea1b8f805c42",
+      "change": "repo_owned_import_closure_configurable_python_and_compile_cache_lock"
+    },
+    {
+      "path": "tests/test_handoff_protocol.py",
+      "formal_sha256": "e9dcb08eb886242b1c133f80c396bc2f5fd059b0857dc0d18dc54c259cbe3c39",
+      "integration_sha256": "65446399e5c5687e244ef5cdf2cd325ba52693970caffad99c9f90aa602fcd6d",
+      "change": "repo_owned_import_path"
+    },
+    {
+      "path": "assets/refiner_manifest.json",
+      "formal_sha256": "14d3b244f0dd6416af597ecbfcf9ed4896ef2b5ed81b57a21e6f54e4c9b1d0d5",
+      "integration_sha256": "559a96e5094ab8f86a9100612eb76f5338947045234b32bea54c017fdf2e0f8e",
+      "change": "safe_relative_asset_identity_and_hash_fields"
+    },
+    {
+      "path": "assets/talking8_fbcache49_5s.json",
+      "formal_sha256": "c8e2f6af019992f8a504fbe283f3d50f6cac3f3a91abe9f39a6885d6d1959f81",
+      "integration_sha256": "0893b2f332d370e9fb66c5670365fd53a2a6b2c2a53939671c3d3693bc383028",
+      "change": "package_owned_manifest_path_hardening"
+    }
+  ],
+  "source_files_sha256": {
+    "run_gb200.sh": "bc63fd54891785da776dac3e4cb2d649076bde0e996baed5e8339cb9101f6178",
+    "handoff_protocol.py": "83b412349137c855095b45ac5e11136c29fc0de5fc75ce2954364ff32fa1d4b6",
+    "summarize.py": "32b837d02a79e7e7a7f90f12f3ee5134b41627fcff856e031d5bdb803b5b2fbc",
+    "stage1/run_stage1_benchmark.py": "9b806cd5fe782affbefcb896d79eaf441ad3c4509bacf4ee0599adc3be0f29ba",
+    "stage1/sglang_firstframe_single_gpu.py": "3074baa4ac7a169af38795b0638944c53944e157f5c0aa69543c6ef6ea889c9d",
+    "stage1/sglang_h3_firstframe_lora_overlay.py": "1d33176128d3b081322f4f64976159ef81f2a0c66174a7e268d43435b9e7fd22",
+    "stage1/sglang_h3_hybrid_overlay.py": "38db3b345ffe6b25bf183d118a85243d388c70be77ad2711e8e92fb8f9c767f0",
+    "stage1/sglang_h3_lowres_sweep_overlay.py": "72ec7565df6c6aed21e91d1240c3a69c78bd5469470ce96813c5d67e73724424",
+    "stage1/sglang_h3_resolution_overlay.py": "1a48c23225fb67e9ba70e895a50af7987780e52cb49fd03d594adc1aeb0b563f",
+    "stage1/sglang_h3_single_gpu_compile_overlay.py": "9c6851bc219fb626a84fabe80ac9b694e6f0db160e19a5ad6b59950455d23d11",
+    "stage1/sglang_h3_stage1_cache_overlay.py": "2d1b9516ace13bb295234779b523bed71af4188211d990e934ce12f838104c8d",
+    "stage1/sglang_h3_stage1_grid_overlay.py": "51514682b7761b4ea0ae0af0cc1b0b1d3a197537c711554a33f0e77c04f3e174",
+    "stage1/sglang_stage1_grid_single_gpu.py": "e99494fed0c8dbfe7f5a0011a5a312d0c82b7cb6cbbda2c2d2d82d9dac7222de",
+    "stage1/stage1_producer.py": "f1510e770099a5129211e642456313556418ea4feaf9c1dffab6f3d5da00b44a",
+    "stage1/taeh3_decoder_telemetry_overlay.py": "f357e921b821ae54bb574ccd5d6d490c115a2ab3f89fbc6740e3c9ac09a13917",
+    "stage1/run_worker.sh": "fda920b69a688e06d68dc28869b0210170b457ed12ab7394c0f3728889f49e13",
+    "stage2/official_compat_h3_refiner_diagnostic.py": "2498594958bf67d5600ff5df6fe709898100b05259f62ea4a14f32681232f660",
+    "stage2/refiner_encoder_ablation_single_gpu.py": "aeaa4a93ffa423d009e7ad26fd4dec407476f838d573e1bb5c717522308eb54c",
+    "stage2/sol_attention.py": "e9cebc23f2eba37efa157aa074dc6d7b2453193bd9053980ad2a8744a3d78aae",
+    "stage2/stage2_server.py": "8b1e38394e4c293d385f38fd3c7df70aee61c41fdcc27d1eab1f4a9775decdad",
+    "stage2/run_worker.sh": "9e2b669c489adadcc47920164034bac194eba045f8c0d64645f7ea1b8f805c42",
+    "tests/run_cpu_checks.sh": "9342552b76eba4777b5b91635cfafd6b936bd79c7c31190fa9ac4ef8686fcd10",
+    "tests/test_contract.py": "467c273b6a1c3fdb5072463813bffc7234b492e5c1575710fa548a0ef029878a",
+    "tests/test_handoff_protocol.py": "65446399e5c5687e244ef5cdf2cd325ba52693970caffad99c9f90aa602fcd6d",
+    "assets/refiner_manifest.json": "559a96e5094ab8f86a9100612eb76f5338947045234b32bea54c017fdf2e0f8e",
+    "assets/talking8_fbcache49_5s.json": "0893b2f332d370e9fb66c5670365fd53a2a6b2c2a53939671c3d3693bc383028",
+    "vendor/taeh3/taehv.py": "28b452ad74f924d2d0922d6b3e805dfa7f504c523ced240435fefad5f6f650a7",
+    "vendor/taeh3/LICENSE": "532f9e394518ffddecd294a517d5b41d79d3d3866c3fb95a6cb0e8bcc02370bf"
+  },
+  "runtime_dependencies": {
+    "stage1": {
+      "sglang_repository": "https://github.com/sgl-project/sglang",
+      "sglang_commit": "12eadf86f12aec2e6f81a6e38b61b964a4c6b529",
+      "container_tag": "docker://lmsysorg/sglang:nightly-dev-cu13-20260803-12eadf86",
+      "container_digest": "sha256:71145ca99ebc458265e93cebd00b52bb9f419f052e7d0de09a54fa0f72fed888",
+      "default_container_reference": "docker://lmsysorg/sglang@sha256:71145ca99ebc458265e93cebd00b52bb9f419f052e7d0de09a54fa0f72fed888",
+      "pinned_minimax_model_module_sha256": "5f87319969c446685ee93d422fc34a7c040defb238eff2274d664f2f8310e997",
+      "pinned_decoding_module_sha256": "5e2cf87da11e0c744d6c7703d8151abd7da7937e1ad67d576fdbf6c678380954",
+      "pinned_gpu_worker_module_sha256": "f103c0861a11a36233e8ed71d6aeffa76635882bb5fb0a4fbce2d74fe1eb3f6b"
+    },
+    "stage2": {
+      "ltx_source_snapshot": "models/ltx25/GB200/SOURCE_SNAPSHOT.json",
+      "ltx_source_snapshot_sha256": "6301ffec8339084af7a17ddcb6ad8e405e95abd96b425c97fc4764e0fdd87f66",
+      "ltx_upstream_commit": "7954dcb0d986bdc36ef272564a9789ade07fcc65",
+      "ltx_optimized_commit": "ccedf8470c224181c65d146b66928d22bac04b22",
+      "python": "3.13.11",
+      "torch": "2.11.0+cu130",
+      "triton": "3.6.0"
+    },
+    "sol_attention_backend": {
+      "path": "techniques/sparse_backends/sol_attn_backend.py",
+      "benchmark_sha256": "a4602c4b48e805babd0a3095e514ba28298f83b73d81cf286a61bd803c5b7825",
+      "benchmark_last_file_commit": "7a99544eb48bb88e494344a28d006235d8601a18",
+      "integration_checkout_observed_sha256": "7309476f3eb6d08a8ab6aab0aa4350fe55ec9e2876770b69a4c195df2a29aa42",
+      "gpu_smoke_checkout_sha256": "a4602c4b48e805babd0a3095e514ba28298f83b73d81cf286a61bd803c5b7825",
+      "publish_target_origin_sol_engine_sha256": "fff7b6ae293fcc7642e21beb7adedd4793dc0a3deeab9da0980e821f5ad04483",
+      "publish_target_assessment": "PR_463_adds_MPS_dispatch_and_formatting; reviewed_diff_leaves_the_CUDA_Sol_execution_path_semantically_unchanged_but_the_new_file_hash_has_not_run_this_GPU_smoke",
+      "status": "benchmark_backend_passed_hardened_GPU_smoke_publish_target_CUDA_diff_reviewed_not_exact_hash_revalidated_local_checkout_drift_remains"
+    },
+    "stage2_taehv": {
+      "source_path": "models/ltx2.5-refiner/GB200/vendor/taehv/taehv.py",
+      "source_commit": "32ac0146b11007cda5a57b60a3b35653361fb8a4",
+      "source_sha256": "607c2a578bc2684e6cd21e96f8c1d024b1c32912e6f58c724f14131a3d4a2773",
+      "license": "MIT"
+    }
+  },
+  "reference_only": [
+    {
+      "name": "MiniMax_H3_weights",
+      "repository": "MiniMaxAI/MiniMax-H3",
+      "runtime_requested_revision": "bfc8ed0353f5a9733be73e6b2c98ec0948195b86",
+      "snapshot_used_by_formal_run": "6818f6c32d12b210915e44ad56a4228c2608f160",
+      "bundled": false
+    },
+    {
+      "name": "LightX2V_MiniMax_H3_four_step_LoRA",
+      "repository": "lightx2v/Minimax-h3-Turbo",
+      "revision": "050494d5fe05bd1b1140b8565ea51dc33a5085a5",
+      "filename": "minimax_h3_fl2v_turbo_4step_v0.1.safetensors",
+      "expected_bytes": 1383677888,
+      "bundled": false
+    },
+    {
+      "name": "Stage1_TAEH3_checkpoint",
+      "filename": "taeh3.pth",
+      "sha256": "af92965c2d7986a89a757e7cccd26f9eeeff0c3f0d5495eb168aeb2d6d9be9ba",
+      "bundled": false
+    },
+    {
+      "name": "LTX25_weight_set",
+      "files": [
+        "diffusion_models/ltx-2.5-22b-dev-transformer-bf16.safetensors",
+        "text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors",
+        "vae/ltx-2.5-video-vae-bf16.safetensors",
+        "vae/ltx-2.5-audio-vae-bf16.safetensors",
+        "latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+        "loras/ltx-2.5-22b-distilled-lora-450-bf16.safetensors"
+      ],
+      "bundled": false
+    },
+    {
+      "name": "Stage2_LTX_TAEHV_checkpoint",
+      "filename": "taehv/taeltx2_3_wide.pth",
+      "sha256": "007788e6b9cb7f77e8589ae30ba7456b119d38b0d017e1d349c1c1d11e3d6339",
+      "bundled": false
+    },
+    {
+      "name": "benchmark_first_frame",
+      "filename": "03-bamboo-forest-wuxia-pair-en.jpg",
+      "sha256": "0f41282b5101d1be9ef51ee2f0bb13d2c599f0a7139b7406d6534b678387f491",
+      "bundled": false
+    },
+    {
+      "name": "runtime_generated_state",
+      "kinds": [
+        "Python_environment",
+        "container_layers",
+        "HuggingFace_cache",
+        "TorchInductor_cache",
+        "Triton_cache",
+        "CUDA_cache",
+        "CuTe_DSL_cache",
+        "benchmark_outputs_and_logs"
+      ],
+      "bundled": false
+    }
+  ],
+  "release_gates": [
+    "confirm_license_provenance_for_previously_untracked_integration_sources",
+    "review_LTX2_Community_License_for_target_distribution",
+    "record_an_immutable_SGLang_container_digest",
+    "freeze_or_restore_the_benchmark_Sol_backend_hash",
+    "rerun_GPU_smoke_and_formal_after_integration_hardening",
+    "run_a_matched_same_profile_baseline_before_any_speedup_claim",
+    "run_a_perceptual_quality_gate_before_any_quality_pass_claim"
+  ]
+}

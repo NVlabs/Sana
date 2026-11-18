@@ -99,7 +99,8 @@ def test_empty_mask_preserves_legacy_output_and_mutated_mask_uses_current_values
     kernel,
 ):
     q, k, v = inputs()
-    mask = torch.zeros(9, device="cuda", dtype=torch.bool)
+    mask = torch.zeros(10, device="cuda", dtype=torch.bool)[1:]
+    assert mask.is_contiguous() and mask.data_ptr() % 16 != 0
     legacy = kernel(q, k, v, tau=1e6, sink_start=128, sink_tokens=64)
     actual = kernel(
         q, k, v, tau=1e6, sink_start=128, sink_tokens=64, exact_block_mask=mask

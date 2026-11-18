@@ -1,0 +1,98 @@
+[project]
+name = "ltx-trainer"
+version = "0.1.0"
+description = "LTX-2 training, democratized."
+readme = "README.md"
+authors = [
+    { name = "Matan Ben-Yosef", email = "mbyosef@lightricks.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "ltx-core",
+    "accelerate>=1.2.1",
+    "av>=14.2.1",
+    "bitsandbytes >=0.45.2; sys_platform == 'linux'",
+    "google-genai>=2.0",
+    "huggingface-hub[hf-xet]>=0.31.4",
+    "imageio>=2.37.0",
+    "imageio-ffmpeg>=0.6.0",
+    "openai>=2.0",
+    "opencv-python>=4.11.0.86",
+    "optimum-quanto>=0.2.6",
+    "pandas>=2.2.3",
+    "peft>=0.14.0",
+    "pillow-heif>=0.21.0",
+    "pydantic>=2.10.4",
+    "rich>=13.9.4",
+    "safetensors>=0.5.0",
+    "scenedetect>=0.6.5.2",
+    "sentencepiece>=0.2.0",
+    "soundfile>=0.12.1",
+    "torch>=2.6.0",
+    "torchaudio>=2.7.0",
+    # torchcodec must match the torch version (it ships a torch-ABI C++ extension and declares
+    # no torch pin of its own); the 0.9 line matches torch 2.9. torchaudio>=2.9 routes
+    # torchaudio.load() through torchcodec, so audio preprocessing needs it installed.
+    "torchcodec>=0.8.1,<0.10",
+    "torchvision>=0.21.0",
+    "typer>=0.15.1",
+    "wandb>=0.27.0",
+    "setuptools>=79.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.1",
+    "ruff>=0.8.6",
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+# Restrict isort first-party detection to src/ so stray dirs (e.g. wandb/ run output)
+# next to pyproject.toml don't get classified as first-party packages. See ruff#10519.
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # pyflakes
+    "W", # pycodestyle (warnings)
+    "I", # isort
+    "N", # pep8-naming
+    "ANN", # flake8-annotations
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "COM", # flake8-commas
+    "C4", # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "EXE", # flake8-executable
+    "PIE", # flake8-pie
+    "T20", # flake8-print
+    "PT", # flake8-pytest
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "PTH", # flake8--use-pathlib
+    "ERA", # flake8-eradicate
+    "RUF", # ruff specific rules
+    "PL", # pylint
+]
+ignore = [
+    "ANN002", # Missing type annotation for *args
+    "ANN003", # Missing type annotation for **kwargs
+    "ANN204", # Missing type annotation for special method
+    "COM812", # Missing trailing comma
+    "PTH123", # `open()` should be replaced by `Path.open()`
+    "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
+]
+[tool.ruff.lint.pylint]
+max-args = 10
+[tool.ruff.lint.isort]
+known-first-party = ["ltx_trainer", "ltx_core", "ltx_pipelines"]

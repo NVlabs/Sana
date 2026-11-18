@@ -101,9 +101,11 @@ def make_sol_attn_dispatch(
       captured inputs: text occupies rows 0-536, audio 537-950, video 951 onward, at both
       832x480 and 1344x768.
 
-    Step and block indices are recovered from the call count: each denoising step issues
-    `blocks_per_step` attention calls — two token-refiner blocks over the 951-row text stream
-    and then the 50 block-stack calls over the packed sequence.
+    Step and block indices are recovered from the sequence length: each denoising step opens
+    with the two token-refiner calls over the short text stream, then runs block-stack calls
+    over the packed (>951-row) sequence. A fixed `blocks_per_step` call count is not used,
+    because FirstBlockCache skips most block-stack calls on cached steps; the argument is
+    kept only for call-site compatibility.
     """
     from diffusers.models.transformers import transformer_minimax_h3 as h3
 
@@ -111,13 +113,23 @@ def make_sol_attn_dispatch(
     sink = dict(sink_tokens=H3_PREFIX_TOKENS, sink_start=0) if policy else {}
 
     dense = h3.dispatch_attention_fn
-    state = {"call": 0}
+    state = {"step": -1, "block": 0, "in_refiner": False}
 
     def dispatch(query, key, value, **kwargs):
-        index = state["call"]
-        state["call"] += 1
-        step, position = divmod(index, blocks_per_step)
-        block = position - 2                    # the two refiner blocks come first
+        # Step and block are recovered from the sequence length, not a fixed call count:
+        # FirstBlockCache skips most block-stack calls on cached steps, so a `divmod` over
+        # `blocks_per_step` drifts and eventually routes a short refiner call to Sol-Attn
+        # ("sink_tokens must be in [0, T]"). Refiner calls run over the <=951-row prefix
+        # stream; the first one of each run of refiner calls opens a new denoising step.
+        if query.shape[1] <= H3_PREFIX_TOKENS:
+            if not state["in_refiner"]:
+                state["step"] += 1
+                state["block"] = 0
+                state["in_refiner"] = True
+            return dense(query, key, value, **kwargs)
+        state["in_refiner"] = False
+        step, block = state["step"], state["block"]
+        state["block"] += 1
 
         late = (
             num_steps is not None
@@ -137,7 +149,7 @@ def make_sol_attn_dispatch(
         return sol_attn(query.contiguous(), key.contiguous(), value.contiguous(),
                         tau=tau, **sink)
 
-    dispatch.reset = lambda: state.update(call=0)
+    dispatch.reset = lambda: state.update(step=-1, block=0, in_refiner=False)
     return dispatch
 
 

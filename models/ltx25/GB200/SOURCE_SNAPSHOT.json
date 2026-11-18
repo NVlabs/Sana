@@ -1,0 +1,31 @@
+{
+  "component": "ltx_src",
+  "upstream_repo": "https://github.com/Lightricks/LTX-2.git",
+  "upstream_release": "v1.2.0",
+  "upstream_commit": "7954dcb0d986bdc36ef272564a9789ade07fcc65",
+  "optimized_commit": "ccedf8470c224181c65d146b66928d22bac04b22",
+  "vendored_paths": [
+    "ltx_core",
+    "ltx_pipelines"
+  ],
+  "local_correctness_fixes": [
+    "Explicitly mark Guided/FactoryGuided denoisers as Stage 1 and SimpleDenoiser as Stage 2",
+    "Bypass FBCache whenever the active denoising stage is not Stage 1"
+  ],
+  "excluded_experiments": [
+    "sol_attention.py",
+    "LTX_SOL_STAGE1 integration",
+    "NVFP4 and block-graph experimental arms"
+  ],
+  "environment": {
+    "default_python": ".venv/bin/python",
+    "lock": "models/ltx25/GB200/environment/LTX-2/uv.lock",
+    "workspace": "models/ltx25/GB200/environment/LTX-2",
+    "external_python_override": "PYTHON_BIN"
+  },
+  "python": "3.13.11",
+  "torch": "2.11.0+cu130",
+  "triton": "3.6.0",
+  "hardware": "4x NVIDIA GB200, compute capability 10.0",
+  "weights": "/lustre/fsw/portfolios/nvr/users/yitongl/pretrained_models/LTX-2.5-public"
+}

@@ -110,9 +110,16 @@ def _run_request(
 
 
 def main() -> int:
-    model_path = os.environ.get("H3_MODEL_PATH")
-    if not model_path:
-        raise ValueError("H3_MODEL_PATH must point to the MiniMax-H3 FL2VA directory")
+    model_path = os.environ.get("H3_MODEL_PATH", "MiniMaxAI/MiniMax-H3")
+    # The FL2VA weights sit in a subfolder of the MiniMax-H3 repository, so the
+    # subfolder depends on whether H3_MODEL_PATH already points inside it. Same
+    # rule as the H100 and A100 cells; this one hardcoded ".", which meant a
+    # repository id resolved to the repo root and the loader stopped on
+    # "does not contain model_index.json" -- only a path that already ended in
+    # FL2VA worked, and nothing said so outside the README.
+    model_subfolder = os.environ.get("H3_MODEL_SUBFOLDER")
+    if not model_subfolder:
+        model_subfolder = "." if Path(model_path).name.lower() == "fl2va" else "FL2VA"
 
     output_dir = Path(os.environ.get("OUT_DIR", str(RUNTIME_ROOT / "outputs")))
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -136,7 +143,7 @@ def main() -> int:
     generator = DiffGenerator.from_pretrained(
         local_mode=True,
         model_path=model_path,
-        model_subfolder=".",
+        model_subfolder=model_subfolder,
         num_gpus=1,
         tp_size=1,
         ulysses_degree=1,

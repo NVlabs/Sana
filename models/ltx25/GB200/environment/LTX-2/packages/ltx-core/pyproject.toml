@@ -1,0 +1,45 @@
+[project]
+name = "ltx-core"
+version = "0.1.0"
+description = "Core implementation of Lightricks' LTX-2 model"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch~=2.7",
+    "torchaudio",
+    "einops",
+    "numpy",
+    "transformers>=5.8.0",
+    "safetensors",
+    "accelerate",
+    "scipy>=1.14",
+    # Apple Silicon only: Apple's fused MPSGraph SDPA, the AUTOMATIC attention
+    # backend on MPS. The marker installs it on Apple Silicon and prunes it
+    # everywhere else (Linux/CUDA), so it is a hard requirement exactly where it
+    # is the only viable attention kernel. Requires torch>=2.11 (within the
+    # torch~=2.7 floor); the resolver forks torch to >=2.11 on macOS.
+    "mps-sdpa>=0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+[project.optional-dependencies]
+natten = [
+    "natten==0.21.5+torch290cu128; sys_platform == 'linux' and platform_machine == 'x86_64' and python_full_version < '3.13'",
+]
+
+[tool.uv.sources]
+natten = { index = "natten" }
+
+[[tool.uv.index]]
+name = "natten"
+url = "https://whl.natten.org"
+format = "flat"
+explicit = true
+
+[build-system]
+requires = ["uv_build>=0.9.8,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "scikit-image>=0.25.2",
+]

@@ -7,7 +7,7 @@ That is the whole interface. There is no scheduler in this file: it runs the arm
 here, in this process, on whatever machine you are on. To run it under Slurm,
 put this exact command inside your own sbatch script -- job scripts are not
 tracked here because their account/partition/QoS are site-specific; see
-docs/simple-launch.md for the four-line wrapper. Nothing here reads SLURM_*, and
+site_docs/installation.md for the four-line wrapper. Nothing here reads SLURM_*, and
 nothing here calls srun/sbatch/squeue, so the same command is correct on a login
 node inside an salloc, on a bare workstation, and inside a batch job.
 
@@ -122,17 +122,39 @@ def load_config(path: Path) -> dict[str, object]:
         return tomllib.loads(text)
     except ModuleNotFoundError:
         pass
-    # Fallback for pythons without tomllib. The flat format makes this honest:
-    # there are no tables to track, so a line-splitter is a complete parser.
+    try:
+        # draco and cs ship python 3.9. A config manifest has nested tables the
+        # fallback below cannot represent, so the backport comes first --
+        # launch_config and collect_run already prefer it for the same reason.
+        import tomli
+
+        return tomli.loads(text)
+    except ModuleNotFoundError:
+        pass
+    # Last resort. The flat format makes this honest: there are no tables to
+    # track, so a line-splitter is a complete parser -- of a flat config. It is
+    # not one for a manifest, which is what the guard below is for.
     out: dict[str, object] = {}
     for raw in text.splitlines():
         line = raw.split("#", 1)[0].strip() if not raw.strip().startswith("#") else ""
-        if not line or "=" not in line:
+        if not line:
             continue
+        # Checked before the '=' filter, not after it. After was unreachable: a
+        # header like [env] contains no '=', so the `continue` fired first and
+        # the header was skipped in silence. Every key under it was then
+        # flattened into the top level, prepare_run merged an [env] it read as
+        # empty, and the run proceeded with the model profile's defaults alone.
+        # On draco that dropped H3_CONTAINER_RUNTIME = "pyxis" from an A100
+        # config, so the job never entered its container and died on `No module
+        # named sglang` -- while manifest.resolved.toml, written from a copy
+        # parsed properly, showed the value present the whole time.
         if line.startswith("["):
             raise SystemExit(
-                f"{path}: [{line}] -- this launcher takes flat configs only, no tables"
+                f"{path}: {line} -- this parser reads flat configs only. To read "
+                "a config manifest on python < 3.11, install the tomli backport."
             )
+        if "=" not in line:
+            continue
         key, value = (part.strip() for part in line.split("=", 1))
         out[key] = value.strip('"').strip("'")
     return out
@@ -223,7 +245,7 @@ def main() -> int:
             launch_args.mode = "dry-run"
             # Only [runtime].root, never submodule: root is repo-relative by
             # contract, while submodule may name an external checkout
-            # (config/cosmos3/sglang_baseline.toml points at Sol-LTX-Infer),
+            # (config/cosmos3/sglang_baseline.toml points at the SGLang runtime),
             # which is machine-specific and belongs in the warn bucket.
             root = cfg.get("runtime", {}).get("root") if isinstance(cfg.get("runtime"), dict) else None
             if root and not (REPO / str(root)).is_dir():

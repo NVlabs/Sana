@@ -1,0 +1,37 @@
+{
+  "target_repository": "https://github.com/NVlabs/Sana",
+  "target_branch": "sol-engine",
+  "base_commit": "781e8341fb3b29d3aea5d50265772e9619340b66",
+  "sol_h3_runtime": "../Sol-H3/h3_runtime at base_commit (sparse_attention, fusions, fusion_install, sol_residual, vae_parallel, ulysses, relayout, comm_quant, encoding)",
+  "checkpoint": {
+    "repository": "https://huggingface.co/VideoRebirthAI/hyperflow-h3-flash",
+    "repo_id": "VideoRebirthAI/hyperflow-h3-flash",
+    "revision": "9e9ed14b8be4b751d7517b8ca58dd199d509720c",
+    "partitions": {"t2v": "fl2va_int8_convrot", "ref2va": "ref2va_int8_convrot"},
+    "license": "MiniMax H3 Community License Agreement (weights); Apache-2.0 (remote code)",
+    "included": false,
+    "remote_code_sha256": {
+      "hyperflow_h3_flash_transformer.py": "e03d07005cacd8d662625678aeadd85746ed301b5354ca92b40d0d7aa9e7d8d8",
+      "hyperflow_h3_flash_int8.py": "ad4ca921ebdc71d54780e8f36e6a4a0ddbf29e415b037a828141ea955e1cc049"
+    },
+    "weights_sha256": {
+      "fl2va_int8_convrot/diffusion_pytorch_model-00001-of-00003.safetensors": "175790b38e171f1b0027b6b7a5cbb9a946a9e98e9a6e9e0f897da681be9e0fa2",
+      "fl2va_int8_convrot/diffusion_pytorch_model-00002-of-00003.safetensors": "47853b57cfc421245d4fa365dafaab474b113c7144a0cef5855849ed4a73d142",
+      "fl2va_int8_convrot/diffusion_pytorch_model-00003-of-00003.safetensors": "b5f6516bb503b5ecc64f507037b341de7de42c792904d9f977e3c9c49a11d1c1",
+      "ref2va_int8_convrot/diffusion_pytorch_model-00001-of-00004.safetensors": "7630fd9f5d2002a9fac4748190d2b865dfad4b715fc973da974970db8b9ca7a9",
+      "ref2va_int8_convrot/diffusion_pytorch_model-00002-of-00004.safetensors": "6f26d16bae5a7f5a05121e0e4360f95cf9a0163c18dc54e79fc42cdb89afc033",
+      "ref2va_int8_convrot/diffusion_pytorch_model-00003-of-00004.safetensors": "e24ef706ac68eb76b1269ce0051d2b604ce23e8125d00d8c63ed64a5feb75b3e",
+      "ref2va_int8_convrot/diffusion_pytorch_model-00004-of-00004.safetensors": "54b1d4cc02696c749aaa46bdf506675b10c79904019be522179ddd65b2a0f9ba"
+    },
+    "code_source": "https://github.com/Video-Rebirth/hyperflow-h3-flash (Apache-2.0; not vendored)"
+  },
+  "base_model": {
+    "repo_id": "MiniMaxAI/MiniMax-H3",
+    "revision": "6818f6c32d12b210915e44ad56a4228c2608f160",
+    "license": "MiniMax H3 Community License Agreement"
+  },
+  "diffusers_revision": "abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc",
+  "measured_hardware": "NVIDIA GB200 (1, 4, 8 GPUs)",
+  "measurement_date": "2026-11-05",
+  "validation_status": "CPU tests pass; GPU re-validation on the pinned checkpoint revision in progress"
+}

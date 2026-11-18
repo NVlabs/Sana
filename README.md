@@ -3,10 +3,7 @@
 </p>
 
 <h3 align="center">
-  Accelerated video-diffusion inference —
-  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/sana/">SANA-Video</a> ·
-  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/cosmos3/">Cosmos3-Super</a> ·
-  <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/pipelines/ltx/">LTX-2.3</a>
+  Accelerated video-diffusion inference
 </h3>
 
 <h3 align="center">
@@ -18,6 +15,10 @@
 
 <p align="center">
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/"><img src="https://img.shields.io/badge/🏠_Homepage-Sol--Engine-76b900?style=flat-square" alt="Homepage"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/H3/"><img src="https://img.shields.io/badge/MiniMax--H3-Project_Page-76b900?style=flat-square" alt="MiniMax H3"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/"><img src="https://img.shields.io/badge/Sol--H3-Project_Page-76b900?style=flat-square" alt="Sol-H3"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/"><img src="https://img.shields.io/badge/Sol--H3--Spark-Project_Page-76b900?style=flat-square" alt="Sol-H3-Spark"/></a>
+  <a href="https://nvlabs.github.io/Sana/Sol-Engine/LTX25/"><img src="https://img.shields.io/badge/LTX--2.5-Project_Page-76b900?style=flat-square" alt="LTX-2.5"/></a>
   <a href="https://arxiv.org/abs/2606.23743"><img src="https://img.shields.io/badge/📄_arXiv-2606.23743-b31b1b?style=flat-square" alt="arXiv"/></a>
   <a href="https://nvlabs.github.io/Sana/Sol-Engine/docs/"><img src="https://img.shields.io/badge/📖_Docs-github.io-blue?style=flat-square" alt="Docs"/></a>
   <a href="#-license"><img src="https://img.shields.io/badge/License-Apache_2.0-green?style=flat-square" alt="License"/></a>
@@ -27,7 +28,7 @@
   Agent-native workflow · Full-stack acceleration techniques · A wide range of video generation models
 </h4>
 
----
+______________________________________________________________________
 
 **Sol-Engine** is an efficiency-oriented inference codebase for high-resolution video
 diffusion, built on [SGLang](https://github.com/sgl-project/sglang)'s `multimodal_gen`
@@ -39,17 +40,26 @@ support a wider range of models.
 
 ## 📰 News
 
-- **[2026/08/09]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on H100 and A100** [[Code](models/minimax_h3/)] — reaches **3.56×** end-to-end on 4×H100 and **3.55×** on 4×A100.
-- **[2026/08/06]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB10 and RTX 5090** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)] — reaches **3.92×** end-to-end on DGX Spark (GB10) and **4.52×** on RTX 5090.
-- **[2026/08/03]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB200** [[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] — reaches **3.97×** end-to-end on 8×GB200.
-- **[2026/07/28]** 🔥 **Sol-Attn** [[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)] — sparse video attention lands with released SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
+- **[2026/11/06]** 🔥 **HyperFlow H3 Flash** \[[Code](models/minimax_h3/HyperFlow-Flash/) | [Weights](https://huggingface.co/VideoRebirthAI/hyperflow-h3-flash)\] — day-0 support for Video Rebirth's six-step MiniMax-H3 (T2VA and Ref2VA). At 1344×768 on 4× NVIDIA GB200, 5 / 10-second T2VA clips finish in **3.4 / 9.2 s** end-to-end, faster than real time.
+- **[2026/10/28]** 🔥 **Open-H3-Regenerate-2K** \[[Code](models/Open-H3-Regenerate-2K/) | [Weights](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K) | [Project Page](https://nvlabs.github.io/Sana/Open-H3-Regenerate-2K/)\] — an open replacement for the closed H3-Regenerate-2K API: a MiniMax-H3 768P draft is upscaled in latent space and regenerated at 2560×1440 in three refine steps. On one NVIDIA B200, latent upscale + refine + VAE decode of a 5-second clip takes **22.45 s**, **3.9×** faster than the standard Diffusers path.
+- **[2026/10/11]** 🔥 **StreamRender-H3** \[[Code](models/streamrender_h3/) | [Weights](https://huggingface.co/Efficient-Large-Model/StreamRender-H3) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/)\] — code and weights for interactive code-driven worlds with real-time streaming diffusion render, connecting a controllable game engine to a two-step streaming renderer and causal video decoder.
+- **[2026/09/28]** 🔥 **SoL-Refiner** \[[Code](models/sol-refiner/) | [Weights](https://huggingface.co/collections/Efficient-Large-Model/sol-refiner-6aba664fa5a41296a351abad) | [Project Page](https://nvlabs.github.io/Sana/Sol-Refiner/)\] — code and pretrained weights for one-step high-resolution video refinement across base generators, including a dedicated refiner for MiniMax-H3.
+- **[2026/09/27]** 🔥 **Sol-H3 on NVIDIA GeForce RTX 5090** \[[Code](models/minimax_h3/Sol-H3-RTX5090/)\] — single-GPU CPU offload for the two-stage pipeline, generating 1344×768 video with original H3 audio. One 5-second T2VA request completed in **39.80 s** end-to-end.
+- **[2026/09/11]** 🔥 **Sol-H3 on NVIDIA DGX Spark** \[[Code](models/minimax_h3/Sol-H3-Spark/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3-Spark/)\] — production two-stage MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On a single NVIDIA DGX Spark at 1344×768, T2V end-to-end latency is **56 s** for a 5-second output.
+- **[2026/09/08]** 🔥 **Sol-H3** \[[Code](models/minimax_h3/Sol-H3/) | [Project Page](https://nvlabs.github.io/Sana/Sol-Engine/Sol-H3/)\] — production MiniMax-H3 inference for T2V, I2V, and Ref2VA with synchronized audio. On 8× NVIDIA B300 at 1344×768, warm BF16-compute T2V latency is **1.653 / 3.732 / 6.612 s** for 5 / 10 / 15-second outputs; optional fused MXFP8 compute reaches **1.472 s** for the 5-second case.
+- **[2026/08/22]** 🔥 **MiniMax-H3 Super Acceleration** [[Code](models/minimax_h3/super_acceleration/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-Super-Acceleration/)] — combines a 4-step MiniMax-H3 draft with a 3-step LTX-2.5 refinement pass, reaching **22.2×** end-to-end speedup for 5-second 768p video and **27.7×** for 10-second video on one NVIDIA GB200.
+- **[2026/08/17]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GeForce RTX 4090** \[[Code](models/minimax_h3/)\] — reaches **4.44×** end-to-end on RTX 4090. Sol-Attn now includes an optimized SM89 CuTe DSL kernel for RTX 4090.
+- **[2026/08/13]** 🔥 **[LTX-2.5](https://github.com/Lightricks/LTX-2) across B200, GeForce RTX 5090, and DGX Spark** \[[Code](models/ltx25/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)\] — reaches up to **4.68×** multi-step pipeline speedup and **1.90×** distilled pipeline speedup.
+- **[2026/08/09]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on H100 and A100** \[[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-DataCenter/)\] — reaches **3.56×** end-to-end on 4×H100 and **3.55×** on 4×A100.
+- **[2026/08/06]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB10 and RTX 5090** \[[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-OnDevice/)\] — reaches **3.92×** end-to-end on DGX Spark (GB10) and **4.52×** on RTX 5090.
+- **[2026/08/03]** 🔥 **[MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) on GB200** \[[Code](models/minimax_h3/) | [Blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)\] — reaches **3.95×** end-to-end on 8×GB200.
+- **[2026/07/28]** 🔥 **Sol-Attn** \[[Paper](https://arxiv.org/abs/2607.24027) | [Code](techniques/sparse_backends/sol_attn/)\] — sparse video attention lands with released SM89/SM90/SM100/SM120 kernels for [**HunyuanVideo-13B**](models/hunyuan_video/) (**~5.03×**) and [**Wan2.1-T2V-14B**](models/wan21_t2v_14b/) (**~3.48×**) end-to-end.
 - **[2026/07/15]** 🔥 **Three new models** — [Wan2.2 TI2V-5B](scripts/wan5b/run_optimized.sh) **~2.89×**, [Wan2.2-A14B](scripts/wan14b/run_optimized.sh) **~2.17×**, and [LingBot-Video](scripts/lingbot/run_optimized.sh) **~2.60×** end-to-end.
 - **[2026/07/13]** ⚙️ **Agent workflow update** — refreshed the agent-native optimization workflow (a master orchestrator driving per-technique executor sub-agents with automatic quality gates). See the [agent-workflow](site_docs/agent-workflow.md) page.
 - **[2026/06]** 📖 **Docs release** — full documentation site live: [3 pipeline designs + 5 acceleration techniques](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
 - **[2026/06]** 🔥 **SANA-Video** — EasyCache + kernel fusion + torch.compile → **~2.77×** end-to-end.
 - **[2026/06]** 🔥 **LTX-2.3** — KWL fusion + cache + PISA + NVFP4 + token-prune → **~2.38×** end-to-end.
 - **[2026/06]** 🔥 **Cosmos3-Super** — TeaCache + step-selective NVFP4 → **~2.27×** end-to-end (4×GB200).
-
 
 ## ⚡ Models & speedups
 
@@ -65,11 +75,13 @@ support a wider range of models.
 | [[weight](https://huggingface.co/robbyant/lingbot-video-moe-30b-a3b) \| [code](models/lingbot_video/)] **LingBot-Video** | kernel fusion + refiner PISA + EasyCache | **~2.60×** |
 | [[weight](https://huggingface.co/hunyuanvideo-community/HunyuanVideo) \| [code](models/hunyuan_video/)] **HunyuanVideo-13B** | kernel fusion + TeaCache + [**Sol-Attn**](techniques/sparse_backends/) | **~5.03×** |
 | [[weight](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B-Diffusers) \| [code](models/wan21_t2v_14b/)] **Wan2.1-T2V-14B** | kernel fusion + EasyCache + [**Sol-Attn**](techniques/sparse_backends/) | **~3.48×** |
-| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **3.97×** |
+| [[weight](https://huggingface.co/Lightricks/LTX-2.5) \| [code](models/ltx25/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/LTX25/)] **LTX-2.5** | parallel optimization + FBCache + kernel fusion | **~4.68×** |
+| [[weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [code](models/minimax_h3/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3/)] **MiniMax-H3** | context parallel + kernel fusion + [**Sol-Attn**](techniques/sparse_backends/) + FirstBlockCache | **~3.95×** |
+| [[H3 weight](https://huggingface.co/MiniMaxAI/MiniMax-H3) \| [LTX-2.5 weight](https://huggingface.co/Lightricks/LTX-2.5-Pre-Trained) \| [code](models/minimax_h3/super_acceleration/) \| [blog](https://nvlabs.github.io/Sana/Sol-Engine/H3-Super-Acceleration/)] **MiniMax-H3 Super Acceleration** | 4-step H3 draft + 3-step LTX-2.5 refinement + [**Sol-Attn**](techniques/sparse_backends/) + kernel fusion | **22.2×** (5 s) / **27.7×** (10 s) |
 
 </div>
 
-<sub>GB200, warmup-excluded. SANA 480p (832×480, 81f, 50 steps); Cosmos3 1280×720, 189f, 35 steps; LTX 1088×1920, 241f. Wan-5B 704×1280, 121f, 50 steps (1 GPU); Wan-14B 720×1280, 81f, 40 steps (1 GPU); LingBot base 480×832→refiner 1088×1920, 121f (4 GPU CP4, same-topology baseline); HunyuanVideo 1280×720, 129f, 50 steps (1 GPU, hot-vs-hot); Wan2.1-14B 720×1280, 81f, 50 steps (1 GPU); MiniMax-H3 1344×768, 124f, 50 steps (8×GB200 Ulysses8, hot-path vs the same-topology 8-GPU diffusers baseline).</sub>
+<sub>Speedup is warm end-to-end latency versus the unoptimized same-topology baseline, with model, prompt/seed, resolution, step count, batch size, and GPU topology held fixed. SANA 480p (832×480, 81f, 50 steps); Cosmos3 1280×720, 189f, 35 steps; LTX-2.3 1088×1920, 241f. LTX-2.5 uses the 4×B200 BF16 multi-step pipeline at 1536×1024 for 5 s (30-step Stage 1 + 2-step Stage 2), comparing the official sequence-parallel baseline (39.23 s) with full-opt (8.38 s). Wan-5B 704×1280, 121f, 50 steps (1 GPU); Wan-14B 720×1280, 81f, 40 steps (1 GPU); LingBot base 480×832→refiner 1088×1920, 121f (4 GPU CP4); HunyuanVideo 1280×720, 129f, 50 steps (1 GPU); Wan2.1-14B 720×1280, 81f, 50 steps (1 GPU). MiniMax-H3 uses 8×GB200 at 1344×768, 124 frames, 50 steps, and batch 1, comparing the Diffusers baseline (27.205 s) with full-opt (6.883 s).</sub>
 
 ## 🧩 The five acceleration methods
 
@@ -106,10 +118,11 @@ into a model runtime through env-gated hooks and powers the optimization stacks 
 [**MiniMax-H3**](models/minimax_h3/). The HunyuanVideo and Wan2.1 stacks reach
 **~5.03×** and **~3.48×** end-to-end speedup, respectively.
 
-Backend selection is automatic: H100 (SM90), B200 (SM100), and RTX 5090
-(SM120) use their optimized CuTe DSL kernels when CuTe is installed. Older
-supported GPUs such as A100 (SM80) and RTX 4090 (SM89), or installations
-without CuTe DSL, use the portable Triton implementation. Model call sites do
+Backend selection is automatic: RTX 4090 (SM89), H100 (SM90), B200 (SM100),
+and RTX 5090 (SM120) use their optimized CuTe DSL kernels when CuTe is
+installed. Older supported GPUs such as A100 (SM80), or installations without
+CuTe DSL, use the portable Triton implementation. Apple Silicon uses the tiled
+Metal backend when `torch.mps.compile_shader` is available. Model call sites do
 not need architecture-specific changes. See the
 [Sol-Attn usage guide](techniques/sparse_backends/) for requirements and API
 details.
@@ -147,6 +160,11 @@ your specific machine.
 - [x] **SANA-Video** acceleration line — EasyCache + fusion + compile
 - [x] **Cosmos3-Super** acceleration line — TeaCache + step-selective NVFP4
 - [x] **LTX-2.3** acceleration line — KWL fusion + cache + PISA + NVFP4 + token-prune
+- [x] **Wan2.2 TI2V-5B, Wan2.2-A14B, and LingBot-Video** acceleration lines — kernel fusion + cache + PISA/compile
+- [x] **HunyuanVideo-13B and Wan2.1-T2V-14B** acceleration lines — kernel fusion + cache + Sol-Attn
+- [x] **Sol-Attn** sparse-attention release — optimized SM89/SM90/SM100/SM120 kernels + portable Triton backend
+- [x] **MiniMax-H3** across GB200, H100, A100, GB10, RTX 4090, and RTX 5090 — context parallel + kernel fusion + Sol-Attn + FirstBlockCache/TeaCache
+- [x] **LTX-2.5** across B200, GeForce RTX 5090, and DGX Spark — parallel optimization + FBCache + kernel fusion + Sol-Attn
 - [ ] More backends for each acceleration method
 - [ ] Agent-native workflow without human-in-the-loop
 
@@ -160,6 +178,13 @@ Built on [SGLang](https://github.com/sgl-project/sglang) and
 draw on TeaCache, EasyCache, SVDQuant/Nunchaku, FlashAttention,
 [TransformerEngine](https://github.com/NVIDIA/TransformerEngine), and the sparse-attention
 / token-reduction literature surveyed in the [docs](https://nvlabs.github.io/Sana/Sol-Engine/docs/).
+
+For StreamRender-H3, we thank the [MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)
+team for the base video model and codecs, the
+[Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) team for the text and visual
+conditioning model, and [TAE / TAeHV](https://github.com/madebyollin/taehv)
+by Ollin Boer Bohan for the lightweight video autoencoder used for reference
+encoding. Their respective upstream licenses and attribution notices apply.
 
 ## 📌 Citation
 

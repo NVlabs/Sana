@@ -193,7 +193,10 @@ def begin_model_forward(
         return None
 
     boundaries = _normalize_boundaries(cu_seqlens_host, total_tokens)
+    epoch = _request_epoch()
+    # A new request may reuse the same position-buffer addresses and shapes.
     layout_signature = (
+        epoch,
         total_tokens,
         boundaries,
         _position_identity(text_positions),
@@ -235,7 +238,6 @@ def begin_model_forward(
             f"{boundaries}, live={live_tokens}"
         )
 
-    epoch = _request_epoch()
     timestep = None if epoch is not None else _timestep_max(unique_timesteps)
     previous = _STATE.context
     layout_changed = previous is None or (

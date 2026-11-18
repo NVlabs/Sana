@@ -9,7 +9,7 @@ speed-targeted (low/mid/high) configs — without any dimension knowing which mo
   and optional `[[method_baseline]]` entries that classify method-family starting
   points as `wired`, `config_wired`, `runtime_patch`, or
   `upper_bound_probe`. They never name a model.
-- **Model** (`models/<id>.toml` + runtime code under `Sol-LTX-Infer/`) is the
+- **Model** (`models/<id>.toml` + runtime code under `sglang-runtime/`) is the
   model-specific surface. Config manifests declare required capabilities.
 - `search.py` gives the main agent a CPU-only diagnostic view. It can still run
   compose checks and print the method-baseline catalog, but those checks do not
@@ -50,6 +50,6 @@ budget is fixed max_iters=40 with early_stop_patience=0; budget exits are
 terminal_pending_review handoffs so the main agent can select low/medium/high
 winners from the retained frontier. Those winners are 1.5x/2.0x/3.0x speed
 targets selected by joint Gemini+LPIPS quality ranking. See
-`docs/fanout-loop-contract.md`.
+the fan-out loop contract, which is not published.
 
-See `docs/search-architecture.md` for the full design.
+The full design is kept with the development notes and is not published.

@@ -1,0 +1,59 @@
+# Experimental torch.compile arm for the fixed standalone Stage-2 refiner.
+# It differs from refiner.toml only in compiler settings and output metadata.
+
+name    = "ltx25_refiner_gb200_sol_compile"
+runtime = "."
+entry   = "run_refiner_gb200.sh"
+gpus    = 4
+
+LTX25_REFINER_WORLD_SIZE = "4"
+LTX25_REFINER_PARALLELISM = "head_context"
+LTX25_REFINER_PARALLEL_DEGREE = "4"
+LTX25_REFINER_PARAMETER_REPLICATION = "full"
+LTX25_REFINER_SELF_ATTN_HEAD_SHARDS = "4"
+LTX25_REFINER_SELF_ATTN_TOKEN_SCOPE = "full_sequence"
+
+LTX25_REFINER_WIDTH = "1920"
+LTX25_REFINER_HEIGHT = "1088"
+LTX25_REFINER_FRAME_COUNT = "241"
+LTX25_REFINER_FPS = "24"
+LTX25_REFINER_BATCH_SIZE = "1"
+
+LTX25_REFINER_SIGMAS = "0.909375,0.725,0.421875,0.0"
+LTX25_REFINER_TAUS = "1.0,1.25,1.5"
+LTX25_REFINER_TRANSFORMER_LAYERS = "48"
+LTX25_REFINER_DENSE_SELF_ATTN_LAYERS = "0"
+LTX25_REFINER_SOL_SELF_ATTN_LAYERS = "1-47"
+LTX25_REFINER_CROSS_ATTN = "dense"
+LTX25_REFINER_SOL_THRESH_TYPE = "diag"
+LTX25_REFINER_SOL_KV_SPLITS = "auto"
+SOL_ATTN_STRICT = "1"
+
+LTX25_REFINER_DTYPE = "bfloat16"
+LTX25_REFINER_LORA_STRENGTH = "0.8"
+LTX25_REFINER_CACHE = "0"
+LTX25_REFINER_COMPILE = "1"
+LTX25_REFINER_COMPILE_MODE = "max-autotune-no-cudagraphs"
+LTX25_REFINER_COMPILE_FULLGRAPH = "0"
+LTX25_REFINER_COMPILE_CAPTURE = "0"
+LTX25_REFINER_COMPILE_CACHE_ROOT = "/home/yitongl/code/.cache/sol-engine/ltx25-refiner/gb200-sm100_py31311_torch2110-cu130_triton360/stage2-headcp4-sol-eager-boundary-v1/1080p10s"
+LTX25_REFINER_OFFLOAD = "0"
+LTX25_REFINER_QUANTIZATION = "none"
+LTX25_REFINER_SINK = "0"
+LTX25_REFINER_REORDER = "0"
+
+# One complete compile/autotune warm-up is excluded before the measured request.
+LTX25_REFINER_WARMUP_REQUESTS = "1"
+LTX25_REFINER_MEASURE_REQUESTS = "1"
+LTX25_REFINER_WARMUP_INDEX = "0"
+LTX25_REFINER_SAMPLE_INDEX = "0"
+
+LTX25_REFINER_WEIGHTS_ROOT = "/lustre/fsw/portfolios/nvr/users/yitongl/pretrained_models/LTX-2.5-public"
+LTX25_REFINER_TAEHV_WEIGHT = "/lustre/fsw/portfolios/nvr/users/yitongl/pretrained_models/LTX-2.5-public/taehv/taeltx2_3_wide.pth"
+LTX25_REFINER_TAEHV_SOURCE_COMMIT = "32ac0146b11007cda5a57b60a3b35653361fb8a4"
+LTX25_REFINER_TAEHV_WEIGHT_SHA256 = "007788e6b9cb7f77e8589ae30ba7456b119d38b0d017e1d349c1c1d11e3d6339"
+
+INPUT_ROOT = ""
+MANIFEST = ""
+OUTPUT_DIR = ""
+METADATA_DIR = ""

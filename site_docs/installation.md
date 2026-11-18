@@ -1,50 +1,35 @@
 # Installation
 
-## Prerequisites
-
-- NVIDIA GPU and driver support for CUDA 13.
-- `conda` or miniforge, `git`, and a Hugging Face account/token.
-- Cosmos3-Super 64B uses 4xB200. LTX-2.3 and SANA-Video use 1xB200.
-
 ## Environment
 
 ```bash
-git clone https://github.com/NVlabs/Sol-Video-Inference-Engine.git Sol-Video-Inference-Engine
-cd Sol-Video-Inference-Engine
+conda create -n solengine python=3.12 -y
+conda activate solengine
 
-PYTHON_VERSION=3.12 bash scripts/create_code_conda_env.sh
-source "$PWD/scripts/use_code_storage_env.sh"
-conda activate "$PWD/.conda/ltx23"
+pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128
+pip install diffusers==0.37.1 transformers accelerate imageio-ffmpeg
 
-uv pip install -e "$PWD/python[diffusion]" --prerelease=allow
-
-PYTHON_BIN=.conda/ltx23/bin/python bash scripts/postinstall_cuda_jit.sh
+git clone -b sol-engine https://github.com/NVlabs/Sana.git
+cd Sana
+pip install ./techniques/sparse_backends
 ```
 
-`scripts/create_code_conda_env.sh` creates `.conda/ltx23` by default, installs
-`pip` and `uv`, and installs conda activation hooks for `scripts/use_code_storage_env.sh`.
-The script defaults to Python 3.11 when `PYTHON_VERSION` is unset; the agent guide
-sets `PYTHON_VERSION=3.12` for this stack.
+`techniques/sparse_backends` is the Sol-Attn kernel package. It needs PyTorch
+already installed — it does not pull one in, so it cannot override a build
+matched to your CUDA.
 
-Add `--with-te` to `scripts/postinstall_cuda_jit.sh` when using the NVFP4 path for Cosmos3-Super or LTX-2.3.
+Sol-Attn ships CuTe kernels for sm90 (H100), sm100 (B200/GB200) and sm120
+(RTX 5090), and a Triton reference elsewhere. `benchmark.json` records which
+backend a run used.
 
-## Verify
+## Weights
 
 ```bash
-.conda/ltx23/bin/python -c "import torch, diffusers, sglang; print(torch.__version__, diffusers.__version__, torch.cuda.is_available())"
+export HF_HOME=/somewhere/with/room     # 30–140 GB per model
+hf auth login
+
+hf download Wan-AI/Wan2.2-TI2V-5B-Diffusers
+hf download Wan-AI/Wan2.2-T2V-A14B-Diffusers
+hf download MiniMaxAI/MiniMax-H3
+hf download Efficient-Large-Model/SANA-Video_2B_480p_diffusers
 ```
-
-Expected versions are torch 2.11.0+cu130 and diffusers 0.38.0. `torch.cuda.is_available()` is false on CPU-only setup hosts.
-
-## Model downloads
-
-```bash
-export HF_HOME="$PWD/.hf_cache"
-huggingface-cli login
-
-huggingface-cli download nvidia/Cosmos3-Super
-huggingface-cli download Lightricks/LTX-2.3
-huggingface-cli download Efficient-Large-Model/SANA-Video_2B_480p_diffusers
-```
-
-Convenience scripts are available under `scripts/cosmos/`, `scripts/ltx/`, and `scripts/sana/` for resumable or Slurm-based downloads.

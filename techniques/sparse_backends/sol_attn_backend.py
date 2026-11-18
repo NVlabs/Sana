@@ -60,15 +60,17 @@ def _load_sol_attn() -> Callable:
 
 
 def sol_attn_supported(q) -> bool:
-    """Whether ``q`` can use a CuTe or portable Triton Sol-Attn backend."""
+    """Whether ``q`` can use an available Sol-Attn backend."""
 
     try:
         import torch
     except Exception:  # pragma: no cover - torch is a runtime dependency
         return False
-    if not (hasattr(q, "is_cuda") and q.is_cuda):
-        return False
     if q.ndim != 4 or q.shape[-1] != HEAD_DIM or q.dtype != torch.bfloat16:
+        return False
+    if q.device.type == "mps":
+        return hasattr(torch.mps, "compile_shader")
+    if not (hasattr(q, "is_cuda") and q.is_cuda):
         return False
     try:
         arch = tuple(torch.cuda.get_device_capability(q.device))
@@ -96,12 +98,10 @@ def _resolve_kv_splits(q, kv_splits: int | str | None) -> int:
 
     if kv_splits not in (None, "auto"):
         return int(kv_splits)
+    if q.device.type == "mps":
+        return 1
     arch = tuple(torch.cuda.get_device_capability(q.device))
-    if (
-        arch == (9, 0)
-        and q.shape[1] >= 65536
-        and _cute_runtime_available()
-    ):
+    if arch == (9, 0) and q.shape[1] >= 65536 and _cute_runtime_available():
         return 4
     return 1
 
@@ -249,6 +249,7 @@ def _parse_layer_ranges(spec: str) -> frozenset[int]:
 class _SolContext:
     step = -1
     layer = 0
+    last_timestep = None
     dense_steps = 0
     dense_layers = frozenset()
     tau = DEFAULT_TAU
@@ -268,9 +269,25 @@ _SOL_STATS = {
 }
 
 
-def sol_attn_begin_forward() -> None:
-    """Advance the denoising-step clock and reset the layer counter."""
+def sol_attn_begin_forward(timestep=None) -> None:
+    """Advance the denoising-step clock and reset the layer counter.
 
+    Without ``timestep`` every transformer forward counts as one step. Pipelines that
+    run classifier-free guidance as separate cond/uncond forwards (diffusers
+    ``WanPipeline``) must pass the forward's ``timestep`` instead: the clock then
+    advances only when the timestep changes, so ``dense_steps`` counts denoising
+    steps, and it restarts when the timestep goes back up (a new generation).
+    """
+
+    if timestep is not None:
+        value = float(timestep.reshape(-1)[0]) if hasattr(timestep, "reshape") else float(timestep)
+        last = _SOL_CTX.last_timestep
+        _SOL_CTX.layer = 0
+        if last is not None and value == last:
+            return
+        if last is not None and value > last:
+            _SOL_CTX.step = -1
+        _SOL_CTX.last_timestep = value
     _SOL_CTX.step += 1
     _SOL_CTX.layer = 0
 
@@ -280,6 +297,7 @@ def reset_sol_attn_state() -> None:
 
     _SOL_CTX.step = -1
     _SOL_CTX.layer = 0
+    _SOL_CTX.last_timestep = None
     for key in _SOL_STATS:
         _SOL_STATS[key] = 0
 
@@ -294,10 +312,7 @@ def _use_dense_layer() -> bool:
     _SOL_STATS["dispatch_calls"] += 1
     layer = _SOL_CTX.layer
     _SOL_CTX.layer += 1
-    dense = (
-        _SOL_CTX.step < _SOL_CTX.dense_steps
-        or layer in _SOL_CTX.dense_layers
-    )
+    dense = _SOL_CTX.step < _SOL_CTX.dense_steps or layer in _SOL_CTX.dense_layers
     if dense:
         _SOL_STATS["dense_guard_calls"] += 1
     return dense
@@ -474,19 +489,13 @@ def _run_mmdit_sol_attn_bthd(
     if not bool((text_valid_per_batch == text_tokens).all()):
         return dense()
     effective_tokens = video_len + text_tokens
-    expected_valid = (
-        torch.arange(tokens, device=q0.device)[None, :] < effective_tokens
-    )
+    expected_valid = torch.arange(tokens, device=q0.device)[None, :] < effective_tokens
     if not bool((valid == expected_valid).all()):
         return dense()
 
     try:
         joint_index = torch.arange(effective_tokens, device=q0.device)
-        if (
-            morton
-            and grid is not None
-            and math.prod(int(x) for x in grid) == video_len
-        ):
+        if morton and grid is not None and math.prod(int(x) for x in grid) == video_len:
             perm, _inverse = _morton3d_perm(grid, q0.device)
             joint_index = torch.cat(
                 [
@@ -549,8 +558,7 @@ def _run_mmdit_sol_attn_bthd(
         if os.environ.get("SOL_ATTN_STRICT", "0") == "1":
             raise
         print(
-            f"[sol-attn:hunyuan] dense fallback: "
-            f"{type(exc).__name__}: {exc}",
+            f"[sol-attn:hunyuan] dense fallback: " f"{type(exc).__name__}: {exc}",
             flush=True,
         )
         return dense()
@@ -565,9 +573,7 @@ def _ensure_hunyuan_op() -> None:
     @torch.library.custom_op(
         "sana_sol_attn::hunyuan_attention",
         mutates_args=(),
-        schema=(
-            "(Tensor q, Tensor k, Tensor v, Tensor key_valid) -> Tensor"
-        ),
+        schema=("(Tensor q, Tensor k, Tensor v, Tensor key_valid) -> Tensor"),
     )
     def hunyuan_attention(q, k, v, key_valid):
         if _use_dense_layer():
@@ -612,9 +618,7 @@ def make_mmdit_sol_attn_dispatch(
     _SOL_CTX.kv_splits = kv_splits
     _SOL_CTX.dense_steps = int(dense_steps)
     _SOL_CTX.dense_layers = _parse_layer_ranges(dense_layers)
-    _SOL_CTX.grid = (
-        None if grid is None else tuple(int(value) for value in grid)
-    )
+    _SOL_CTX.grid = None if grid is None else tuple(int(value) for value in grid)
     _SOL_CTX.morton = bool(morton)
     _ensure_hunyuan_op()
     import torch

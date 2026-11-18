@@ -309,10 +309,12 @@ def _compute_exact_threshold(
     batch_heads = batch * heads
     kc_bh = kc[:, :blocks].permute(0, 2, 1, 3)
     kc_mean = kc_bh.mean(dim=2, dtype=torch.float32)
-    kc_second_moment = torch.matmul(
-        kc_bh.transpose(-1, -2),
-        kc_bh,
-    )
+    # The Triton projection requires BF16 operands even under FP16 autocast.
+    with torch.autocast(device_type=q.device.type, enabled=False):
+        kc_second_moment = torch.matmul(
+            kc_bh.transpose(-1, -2),
+            kc_bh,
+        )
     kc_second_moment.div_(blocks)
     q_bar = torch.empty(
         (batch_heads, blocks, head_dim),

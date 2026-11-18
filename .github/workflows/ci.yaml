@@ -1,0 +1,65 @@
+name: ci
+on:
+  pull_request:
+    branches: [sol-engine]
+  push:
+    branches: [sol-engine]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Install CPU-only dependencies
+        run: |
+          pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy==2.3.5 Pillow==12.3.0 pytest==9.1.1
+      - name: Run unit tests
+        run: |
+          for d in models/ltx2.5-refiner/GB200 models/minimax_h3/Sol-H3-ComfyUI models/minimax_h3/Sol-H3-RTX5090 \
+                   models/minimax_h3/Sol-H3-Spark models/minimax_h3/super_acceleration; do
+            (cd "$d" && python -m unittest discover -s tests)
+          done
+          (cd models/streamrender_h3 && python -m unittest tests.test_protocol tests.test_examples tests.test_http)
+          python -m pytest -q tests techniques/sparse_backends/tests
+  dependency-audit:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - run: pip install pip-audit==2.10.1
+      - name: Audit requirements files
+        run: |
+          # PRs audit only the requirements files they change; manual runs audit all of them.
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            files=$(git diff --name-only --diff-filter=d "origin/$GITHUB_BASE_REF...HEAD" -- '*requirements*.txt')
+          else
+            files=$(git ls-files -- '*requirements*.txt')
+          fi
+          [ -n "$files" ] || echo "No requirements files to audit."
+          rc=0
+          for f in $files; do
+            echo "== $f"
+            if out=$(pip-audit -r "$f" --no-deps --disable-pip --progress-spinner off 2>&1); then echo "$out"
+            elif grep -q 'is not pinned' <<<"$out"; then echo "skipped: not fully pinned, cannot audit with --no-deps"
+            else echo "$out"; rc=1; fi
+          done
+          exit $rc

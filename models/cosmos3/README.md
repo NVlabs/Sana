@@ -46,7 +46,7 @@ login node):
 
 ```bash
 OUT_DIR=/path/to/out \
-SOL_LTX_INFER_ROOT=/lustre/fs1/portfolios/nvr/projects/nvr_elm_llm/users/yitongl/code/Sol-LTX-Infer \
+SGLANG_RUNTIME_ROOT=/path/to/sglang-runtime \
 bash models/cosmos3/baseline/scripts/run_cosmos3_gpu.sh
 ```
 
@@ -55,13 +55,13 @@ bash models/cosmos3/baseline/scripts/run_cosmos3_gpu.sh
 This directory holds the *profile and the two runnable arms*. The 64B model code
 — `cosmos3_pipeline.py`, the `Cosmos3OmniTransformer` DiT, `cosmos3_teacache.py`
 and the `run_cosmos3_cache_matrix.sh` driver that parses the cache-variant
-strings — stays in `Efficient-Large-Model/Sol-LTX-Infer`, pinned in `model.toml`
-to `b0b7eb4d0` (`elm/v1_formal`) and reached through `SOL_LTX_INFER_ROOT`.
+strings — stays in `the SGLang runtime`, pinned in `model.toml`
+to `b0b7eb4d0` (`elm/v1_formal`) and reached through `SGLANG_RUNTIME_ROOT`.
 
 ## Why the pin moved
 
 `models/cosmos3.toml` previously pinned `base_commit = 29d0d9e4...`. That commit
-sits on **no branch** in Sol-LTX-Infer — `git branch -r --contains` returns
+sits on **no branch** in the SGLang runtime — `git branch -r --contains` returns
 nothing for it — so an ordinary `git fetch` never brings it down and every
 checkout on the fleet reported it as a bad object. It is not lost: GitHub still
 serves it to an explicit `git fetch <remote> 29d0d9e4...`. But pinning a

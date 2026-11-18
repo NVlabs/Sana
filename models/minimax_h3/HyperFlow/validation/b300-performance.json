@@ -1,0 +1,254 @@
+{
+  "evidence_kind": "Measured performance of the packaged runtime; existing 2026-09-19 benchmark",
+  "measured_date": "2026-09-19",
+  "source_commit": "d0e6fe4745f06ee5761116ebf2c0fc22ec4b031e",
+  "source_pull_request": "https://github.com/NVlabs/Sana/pull/507",
+  "hardware": {
+    "gpus": 8,
+    "gpu_name": "NVIDIA B300 SXM6 AC",
+    "driver": "580.178.04"
+  },
+  "environment": {
+    "python": "3.12.3",
+    "torch": "2.10.0+cu130",
+    "cuda": "13.0",
+    "diffusers": "c419dac0152186060246c93a095bc1bfaea342b3",
+    "transformers": "5.12.1",
+    "peft": "0.20.0",
+    "triton": "3.6.0",
+    "cudnn_frontend": "1.28.0",
+    "cutlass_dsl": "4.7.1"
+  },
+  "model": {
+    "base": "MiniMaxAI/MiniMax-H3",
+    "base_revision": "83db0c0efe6ef9824e0e194be110346c0a9542ed",
+    "adapter": "videorebirth/hyperflow/minimax_h3_hyperflow_8step_v1.0.safetensors",
+    "adapter_sha256": "9297f4505bfdef59c3014d11274411809c19b0abfe26161cab2b425a696df447"
+  },
+  "workload": {
+    "width": 1344,
+    "height": 768,
+    "fps": 24,
+    "steps": 8,
+    "seed": 42,
+    "prompts_per_task": 1,
+    "ref2va_image_count": 1,
+    "synchronized_audio": true
+  },
+  "protocol": {
+    "resident": true,
+    "same_host": true,
+    "warmups_per_configuration_per_case": 2,
+    "measured_calls_per_configuration_per_case": 5,
+    "statistic": "median",
+    "timing_scope": "Both resident; output_type=pt on both; pipeline call until all-rank CUDA completion, including conditioning and video/audio decode. No RGB8/PIL conversion, MP4 encoding, media saving or noise-fixture I/O.",
+    "target_noise_verified_equal_across_all_ranks": true
+  },
+  "original_hyperflow": {
+    "attention": "dense SDPA",
+    "lora": "native unmerged PEFT",
+    "dit_linears": "BF16",
+    "conditioner": "resident rank 0 with original broadcast",
+    "reference_preprocessing": "original 2048 short edge"
+  },
+  "sol_engine": {
+    "lora": "unmerged with fused consumers",
+    "dit_linears": "BF16",
+    "mxfp8": false,
+    "reference_kv_cache": false,
+    "attention": "SOL/BSA",
+    "transport": "INT8 QKV, FP8 output",
+    "reference_preprocessing": "area capped at 1344 x 768 without upscaling"
+  },
+  "audit": {
+    "total_calls": 84,
+    "measured_calls": 60,
+    "warmup_calls": 24,
+    "pr_calls_with_expected_fusion": 42,
+    "all_steps_8": true,
+    "all_lora_unmerged": true,
+    "common_input_proofs_match_for_all_six_pairs": true
+  },
+  "rows": [
+    {
+      "task": "t2v",
+      "duration_seconds": 5,
+      "frames": 124,
+      "original_hyperflow": {
+        "samples_seconds": [
+          10.822860011016019,
+          10.839324539992958,
+          10.817274961038493,
+          10.833851512055844,
+          10.863025452010334
+        ],
+        "median_seconds": 10.833851512055844,
+        "min_seconds": 10.817274961038493,
+        "max_seconds": 10.863025452010334
+      },
+      "sol_engine": {
+        "samples_seconds": [
+          3.589718653995078,
+          3.515376003982965,
+          3.5450259000062943,
+          3.5708149619749747,
+          3.570672907982953
+        ],
+        "median_seconds": 3.570672907982953,
+        "min_seconds": 3.515376003982965,
+        "max_seconds": 3.589718653995078
+      },
+      "speedup": 3.034120400060897
+    },
+    {
+      "task": "t2v",
+      "duration_seconds": 10,
+      "frames": 243,
+      "original_hyperflow": {
+        "samples_seconds": [
+          22.671386689005885,
+          22.67899727303302,
+          22.711826999962796,
+          22.709320277965162,
+          22.701739487005398
+        ],
+        "median_seconds": 22.701739487005398,
+        "min_seconds": 22.671386689005885,
+        "max_seconds": 22.711826999962796
+      },
+      "sol_engine": {
+        "samples_seconds": [
+          7.756367729045451,
+          7.734558627998922,
+          7.684847939002793,
+          7.682550102006644,
+          7.65306971402606
+        ],
+        "median_seconds": 7.684847939002793,
+        "min_seconds": 7.65306971402606,
+        "max_seconds": 7.756367729045451
+      },
+      "speedup": 2.954090915942214
+    },
+    {
+      "task": "t2v",
+      "duration_seconds": 15,
+      "frames": 362,
+      "original_hyperflow": {
+        "samples_seconds": [
+          37.973732833052054,
+          37.90892621601233,
+          37.94936465797946,
+          38.03870462800842,
+          37.97985056496691
+        ],
+        "median_seconds": 37.973732833052054,
+        "min_seconds": 37.90892621601233,
+        "max_seconds": 38.03870462800842
+      },
+      "sol_engine": {
+        "samples_seconds": [
+          13.323604787001386,
+          13.259606775012799,
+          13.273243358009495,
+          13.37008565600263,
+          13.261559662991203
+        ],
+        "median_seconds": 13.273243358009495,
+        "min_seconds": 13.259606775012799,
+        "max_seconds": 13.37008565600263
+      },
+      "speedup": 2.860923423824479
+    },
+    {
+      "task": "ref2va",
+      "duration_seconds": 5,
+      "frames": 124,
+      "original_hyperflow": {
+        "samples_seconds": [
+          15.79081163596129,
+          15.649202646978665,
+          15.655695480003487,
+          15.61475662101293,
+          15.607396573992446
+        ],
+        "median_seconds": 15.649202646978665,
+        "min_seconds": 15.607396573992446,
+        "max_seconds": 15.79081163596129
+      },
+      "sol_engine": {
+        "samples_seconds": [
+          3.785188317007851,
+          3.7725416230387054,
+          3.7663958110497333,
+          3.762216861010529,
+          3.774627787992358
+        ],
+        "median_seconds": 3.7725416230387054,
+        "min_seconds": 3.762216861010529,
+        "max_seconds": 3.785188317007851
+      },
+      "speedup": 4.148185549871694
+    },
+    {
+      "task": "ref2va",
+      "duration_seconds": 10,
+      "frames": 243,
+      "original_hyperflow": {
+        "samples_seconds": [
+          28.826185627025552,
+          28.80715114402119,
+          28.824105240986682,
+          28.80971179099288,
+          28.797919787990395
+        ],
+        "median_seconds": 28.80971179099288,
+        "min_seconds": 28.797919787990395,
+        "max_seconds": 28.826185627025552
+      },
+      "sol_engine": {
+        "samples_seconds": [
+          7.616144208994228,
+          7.598715158004779,
+          7.608088397013489,
+          7.61392104200786,
+          7.589830380980857
+        ],
+        "median_seconds": 7.608088397013489,
+        "min_seconds": 7.589830380980857,
+        "max_seconds": 7.616144208994228
+      },
+      "speedup": 3.786721484769021
+    },
+    {
+      "task": "ref2va",
+      "duration_seconds": 15,
+      "frames": 362,
+      "original_hyperflow": {
+        "samples_seconds": [
+          44.78257034701528,
+          44.790487086982466,
+          45.105107927985955,
+          44.74717671104008,
+          44.988320700998884
+        ],
+        "median_seconds": 44.790487086982466,
+        "min_seconds": 44.74717671104008,
+        "max_seconds": 45.105107927985955
+      },
+      "sol_engine": {
+        "samples_seconds": [
+          12.560209648043383,
+          12.57818666199455,
+          12.59261906699976,
+          12.585580407001544,
+          12.578153487993404
+        ],
+        "median_seconds": 12.57818666199455,
+        "min_seconds": 12.560209648043383,
+        "max_seconds": 12.59261906699976
+      },
+      "speedup": 3.5609653673147146
+    }
+  ]
+}

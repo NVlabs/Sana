@@ -1,0 +1,16 @@
+# Qwen runs separately from FastVideo and LTX. Build is not release-validated.
+FROM nvcr.io/nvidia/pytorch:25.11-py3@sha256:417cbf33f87b5378849df37983552cd1f8bc8b62fe1ceabe004de816a55dff21
+ARG COMFYUI_COMMIT=b1693ecba9f5b65f8c80ab36b195ab963ec92413
+ENV OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false \
+    PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+RUN git clone --filter=blob:none --no-checkout https://github.com/Comfy-Org/ComfyUI.git /opt/ComfyUI \
+    && git -C /opt/ComfyUI checkout --detach ${COMFYUI_COMMIT} \
+    && test "$(git -C /opt/ComfyUI rev-parse HEAD)" = "${COMFYUI_COMMIT}"
+# Preserve NGC's matched torch stack, as in the pinned public runtime recipe.
+RUN sed -E '/^(torch|torchvision|torchaudio)([<=>~! ].*)?$/d' \
+      /opt/ComfyUI/requirements.txt > /tmp/comfy-requirements.txt \
+    && python -m pip install -r /tmp/comfy-requirements.txt
+WORKDIR /opt/ComfyUI
+ENTRYPOINT []
+CMD ["python"]

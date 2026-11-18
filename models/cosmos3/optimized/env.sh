@@ -8,7 +8,7 @@
 #   2. NVFP4     — step-selective FP4 linear on gate_up/down/qkv/out, with the
 #                  first 3 and last 3 denoising steps kept dense
 #
-# Provenance: the `fullopt` branch of Sol-LTX-Infer
+# Provenance: the `fullopt` branch of the SGLang runtime
 # scripts/cosmos/slurm_cosmos3_super.sh (pinned commit in
 # models/cosmos3/model.toml). Published speedup: 2.26x
 # (site_docs/pipelines/cosmos3.md), measured on 4x GB200 at 1280x720 / 189

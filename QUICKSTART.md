@@ -1,5 +1,11 @@
 # QUICKSTART — run SANA-Video / Cosmos3-Super / LTX-2.3 (baseline + full-opt)
 
+
+> **These commands run in the SGLang runtime**,
+> not in this repository — every `scripts/…` path below is one of its. This
+> repository is launched with `python3 scripts/run.py config/<model>/<arm>.toml`;
+> see [`site_docs/installation.md`](site_docs/installation.md).
+
 Human, copy-paste quickstart. (For the agent-oriented, machine-portable rules
 see `AGENTS.md` — this file is the short human version.)
 
@@ -19,8 +25,8 @@ SANA and LTX run on **1**.
 ## 1. Set up a fresh environment (one time)
 
 ```bash
-git clone https://github.com/NVlabs/Sol-Video-Inference-Engine.git Sol-Video-Inference-Engine
-cd Sol-Video-Inference-Engine
+git clone https://github.com/NVlabs/the SGLang runtime.git the SGLang runtime
+cd the SGLang runtime
 
 PYTHON_VERSION=3.12 bash scripts/create_code_conda_env.sh   # -> ./.conda/ltx23 (new env)
 conda activate "$PWD/.conda/ltx23"

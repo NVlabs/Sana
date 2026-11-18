@@ -12,6 +12,12 @@ The actual runtime adapter code lives under `models/<model_uid>/baseline/` and
 `techniques/`. (Both moved in the 2026-07-17 `efficiency/` -> `techniques/`
 reorg; there is no longer a top-level `runtime/` or `efficiency/` directory.)
 
+## SoL-Refiner
+
+[SoL-Refiner](sol-refiner/) provides the original LTX-2.3 one-step and multi-step
+refiners and the LTX-2.5 extension for MiniMax-H3. Each entry includes inference
+commands using the published Hugging Face models.
+
 ## A model profile contains
 
 - official config and runtime env
@@ -42,7 +48,7 @@ Current local profiles include:
   baseline and a TeaCache + step-selective NVFP4 optimized arm.
 
 `ltx23` and `cosmos3` both keep their model code in the separate
-`Efficient-Large-Model/Sol-LTX-Infer` repo, declared `reference_only` and pinned
+`the SGLang runtime` repo, declared `reference_only` and pinned
 by commit in `model.toml`; what lives here is the profile plus the two runnable
 arms. Each arm is an `env.sh` (the technique declaration, with every knob written
 out explicitly including the zeros) plus a shim that sources it and then the

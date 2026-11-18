@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Standalone Studio preview with stubbed ComfyUI app/api (no GPU, no ComfyUI).
+     Serve the repository root:  python3 -m http.server 8765
+     then open  http://localhost:8765/scripts/studio_preview.html?state=empty|progress|done|library|first_frame|gallery|two_stage
+     (add &solh3_lang=zh for Chinese). Media: python3 scripts/fetch_assets.py demo gallery (into assets/). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sol-H3 Studio preview</title>
+<link rel="icon" href="../web/assets/solh3.svg">
+<link rel="stylesheet" href="../web/theme.css">
+<link rel="stylesheet" href="../web/studio.css">
+<style>
+  /* Stand-in for the ComfyUI canvas behind the modal. */
+  html,body{margin:0;height:100%;background:#202020 repeating-linear-gradient(0deg,#262626 0 1px,transparent 1px 24px),repeating-linear-gradient(90deg,#262626 0 1px,transparent 1px 24px)}
+</style>
+</head>
+<body>
+<script type="module">
+import { createStudio } from '../web/studio.js';
+
+const state = new URLSearchParams(location.search).get('state') || 'empty';
+const poster = '../assets/film/sol-h3-in-comfyui-poster.jpg';
+const posters = [poster, '../assets/demo/comfyui.png'];
+const prompts = ['A slow aerial push-in toward a lone lighthouse on black cliffs as a storm rolls in at dusk.',
+    'Handheld close-up in a tiny Tokyo noodle bar at night, steam curling past neon signs.',
+    'Golden-hour tracking shot of a camel caravan cresting a vast dune.',
+    'Low wide shot gliding beside a red kayak through turquoise glacial water.',
+    'A bird glides over a mountain lake.', 'Rain on a city crosswalk at night, umbrellas from above.',
+    'A potter shapes wet clay on a spinning wheel, warm window light.', 'Fireflies over tall grass at blue hour.'];
+const items = prompts.map((prompt, i) => ({id: `SolH3/studio_${String(8 - i).padStart(5, '0')}_.mp4`, file: `studio_${String(8 - i).padStart(5, '0')}_.mp4`,
+    subfolder: 'SolH3', type: 'output', prompt, mode: i === 2 ? 'first_frame' : 'text', profile: i % 3 ? 'H3 FP8 — single RTX 5090' : 'H3 BF16 — single RTX 5090',
+    seed: 1000 + i, e2e_s: 41.2 + i * 3.7, created: Date.now() / 1000 - i * 3600}));
+
+// Minimal ComfyUI stand-ins: widgets on a node, a JSON API and an event bus.
+const listeners = new EventTarget();
+const api = {
+    apiURL(path) {
+        if (path.startsWith('/solh3/library/thumbnail')) {
+            const id = new URLSearchParams(path.split('?')[1]).get('id');
+            return posters[items.findIndex(x => x.id === id) % 2] || poster;
+        }
+        if (path.startsWith('/view')) return '../assets/demo/comfyui-demo.mp4';
+        if (path.startsWith('/solh3/gallery/file')) return '../assets/gallery/' + new URLSearchParams(path.split('?')[1]).get('name');
+        return path;
+    },
+    async fetchApi(path) {
+        if (path.startsWith('/solh3/gallery')) {
+            const listing = await fetch('../assets/gallery/index.json').then(r => r.ok ? r.json() : []).catch(() => []);
+            return new Response(JSON.stringify({items: listing}), {headers: {'Content-Type': 'application/json'}});
+        }
+        const body = path.startsWith('/solh3/capabilities') ? {profiles: [
+            {name: 'Sol-H3 HyperFlow · 8 steps fast — RTX 5090', label: 'One stage', steps: 8, pipeline: 'one_stage',
+             modes: ['text', 'first_frame', 'reference'], resolutions: ['768p', '480p'], latency_s: 67.2, default: true},
+            {name: 'Sol-H3 two stage — RTX 5090', label: 'Two stage', steps: 7, pipeline: 'two_stage',
+             modes: ['text'], resolutions: ['768p'], latency_s: 39.8, default: false}],
+            device: {id: 'rtx5090', label: 'RTX 5090'}, gallery: true}
+            : path.startsWith('/solh3/library') ? {items: items.slice(0, Number(new URLSearchParams(path.split('?')[1]).get('limit')) || 8)}
+            : path.startsWith('/solh3/progress') ? {progress: []} : {};
+        return new Response(JSON.stringify(body), {headers: {'Content-Type': 'application/json'}});
+    },
+    addEventListener: (n, f) => listeners.addEventListener(n, f),
+    removeEventListener: (n, f) => listeners.removeEventListener(n, f),
+    async queuePrompt() { return {prompt_id: 'preview'}; },
+};
+const app = {async graphToPrompt() { return {output: {}, workflow: {}}; }};
+const w = (name, value, extra = {}) => ({name, value, ...extra});
+const node = {id: 1, widgets: [
+    w('profile', state === 'two_stage' ? 'Sol-H3 two stage — RTX 5090' : 'Sol-H3 HyperFlow · 8 steps fast — RTX 5090',
+      {options: {values: ['Sol-H3 HyperFlow · 8 steps fast — RTX 5090', 'Sol-H3 two stage — RTX 5090']}}),
+    w('prompt', state === 'empty' ? '' : 'A slow aerial push-in toward a lone lighthouse on black cliffs as a storm rolls in at dusk, waves exploding into white spray, the beam sweeping through rain. overall_soundscape: Roaring surf, gusting wind and distant thunder.'),
+    w('seed', 42), w('control_after_generate', 'fixed'), w('keep_loaded', true),
+    w('mode', state === 'first_frame' ? 'first_frame' : 'text'), w('image', ''), w('backend', 'local'), w('resolution', '768p')]};
+
+const studio = createStudio({app, api});
+studio.openStudio(node, {tab: state === 'gallery' ? 'gallery' : 'studio'});
+await new Promise(r => setTimeout(r, 300));
+const s = studio.current;
+if (state === 'progress') s.showProgress({node: 1, prompt_id: 'preview', stage: 'denoising', step: 3, steps: 4, elapsed_s: 23.4, message: ''});
+if (state === 'done') s.showVideo({...items[0], poster});
+if (state === 'library') document.querySelector('.sh-header-actions .sh-ghost').click();
+if (state === 'gallery') await new Promise(r => setTimeout(r, 1500));
+window.previewReady = true;
+</script>
+</body>
+</html>

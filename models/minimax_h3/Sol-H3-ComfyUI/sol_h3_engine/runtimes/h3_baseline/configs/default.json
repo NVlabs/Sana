@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "Original MiniMax-H3 50-step BF16 baseline, RTX5090 CPU offload",
+  "stage1": {
+    "width": 1344,
+    "height": 768,
+    "frames": 124,
+    "fps": 24,
+    "qwen": "NVFP4_AWQ_per_request",
+    "dit": "BF16_original_no_LoRA",
+    "lora": null,
+    "updates": 50,
+    "video_sigmas": "native MiniMaxH3Scheduler shift12, 50 grid points",
+    "audio_sigmas": "native MiniMaxH3Scheduler shift3, 50 grid points",
+    "attention": "FA4_dense",
+    "video_decode": true
+  },
+  "output": {
+    "width": 1344,
+    "height": 768,
+    "frames": 121,
+    "fps": 24,
+    "video_codec": "H264",
+    "crf": 19,
+    "preset": "veryfast",
+    "audio": "original_H3_PCM_to_AAC_stereo_32000Hz"
+  },
+  "decoder": {
+    "name": "original_H3_full_VAE",
+    "weights": "fp32",
+    "autocast": "fp16",
+    "cpu_offload": true,
+    "compile": true,
+    "crop": "first121 of124 native frames"
+  }
+}

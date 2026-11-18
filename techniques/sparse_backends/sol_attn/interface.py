@@ -8,6 +8,7 @@ import torch
 
 BLOCK_SIZE = 64
 _CUTE_BACKENDS = {
+    (8, 9): "cute_sm89",
     (9, 0): "cute_sm90",
     (10, 0): "cute_sm100",
     (12, 0): "cute_sm120",
@@ -30,8 +31,12 @@ def _validate_inputs(
         raise ValueError("Sol-Attn requires T > 0 and head dimension 128")
     if any(x.dtype != torch.bfloat16 for x in (q, k, v)):
         raise TypeError("q, k, and v must use torch.bfloat16")
-    if q.device.type != "cuda" or k.device != q.device or v.device != q.device:
-        raise ValueError("q, k, and v must be on the same CUDA device")
+    if (
+        q.device.type not in ("cuda", "mps")
+        or k.device != q.device
+        or v.device != q.device
+    ):
+        raise ValueError("q, k, and v must be on the same CUDA or MPS device")
     if not (q.is_contiguous() and k.is_contiguous() and v.is_contiguous()):
         raise ValueError("q, k, and v must be contiguous BTHD tensors")
     if thresh_type not in ("diag", "exact"):
@@ -61,6 +66,8 @@ def _validate_inputs(
                 "exact_block_mask must be a contiguous bool vector of ceil(T/64) blocks on q.device"
             )
 
+    if q.device.type == "mps":
+        return None
     return tuple(torch.cuda.get_device_capability(q.device))
 
 
@@ -91,9 +98,7 @@ def _backend_for_arch(
     cute_backend = _CUTE_BACKENDS.get(arch)
     if cute_backend is not None:
         available = (
-            _cute_runtime_available()
-            if cute_available is None
-            else cute_available
+            _cute_runtime_available() if cute_available is None else cute_available
         )
         if available:
             return cute_backend
@@ -103,6 +108,18 @@ def _backend_for_arch(
 def get_sol_attn_backend(device: torch.device | str | int | None = None) -> str:
     """Return the backend selected for ``device`` without compiling it."""
 
+    if (
+        device is None
+        and not torch.cuda.is_available()
+        and torch.backends.mps.is_available()
+    ):
+        return "metal"
+    if device is not None and not isinstance(device, int):
+        resolved = torch.device(device)
+        if resolved.type == "mps":
+            return "metal"
+        if resolved.type != "cuda":
+            raise ValueError(f"Sol-Attn does not support device type {resolved.type!r}")
     if device is None:
         device = torch.cuda.current_device()
     return _backend_for_arch(tuple(torch.cuda.get_device_capability(device)))
@@ -160,6 +177,35 @@ def _compile_sm90(
         *args,
         scale,
         sink_range,
+        exact_block_mask,
+        stream=stream,
+        options="--enable-tvm-ffi",
+    )
+    _compiled[key] = compiled
+    return compiled, args
+
+
+def _compile_sm89(
+    key,
+    tensors,
+    scale,
+    sink_start_block,
+    sink_end_block,
+    exact_block_mask,
+    stream,
+):
+    import cutlass.cute as cute
+
+    from .sm89 import make_kernel
+
+    operator = make_kernel()
+    args = _to_cute_tensors(tensors)
+    compiled = cute.compile(
+        operator,
+        *args,
+        scale,
+        sink_start_block,
+        sink_end_block,
         exact_block_mask,
         stream=stream,
         options="--enable-tvm-ffi",
@@ -239,6 +285,7 @@ def _sol_attn_cute(
     sink_start,
     exact_block_mask,
 ):
+    from .common import to_cute_tensor
     from .preprocess import prepare
 
     batch, tokens, heads, _ = q.shape
@@ -260,13 +307,42 @@ def _sol_attn_cute(
         )
         stream = _stream(q.device)
         key = (q.device.index, arch, batch, tokens, heads, kv_splits, exact_block_mask is not None)
-        # Reinterpret the bool storage without a copy for CuTe's DLPack bridge.
+        # Bool views can start at any byte offset; do not assume 16-byte alignment.
+        # Reinterpret storage without a copy for CuTe's DLPack bridge.
         mask_arg = (
             None if exact_block_mask is None
-            else _to_cute_tensors([exact_block_mask.view(torch.uint8)])[0]
+            else to_cute_tensor(exact_block_mask.view(torch.uint8), assumed_align=1)
         )
 
-        if arch == (9, 0):
+        if arch == (8, 9):
+            sink_start_block, sink_end_block = _sink_block_range(
+                tokens,
+                sink_start,
+                sink_tokens,
+            )
+            tensors = [q, k, v, output, kc, vc, threshold, lse]
+            compiled = _compiled.get(key)
+            if compiled is None:
+                compiled, args = _compile_sm89(
+                    key,
+                    tensors,
+                    scale,
+                    sink_start_block,
+                    sink_end_block,
+                    mask_arg,
+                    stream,
+                )
+            else:
+                args = _to_cute_tensors(tensors)
+            compiled(
+                *args,
+                scale,
+                sink_start_block,
+                sink_end_block,
+                mask_arg,
+                stream=stream,
+            )
+        elif arch == (9, 0):
             if sink_tokens:
                 sink_start_block, sink_end_block = _sink_block_range(
                     tokens,
@@ -405,9 +481,26 @@ def sol_attn(
     )
     if kv_splits not in (1, 2, 4):
         raise ValueError("kv_splits must be 1, 2, or 4")
-    backend = _backend_for_arch(arch)
+    backend = "metal" if arch is None else _backend_for_arch(arch)
     scale = q.shape[-1] ** -0.5 if scale is None else float(scale)
     tau = float(tau)
+
+    if backend == "metal":
+        if exact_block_mask is not None:
+            raise NotImplementedError("exact_block_mask is currently supported by CUDA SOL kernels only")
+        from .mps import sol_attn as mps_sol_attn
+
+        return mps_sol_attn(
+            q,
+            k,
+            v,
+            scale=scale,
+            tau=tau,
+            thresh_type=thresh_type,
+            kv_splits=kv_splits,
+            sink_tokens=sink_tokens,
+            sink_start=sink_start,
+        )
 
     if backend == "triton":
         if kv_splits != 1:

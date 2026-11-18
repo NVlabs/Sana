@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Operator fusions for MiniMax-H3, derived from Sol-LTX-Infer's KWL line.
+"""Operator fusions for MiniMax-H3, derived from the SGLang runtime's KWL line.
 
 The reference fuses LTX-2's block; none of its kernels drop into MiniMax-H3 unchanged, because the
 two models differ exactly where the kernels are specialized — RMSNorm instead of LayerNorm, partial
@@ -115,7 +115,7 @@ if HAVE_TRITON:
 
     @triton.jit
     def _swiglu_kernel(out_ptr, x_ptr, n_cols, stride_in_row, stride_out_row, BLOCK: tl.constexpr):
-        row = tl.program_id(0)
+        row = tl.program_id(0).to(tl.int64)
         cols = tl.arange(0, BLOCK)
         mask = cols < n_cols
         value = tl.load(x_ptr + row * stride_in_row + cols, mask=mask, other=0.0).to(tl.float32)

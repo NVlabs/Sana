@@ -15,7 +15,7 @@
 # experimental set only. Writing the zeros out keeps that decision visible here
 # instead of hiding it in an unset variable.
 #
-# Provenance: expanded from enable_fullopt_env() in Sol-LTX-Infer
+# Provenance: expanded from enable_fullopt_env() in the SGLang runtime
 # scripts/ltx/run_ltx23_sglang_hq_1080p10s.sh (pinned commit in
 # models/ltx23/model.toml). Published speedup: 2.40x (site_docs/pipelines/ltx.md).
 # The upstream launcher comment claims 2.47x for the same stack; the two numbers

@@ -9,7 +9,7 @@ directly.
 
 This skeleton produces a CPU-only launchability/diagnostic view. The eval +
 speed-target selection (1.5/2/3x vs baseline) is the GPU stage; see plan_eval()
-and docs/search-architecture.md.
+and the development notes, which are not published.
 """
 from __future__ import annotations
 
@@ -170,8 +170,8 @@ def plan_eval(model_id: str):  # noqa: D401
     speed-target winners from the retained frontier by joint Gemini+LPIPS quality
     ranking, then integration stacks those winners into final profiles (composed
     targets in tiers.toml [targets]).
-    Not run here (no GPU). See docs/search-architecture.md."""
-    raise NotImplementedError("eval+tiering is the GPU stage; see docs/search-architecture.md")
+    Not run here (no GPU); it is the GPU stage."""
+    raise NotImplementedError("eval+tiering is the GPU stage")
 
 
 if __name__ == "__main__":

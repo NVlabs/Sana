@@ -6,7 +6,7 @@
 # export in the caller's shell cannot switch part of the optimized stack on
 # inside a "baseline" run and quietly corrupt the control arm.
 #
-# Provenance: the `baseline` branch of Sol-LTX-Infer
+# Provenance: the `baseline` branch of the SGLang runtime
 # scripts/cosmos/slurm_cosmos3_super.sh (pinned commit in
 # models/cosmos3/model.toml).
 

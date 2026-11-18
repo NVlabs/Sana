@@ -256,7 +256,12 @@ def main():
         _twan_sol.dispatch_attention_fn = make_sol_attn_dispatch(
             _twan_sol.dispatch_attention_fn, **_sol_kw
         )
-        pipe.transformer.register_forward_pre_hook(lambda _m, _a: sol_attn_begin_forward())
+        # WanPipeline runs cond and uncond as two forwards per step: key the step
+        # clock on the timestep so dense_steps counts denoising steps, not forwards.
+        pipe.transformer.register_forward_pre_hook(
+            lambda _m, _a, kw: sol_attn_begin_forward(kw.get("timestep")),
+            with_kwargs=True,
+        )
         log(f"Sol-Attn installed tau={_sol_kw['tau']} "
             f"thresh_type={_sol_kw['thresh_type']} kv_splits={_sol_kw['kv_splits']} "
             f"dense_steps={_sol_kw['dense_steps']} dense_layers='{_sol_kw['dense_layers']}' "

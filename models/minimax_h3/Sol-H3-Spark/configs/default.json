@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "name": "Sol-H3 Spark",
+  "stage1": {
+    "width": 672, "height": 384, "frames": 124, "fps": 24,
+    "qwen": "NVFP4_AWQ_resident",
+    "dit": "W8A8_FP8_after_BF16_LoRA_merge",
+    "lora": "FastH3_VSA_DataFree", "lora_strength": 1.0,
+    "updates": 4,
+    "video_sigmas": [1.0, 0.972972989, 0.923076928, 0.8, 0.0],
+    "audio_sigmas": [1.0, 0.9, 0.75, 0.5, 0.0],
+    "attention": "VSA_cuDNN_BSA", "sparsity": 0.9, "tile_size": 64,
+    "video_decode": false
+  },
+  "handoff": {
+    "transport": "CPU_tensor_file",
+    "representation": "normalized_H3_latent_and_original_PCM",
+    "upscale_before_adapter": true,
+    "upscale_ratio": 2.0,
+    "normalization": "author_D(model(N(normalized_H3)))",
+    "refiner_input_shape": [1, 128, 16, 24, 42]
+  },
+  "stage2": {
+    "compile": true,
+    "fixed_prompt": "4K, refined, high quality, cinematic detail, clean textures, natural motion.",
+    "online_text_encoder": false,
+    "transformer": "LTX-2.5_dev_BF16",
+    "lora": "distilled_lora_450", "lora_strength": 0.8,
+    "updates": 3, "sigmas": [0.909375, 0.725, 0.421875, 0.0],
+    "attention": "Triton_Sol", "taus": [1.0, 1.25, 1.5],
+    "threshold": "diag", "dense_layers": [0],
+    "decoder": "official_Conv_VAE",
+    "tiles": {"temporal": 128, "temporal_overlap": 24,
+              "height": 448, "height_overlap": 64, "width": 768, "width_overlap": 64},
+    "direct_nhwc": true, "writer_chunk_frames": 16,
+    "single_gpu_all2all": true
+  },
+  "output": {
+    "width": 1344, "height": 768, "frames": 121, "fps": 24,
+    "video_codec": "H264", "crf": 19, "preset": "veryfast",
+    "audio": "original_H3_PCM_to_AAC_stereo_32000Hz"
+  }
+}

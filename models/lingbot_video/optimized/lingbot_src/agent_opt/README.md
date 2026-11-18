@@ -1,6 +1,6 @@
 # agent_opt — autonomous lossless-parallelism optimizer
 
-Adapts the Sol-LTX-Infer multi-agent search pattern (goal.md + search-space +
+Adapts the SGLang runtime multi-agent search pattern (goal.md + search-space +
 bounded fan-out loop + correctness-gate-first + journal) to LingBot-Video, driven
 by a Claude Code subagent instead of Codex goal sessions.
 

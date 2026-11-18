@@ -1,0 +1,100 @@
+{
+  "last_node_id": 2,
+  "last_link_id": 1,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "SolH3Generate",
+      "pos": [
+        80,
+        100
+      ],
+      "size": [
+        470,
+        420
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "video_with_audio",
+          "type": "VIDEO",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "timing_json",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SolH3Generate"
+      },
+      "widgets_values": [
+        "H3 FP8 — single RTX 5090",
+        "A bird glides over a mountain lake. overall_soundscape: Soft wind and distant birds.",
+        42,
+        "fixed",
+        true
+      ]
+    },
+    {
+      "id": 2,
+      "type": "SaveVideo",
+      "pos": [
+        650,
+        100
+      ],
+      "size": [
+        520,
+        500
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 1
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveVideo"
+      },
+      "widgets_values": [
+        "SolH3/demo",
+        "mp4",
+        "auto"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "VIDEO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  },
+  "version": 0.4
+}

@@ -120,6 +120,26 @@ Exactness is applied at 64-token KV-block granularity. The sink does not
 make text query rows dense: an MMDiT integration should still use dense
 attention for valid text queries and Sol-Attn for image/video queries.
 
+### Arbitrary exact Q/KV blocks
+
+Use `exact_block_mask` when protected modalities occupy several disjoint
+segments, or when their query rows must also remain exact. It is a contiguous
+Boolean vector of length `ceil(tokens / 64)` on the Q/K/V device, shared across
+the batch and heads. A marked block forces both its Q rows and KV columns to
+take the exact route inside the fused kernel. Other blocks retain SOL routing
+and its omitted-block approximation.
+
+```python
+protected = torch.zeros((q.shape[1] + 63) // 64, device=q.device, dtype=torch.bool)
+protected[0] = protected[-1] = True  # Example: disjoint text/audio blocks.
+out = sol_attn(q, k, v, exact_block_mask=protected)
+```
+
+This option is supported by the CuTe SM90/SM100/SM120 kernels (including SM90
+KV splitting) and the Triton implementation. It can be combined with the
+legacy KV sink range. Omitting it preserves the original API behavior.
+Mask values remain runtime inputs and can change without recompilation.
+
 ### Long-sequence tuning on H100
 
 The SM90 CuTe kernel supports `kv_splits=1`, `2`, and `4`. Splitting KV can

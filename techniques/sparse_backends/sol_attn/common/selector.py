@@ -135,11 +135,16 @@ def sol_attn_route_is_exact(
     column_mean: Float32,
     threshold: Float32,
     valid: cutlass.Boolean,
+    exact_block_mask: cute.Tensor | None = None,
 ) -> cutlass.Boolean:
     distance = q_block - kv_block
     if distance < Int32(0):
         distance = Int32(0) - distance
-    return ((column_mean > threshold) or distance <= Int32(1)) and valid
+    protected = False
+    if const_expr(exact_block_mask is not None):
+        if valid and kv_block < cute.size(exact_block_mask):
+            protected = (exact_block_mask[q_block] != 0) or (exact_block_mask[kv_block] != 0)
+    return ((column_mean > threshold) or distance <= Int32(1) or protected) and valid
 
 
 @cute.jit

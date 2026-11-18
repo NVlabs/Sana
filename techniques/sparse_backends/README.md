@@ -19,7 +19,7 @@ Sol-Attn is a training-free sparse attention method for accelerating image
 and video generation. It performs dynamic block routing during online softmax
 and reuses proxy scores to approximate unselected blocks, avoiding a
 materialized routing map while preserving visual quality. CuTe DSL kernels
-support SM89, SM90, SM100, and SM120; SM80 uses the Triton kernel; Apple
+support SM89, SM90, SM100, SM103, and SM120; SM80 uses the Triton kernel; Apple
 Silicon uses a tiled Metal kernel.
 
 ## Requirements
@@ -51,6 +51,7 @@ The public `sol_attn(...)` API selects the implementation from `q.device`:
 | SM89 | RTX 4090 | CuTe DSL |
 | SM90 | H100 | CuTe DSL |
 | SM100 | GB200 | CuTe DSL |
+| SM103 | B300 / GB300 | CuTe DSL (SM100 kernel family) |
 | SM120 | RTX 5090 | CuTe DSL |
 | SM80 | A100 | Triton |
 | Apple Silicon | M-series Mac | Metal |
@@ -140,7 +141,7 @@ protected[0] = protected[-1] = True  # Example: disjoint text/audio blocks.
 out = sol_attn(q, k, v, exact_block_mask=protected)
 ```
 
-This option is supported by the CuTe SM89/SM90/SM100/SM120 kernels (including SM90
+This option is supported by the CuTe SM89/SM90/SM100/SM103/SM120 kernels (including SM90
 KV splitting) and the Triton implementation. It can be combined with the
 legacy KV sink range. Omitting it preserves the original API behavior.
 Mask values remain runtime inputs and can change without recompilation.

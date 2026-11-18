@@ -11,6 +11,7 @@ _CUTE_BACKENDS = {
     (8, 9): "cute_sm89",
     (9, 0): "cute_sm90",
     (10, 0): "cute_sm100",
+    (10, 3): "cute_sm100",
     (12, 0): "cute_sm120",
 }
 _compiled = {}
@@ -389,7 +390,7 @@ def _sol_attn_cute(
                 mask_arg,
                 stream=stream,
             )
-        elif arch == (10, 0):
+        elif arch in ((10, 0), (10, 3)):
             sink_start_block, sink_end_block = _sink_block_range(
                 tokens,
                 sink_start,

@@ -1321,7 +1321,12 @@ def _sol_attn_sm100_bf16_kernel(
                 # this exact N128 pair.  The existing score-load barrier below
                 # both protects the S/P alias and publishes these stores; no
                 # barrier or shared allocation is added.
-                if exact_owner_warp == Int32(0):
+                needs_pair_mask = (
+                    valid0 != Int32(N_MEMBER)
+                    or valid1 != Int32(N_MEMBER)
+                    or q_len != Int32(M)
+                )
+                if exact_owner_warp == Int32(0) and needs_pair_mask:
                     for cohort in cutlass.range_constexpr(4):
                         column = Int32(cohort * 32) + exact_lane
                         if cutlass.const_expr(cohort < 2):
@@ -1351,33 +1356,34 @@ def _sol_attn_sm100_bf16_kernel(
                 pair_score_pipe.consumer_release(pair_score_consumer)
                 pair_score_consumer.advance()
 
-                semantic_row = (
-                    pair_coords[0][0] + Int32(SEMANTIC_ROW_OFFSET)
-                ) & Int32(M - 1)
-                row_valid = semantic_row < q_len
-                row_mask = -Float32.inf
-                if row_valid:
-                    row_mask = Float32(0.0)
-                assert cute.size(pair_scores) % 2 == 0
-                for i in cutlass.range_constexpr(
-                    0, cute.size(pair_scores), 2
-                ):
-                    column0 = pair_coords[i][1]
-                    column1 = pair_coords[i + 1][1]
-                    mask0 = Float32(column_masks[column0])
-                    mask1 = Float32(column_masks[column1])
-                    mask0, mask1 = cute.arch.add_packed_f32x2(
-                        (mask0, mask1), (row_mask, row_mask)
-                    )
-                    mask0, mask1 = cute.arch.add_packed_f32x2(
-                        (
-                            Float32(pair_scores[i]),
-                            Float32(pair_scores[i + 1]),
-                        ),
-                        (mask0, mask1),
-                    )
-                    pair_scores[i] = mask0
-                    pair_scores[i + 1] = mask1
+                if needs_pair_mask:
+                    semantic_row = (
+                        pair_coords[0][0] + Int32(SEMANTIC_ROW_OFFSET)
+                    ) & Int32(M - 1)
+                    row_valid = semantic_row < q_len
+                    row_mask = -Float32.inf
+                    if row_valid:
+                        row_mask = Float32(0.0)
+                    assert cute.size(pair_scores) % 2 == 0
+                    for i in cutlass.range_constexpr(
+                        0, cute.size(pair_scores), 2
+                    ):
+                        column0 = pair_coords[i][1]
+                        column1 = pair_coords[i + 1][1]
+                        mask0 = Float32(column_masks[column0])
+                        mask1 = Float32(column_masks[column1])
+                        mask0, mask1 = cute.arch.add_packed_f32x2(
+                            (mask0, mask1), (row_mask, row_mask)
+                        )
+                        mask0, mask1 = cute.arch.add_packed_f32x2(
+                            (
+                                Float32(pair_scores[i]),
+                                Float32(pair_scores[i + 1]),
+                            ),
+                            (mask0, mask1),
+                        )
+                        pair_scores[i] = mask0
+                        pair_scores[i + 1] = mask1
 
                 probabilities, next_max, next_sum, row_alpha = (
                     _online_update_pair(

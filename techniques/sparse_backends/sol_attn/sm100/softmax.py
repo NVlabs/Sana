@@ -65,48 +65,54 @@ def _rescale_m64_partial_o(
 ):
     """Rescale the prior M64 output accumulator before its next PV update."""
 
-    relative_o = _zero_based_tmem_tensor(Float32, o_template.layout)
-    correction_width = 16
-    relative_fragment = cute.composition(
-        relative_o, cute.make_layout((M, correction_width))
-    )
-    load_atom = cute.make_copy_atom(
-        tcgen05.copy.Ld16x64bOp(tcgen05.copy.Repetition(8)), Float32
-    )
-    store_atom = cute.make_copy_atom(
-        tcgen05.copy.St16x64bOp(tcgen05.copy.Repetition(8)), Float32
-    )
-    thread_load = tcgen05.make_tmem_copy(
-        load_atom, relative_fragment
-    ).get_slice(owner_tidx)
-    thread_store = tcgen05.make_tmem_copy(
-        store_atom, relative_fragment
-    ).get_slice(owner_tidx)
-    source = _add_physical_tmem_base(
-        thread_load.partition_S(relative_fragment), tmem_base + o_offset
-    )
-    destination = _add_physical_tmem_base(
-        thread_store.partition_D(relative_fragment), tmem_base + o_offset
-    )
-    for fragment_idx in cutlass.range_constexpr(DV // correction_width):
-        registers = cute.make_rmem_tensor(
-            thread_load.partition_D(relative_fragment).shape, Float32
+    # A per-lane branch would violate tcgen05 .sync.aligned. The ballot
+    # makes this decision identical for every lane of the participating warp.
+    # An all-one scale leaves its accumulator elements unchanged. Producer
+    # completion and the later probability-ready barrier remain in the caller.
+    needs_rescale = Int32(cute.arch.vote_ballot_sync(alpha != Float32(1.0)))
+    if needs_rescale != Int32(0):
+        relative_o = _zero_based_tmem_tensor(Float32, o_template.layout)
+        correction_width = 32
+        relative_fragment = cute.composition(
+            relative_o, cute.make_layout((M, correction_width))
         )
-        source_i = cute.make_tensor(
-            source.iterator + fragment_idx * correction_width, source.layout
+        load_atom = cute.make_copy_atom(
+            tcgen05.copy.Ld16x64bOp(tcgen05.copy.Repetition(16)), Float32
         )
-        cute.copy(thread_load, source_i, registers)
-        tcgen05_wait_ld()
-        cute.arch.fence_view_async_tmem_load()
-        for i in cutlass.range(cute.size(registers), unroll_full=True):
-            registers[i] = Float32(registers[i]) * Float32(alpha)
-        destination_i = cute.make_tensor(
-            destination.iterator + fragment_idx * correction_width,
-            destination.layout,
+        store_atom = cute.make_copy_atom(
+            tcgen05.copy.St16x64bOp(tcgen05.copy.Repetition(16)), Float32
         )
-        cute.copy(thread_store, registers, destination_i)
-        tcgen05_wait_st()
-    cute.arch.fence_view_async_tmem_store()
+        thread_load = tcgen05.make_tmem_copy(
+            load_atom, relative_fragment
+        ).get_slice(owner_tidx)
+        thread_store = tcgen05.make_tmem_copy(
+            store_atom, relative_fragment
+        ).get_slice(owner_tidx)
+        source = _add_physical_tmem_base(
+            thread_load.partition_S(relative_fragment), tmem_base + o_offset
+        )
+        destination = _add_physical_tmem_base(
+            thread_store.partition_D(relative_fragment), tmem_base + o_offset
+        )
+        for fragment_idx in cutlass.range_constexpr(DV // correction_width):
+            registers = cute.make_rmem_tensor(
+                thread_load.partition_D(relative_fragment).shape, Float32
+            )
+            source_i = cute.make_tensor(
+                source.iterator + fragment_idx * correction_width, source.layout
+            )
+            cute.copy(thread_load, source_i, registers)
+            tcgen05_wait_ld()
+            cute.arch.fence_view_async_tmem_load()
+            for i in cutlass.range(cute.size(registers), unroll_full=True):
+                registers[i] = Float32(registers[i]) * Float32(alpha)
+            destination_i = cute.make_tensor(
+                destination.iterator + fragment_idx * correction_width,
+                destination.layout,
+            )
+            cute.copy(thread_store, registers, destination_i)
+            tcgen05_wait_st()
+        cute.arch.fence_view_async_tmem_store()
 
 
 @cute.jit

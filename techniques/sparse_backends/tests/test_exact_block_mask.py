@@ -36,7 +36,7 @@ def inputs(tokens=513):
     )
 
 
-def hybrid_oracle(q, k, v, mask, tau, thresh_type):
+def hybrid_oracle(q, k, v, mask, tau, thresh_type, *, sink_start=0, sink_tokens=0):
     """Independent token-level attention over exact blocks and expanded centroids."""
     from sol_attn.triton_ref.preprocess import prepare
 
@@ -55,7 +55,11 @@ def hybrid_oracle(q, k, v, mask, tau, thresh_type):
             ks = slice(kb * 64, min((kb + 1) * 64, tokens))
             score = (mean * kc[:, kb].float()).sum(-1) * (scale * math.log2(math.e))
             exact = score > thresholds[:, qb]
-            if abs(qb - kb) <= 1 or protected[qb] or protected[kb]:
+            sink = (
+                sink_tokens > 0
+                and sink_start // 64 <= kb < (sink_start + sink_tokens + 63) // 64
+            )
+            if abs(qb - kb) <= 1 or protected[qb] or protected[kb] or sink:
                 exact = torch.ones_like(exact)
             exact = exact[:, None, :, None]
             keys.append(

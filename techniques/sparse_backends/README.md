@@ -159,6 +159,34 @@ out = sol_attn(q, k, v, tau=1.0, kv_splits=4)
 
 B200, RTX 4090, RTX 5090, Triton, and Metal currently use `kv_splits=1`.
 
+### Comparing SM100/SM103 kernel changes
+
+Use a separate, unchanged checkout as the baseline. From the candidate checkout:
+
+```bash
+PYTHONPATH=techniques/sparse_backends python \
+  techniques/sparse_backends/benchmarks/benchmark_sm100.py \
+  --baseline-root /path/to/baseline/techniques/sparse_backends \
+  --warmup 5 --repeats 16 --modes eager,graph --output results.json
+```
+
+The benchmark uses the candidate's public API and isolates the baseline's
+module names and compilation caches without changing its kernel bodies. It
+checks bitwise equality with the baseline before and after timing and during
+CUDA graph replay. Original SOL, candidate SOL, and cuDNN dense attention run
+in rotating and reversing order. The JSON includes every CUDA-event and
+synchronized wall-time sample, paired speedups, variation, and source hashes.
+Dense attention is a performance control; sparse output correctness is checked
+against the original SOL implementation.
+
+The built-in matrix covers short and long sequences, batch/head counts, exact
+protection, and different sparsity thresholds. `--stress-only` checks changing
+maxima, zero inputs, and tiny/subnormal values against the baseline without
+timing. `--input capture.pt --heads 28` accepts a frozen H3 Q/K/V capture with
+tensor hashes and attention options. Synthetic timings alone do not establish
+model-forward or end-to-end generation speedups. Record GPU model, actual
+clocks, power limits, and software environment alongside the JSON.
+
 ## Sol-Engine integration
 
 Sol-Engine exposes two integration factories. They preserve the model's

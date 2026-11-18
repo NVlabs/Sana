@@ -42,7 +42,7 @@ def _reduce_kc_kernel(
     values = k_desc.load(
         [batch, block * BLOCK, head, d_tile * TILE_D]
     ).reshape([BLOCK, TILE_D])
-    summary = tl.sum(values, axis=0) / block_len
+    summary = tl.sum(values.to(tl.float32), axis=0) / block_len
     offsets = d_tile * TILE_D + tl.arange(0, TILE_D)
     tl.store(
         kc + ((batch * N + block) * H + head) * D + offsets,
@@ -79,7 +79,7 @@ def _reduce_vc_kernel(
     values = v_desc.load(
         [batch, block * BLOCK, head, d_tile * TILE_D]
     ).reshape([BLOCK, TILE_D])
-    summary = tl.sum(values, axis=0)
+    summary = tl.sum(values.to(tl.float32), axis=0)
     offsets = d_tile * TILE_D + tl.arange(0, TILE_D)
     tl.store(
         vc + ((batch * N + block) * H + head) * D + offsets,

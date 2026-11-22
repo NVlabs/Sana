@@ -1,0 +1,55 @@
+work_dir: output/sana_robot_ar_libero
+checkpoint: checkpoints/sana_robot_ar_pretrain.pth
+vae: checkpoints/LTX-2.3-Diffusers
+text_encoder: checkpoints/gemma-2-2b-it
+policy:
+  spatial_layout: 2x2
+  actions_per_chunk: 32
+  sliding_window_chunks: 1
+data:
+  path: data/LIBERO/sana_robot_zip
+  normalization: data/LIBERO/normalization.json
+  view_sizes: [[256, 256], [256, 256]]
+  latent_store: null
+  augmentation:
+    view_changes:
+      clean_probability: 0.2
+      crop_area: [0.75, 1.0]
+      rotation: 10.0
+      translation: 0.1
+      brightness: 0.3
+      contrast: 0.3
+      saturation: 0.3
+      hue: 0.03
+      gamma: 0.2
+      camera_move:
+        views: [image]
+        probability: 0.35
+        yaw: 3.0
+        pitch: 2.5
+        roll: 0.75
+        focal: [0.96, 1.06]
+        shift_x: 4.0
+        shift_y: 3.0
+        radial: [-0.015, 0.03]
+  chunk_size: 32
+  video_frame_stride: 4
+  chunk_budget: 12
+  num_workers: 8
+optimizer:
+  learning_rate: 5.0e-5
+  betas: [0.9, 0.95]
+  eps: 1.0e-10
+  weight_decay: 0.01
+  decay_biases_and_norms: true
+  warmup_steps: 1000
+  min_learning_rate_ratio: 0.01
+  gradient_clip: 1.0
+max_steps: 20000
+save_steps: 1000
+log_steps: 20
+seed: 42
+action_loss_weight: 1.0
+timestep_weighting: false
+instruction_dropout: 0.1
+wandb_project: sana-robot

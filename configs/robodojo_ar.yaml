@@ -1,0 +1,37 @@
+work_dir: output/sana_robot_ar_robodojo
+checkpoint: checkpoints/sana_robot_ar_pretrain.pth
+vae: checkpoints/LTX-2.3-Diffusers
+text_encoder: checkpoints/gemma-2-2b-it
+policy:
+  spatial_layout: t_shape
+  actions_per_chunk: 32
+  sliding_window_chunks: 1
+data:
+  path: data/RoboDojo/sana_robot_zip
+  normalization: data/RoboDojo/normalization.json
+  view_sizes: [[384, 480], [192, 256], [192, 256]]
+  latent_store: null
+  chunk_size: 32
+  video_frame_stride: 4
+  chunk_budget: 71
+  num_workers: 6
+optimizer:
+  learning_rate: 1.0e-4
+  betas: [0.9, 0.95]
+  eps: 1.0e-10
+  weight_decay: 1.0e-4
+  warmup_steps: 1000
+  min_learning_rate_ratio: 0.01
+  gradient_clip: 1.0
+  gradient_clip_groups:
+    attn_res_final: 0.1
+    attn_res_attn: 0.2
+    attn_res_mlp: 0.2
+    rest: 0.2
+max_steps: 50000
+save_steps: 500
+log_steps: 10
+seed: 1
+action_loss_weight: 1.0
+instruction_dropout: 0.1
+wandb_project: sana-robot

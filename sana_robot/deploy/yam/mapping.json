@@ -1,0 +1,21 @@
+{
+  "embodiment": "dual-arm YAM robot with parallel grippers",
+  "action_mode": "joint_only",
+  "views": [
+    {"name": "top", "column": "observation.images.top", "slot": 0, "description": "overhead external camera"},
+    {"name": "left_wrist", "column": "observation.images.left_wrist", "slot": 2, "description": "left wrist-mounted camera"},
+    {"name": "right_wrist", "column": "observation.images.right_wrist", "slot": 3, "description": "right wrist-mounted camera"}
+  ],
+  "state": {
+    "left_joints": {"column": "observation.state", "index": [0, 1, 2, 3, 4, 5]},
+    "right_joints": {"column": "observation.state", "index": [6, 7, 8, 9, 10, 11]},
+    "left_gripper": {"column": "observation.state", "index": [12], "open": 1.0, "closed": 0.0},
+    "right_gripper": {"column": "observation.state", "index": [13], "open": 1.0, "closed": 0.0}
+  },
+  "action": {
+    "left_joints": {"column": "action", "index": [0, 1, 2, 3, 4, 5]},
+    "right_joints": {"column": "action", "index": [6, 7, 8, 9, 10, 11]},
+    "left_gripper": {"column": "action", "index": [12], "open": 1.0, "closed": 0.0},
+    "right_gripper": {"column": "action", "index": [13], "open": 1.0, "closed": 0.0}
+  }
+}

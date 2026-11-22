@@ -1,0 +1,25 @@
+# Copyright 2026 NVIDIA CORPORATION & AFFILIATES
+#
+# SPDX-License-Identifier: Apache-2.0
+
+from __future__ import annotations
+
+import torch
+
+from sana_robot.train.flow_matching.timesteps import TRAIN_TIMESTEPS, shifted_sigmas
+
+WEIGHT_FLOOR = 0.1
+
+
+def timestep_weight_table(flow_shift: float, device=None) -> torch.Tensor:
+    """Return the loss weight of every raw timestep [1000] under a flow shift: a bell around the middle noise level, zero at its lowest point, mean 1 over the timesteps, and at least ``WEIGHT_FLOOR`` on the noisier half."""
+    levels = shifted_sigmas(torch.arange(TRAIN_TIMESTEPS, device=device), flow_shift)
+    weights = torch.exp(-2 * (levels - 0.5).square())
+    weights = weights - weights.min()
+    weights = weights / weights.mean()
+    return torch.where(levels > 0.5, weights.clamp_min(WEIGHT_FLOOR), weights)
+
+
+def timestep_weights(timesteps: torch.Tensor, flow_shift: float) -> torch.Tensor:
+    """Return the loss weight of raw timesteps under a flow shift, with the shape of ``timesteps``."""
+    return timestep_weight_table(flow_shift, timesteps.device)[timesteps.long()]

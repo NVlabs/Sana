@@ -1,0 +1,49 @@
+work_dir: output/sana_robot_ar_robotwin
+checkpoint: checkpoints/sana_robot_ar_pretrain.pth
+vae: checkpoints/LTX-2.3-Diffusers
+text_encoder: checkpoints/gemma-2-2b-it
+policy:
+  spatial_layout: t_shape
+  actions_per_chunk: 32
+  sliding_window_chunks: 1
+data:
+  path: data/RoboTwin/sana_robot_zip
+  normalization: data/RoboTwin/normalization.json
+  view_sizes: [[384, 480], [192, 256], [192, 256]]
+  latent_store: null
+  augmentation:
+    camera:
+      views: [head_camera]
+      probability: 0.5
+      scale: [0.95, 1.0]
+    lighting:
+      gain_probability: 0.7
+      gain: [0.8, 1.2]
+      shadow_probability: 0.7
+      shadow_width: [0.25, 0.6]
+      shadow_depth: [0.15, 0.35]
+    color:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.25
+      gamma: 0.1
+  chunk_size: 32
+  video_frame_stride: 4
+  chunk_budget: 15
+  num_workers: 8
+optimizer:
+  learning_rate: 5.0e-5
+  betas: [0.9, 0.95]
+  eps: 1.0e-10
+  weight_decay: 0.01
+  decay_biases_and_norms: true
+  warmup_steps: 1000
+  min_learning_rate_ratio: 0.01
+  gradient_clip: 1.0
+max_steps: 21380
+save_steps: 1000
+log_steps: 10
+seed: 1
+action_loss_weight: 1.0
+instruction_dropout: 0.1
+wandb_project: sana-robot

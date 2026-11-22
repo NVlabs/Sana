@@ -1,0 +1,16 @@
+policy_type: ar
+checkpoint: checkpoints/sana_robot_ar_libero/sana_robot_ar_libero.pth
+vae: checkpoints/LTX-2.3-Diffusers
+text_encoder: checkpoints/gemma-2-2b-it
+policy:
+  spatial_layout: 2x2
+  actions_per_chunk: 32
+  sliding_window_chunks: 1
+dataset: checkpoints/sana_robot_ar_libero
+normalization: checkpoints/sana_robot_ar_libero/normalization.json
+view_sizes: [[256, 256], [256, 256]]
+chunk_size: 32
+video_frame_stride: 4
+steps: 2
+n_action_steps: 16
+optimized: false

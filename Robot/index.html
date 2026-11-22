@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SANA-Robot: Efficient World Action Model with Hybrid Memory</title>
+<meta name="description" content="SANA-Robot is a 4.5B world action model with minute-level memory that runs in real time on edge devices.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%2213 7 112 104%22 height=%22104%22 width=%22112.0%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M22 78V102%22 stroke=%22%2376b900%22 stroke-width=%228%22/%3E%3Cpath d=%22M26 90H71A15 15 0 0 0 71 60H51A15 15 0 0 1 51 30H92%22 stroke=%22%2376b900%22 stroke-width=%2214%22/%3E%3Ccircle cx=%2286%22 cy=%2275%22 r=%225.4%22 fill=%22%233d8bff%22/%3E%3Ccircle cx=%2236%22 cy=%2245%22 r=%225.4%22 fill=%22%233d8bff%22/%3E%3Cpath d=%22M116 16H100V44H116%22 stroke=%22%2376b900%22 stroke-width=%227%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%2213 7 112 104%22 height=%22104%22 width=%22112.0%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M22 78V102%22 stroke=%22%2376b900%22 stroke-width=%228%22/%3E%3Cpath d=%22M26 90H71A15 15 0 0 0 71 60H51A15 15 0 0 1 51 30H92%22 stroke=%22%2376b900%22 stroke-width=%2214%22/%3E%3Ccircle cx=%2286%22 cy=%2275%22 r=%225.4%22 fill=%22%233d8bff%22/%3E%3Ccircle cx=%2236%22 cy=%2245%22 r=%225.4%22 fill=%22%233d8bff%22/%3E%3Cpath d=%22M116 16H100V44H116%22 stroke=%22%2376b900%22 stroke-width=%227%22/%3E%3C/svg%3E" alt="" width="28" height="26">SANA<span>-Robot</span></a>
+    <nav aria-label="Sections">
+      <a href="#why">Why</a>
+      <a href="#method">Method</a>
+      <a href="#results">Results</a>
+      <a href="#realtime">Real time</a>
+      <a href="#simulator">Simulator</a>
+      <a href="#bibtex">BibTeX</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ───────────────────────── Hero ───────────────────────── -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-text">
+      <p class="eyebrow">World action model · real-time robot control</p>
+      <h1>SANA-Robot</h1>
+      <p class="subtitle">Efficient World Action Model with Hybrid Memory</p>
+      <p class="tagline">A 4.5B world action model with <span class="nb">minute-level</span> memory that runs in real time on edge devices.</p>
+
+      <p class="authors">
+        <a href="https://yuyangzhao.com/" target="_blank" rel="noopener">Yuyang Zhao</a><sup>1*†</sup>, <a href="https://lizekai-richard.github.io/" target="_blank" rel="noopener">Zekai Li</a><sup>1,2*†</sup>, <a href="https://ryanpyc27.github.io/" target="_blank" rel="noopener">Yicheng Pan</a><sup>3†</sup>, <a href="https://jiamingtang.me/" target="_blank" rel="noopener">Jiaming Tang</a><sup>4</sup>, <a href="https://zhuoyangz.com/" target="_blank" rel="noopener">Zhuoyang Zhang</a><sup>4</sup>, <a href="https://jiaxux.ing/" target="_blank" rel="noopener">Jiaxu Xing</a><sup>1</sup>, <a href="https://mbreuss.github.io/" target="_blank" rel="noopener">Moritz Reuss</a><sup>1</sup>, <a href="https://pengqq.com/" target="_blank" rel="noopener">Quanquan Peng</a><sup>2</sup>, <a href="https://lawrence-cj.github.io/" target="_blank" rel="noopener">Junsong Chen</a><sup>1,5</sup>, <a href="https://xieenze.github.io/" target="_blank" rel="noopener">Enze Xie</a><sup>1</sup>, <a href="https://zhijianliu.com/" target="_blank" rel="noopener">Zhijian Liu</a><sup>2,6</sup>, <a href="https://hanlab.mit.edu/songhan/" target="_blank" rel="noopener">Song Han</a><sup>1,4</sup>
+      </p>
+      <p class="affil"><sup>1</sup>NVIDIA &nbsp; <sup>2</sup>UCSD &nbsp; <sup>3</sup>THU &nbsp; <sup>4</sup>MIT &nbsp; <sup>5</sup>HKU &nbsp; <sup>6</sup>Inco AI<br><span><sup>*</sup>Equal contribution &nbsp; <sup>†</sup>Core contributor</span></p>
+
+      <div class="cta">
+        <!-- Paper (arXiv), Code (GitHub), Models (Hugging Face): one look, each with the logo of its site. -->
+        <a class="btn is-pending" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.8423 0a1.0037 1.0037 0 0 0-.922.6078c-.1536.3687-.0438.6275.2938 1.1113l6.9185 8.3597-1.0223 1.1058a1.0393 1.0393 0 0 0 .003 1.4229l1.2292 1.3135-5.4391 6.4444c-.2803.299-.4538.823-.2971 1.1986a1.0253 1.0253 0 0 0 .9585.635.9133.9133 0 0 0 .6891-.3405l5.783-6.126 7.4902 8.0051a.8527.8527 0 0 0 .6835.2597.9575.9575 0 0 0 .8777-.6138c.1577-.377-.017-.7502-.306-1.1407l-7.0518-8.3418 1.0632-1.13a.9626.9626 0 0 0 .0089-1.3165L4.6336.4639s-.3733-.4535-.768-.463zm0 .272h.0166c.2179.0052.4874.2715.5644.3639l.005.006.0052.0055 10.169 10.9905a.6915.6915 0 0 1-.0072.945l-1.0666 1.133-1.4982-1.7724-8.5994-10.39c-.3286-.472-.352-.6183-.2592-.841a.7307.7307 0 0 1 .6704-.4401Zm14.341 1.5701a.877.877 0 0 0-.6554.2418l-5.6962 6.1584 1.6944 1.8319 5.3089-6.5138c.3251-.4335.479-.6603.3247-1.0292a1.1205 1.1205 0 0 0-.9763-.689zm-7.6557 12.2823 1.3186 1.4135-5.7864 6.1295a.6494.6494 0 0 1-.4959.26.7516.7516 0 0 1-.706-.4669c-.1119-.2682.0359-.6864.2442-.9083l.0051-.0055.0047-.0055z"/></svg>Paper <small>soon</small></a>
+        <a class="btn is-pending" aria-disabled="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>Code <small>soon</small></a>
+        <a class="btn is-pending" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.4446 11.5059c0 1.1021.1673 2.1585.4847 3.1563-.0378-.0028-.0691-.0058-.1058-.0058-.4209 0-.8015.16-1.0704.4512-.3454.3737-.4984.8335-.4316 1.293a1.576 1.576 0 0 0 .2148.5978c-.2319.1864-.4018.4456-.4844.7578-.0646.2448-.131.7543.2149 1.2794a1.4552 1.4552 0 0 0-.0625.1055c-.208.3923-.2207.8372-.0371 1.25.2783.6258.9696 1.1175 2.3126 1.6467.8356.3292 1.5988.5411 1.6056.543 1.1046.2847 2.104.4277 2.969.4277 1.4173 0 2.4754-.3849 3.1525-1.1446 1.538.2651 2.791.1403 3.592.006.6773.7555 1.7332 1.1387 3.1467 1.1387.8649 0 1.8643-.143 2.969-.4278.0068-.0019.77-.2138 1.6056-.543 1.343-.5292 2.0343-1.0208 2.3126-1.6466.1836-.4129.171-.8577-.037-1.25a1.4685 1.4685 0 0 0-.0626-.1056c.346-.525.2795-1.0346.2149-1.2793-.0826-.3122-.2525-.5714-.4844-.7579.11-.1816.1831-.3788.2148-.5977.0669-.4595-.0862-.9193-.4316-1.293-.2688-.2913-.6495-.4513-1.0704-.4513-.0209 0-.0376.0008-.0588.0018.3162-.9966.4846-2.0518.4846-3.1523 0-5.807-4.7362-10.5144-10.5789-10.5144-5.8426 0-10.5788 4.7073-10.5788 10.5144Zm10.5788-9.4831c5.2727 0 9.5476 4.246 9.5476 9.483a9.4201 9.4201 0 0 1-.2696 2.2365c-.0039-.0047-.0079-.011-.0117-.0156-.274-.3255-.6679-.5059-1.1075-.5059-.352 0-.714.1155-1.0763.3438-.2403.1517-.5058.422-.7793.7598-.2534-.3492-.608-.5832-1.0137-.6465a1.5174 1.5174 0 0 0-.2344-.0176c-.9263 0-1.4828.7993-1.6935 1.5177-.1046.2426-.6065 1.3482-1.3614 2.0978-1.1681 1.1601-1.4458 2.3534-.8396 3.6382-.843.1029-1.5836.0927-2.365-.006.5906-1.212.3626-2.4388-.8426-3.6322-.755-.7496-1.2568-1.8552-1.3614-2.0978-.2107-.7184-.7673-1.5177-1.6935-1.5177-.078 0-.1568.0054-.2344.0176-.4057.0633-.7604.2973-1.0137.6465-.2735-.3379-.539-.6081-.7794-.7598-.3622-.2283-.7243-.3438-1.0762-.3438-.4266 0-.8094.171-1.0821.4786a9.4208 9.4208 0 0 1-.2598-2.1936c0-5.237 4.2749-9.483 9.5475-9.483zM8.6443 7.0036c-.4838.0043-.9503.2667-1.1934.7227-.3536.6633-.1006 1.4873.5645 1.84.351.1862.4883-.5261.836-.6485.3107-.1095.841.399 1.0078.086.3536-.6634.1025-1.4874-.5625-1.84a1.3659 1.3659 0 0 0-.6524-.1602Zm6.8403 0c-.2199-.002-.4426.05-.6504.1602-.665.3526-.9181 1.1766-.5645 1.84.1669.313.6971-.1955 1.0079-.086.3476.1224.4867.8347.838.6485.6649-.3527.916-1.1767.5624-1.84-.243-.456-.7096-.7184-1.1934-.7227Zm-9.7565 1.418a.8768.8768 0 0 0-.877.877c0 .4846.3925.877.877.877a.8768.8768 0 0 0 .877-.877.8768.8768 0 0 0-.877-.877zm12.6434 0c-.4845 0-.879.3925-.879.877 0 .4846.3945.877.879.877a.8768.8768 0 0 0 .877-.877.8768.8768 0 0 0-.877-.877zM8.7927 11.459c-.179-.003-.2793.1107-.2793.416 0 .8097.3874 2.125 1.4279 2.924.207-.7123 1.3453-1.2832 1.5079-1.2012.2315.1167.2191.4417.6074.7266.3884-.285.374-.6098.6056-.7266.1627-.082 1.3009.4889 1.5079 1.2012 1.0404-.799 1.4278-2.1144 1.4278-2.924 0-1.2212-1.583.6402-3.5413.6485-1.4686-.0061-2.7266-1.0558-3.2639-1.0645zM4.312 14.4768c.5792.365 1.6964 2.2751 2.1056 3.0177.1371.2488.371.3536.582.3536.4188 0 .7465-.4138.0391-.9395-1.0636-.791-.6914-2.0846-.1836-2.1642a.4302.4302 0 0 1 .0664-.004c.4616 0 .666.7892.666.7892s.5959 1.4898 1.6213 2.508c.942.9356 1.062 1.703.4961 2.6661-.0164-.004-.0159.0236-.1484.2149-.1853.2673-.4322.4688-.7188.6152-.5062.2269-1.1397.2696-1.7833.2696-1.037 0-2.1017-.1824-2.6975-.336-.0293-.0075-3.6505-.9567-3.1916-1.8224.0771-.1454.2033-.2031.3633-.2031.6463 0 1.823.9551 2.3283.9551.113 0 .196-.0865.2285-.2031.2249-.8045-3.2787-1.0522-2.9846-2.1642.0519-.1967.193-.2757.3907-.2754.854 0 2.7704 1.4923 3.172 1.4923.0307 0 .0525-.0085.0645-.0274.2012-.3227.1096-.5865-1.3087-1.4395-1.4182-.8533-2.4315-1.329-1.8653-1.9416.0651-.0707.1574-.1015.2695-.1015.8611.0002 2.8948 1.84 2.8948 1.84s.5487.5683.8809.5683c.0762 0 .1416-.0315.1855-.1054.2355-.3946-2.1858-2.2183-2.3224-2.971-.0926-.51.0641-.7676.3555-.7676-.0006.008.1701-.0285.4942.1759zm16.2257.5918c-.1366.7526-2.5579 2.5764-2.3224 2.9709.044.074.1092.1055.1855.1055.3321 0 .881-.5684.881-.5684s2.0336-1.8397 2.8947-1.84c.1121 0 .2044.0308.2695.1016.5662.6125-.447 1.0882-1.8653 1.9415-1.4183.853-1.51 1.1168-1.3087 1.4396.012.0188.0337.0273.0644.0273.4016 0 2.3181-1.4923 3.1721-1.4923.1977-.0002.3388.0787.3907.2754.294 1.112-3.2095 1.3597-2.9846 2.1642.0325.1166.1156.2032.2285.2032.5054 0 1.682-.9552 2.3283-.9552.16 0 .2862.0577.3633.2032.459.8656-3.1623 1.8149-3.1916 1.8224-.5958.1535-1.6605.336-2.6975.336-.6351 0-1.261-.0409-1.7638-.2599-.2949-.1472-.5488-.3516-.7383-.625-.0411-.0682-.1026-.1476-.1426-.205-.5726-.9679-.455-1.7371.4903-2.676 1.0254-1.0182 1.6212-2.508 1.6212-2.508s.2044-.7891.666-.7891a.4318.4318 0 0 1 .0665.0039c.5078.0796.88 1.3732-.1836 2.1642-.7074.5257-.3797.9395.039.9395.211 0 .445-.1047.5821-.3535.4092-.7426 1.5264-2.6527 2.1056-3.0178.5588-.3524.99-.1816.8497.5918z"/></svg>Models <small>soon</small></a>
+      </div>
+    </div>
+
+    <figure class="hero-video">
+      <div class="vid">
+        <video id="heroVideo" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/overview_short.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/overview_short.jpg" muted loop playsinline controls preload="metadata" data-autoplay></video>
+      </div>
+      <figcaption><b>SANA-Robot in 1:47.</b> Five real-world tasks, the hybrid memory, memory RTC and the results. The video starts muted; turn the sound on for the music.
+        <span class="credit">Music: 'Growing Up' by Scott Buckley (edited) - released under CC-BY 4.0. <a href="https://www.scottbuckley.com.au">www.scottbuckley.com.au</a></span></figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap tiles">
+    <div class="tile"><b>4.5B</b><span>parameters in one network that is a policy, an inverse and a forward dynamics model</span></div>
+    <div class="tile"><b>≥ 1 min</b><span>of memory over the whole episode, at the same cost for every action chunk</span></div>
+    <div class="tile"><b>115 ms</b><span>per action chunk on an RTX 5090 with NVFP4 GEMMs, 135 ms with FP8</span></div>
+    <div class="tile"><b>30 Hz</b><span>closed-loop, asynchronous robot control on edge devices</span></div>
+  </div>
+</section>
+
+<!-- ───────────────────────── Why ───────────────────────── -->
+<section class="band" id="why">
+  <div class="wrap">
+    <p class="eyebrow">01 · Why</p>
+    <h2>Video prediction makes world action models slow, and most of them cannot remember.</h2>
+    <p class="lede">World action models (WAMs) leverage the world knowledge of video generation models to improve action generation. Two problems keep them from serving as the low-level policy that must run stably on edge devices.</p>
+
+    <div class="two">
+      <article class="card problem">
+        <h3>Prediction overhead</h3>
+        <div class="versus">
+          <div><b class="bad">0.6 s</b><span>per request for our 4.5B model on an RTX 5090, without optimization</span></div>
+          <div><b>&lt; 0.1 s</b><span>for π<sub>0.5</sub>, a vision-language-action model</span></div>
+        </div>
+        <p>Besides the actions, each action chunk requires denoising the far more numerous video tokens over several steps. A synchronous robot stands still during each request.</p>
+      </article>
+      <article class="card problem">
+        <h3>No long-term memory</h3>
+        <div class="versus">
+          <div><b class="bad">30%</b><span>on the Shell Game for SANA-Robot-base, which sees only the current observation: no better than chance</span></div>
+          <div><b class="good">75%</b><span>for SANA-Robot-AR, with the hybrid memory</span></div>
+        </div>
+        <p>Many manipulation tasks depend on information that is no longer visible, such as the number of completed steps or the position of an occluded object. Existing WAMs either act from the current observation alone or keep only a few sparsely sampled past frames, which miss most of the episode and add to the latency as the memory grows.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── Method ───────────────────────── -->
+<section id="method">
+  <div class="wrap">
+    <p class="eyebrow">02 · Method</p>
+    <h2>One hybrid transformer, three core designs.</h2>
+    <p class="lede">SANA-Robot is a hybrid linear diffusion transformer trained from Sana-Video 2. It stacks 8 blocks, each with three Gated DeltaNet (GDN) layers followed by one softmax attention layer. A GDN layer compresses the past into a fixed-size recurrent state, so its cost does not grow with the context. A softmax layer attends to every token exactly, at a cost that grows with the context.</p>
+
+    <figure class="card arch" id="arch">
+      <div class="arch-scroll"><div id="archChart"></div></div>
+      <figcaption>The video VAE encodes each camera view separately into the observation latent <i>o</i> and the future video latent <i>z</i>, which enter the DiT in one sequence with the proprioception <i>s</i> and the actions <i>a</i>. The Policy mode is shown: <i>z</i> and <i>a</i> are noised targets and are denoised jointly. SANA-Robot-AR adds the hybrid memory.</figcaption>
+    </figure>
+
+    <!-- Design 1 -->
+    <div class="design">
+      <div class="design-head">
+        <span class="num">1</span>
+        <div>
+          <h3>Hybrid memory at constant cost</h3>
+          <p>Attention is causal across action chunks, so each chunk reads the past but never the future. The softmax layers attend to the first frame and to a sliding window over the last few chunks, through which information propagates chunk by chunk. The GDN layers absorb every past chunk into their fixed-size state and keep a memory of the whole episode. Each chunk is written into the memory once, so every action chunk has the same cost.</p>
+        </div>
+      </div>
+
+      <div class="card memlab" id="memlab">
+        <div class="memlab-top">
+          <div class="vid">
+            <video id="memVideo" src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/shell_3.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/shell_first.jpg" muted loop playsinline preload="metadata" data-autoplay></video>
+            <span class="chip">Three-Cup Shell Game · real robot · 1×</span>
+            <button class="playbtn" id="memPlay" type="button" aria-label="Pause the episode">❚❚</button>
+          </div>
+          <div class="memlab-panel">
+            <p class="panel-title">What the current chunk reads from the past</p>
+            <div class="tabs" id="memTabs" role="tablist" aria-label="Memory design"></div>
+            <p class="memlab-desc" id="memDesc"></p>
+            <div id="memLanes"></div>
+          </div>
+        </div>
+
+        <div class="memlab-strip">
+          <div class="strip-head">
+            <span id="memClock"></span>
+            <span id="memCover"></span>
+          </div>
+          <!-- Two rows over one time axis, as in the overview video: for the hybrid memory the softmax layers
+               (first frame and sliding window) above the GDN layers (every past chunk). -->
+          <div class="strip-grid">
+            <div class="phases" id="memPhases" aria-hidden="true"></div>
+            <div class="strip-rows" id="memRows" aria-hidden="true"></div>
+            <div class="strip" id="memStrip" role="slider" aria-label="Position in the episode" tabindex="0"></div>
+            <div class="strip-axis"><span>episode start</span><span>time →</span></div>
+          </div>
+          <div class="strip-legend" id="memLegend"></div>
+        </div>
+
+        <div class="memlab-foot">
+          <div class="nsel" id="memN">
+            <span>Softmax window <i>N</i></span>
+            <div class="seg" role="group" aria-label="Window size in chunks"></div>
+            <small>The Shell Game policy uses <i>N</i> = 3. From <i>N</i> = 1 to <i>N</i> = 4 the latency rises by only 2.5 ms (173.3 → 175.8 ms, BF16, RTX 5090).</small>
+          </div>
+          <div class="memscore">
+            <p>Success on the memory tasks of RoboDojo (%), our own evaluation</p>
+            <div class="bars" id="memBars"></div>
+            <small>The baseline memories are used to post-train SANA-Robot-base with the same data and initialization. All three are evaluated in our own runs rather than in the official evaluation, so the number of the hybrid memory differs from its official result in the benchmark table under <a href="#results">Results</a>.</small>
+          </div>
+        </div>
+      </div>
+      <p class="note">Play the episode or click the timeline. The ball is visible only in the first two seconds; when the robot reaches for a cup, the answer lies about ten seconds in the past. Chunks are drawn every 32 actions at 30 Hz (about 1.07 s). The clip illustrates the mechanism and is not aligned to the actual requests of the policy.</p>
+
+      <div class="three">
+        <div class="fact"><h4>Fine-grained, chunk-level</h4><p>Each chunk stores the video latent of its full span of 32 control steps, so the memory keeps every position the target cup passes through in the Shell Game, which sparsely sampled frames may miss.</p></div>
+        <div class="fact"><h4>Read, but never written</h4><p>The targets read the current observation, but the observation does not read them and is not written into the memory. With bidirectional attention the policy takes a shortcut through the current frame and ignores the memory (9.1% on the memory tasks, against 48.8%).</p></div>
+        <div class="fact"><h4>The predicted video is the bridge</h4><p>The actions barely read the history directly. The video predicted for the current chunk reads the history, and the actions read this video, which is also why the memory stores only video latents.</p></div>
+      </div>
+    </div>
+
+    <!-- Design 2 -->
+    <div class="design">
+      <div class="design-head">
+        <span class="num">2</span>
+        <div>
+          <h3>A unified world action model</h3>
+          <p>All three modes share one token sequence of multi-view video, proprioception and actions, and differ only in which tokens are clean conditions and which are noised targets. One network thus learns all three roles from the same data: 19.4K hours from 23 datasets of robots, handheld grippers, simulation and human video.</p>
+        </div>
+      </div>
+
+      <div class="card unified" id="unified">
+        <div class="tabs" id="uniTabs" role="tablist" aria-label="Mode of the unified model"></div>
+        <div class="tokens" id="uniTokens" aria-live="polite"></div>
+        <div class="uni-foot">
+          <p class="formula" id="uniFormula"></p>
+          <p id="uniDesc"></p>
+        </div>
+        <div class="legend">
+          <span><i class="sw sw-clean"></i>clean token: condition</span>
+          <span><i class="sw sw-noised"></i>noised token: target that carries the loss</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Design 3 -->
+    <div class="design">
+      <div class="design-head">
+        <span class="num">3</span>
+        <div>
+          <h3>Full-stack infrastructure for memory</h3>
+          <p>The memory changes both training and deployment, and the infrastructure of SANA-Robot is designed around it.</p>
+        </div>
+      </div>
+      <div class="two">
+        <article class="card infra">
+          <p class="tag">Training</p>
+          <h4>Whole episodes, without padding</h4>
+          <p>The memory must be learned on whole episodes, whose lengths vary widely. Multimodal sequence packing with task-balanced ordering trains on whole episodes without padding and with a stable task mix in every step. Balanced and shuffled data loading further mixes many datasets in every step.</p>
+        </article>
+        <article class="card infra">
+          <p class="tag">Deployment</p>
+          <h4>Memory RTC and a 5.3× faster request</h4>
+          <p>Memory RTC extends real-time chunking to a policy with memory by keeping one memory per execution phase, so that every request reads a memory laid out as in training. Fused kernels, CUDA graphs, prefix caching and low-bit GEMMs reduce the latency by 5.3× to 115 ms per action chunk on an RTX 5090. <a href="#realtime">See it on the robot ↓</a></p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── Results ───────────────────────── -->
+<section class="band" id="results">
+  <div class="wrap">
+    <p class="eyebrow">03 · Results</p>
+    <h2>Long-horizon, precise, and it remembers.</h2>
+    <p class="lede">Five real-world tasks, each with 100 demonstrations and 20 evaluation rollouts. The baselines, π<sub>0.5</sub> and OpenWAM-α, are fine-tuned on the same demonstrations of each task.</p>
+
+    <div class="tasks">
+      <article class="card task">
+        <div class="vid">
+          <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/hanoi.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/hanoi.jpg" muted loop playsinline preload="none" data-autoplay></video>
+          <span class="chip">real robot · 1×</span>
+        </div>
+        <div class="task-body">
+          <p class="tag">Long horizon · precision</p>
+          <h3>Tower of Hanoi</h3>
+          <p>Seven rings are stacked one after another, and each must be lowered with its hole aligned to the peg. An error at one step compromises all the steps after it.</p>
+          <div class="bars" data-bars="hanoi"></div>
+          <small>Rings stacked consecutively in the correct order before the first error, out of 7 (%).</small>
+        </div>
+      </article>
+
+      <article class="card task">
+        <div class="vid">
+          <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/coffee.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/coffee.jpg" muted loop playsinline preload="none" data-autoplay></video>
+          <span class="chip">real robot · 1×</span>
+        </div>
+        <div class="task-body">
+          <p class="tag">Long horizon</p>
+          <h3>Make Coffee</h3>
+          <p>Seven sub-tasks on a Galaxea R1, from picking up the capsule to handing over the coffee cup.</p>
+          <div class="bars" data-bars="coffee"></div>
+          <small>Finished steps before the first error (%).</small>
+        </div>
+      </article>
+
+      <article class="card task">
+        <div class="vid">
+          <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/cube.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/cube.jpg" muted loop playsinline preload="none" data-autoplay></video>
+          <span class="chip">real robot · 1×</span>
+        </div>
+        <div class="task-body">
+          <p class="tag">Precision</p>
+          <h3>Magic Cube</h3>
+          <p>Each turn must grasp one layer of the cube and rotate it without moving the others.</p>
+          <div class="bars" data-bars="cube"></div>
+          <small>Successful turns of the cube (%).</small>
+        </div>
+      </article>
+
+      <!-- Second row: long memory (two columns wide, two rollouts) and fast reaction. -->
+      <article class="card task task-wide">
+        <div class="vid-pair">
+          <div class="vid"><video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/shell_1.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/shell_1.jpg" muted loop playsinline preload="none" data-autoplay></video><span class="chip">real robot · 1×</span></div>
+          <div class="vid"><video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/shell_2.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/shell_2.jpg" muted loop playsinline preload="none" data-autoplay></video><span class="chip">real robot · 1×</span></div>
+        </div>
+        <div class="task-body">
+          <p class="tag">Long memory</p>
+          <h3>Three-Cup Shell Game</h3>
+          <p>A ball is hidden under one of three cups and the cups are shuffled, after which the policy must lift the cup that hides the ball. SANA-Robot-AR, with a window of <i>N</i> = 3, succeeds in 75% of the rollouts. SANA-Robot-base sees only the current observation and succeeds in 30%, no better than chance.</p>
+          <div class="bars" data-bars="shell" data-ref="33.3" data-ref-label="chance, 1 in 3"></div>
+          <small>Rollouts in which the robot picks the cup that hides the ball (%).</small>
+        </div>
+      </article>
+
+      <article class="card task">
+        <div class="vid">
+          <video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/hockey_fp8.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/hockey_fp8.jpg" muted loop playsinline preload="none" data-autoplay></video>
+          <span class="chip">real robot · 1×</span>
+        </div>
+        <div class="task-body">
+          <p class="tag">Fast reaction</p>
+          <h3>Air Hockey</h3>
+          <p>The robot must react to a fast-moving puck, so every pause between chunks costs hits. Asynchronous execution removes the stall before each chunk.</p>
+          <div class="bars" data-bars="hockey"></div>
+          <small>Attempts in which the robot hits the puck (%). Asynchronous with FP8 GEMMs, as in the clip; synchronous with BF16. See <a href="#realtime">Real time</a>.</small>
+        </div>
+      </article>
+    </div>
+
+    <h3 class="sub">Simulation benchmarks</h3>
+    <div class="benchgrid">
+      <div class="card bench" id="bench">
+        <div class="tabs" id="benchTabs" role="tablist" aria-label="Benchmark"></div>
+        <div class="bench-controls">
+          <div class="pills" id="benchCols" role="group" aria-label="Column"></div>
+          <div class="seg" id="benchMetric" role="group" aria-label="Metric"></div>
+        </div>
+        <div class="bars bars-wide" id="benchBars"></div>
+        <p class="note" id="benchNote"></p>
+      </div>
+
+      <div class="card tradeoff">
+        <h4>Speed against memory</h4>
+        <p>Latency per action chunk against the score on the memory dimension of RoboDojo, all measured on one RTX 5090.</p>
+        <div id="tradeoffChart"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── Real time ───────────────────────── -->
+<section id="realtime">
+  <div class="wrap">
+    <p class="eyebrow">04 · Real time</p>
+    <h2>115 ms per action chunk, and 30 Hz closed-loop control.</h2>
+    <p class="lede">Real-time closed-loop control requires the robot to run stably at its control frequency, 30 Hz in our deployment, without any idle time. The pipeline must be asynchronous, since in synchronous execution the robot idles during every request, and inference must be fast, so that each chunk is planned from a more recent observation.</p>
+
+    <h3 class="sub">Air Hockey: every pause between chunks costs hits</h3>
+    <div class="hockey" id="hockey">
+      <article class="card hk">
+        <div class="vid"><video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/hockey_sync.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/hockey_sync.jpg" muted loop playsinline preload="none" data-autoplay></video><span class="chip">real robot · 1×</span></div>
+        <div class="hk-body">
+          <p class="tag tag-bad">BF16 · Synchronous</p>
+          <p class="big">45%<small>of the pucks hit</small></p>
+          <p>The robot stalls for 181.3 ms before each chunk while the model runs.</p>
+        </div>
+      </article>
+      <article class="card hk">
+        <div class="vid"><video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/hockey_fp8.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/hockey_fp8.jpg" muted loop playsinline preload="none" data-autoplay></video><span class="chip">real robot · 1×</span></div>
+        <div class="hk-body">
+          <p class="tag">FP8 · Asynchronous</p>
+          <p class="big">60%<small>of the pucks hit</small></p>
+          <p>Inference overlaps the execution of the current chunk. The stall falls to about 4 ms, the network latency.</p>
+        </div>
+      </article>
+      <article class="card hk">
+        <div class="vid"><video src="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/videos/hockey_nvfp4.mp4" poster="https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Robot/img/hockey_nvfp4.jpg" muted loop playsinline preload="none" data-autoplay></video><span class="chip">real robot · 1×</span></div>
+        <div class="hk-body">
+          <p class="tag">NVFP4 · Asynchronous</p>
+          <p class="big">50%<small>of the pucks hit</small></p>
+          <p>Two more missed hits in 20 attempts than BF16 and FP8, with a 30% lower latency than BF16.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="two rt">
+      <div class="card">
+        <h4>Why asynchronous execution keeps 30 Hz</h4>
+        <div id="lanes"></div>
+        <div class="deltas" id="deltas"></div>
+        <p class="note">Asynchronous execution with BF16 GEMMs and <i>d</i> = 8: the request is issued when 8 actions of the current chunk remain and runs while the robot executes them.</p>
+      </div>
+      <div class="card">
+        <h4>Low-bit inference keeps the success</h4>
+        <p>FP8 and NVFP4 GEMMs quantize the weights and activations of the backbone to 8 and 4 bits, and cut the latency on RTX PRO 6000 by 20% and 30% over BF16.</p>
+        <div class="lowbit">
+          <div><p class="mini">Tower of Hanoi (%)</p><div class="bars" data-lowbit="hanoi"></div></div>
+          <div><p class="mini">Air Hockey (%)</p><div class="bars" data-lowbit="hockey"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">Asynchronous execution with memory: direct RTC against memory RTC</h3>
+    <p class="lede lede-sm">In training, a chunk that starts at step <i>t</i> reads memory chunks of <i>C</i> = 32 steps that end at <i>t</i>, <i>t</i> − <i>C</i>, <i>t</i> − 2<i>C</i> and so on. In asynchronous execution, consecutive requests are only <i>C</i> − <i>d</i> steps apart. A single memory can then serve all requests only by breaking this chunk structure. Memory RTC instead keeps one memory per phase <i>φ</i> = <i>t</i> mod <i>C</i>, and each request reads the memory of its own phase.</p>
+    <div class="card rtc" id="rtc">
+      <div class="rtc-controls">
+        <div class="rtc-d"><span>Asynchronous delay <i>d</i> (actions dropped per chunk)</span><div class="seg" id="rtcD" role="group" aria-label="Asynchronous delay d"></div></div>
+        <div class="stepper"><b id="rtcK"></b><button type="button" id="rtcPrev" aria-label="Previous request">‹</button><button type="button" id="rtcPlay" aria-label="Pause the animation">❚❚</button><button type="button" id="rtcNext" aria-label="Next request">›</button></div>
+      </div>
+      <div class="rtc-scroll"><div id="rtcChart"></div></div>
+      <div class="rtc-verdicts" id="rtcVerdicts"></div>
+    </div>
+    <p class="note">The animation runs along the control steps: every window of observed video is written into a memory once, and each request reads while the robot keeps moving. Drag across the chart to scrub, or change <i>d</i>. The error is the open-loop end-effector position error of asynchronous execution relative to synchronous execution (<i>C</i> = 32), on 70 RoboDojo episodes. Memory RTC trades one copy of the memory per phase for exact training-time memories, without recomputing the history at any request.</p>
+
+    <h3 class="sub">Latency per request, from server to edge</h3>
+    <div class="latgrid" id="latency"></div>
+    <p class="note">Per-request latency of SANA-Robot-AR (<i>N</i> = 1) in synchronous execution with <i>K</i> = 4 denoising steps and three camera views: the sum of video encoding, prefill (including the memory) and denoising. Optimized: kernel fusion, CUDA graphs and prefix caching in BF16. Under the real-time condition, a 30 Hz control loop is met with <i>d</i> = 8 on RTX PRO 6000 and RTX 5090, and with <i>d</i> = 16 on Jetson Thor.</p>
+  </div>
+</section>
+
+<!-- ───────────────────────── World simulator ───────────────────────── -->
+<section class="band" id="simulator">
+  <div class="wrap">
+    <p class="eyebrow">05 · World simulator</p>
+    <h2>The same network is also a world simulator.</h2>
+    <p class="lede">In the FDM mode, SANA-Robot predicts the future video caused by given actions. A policy reads the generated observation and proposes the next action chunk, the simulator renders its visual consequences, and the loop repeats entirely in imagination.</p>
+
+    <div class="simgrid">
+      <div class="card">
+        <h4>Policy evaluation on DROID</h4>
+        <p>Success rate of three policies on seven tasks in the world model against the real robot. A faithful simulator puts the points on <i>y</i> = <i>x</i>.</p>
+        <div id="droidChart"></div>
+      </div>
+      <div class="simside">
+        <div class="tile tile-plain"><b>66.8</b><span>EWMScore-P on WorldArena, second on the video-quality leaderboard and the highest visual quality</span></div>
+        <div class="tile tile-plain"><b>0.3 s</b><span>to generate 30 frames at 640 × 480 on one H100 with the 4-step student, which keeps a score of 66.2</span></div>
+        <div class="tile tile-plain"><b>58.3%</b><span>mean simulated success over the 21 policy and task pairs, against 52.6% on the real robot and 32.4% in Ctrl-World</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── BibTeX ───────────────────────── -->
+<section id="bibtex">
+  <div class="wrap">
+    <p class="eyebrow">Citation</p>
+    <h2>BibTeX</h2>
+    <div class="bib">
+      <button type="button" id="copyBib">Copy</button>
+<pre id="bibText">@article{zhao2026sanarobot,
+  title   = {SANA-Robot: Efficient World Action Model with Hybrid Memory},
+  author  = {Zhao, Yuyang and Li, Zekai and Pan, Yicheng and Tang, Jiaming and Zhang, Zhuoyang and Xing, Jiaxu and Reuss, Moritz and Peng, Quanquan and Chen, Junsong and Xie, Enze and Liu, Zhijian and Han, Song},
+  year    = {2026}
+}</pre>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>All numbers are from the paper. Real-robot clips play at the labelled speed.</p>
+  </div>
+</footer>
+
+<script src="static/js/bench_data.js"></script>
+<script src="static/js/data.js"></script>
+<script src="static/js/main.js"></script>
+</body>
+</html>

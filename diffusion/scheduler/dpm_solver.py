@@ -44,6 +44,8 @@ def DPMS(
         model_kwargs = {}
     if interval_guidance is None:
         interval_guidance = [0, 1.0]
+    if apg is not None:
+        apg.reset()
     betas = torch.tensor(gd.get_named_beta_schedule(noise_schedule, diffusion_steps))
 
     ## 1. Define the noise schedule.

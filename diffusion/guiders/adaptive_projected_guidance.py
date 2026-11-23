@@ -63,11 +63,18 @@ class AdaptiveProjectedGuidance:
         self.adaptive_projected_guidance_rescale = adaptive_projected_guidance_rescale
         self.eta = eta
         self.guidance_rescale = guidance_rescale
-        self.momentum_buffer = None
         self.start = start
         self.stop = stop
-        self.momentum_buffer = MomentumBuffer(self.adaptive_projected_guidance_momentum)
         self.mode = mode
+        self.reset()
+
+    def reset(self):
+        """Clear the momentum state. Call this before each new sample, so that one sample does not carry over into
+        the next."""
+        if self.adaptive_projected_guidance_momentum is None:
+            self.momentum_buffer = None
+        else:
+            self.momentum_buffer = MomentumBuffer(self.adaptive_projected_guidance_momentum)
 
     def __call__(self, pred_cond: torch.Tensor, pred_uncond: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Make the object callable by delegating to forward method."""

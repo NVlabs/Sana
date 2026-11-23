@@ -3,7 +3,7 @@
 </p>
 
 <h3 align="center">
-<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/Video2/"><b>SANA-Video 2.0</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
+<a href="https://nvlabs.github.io/Sana/docs/"><b>📚 Docs</b></a> | <a href="https://nvlabs.github.io/Sana/"><b>SANA</b></a> | <a href="https://nvlabs.github.io/Sana/Sana-1.5/"><b>SANA-1.5</b></a> | <a href="https://nvlabs.github.io/Sana/Sprint/"><b>SANA-Sprint</b></a> | <a href="https://nvlabs.github.io/Sana/Video/"><b>SANA-Video</b></a> | <a href="https://nvlabs.github.io/Sana/Video2/"><b>SANA-Video 2.0</b></a> | <a href="https://nvlabs.github.io/Sana/WM/"><b>SANA-WM</b></a> | <a href="https://nvlabs.github.io/Sana/Streaming/"><b>SANA-Streaming</b></a> | <a href="https://nvlabs.github.io/Sana/Robot/"><b>SANA-Robot</b></a> | <a href="https://nvlabs.github.io/Sana/Sol-RL/"><b>Sol-RL</b></a>
 
 <a href="https://nv-sana.mit.edu/"><b>Demo</b></a> | <a href="https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo"><b>🎬 SANA-Video 2.0 Demo</b></a> | <a href="https://huggingface.co/collections/Efficient-Large-Model/sana"><b>🤗 HuggingFace</b></a> | <a href="https://github.com/lawrence-cj/ComfyUI_ExtraModels"><b>ComfyUI</b></a> | <a href="https://github.com/sgl-project/sglang"><b>SGLang</b></a> | <a href="https://github.com/nvidia-cosmos/cosmos-rl/blob/main/examples/sana.md"><b>Cosmos-RL</b></a>
 
@@ -33,7 +33,7 @@
 
 <h4 align="center">ICLR 2025 Oral | ICML 2025 | ICCV 2025 Highlight | ICLR 2026 Oral </h4>
 
-**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
+**SANA** is an efficiency-oriented codebase for high-resolution image and video generation, providing complete training and inference pipelines. This repository contains code for [SANA](https://nvlabs.github.io/Sana/), [SANA-1.5](https://nvlabs.github.io/Sana/Sana-1.5/), [SANA-Sprint](https://nvlabs.github.io/Sana/Sprint/), [SANA-Video](https://nvlabs.github.io/Sana/Video/), [SANA-Video 2.0](https://nvlabs.github.io/Sana/Video2/), [SANA-WM](https://nvlabs.github.io/Sana/WM/), [SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/), [SANA-Robot](https://nvlabs.github.io/Sana/Robot/), and [Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/). More details can be found in our [📚 documentation](https://nvlabs.github.io/Sana/docs/).
 
 Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with the community! If you have any questions, run into issues, or are interested in contributing, don't hesitate to reach out!
 
@@ -43,6 +43,7 @@ Join our [Discord](https://discord.gg/rde6eaE5Ta) to engage in discussions with 
 
 ## News
 
+- 🔥 [2026/11] 🤖 **SANA-Robot: 4.5B World Action Model with Hybrid Memory** is released! Keeps a minute-level memory and runs in real time on edge devices. Finetuning and inference code and checkpoints are available. See [Project](https://nvlabs.github.io/Sana/Robot/) | [Code](https://github.com/NVlabs/Sana/tree/robot) | [Models](https://huggingface.co/collections/Efficient-Large-Model/sana-robot).
 - 🔥 [2026/10] 🎮 **StreamRender-H3** is released! A code-driven streaming render runtime connecting a controllable Three.js game engine to a multi-GPU H3 streaming renderer with browser video feedback. See [Project](https://nvlabs.github.io/Sana/Sol-Engine/StreamRender-H3/) | [Code](https://github.com/NVlabs/Sana/tree/sol-engine/models/streamrender_h3).
 - 🔥 [2026/10] ⚡ **Sol-H3** brings MiniMax-H3 to a single RTX 5090 or DGX Spark, now also in ComfyUI: one 1344×768 clip with audio in **35.5 s** on one RTX 5090 (989.0 s for the original 50-step model). See [Project](https://nvlabs.github.io/Sana/Sol-H3/) | [Code](https://github.com/NVlabs/Sana/tree/sol-engine/models/minimax_h3).
 - 🔥 [2026/09] 🔍 **SoL-Refiner** is released! One-step refinement turns low-resolution video drafts into high-resolution video, with code and models for LTX-2.3 and MiniMax-H3. See [Project](https://nvlabs.github.io/Sana/Sol-Refiner/) | [Code](https://github.com/NVlabs/Sana/tree/sol-engine/models/sol-refiner).
@@ -120,6 +121,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **[Sol-RL](https://nvlabs.github.io/Sana/Sol-RL/)**: NVFP4 Rollout, BF16 Training RL achieves **4.64× faster convergence**.
 - **[SANA-WM](https://nvlabs.github.io/Sana/WM/)**: 2.6B parameter controllable world model, generating 720p, 1-minute video worlds with 6-DoF camera control.
 - **[SANA-Streaming](https://nvlabs.github.io/Sana/Streaming/)**: 2B real-time streaming video-to-video editing for 720p, minute-scale videos.
+- **[SANA-Robot](https://nvlabs.github.io/Sana/Robot/)**: 4.5B world action model with minute-level memory that runs in real time on edge devices. Code is on the [`robot`](https://github.com/NVlabs/Sana/tree/robot) branch.
 
 **Key Techniques:**
 
@@ -133,6 +135,7 @@ We introduce **SANA**, a series of efficient diffusion models for high-resolutio
 - **Sol-RL**: Low precision(NVFP4) rollout selection, high precesion(BF16) optimization for faster RL training.
 - **Controllable World Modeling**: Efficient long-context modeling and camera trajectory control for consistent world generation.
 - **Streaming Video Editing**: Real-time long-form video-to-video editing with stable temporal consistency.
+- **World Action Modeling with Hybrid Memory**: One model denoises future video and actions together, with a constant-cost memory of the whole episode.
 
 **In summary**, SANA is a fully open-source framework integrating **efficient training, fast inference, and flexible deployment** for both image and video generation. Deployable on laptop GPUs with **< 8GB VRAM** via 4-bit quantization.
 
@@ -217,6 +220,7 @@ image[0].save("sana.png")
 - [LongSANA](https://nvlabs.github.io/Sana/docs/longsana/)
 - [SANA-WM](https://nvlabs.github.io/Sana/docs/sana_wm/)
 - [SANA-Streaming](https://nvlabs.github.io/Sana/docs/sana_streaming/)
+- [SANA-Robot](https://github.com/NVlabs/Sana/tree/robot)
 - [ControlNet](https://nvlabs.github.io/Sana/docs/sana_controlnet/)
 - [LoRA / DreamBooth](https://nvlabs.github.io/Sana/docs/sana_lora_dreambooth/)
 - [Sol-RL Post-Training](https://nvlabs.github.io/Sana/docs/sol_rl/)
@@ -276,6 +280,7 @@ We will try our best to achieve
 - [✅] RL Post-training: collaborate with [Cosmos-RL](https://github.com/nvidia-cosmos/cosmos-rl)
 - [✅] SANA World Model
 - [✅] SANA-Streaming Video-to-Video Editing
+- [✅] SANA-Robot World Action Model
 - [🚀] See you in the future
 
 ## 🤗 Acknowledgements

@@ -9,7 +9,7 @@
 
 <div align="center">
   <a href="https://nvlabs.github.io/Sana/Robot/"><img src="https://img.shields.io/static/v1?label=Project&message=Github&color=blue&logo=github-pages"></a> &ensp;
-  <a href="TODO"><img src="https://img.shields.io/static/v1?label=Arxiv&message=SANA-Robot&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://arxiv.org/abs/2611.28943"><img src="https://img.shields.io/static/v1?label=Arxiv&message=SANA-Robot&color=red&logo=arxiv"></a> &ensp;
   <a href="https://huggingface.co/collections/Efficient-Large-Model/sana-robot"><img src="https://img.shields.io/static/v1?label=Models&message=Huggingface&color=yellow"></a> &ensp;
 </div>
 
@@ -311,6 +311,7 @@ This project is released under the [Apache 2.0 license](LICENSE).
 @article{zhao2026sanarobot,
   title={SANA-Robot: Efficient World Action Model with Hybrid Memory},
   author={Zhao, Yuyang and Li, Zekai and Pan, Yicheng and Tang, Jiaming and Zhang, Zhuoyang and Xing, Jiaxu and Reuss, Moritz and Peng, Quanquan and Chen, Junsong and Xie, Enze and Liu, Zhijian and Han, Song},
+  journal={arXiv preprint arXiv:2611.28943},
   year={2026}
 }
 ```

@@ -13,7 +13,11 @@ from h3_runtime import MiniMaxH3Inference
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="MiniMax-H3 checkpoint directory or repo ID")
-    parser.add_argument("--adapter", required=True, help="FastH3 dense-datafree adapter file")
+    adapters = parser.add_mutually_exclusive_group(required=True)
+    adapters.add_argument("--adapter", help="Adapter file matching the selected sampling configuration")
+    adapters.add_argument("--no-adapter", action="store_true", help="Base weights; requires --num-inference-steps")
+    parser.add_argument("--num-inference-steps", type=int, help="Scheduler points (N forwards require N+1 points)")
+    parser.add_argument("--adapter-alpha", type=float, help="Adapter alpha; defaults to the existing task profile")
     parser.add_argument(
         "--attention-backend",
         choices=("dense", "sol", "sol_bsa"),
@@ -51,7 +55,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--warmup", action="store_true")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.no_adapter and args.num_inference_steps is None:
+        parser.error("--no-adapter requires --num-inference-steps")
+    if args.no_adapter and args.adapter_alpha is not None:
+        parser.error("--adapter-alpha requires --adapter")
+    return args
 
 
 def load_references(specs: list[str]):
@@ -106,6 +115,8 @@ def main() -> int:
         reference_image_resize_mode=args.reference_image_resize_mode,
         compute_quant=args.compute_quant,
         lora_mode=args.lora_mode,
+        num_inference_steps=args.num_inference_steps,
+        adapter_alpha=args.adapter_alpha,
     ) as engine:
         if args.warmup:
             engine.warmup(
@@ -136,6 +147,10 @@ def main() -> int:
                         "reference_image_resize_mode": (
                             args.reference_image_resize_mode if args.task == "ref2va" else None
                         ),
+                        "num_inference_steps": engine.num_inference_steps,
+                        "denoise_forwards": engine.num_inference_steps - 1,
+                        "adapter": args.adapter,
+                        "adapter_alpha": args.adapter_alpha,
                         "inference_s": round(result.elapsed_s, 3),
                     },
                     ensure_ascii=False,

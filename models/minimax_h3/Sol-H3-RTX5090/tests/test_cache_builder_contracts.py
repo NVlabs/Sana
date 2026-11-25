@@ -3,8 +3,9 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 
-from runtime.cache_builder import build_cache, prompt_stats
+from runtime.cache_builder import build_cache, prompt_stats, validate_device
 from runtime.cache_ops.int8_header import (
     Int8ConvRotLayerSpec, _expected_gemma_modules, partition_dev_int8_convrot_specs,
 )
@@ -75,6 +76,21 @@ class CacheBuilderContracts(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 build_cache({}, target)
             self.assertEqual(target.read_bytes(), b"existing")
+
+    def test_device_check_accepts_rtx5090_and_spark_only(self):
+        import torch
+
+        def visible(count, capability):
+            return mock.patch.multiple(torch.cuda, device_count=mock.Mock(return_value=count),
+                                       get_device_capability=mock.Mock(return_value=capability))
+
+        for capability in ((12, 0), (12, 1)):
+            with self.subTest(capability=capability), visible(1, capability):
+                self.assertEqual(validate_device(torch), capability)
+        for count, capability in ((1, (9, 0)), (1, (10, 0)), (1, (8, 9)), (0, (12, 0)), (2, (12, 0))):
+            with self.subTest(count=count, capability=capability), visible(count, capability):
+                with self.assertRaisesRegex(RuntimeError, "SM120 or SM121"):
+                    validate_device(torch)
 
 
 if __name__ == "__main__":

@@ -161,7 +161,7 @@ def _cached_temporal_short_conv(
         x: ``(B, N, C)`` where ``N = T * S``.
         conv: FLA ``ShortConvolution`` (depthwise causal Conv1d).
         HW: ``(T, H, W)``.
-        conv_cache: ``(B*S, K-1, C)`` from previous chunk, or None.
+        conv_cache: ``(B*S, L, C)`` left context, with ``L <= K-1``, or None.
         save_cache: Whether to return a new cache for the next chunk.
 
     Returns:
@@ -176,21 +176,30 @@ def _cached_temporal_short_conv(
     # Reshape to temporal: (B*S, T, C).
     x_t = x.reshape(B_orig, T, S, C).permute(0, 2, 1, 3).contiguous().reshape(B_orig * S, T, C)
 
+    def causal_conv(inputs: torch.Tensor) -> torch.Tensor:
+        # FLA's length-one step path requires a recurrent state. Keep using
+        # its stateless batch kernel, with an equivalent zero left context.
+        if inputs.shape[1] == 1:
+            output, _ = conv(F.pad(inputs, (0, 0, 1, 0)))
+            return output[:, 1:, :]
+        output, _ = conv(inputs)
+        return output
+
     # --- Forward causal conv with cache ---
     # Use ShortConvolution.forward() (Triton/CUDA kernel) for exact numerical
     # parity with ChunkCausalGDN._apply_temporal_short_conv.
     if conv_cache is not None:
         # Prepend cached left context and run full causal conv, then slice.
         x_fwd_in = torch.cat([conv_cache.to(x_t.dtype), x_t], dim=1)
-        y_fwd_full, _ = conv(x_fwd_in)
-        y_fwd = y_fwd_full[:, K - 1 :, :]  # drop positions from cached prefix
+        y_fwd = causal_conv(x_fwd_in)[:, conv_cache.shape[1] :, :]
     else:
-        y_fwd, _ = conv(x_t)
+        x_fwd_in = x_t
+        y_fwd = causal_conv(x_fwd_in)
 
     # --- Backward conv (isolated within current chunk) ---
     # Same as ChunkCausalGDN._backward_causal_conv_per_chunk for a single chunk:
     # flip → causal conv → flip back.
-    y_bwd_flipped, _ = conv(x_t.flip(1))
+    y_bwd_flipped = causal_conv(x_t.flip(1))
     y_bwd = y_bwd_flipped.flip(1)  # (B*S, T, C)
 
     # --- Center tap ---
@@ -202,7 +211,11 @@ def _cached_temporal_short_conv(
     # Save cache: last K-1 timesteps of the conv INPUT (for next chunk's left context).
     new_cache: torch.Tensor | None = None
     if save_cache and K > 1:
-        new_cache = x_t[:, -(K - 1) :, :].detach().clone()
+        history = x_fwd_in[:, -(K - 1) :, :].detach()
+        if history.shape[1] < K - 1:
+            new_cache = F.pad(history, (0, 0, K - 1 - history.shape[1], 0))
+        else:
+            new_cache = history.clone()
 
     # Reshape back to (B, N, C).
     y = y.reshape(B_orig, S, T, C).permute(0, 2, 1, 3).reshape(B_orig, N, C)

@@ -82,6 +82,7 @@ class SolAttnForwardSm120:
         scale_softmax_log2e: cutlass.Float32,
         sink_start_block: cutlass.Int32,
         sink_end_block: cutlass.Int32,
+        exact_block_mask: cute.Tensor | None,
     ):
         tidx, _, _ = cute.arch.thread_idx()
         lane = cute.arch.lane_idx()
@@ -446,6 +447,7 @@ class SolAttnForwardSm120:
                             col_mean,
                             threshold,
                             valid,
+                            exact_block_mask,
                         )
                         exact = exact or (
                             kv_block >= sink_start_block
@@ -701,6 +703,7 @@ class SolAttnForwardSm120:
         softmax_scale: cutlass.Float32,
         sink_start_block: cutlass.Int32,
         sink_end_block: cutlass.Int32,
+        exact_block_mask: cute.Tensor | None,
         stream: cuda.CUstream,
     ):
         q_mkl, k_nkl, kc_nkl = [
@@ -887,6 +890,7 @@ class SolAttnForwardSm120:
             softmax_scale * 1.4426950408889634,
             sink_start_block,
             sink_end_block,
+            exact_block_mask,
         ).launch(
             grid=(cute.ceil_div(q_mkl.shape[0], M), q_mkl.shape[2], q_mkl.shape[3]),
             block=(self.num_threads, 1, 1),

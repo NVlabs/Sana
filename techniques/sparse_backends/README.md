@@ -19,7 +19,7 @@ Sol-Attn is a training-free sparse attention method for accelerating image
 and video generation. It performs dynamic block routing during online softmax
 and reuses proxy scores to approximate unselected blocks, avoiding a
 materialized routing map while preserving visual quality. CuTe DSL kernels
-support SM89, SM90, SM100, and SM120; SM80 uses the Triton kernel; Apple
+support SM89, SM90, SM100, SM103, and SM120; SM80 uses the Triton kernel; Apple
 Silicon uses a tiled Metal kernel.
 
 ## Requirements
@@ -51,6 +51,7 @@ The public `sol_attn(...)` API selects the implementation from `q.device`:
 | SM89 | RTX 4090 | CuTe DSL |
 | SM90 | H100 | CuTe DSL |
 | SM100 | GB200 | CuTe DSL |
+| SM103 | B300 / GB300 | CuTe DSL (SM100 kernel family) |
 | SM120 | RTX 5090 | CuTe DSL |
 | SM80 | A100 | Triton |
 | Apple Silicon | M-series Mac | Metal |
@@ -124,6 +125,27 @@ Every query attends all KV blocks overlapping the sink range exactly.
 Exactness is applied at 64-token KV-block granularity. The sink does not
 make text query rows dense: an MMDiT integration should still use dense
 attention for valid text queries and Sol-Attn for image/video queries.
+
+### Arbitrary exact Q/KV blocks
+
+Use `exact_block_mask` when protected modalities occupy several disjoint
+segments, or when their query rows must also remain exact. It is a contiguous
+Boolean vector of length `ceil(tokens / 64)` on the Q/K/V device, shared across
+the batch and heads. A marked block forces both its Q rows and KV columns to
+take the exact route inside the fused kernel. Other blocks retain SOL routing
+and its omitted-block approximation.
+
+```python
+protected = torch.zeros((q.shape[1] + 63) // 64, device=q.device, dtype=torch.bool)
+protected[0] = protected[-1] = True  # Example: disjoint text/audio blocks.
+out = sol_attn(q, k, v, exact_block_mask=protected)
+```
+
+This option is supported by the CuTe SM89/SM90/SM100/SM103/SM120 kernels (including SM90
+KV splitting) and the Triton implementation. It can be combined with the
+legacy KV sink range. Omitting it preserves the original API behavior.
+Mask values remain runtime inputs and can change without recompilation.
+The Metal backend currently rejects a non-`None` mask explicitly.
 
 ### Long-sequence tuning on H100
 

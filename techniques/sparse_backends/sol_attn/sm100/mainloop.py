@@ -371,6 +371,7 @@ def _sol_attn_sm100_bf16_kernel(
     softmax_scale: Float32,
     sink_start_block: Int32,
     sink_end_block: Int32,
+    exact_block_mask: cute.Tensor | None,
     q_layout: cute.ComposedLayout,
     pack_k_layout: cute.ComposedLayout,
     pack_k_gather_layout: cute.ComposedLayout,
@@ -932,6 +933,7 @@ def _sol_attn_sm100_bf16_kernel(
                                 col_mean,
                                 threshold,
                                 valid,
+                                exact_block_mask,
                             )
                             # Sink is a KV-only contract. Text queries remain
                             # a caller-side dense operation in MMDiT models.
@@ -1560,6 +1562,7 @@ def _sol_attn_sm100_bf16_host(
     softmax_scale: Float32,
     sink_start_block: Int32,
     sink_end_block: Int32,
+    exact_block_mask: cute.Tensor | None,
     stream: cuda.CUstream = None,
 ):
     q, k, v, o, kc, vc = tuple(
@@ -1712,6 +1715,7 @@ def _sol_attn_sm100_bf16_host(
         softmax_scale,
         sink_start_block,
         sink_end_block,
+        exact_block_mask,
         q_layout,
         pack_k_layout,
         pack_k_gather_layout,
@@ -1741,6 +1745,7 @@ def forward(
     softmax_scale: Float32,
     sink_start_block: Int32,
     sink_end_block: Int32,
+    exact_block_mask: cute.Tensor | None,
     stream: cuda.CUstream = None,
 ):
     return _sol_attn_sm100_bf16_host(
@@ -1755,6 +1760,7 @@ def forward(
         softmax_scale,
         sink_start_block,
         sink_end_block,
+        exact_block_mask,
         stream,
     )
 

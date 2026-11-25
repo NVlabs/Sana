@@ -30,7 +30,7 @@ ______________________________________________________________________
 uv pip install 'sglang[diffusion]' --prerelease=allow
 ```
 
-For more installation methods (e.g. Docker, ROCm/AMD), check the [SGLang installation guide](https://github.com/sgl-project/sglang/tree/main/docs/diffusion/installation.md).
+For more installation methods (e.g. Docker, ROCm/AMD), check the [SGLang installation guide](https://github.com/sgl-project/sglang/blob/main/docs/docs/sglang-diffusion/installation.mdx).
 
 ______________________________________________________________________
 
@@ -146,7 +146,7 @@ ______________________________________________________________________
 
 ## Related
 
-- [SGLang Diffusion Documentation](https://github.com/sgl-project/sglang/tree/main/docs/diffusion)
+- [SGLang Diffusion Documentation](https://github.com/sgl-project/sglang/tree/main/docs/docs/sglang-diffusion)
 - [Model Zoo](model_zoo.md) - All available Sana models
 - [SANA Inference & Training](sana.md) - Native inference pipeline
 

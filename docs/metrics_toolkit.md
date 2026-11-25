@@ -71,7 +71,7 @@ bash $geneval_launch \
 
 ### 2. [Inference and Metric] a list of .pth files using a txt file
 
-You can also write all your pth files of a job in one txt file, eg. [model_paths.txt](../model_paths.txt)
+You can also write all your pth files of a job in one txt file, eg. [model_paths.txt](../asset/model_paths.txt)
 
 ```bash
 # Use following format to metric your models, gathering in a txt file:

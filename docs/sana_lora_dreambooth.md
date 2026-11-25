@@ -65,7 +65,7 @@ This will also allow us to push the trained LoRA parameters to the Hugging Face 
 
 [Here is the Model Card](model_zoo.md) for you to choose the desired pre-trained models and set it to `MODEL_NAME`.
 
-Now, we can launch training using [file here](../../train_scripts/train_lora.sh):
+Now, we can launch training using [file here](../train_scripts/train_lora.sh):
 
 ```bash
 bash train_scripts/train_lora.sh

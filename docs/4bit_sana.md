@@ -17,7 +17,7 @@
 
 ### 1. Environment setup
 
-Follow the official [SVDQuant-Nunchaku](https://github.com/mit-han-lab/nunchaku) repository to set up the environment. The guidance can be found [here](https://github.com/mit-han-lab/nunchaku?tab=readme-ov-file#installation).
+Follow the official [SVDQuant-Nunchaku](https://github.com/nunchux-ai/nunchaku) repository to set up the environment. The guidance can be found [here](https://github.com/nunchux-ai/nunchaku?tab=readme-ov-file#installation).
 
 ### 1-1. Quantize Sana with SVDQuant-4bit (Optional)
 
@@ -33,11 +33,11 @@ python tools/convert_scripts/convert_sana_to_svdquant.py \
 ```
 
 2. follow the guidance to compress model
-   [Quantization guidance](https://github.com/mit-han-lab/deepcompressor/tree/main/examples/diffusion)
+   [Quantization guidance](https://github.com/nunchux-ai/deepcompressor/tree/main/examples/diffusion)
 
 ### 2. Code snap for inference
 
-Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the [SanaPAGPipeline](https://github.com/mit-han-lab/nunchaku/blob/main/examples/sana_1600m_pag.py) section.
+Here we show the code snippet for SanaPipeline. For SanaPAGPipeline, please refer to the [SanaPAGPipeline](https://github.com/nunchux-ai/nunchaku/blob/main/examples/sana1.6b_pag.py) section.
 
 ```python
 import torch
@@ -77,7 +77,7 @@ python app/app_sana_4bit.py
 
 2). Compare with BF16 version
 
-Refer to the original [Nunchaku-Sana.](https://github.com/mit-han-lab/nunchaku/tree/main/app/sana/t2i) guidance for SanaPAGPipeline
+Refer to the original [Nunchaku-Sana.](https://github.com/nunchux-ai/nunchaku/tree/main/app/sana/t2i) guidance for SanaPAGPipeline
 
 ```bash
 python app/app_sana_4bit_compare_bf16.py

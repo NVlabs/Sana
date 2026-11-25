@@ -19,7 +19,7 @@ Sol-Attn is a training-free sparse attention method for accelerating image
 and video generation. It performs dynamic block routing during online softmax
 and reuses proxy scores to approximate unselected blocks, avoiding a
 materialized routing map while preserving visual quality. CuTe DSL kernels
-support SM89, SM90, SM100, and SM120; SM80 uses the Triton kernel; Apple
+support SM89, SM90, SM100, SM103, and SM120; SM80 uses the Triton kernel; Apple
 Silicon uses a tiled Metal kernel.
 
 ## Requirements
@@ -51,6 +51,7 @@ The public `sol_attn(...)` API selects the implementation from `q.device`:
 | SM89 | RTX 4090 | CuTe DSL |
 | SM90 | H100 | CuTe DSL |
 | SM100 | GB200 | CuTe DSL |
+| SM103 | B300 / GB300 | CuTe DSL (SM100 kernel family) |
 | SM120 | RTX 5090 | CuTe DSL |
 | SM80 | A100 | Triton |
 | Apple Silicon | M-series Mac | Metal |
@@ -125,6 +126,27 @@ Exactness is applied at 64-token KV-block granularity. The sink does not
 make text query rows dense: an MMDiT integration should still use dense
 attention for valid text queries and Sol-Attn for image/video queries.
 
+### Arbitrary exact Q/KV blocks
+
+Use `exact_block_mask` when protected modalities occupy several disjoint
+segments, or when their query rows must also remain exact. It is a contiguous
+Boolean vector of length `ceil(tokens / 64)` on the Q/K/V device, shared across
+the batch and heads. A marked block forces both its Q rows and KV columns to
+take the exact route inside the fused kernel. Other blocks retain SOL routing
+and its omitted-block approximation.
+
+```python
+protected = torch.zeros((q.shape[1] + 63) // 64, device=q.device, dtype=torch.bool)
+protected[0] = protected[-1] = True  # Example: disjoint text/audio blocks.
+out = sol_attn(q, k, v, exact_block_mask=protected)
+```
+
+This option is supported by the CuTe SM89/SM90/SM100/SM103/SM120 kernels (including SM90
+KV splitting) and the Triton implementation. It can be combined with the
+legacy KV sink range. Omitting it preserves the original API behavior.
+Mask values remain runtime inputs and can change without recompilation.
+The Metal backend currently rejects a non-`None` mask explicitly.
+
 ### Long-sequence tuning on H100
 
 The SM90 CuTe kernel supports `kv_splits=1`, `2`, and `4`. Splitting KV can
@@ -136,6 +158,34 @@ out = sol_attn(q, k, v, tau=1.0, kv_splits=4)
 ```
 
 B200, RTX 4090, RTX 5090, Triton, and Metal currently use `kv_splits=1`.
+
+### Comparing SM100/SM103 kernel changes
+
+Use a separate, unchanged checkout as the baseline. From the candidate checkout:
+
+```bash
+PYTHONPATH=techniques/sparse_backends python \
+  techniques/sparse_backends/benchmarks/benchmark_sm100.py \
+  --baseline-root /path/to/baseline/techniques/sparse_backends \
+  --warmup 5 --repeats 16 --modes eager,graph --output results.json
+```
+
+The benchmark uses the candidate's public API and isolates the baseline's
+module names and compilation caches without changing its kernel bodies. It
+checks bitwise equality (including signed zero) with the baseline before and after timing and during
+CUDA graph replay. Original SOL, candidate SOL, and cuDNN dense attention run
+in rotating and reversing order. The JSON includes every CUDA-event and
+synchronized wall-time sample, paired speedups, variation, and source hashes.
+Dense attention is a performance control; sparse output correctness is checked
+against the original SOL implementation.
+
+The built-in matrix covers short and long sequences, batch/head counts, exact
+protection, and different sparsity thresholds. `--stress-only` checks changing
+maxima, zero inputs, and tiny/subnormal values against the baseline without
+timing. `--input capture.pt --heads 28` accepts a frozen H3 Q/K/V capture with
+tensor hashes and attention options. Synthetic timings alone do not establish
+model-forward or end-to-end generation speedups. Record GPU model, actual
+clocks, power limits, and software environment alongside the JSON.
 
 ## Sol-Engine integration
 

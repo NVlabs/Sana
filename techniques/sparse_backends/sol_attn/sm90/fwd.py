@@ -39,6 +39,7 @@ class SolAttnSplitForwardSm90(SolAttnMainloopSm90):
         lse_partial: cute.Tensor,
         softmax_scale: cutlass.Float32,
         sink_range: cutlass.Int32,
+        exact_block_mask: cute.Tensor | None,
         stream: cuda.CUstream = None,
     ):
         SolAttnMainloopSm90.__call__(
@@ -53,6 +54,7 @@ class SolAttnSplitForwardSm90(SolAttnMainloopSm90):
             lse_partial,
             softmax_scale,
             sink_range,
+            exact_block_mask,
             stream=stream,
         )
 

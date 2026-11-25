@@ -1430,7 +1430,7 @@ def main(cfg: SanaConfig) -> None:
         try:
             start_epoch = int(path.replace(".pth", "").split("_")[1]) - 1
             start_step = int(path.replace(".pth", "").split("_")[3])
-        except:
+        except Exception:
             pass
 
     if config.model.teacher_model is not None:

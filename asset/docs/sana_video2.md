@@ -7,7 +7,7 @@ and 720p reference configs for the 5B variant, and a post-trained 5B checkpoint
 for 720p, 8-second generation. The 14B config and checkpoint are not included
 yet.
 
-> **Release status:** Explore the [project page](https://nvlabs.github.io/Sana/Video2/),
+> **Release status:** Read the [paper](https://arxiv.org/abs/2607.21553), explore the [project page](https://nvlabs.github.io/Sana/Video2/),
 > try the [4-step 5B 720p preview](https://huggingface.co/spaces/Efficient-Large-Model/sana-video2-5b-720p-demo),
 > or download the [50-step](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p)
 > and [4-step preview](https://huggingface.co/Efficient-Large-Model/SANA-Video_2.0_5B_720p_4step)
@@ -237,3 +237,17 @@ torchrun --nproc_per_node=8 --master_port=29500 \
 To resume, pass `--resume_from=<checkpoint>`. Set `model.load_from` when
 initializing from a compatible model checkpoint; leave it as `null` to train
 from scratch.
+
+## Citation
+
+```bibtex
+@misc{chen2026sanavideo2,
+      title={SANA-Video 2.0: Hybrid Linear Attention with Attention Residuals for Efficient Video Generation},
+      author={Junsong Chen and Jincheng Yu and Yitong Li and Shuchen Xue and Haozhe Liu and Jingyu Xin and Yuyang Zhao and Tian Ye and Zhangjie Wu and Zian Wang and Daquan Zhou and Ping Luo and Song Han and Enze Xie},
+      year={2026},
+      eprint={2607.21553},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2607.21553},
+}
+```

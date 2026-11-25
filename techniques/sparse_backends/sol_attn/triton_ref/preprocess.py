@@ -49,8 +49,8 @@ def _reduce_kv_kernel(
     summary_offsets = (
         ((batch * NPAD + block) * H + head) * D + dims
     )
-    tl.store(kc + summary_offsets, tl.sum(k_values, axis=0) / block_len)
-    tl.store(vc + summary_offsets, tl.sum(v_values, axis=0))
+    tl.store(kc + summary_offsets, tl.sum(k_values.to(tl.float32), axis=0) / block_len)
+    tl.store(vc + summary_offsets, tl.sum(v_values.to(tl.float32), axis=0))
 
 
 @triton.jit

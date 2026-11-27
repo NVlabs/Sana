@@ -118,8 +118,8 @@ window.SV25 = {
   {
    "title": "Pour-over coffee",
    "meta": "10 s · 3 shots · everyday",
-   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/long/case_L05_real.mp4",
-   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/long/case_L05_real.jpg",
+   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/long/case_L05_g43408.mp4",
+   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/long/case_L05_g43408.jpg",
    "prompt": "[Shot 1] Live-action, photorealistic, a medium shot frames a man in his thirties in a grey t-shirt standing at a wooden kitchen counter in soft morning sunlight, with potted herbs on the windowsill behind him. He pours steaming water from a black gooseneck kettle in slow circles over the coffee grounds in a glass pour-over dripper. The camera holds a static shot. [Shot 2] At 00:03.500, the camera cuts to an overhead close-up of the coffee grounds blooming and bubbling as the hot water soaks in, while a thin stream of dark coffee drips into the glass carafe below. [Shot 3] At 00:07.000, the shot cuts to a medium close-up as he pours the coffee into a white ceramic mug, lifts it, blows gently across the surface and takes a slow sip, looking out of the window.\n\nSound: Quiet kitchen ambience with the trickle of water from the kettle, the soft hiss and bubbling of the blooming grounds, coffee dripping into the carafe, the clink of the mug on the counter, his soft exhale across the coffee and birdsong through an open window.\n\nMusic: A soft fingerpicked acoustic guitar at a relaxed, moderate tempo, joined by a light brushed snare halfway through and fading out at the end."
   },
   {

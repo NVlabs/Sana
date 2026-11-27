@@ -13,4 +13,4 @@ The SANA-Video 2.0 curated samples from 2026-08-12 are stored together under
 frames, posters, prompts, selection summary, and complete metadata.
 
 The SANA-Video 2.5 page media (32 videos with sound and their posters) are stored
-under `Video2.5/media/`, which `Video25/data.js` references.
+under `Video25/media/`, which `Video25/data.js` references.

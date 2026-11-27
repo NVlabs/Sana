@@ -11,8 +11,8 @@ window.SV25 = {
   {
    "title": "Restaurant kitchen",
    "meta": "10 s · 2 shots · dialogue",
-   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T05_s3505.mp4",
-   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T05_s3505.jpg",
+   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T05_g20052.mp4",
+   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T05_g20052.jpg",
    "prompt": "[Shot 1] Live-action, photorealistic, a medium shot frames a busy restaurant kitchen with steel counters and copper pans, where a head chef in his fifties with a white chef's jacket and a neat grey beard tastes a sauce from a wooden spoon, and the head chef with a deep, gravelly voice (S1) says: <d>[English] Almost there. It needs a pinch more salt.</d> The camera holds a static shot. [Shot 2] At 00:05.000, the camera cuts to a medium close-up of a young sous chef in her twenties with a black bandana, who stirs the pan and nods, and the young woman with a quick, confident voice (S2) says: <d>[English] Got it, chef. Plating it now.</d> Flames flicker on the stove behind her. Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: Pans sizzling softly on a hot stove, plates and utensils clinking, a gas burner hissing and the low murmur of a busy kitchen.\n\nMusic: N/A"
   },
   {
@@ -35,6 +35,13 @@ window.SV25 = {
    "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T22_s6022.mp4",
    "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T22_s6022.jpg",
    "prompt": "[Shot 1] Live-action, photorealistic, a wide shot frames a white stone lighthouse on a rocky cliff at dusk, dark waves crashing against the rocks below and storm clouds rolling in over the sea. No one speaks, and the camera slowly pushes in toward the lighthouse. [Shot 2] At 00:05.000, the camera cuts to a medium shot inside the lamp room, where an old lighthouse keeper in his seventies with a thick white beard and a dark blue wool sweater turns a brass crank beside the great glass lens, and the old man with a deep, rough voice (S1) mutters: <d>[English] Steady now. Almost there.</d> [Shot 3] At 00:10.000, the shot cuts to a medium close-up of the keeper as the lamp flares to life and its bright beam sweeps out across the dark sea, the warm light passing over his face, and the old man (S1) smiles and says quietly: <d>[English] There. Now the ships can see us.</d> Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: Waves crashing on the rocks, a strong sea wind howling around the tower, the creak and click of a brass crank and a low ship's horn far away.\n\nMusic: N/A"
+  },
+  {
+   "title": "Water town",
+   "meta": "15 s · 3 shots · dialogue · Chinese",
+   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_Z04_g21042.mp4",
+   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_Z04_g21042.jpg",
+   "prompt": "[Shot 1] Live-action, photorealistic, a wide shot frames a quiet Chinese water town on a misty morning, white walls and black tiled roofs along a narrow canal, a small wooden boat gliding toward an old stone arch bridge. No one speaks, and the camera slowly moves forward along the water. [Shot 2] At 00:05.000, the camera cuts to a medium shot of the boatwoman, a Chinese woman in her forties with a blue printed headscarf and a blue cotton jacket, who pushes a long wooden oar at the back of the boat, and the woman with a clear, friendly voice (S1) says: <d>[Chinese] 坐稳了，要过桥了。</d> [Shot 3] At 00:10.000, the camera cuts to a medium close-up of the passenger, a young Chinese woman in her twenties with long black hair and a beige coat, who looks up at the bridge passing overhead, and the young woman with a soft, amazed voice (S2) says: <d>[Chinese] 这里真美，像画一样。</d> Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: A wooden oar creaking and dipping into calm water, small ripples lapping against the boat, birds singing in the mist and distant footsteps on a stone bridge.\n\nMusic: N/A"
   },
   {
    "title": "Fishing at sunrise",
@@ -60,15 +67,15 @@ window.SV25 = {
   {
    "title": "Robot and girl",
    "meta": "10 s · 2 shots · dialogue · 3D animation",
-   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T03_s4503.mp4",
-   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T03_s4503.jpg",
+   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T03_g20032.mp4",
+   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T03_g20032.jpg",
    "prompt": "[Shot 1] 3D animated, Pixar-style, a medium shot frames a sunny backyard garden full of colorful flowers, where a small round white robot with big glowing blue eyes kneels beside a little girl of about seven with red pigtails and green overalls. The robot points one metal finger at a tiny yellow flower, and the little robot with a gentle, curious, slightly electronic voice (S1) asks: <d>[English] What is this? It's so small.</d> [Shot 2] At 00:05.000, the camera cuts to a close-up of the little girl, who smiles widely, and the little girl with a sweet, high voice (S2) replies: <d>[English] It's a flower. Be gentle, it's alive.</d> Butterflies flutter in the soft-focus background. Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: Birds chirping in a sunny garden, bees buzzing softly around the flowers, the faint whir and click of the robot's motors and leaves rustling in a light breeze.\n\nMusic: N/A"
   },
   {
    "title": "Rooftop promise",
    "meta": "10 s · 2 shots · dialogue · 2D anime",
-   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T14_s3514.mp4",
-   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T14_s3514.jpg",
+   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T14_g20144.mp4",
+   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T14_g20144.jpg",
    "prompt": "[Shot 1] 2D anime style, hand-drawn cel animation, a medium shot frames a school rooftop at sunset, the sky glowing orange and pink and cherry blossom petals drifting past. A high school girl with short black hair and a sailor uniform leans on the railing, turns to her friend and, with a bright, youthful voice (S1), says: <d>[English] Promise we'll still be friends next year.</d> [Shot 2] At 00:05.000, the camera cuts to a close-up of her friend, a boy with messy brown hair and a dark school blazer, who grins as the wind ruffles his hair, and the boy with a warm, cheerful voice (S2) replies: <d>[English] Of course. That's a promise.</d> Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: A gentle evening breeze, cicadas buzzing in the distance, a school bell ringing far away and petals rustling across the rooftop.\n\nMusic: N/A"
   }
  ],

@@ -11,3 +11,6 @@ reference the corresponding `resolve/main/...` URL from the site code.
 The SANA-Video 2.0 curated samples from 2026-08-12 are stored together under
 `Video2/assets/curated-20260812/`, including the 20 videos, 10 conditioning
 frames, posters, prompts, selection summary, and complete metadata.
+
+The SANA-Video 2.5 page media (32 videos with sound and their posters) are stored
+under `Video25/media/`, which `Video25/data.js` references.

@@ -84,7 +84,7 @@
   lockSize(); window.addEventListener("resize", lockSize);
   const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-pause" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/><path class="i-play" d="M8 5.5v13l11-6.5z"/></svg>';
   const ICON_SND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="i-off" d="M16 9.5l5 5M21 9.5l-5 5"/><path class="i-on" d="M16 8.8a4.6 4.6 0 0 1 0 6.4M18.6 6.4a8 8 0 0 1 0 11.2"/></svg>';
-  // One clip downloads at a time, in page order (user, 2026-11-10: load the videos one by one, front to back), so the
+  // One clip downloads at a time, in page order (front to back), so the
   // first clips get the whole bandwidth. A clip gets its src only when its turn comes. The next one starts once the
   // browser holds the whole clip, has stopped fetching with enough data to play through, or after 20 s.
   // Pressing play or sound on a later clip starts that clip at once.
@@ -341,7 +341,7 @@
   ];
   const bars = $("[data-bars]");
   if (bars) {
-    // true proportions on one linear axis (user, 2026-11-10): the slowest bar sets the full height, nothing is cut
+    // true proportions on one linear axis: the slowest bar sets the full height, nothing is cut
     const top = Math.max(...series.flatMap((s) => s[2]).filter((v) => v != null));
     ["5 s clip", "10 s clip", "15 s clip"].forEach((x, gi) => {
       const g = el("div", "bgroup"), cols = el("div", "bcols");

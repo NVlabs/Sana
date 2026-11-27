@@ -58,6 +58,13 @@ window.SV25 = {
    "prompt": "[Shot 1] Live-action, photorealistic, a medium two-shot frames a sunlit artist's studio with tall windows, canvases leaning against the walls and jars of brushes on a wooden table. An elderly painter in his seventies with white hair, round glasses and a paint-stained smock stands beside a teenage girl who is painting a seascape on an easel, and the old man with a soft, patient voice (S1) says: <d>[English] Slower. Let the colors breathe.</d> [Shot 2] At 00:05.000, the camera cuts to a close-up of the girl's face as she steps back from the canvas, her eyes lighting up, and the girl with a soft, delighted voice (S2) says: <d>[English] Oh, I see it now. It looks like real water.</d> Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: The soft swish of a brush across canvas, the gentle tap of a brush against a glass jar, birds outside the open window and the quiet creak of a wooden floor.\n\nMusic: N/A"
   },
   {
+   "title": "Dumpling lesson",
+   "meta": "10 s · 2 shots · dialogue",
+   "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T10_s4510.mp4",
+   "poster": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/talk/case_T10_s4510.jpg",
+   "prompt": "[Shot 1] Live-action, photorealistic, a medium shot frames a warm home kitchen table dusted with flour, where a grandmother in her seventies with silver hair in a bun and a floral apron folds a dumpling, and the grandmother with a gentle, smiling voice (S1) says: <d>[English] Fold it like this, then pinch the edges.</d> The camera holds a static shot. [Shot 2] At 00:05.000, the camera cuts to a medium close-up of her grandson, a boy of about eight with a flour smudge on his nose, who holds up a lumpy dumpling and giggles, and the boy with a high, playful voice (S2) says: <d>[English] Mine looks like a little boat!</d> Do not display spoken dialogue as subtitles or captions anywhere in the video. Text naturally present within the scene is allowed.\n\nSound: The soft pat of dough on a floured wooden table, a pot of water simmering on the stove, a ticking wall clock and gentle laughter.\n\nMusic: N/A"
+  },
+  {
    "title": "Campfire story",
    "meta": "10 s · 2 shots · dialogue",
    "mp4": "https://huggingface.co/datasets/Efficient-Large-Model/Sana-assets/resolve/main/Video25/media/src/talk/case_T13_s3513.mp4",
